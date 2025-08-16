@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             first_name: userData.firstName,
             last_name: userData.lastName,
-            role: userData.userType,
+            role: 'client', // Always set to client for security (prevents privilege escalation)
             store_name: userData.storeName,
             country: userData.country
           }

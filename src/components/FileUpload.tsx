@@ -8,7 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface FileUploadProps {
-  onFilesUploaded?: (fileUrls: { url: string; name: string; type: string }[]) => void;
+  onFilesUploaded?: (fileUrls: { 
+    url: string; 
+    name: string; 
+    type: string; 
+    bucket: string;
+    size: number;
+  }[]) => void;
   acceptedTypes?: string[];
   maxFileSize?: number; // in MB
   maxFiles?: number;
@@ -134,18 +140,22 @@ export const FileUpload = ({
 
       if (error) throw error;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(data.path);
+      // Store file path instead of public URL (bucket is now private)
+      const uploadedFilePath = data.path;
 
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id 
-          ? { ...f, status: 'completed', progress: 100, url: publicUrl }
+          ? { ...f, status: 'completed', progress: 100, url: uploadedFilePath }
           : f
       ));
 
-      return { url: publicUrl, name: uploadFile.file.name, type: uploadFile.file.type };
+      return { 
+        url: uploadedFilePath, 
+        name: uploadFile.file.name, 
+        type: uploadFile.file.type,
+        bucket,
+        size: uploadFile.file.size 
+      };
     } catch (error) {
       console.error('Upload error:', error);
       setFiles(prev => prev.map(f => 
@@ -164,9 +174,13 @@ export const FileUpload = ({
     try {
       const results = await Promise.allSettled(uploadPromises);
       const successfulUploads = results
-        .filter((result): result is PromiseFulfilledResult<{url: string; name: string; type: string}> => 
-          result.status === 'fulfilled'
-        )
+        .filter((result): result is PromiseFulfilledResult<{
+          url: string; 
+          name: string; 
+          type: string; 
+          bucket: string;
+          size: number;
+        }> => result.status === 'fulfilled')
         .map(result => result.value);
 
       if (successfulUploads.length > 0) {
@@ -317,14 +331,10 @@ export const FileUpload = ({
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {uploadFile.status === 'completed' && uploadFile.url && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => window.open(uploadFile.url, '_blank')}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    {uploadFile.status === 'completed' && (
+                      <Badge variant="outline" className="text-xs">
+                        Uploadé
+                      </Badge>
                     )}
                     <Button
                       size="sm"

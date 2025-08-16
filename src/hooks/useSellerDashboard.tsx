@@ -59,7 +59,13 @@ export const useSellerDashboard = () => {
   });
   const [submissions, setSubmissions] = useState<ContentSubmission[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [draftFiles, setDraftFiles] = useState<{url: string, name: string, type: string}[]>([]);
+  const [draftFiles, setDraftFiles] = useState<{
+    url: string; 
+    name: string; 
+    type: string; 
+    bucket?: string; 
+    size?: number;
+  }[]>([]);
 
   // Fetch seller statistics
   const fetchStats = async () => {
@@ -141,8 +147,20 @@ export const useSellerDashboard = () => {
   };
 
   // Store draft files for creation
-  const addDraftFiles = (files: {url: string, name: string, type: string}[]) => {
-    setDraftFiles(prev => [...prev, ...files]);
+  const addDraftFiles = (files: {
+    url: string; 
+    name: string; 
+    type: string; 
+    bucket: string; 
+    size: number;
+  }[]) => {
+    setDraftFiles(prev => [...prev, ...files.map(file => ({
+      url: file.url,
+      name: file.name,
+      type: file.type,
+      bucket: file.bucket,
+      size: file.size
+    }))]);
   };
 
   const clearDraftFiles = () => {
@@ -195,9 +213,10 @@ export const useSellerDashboard = () => {
           file_path: file.url,
           file_type: file.type,
           file_format: file.name.split('.').pop() || '',
-          file_size: 0, // We don't have size info from the upload
-          is_original: true,
-          metadata: {}
+          file_size: file.size || 0,
+          is_preview: false,
+          is_original: file.bucket === 'original-files',
+          metadata: { bucket: file.bucket || 'seller-content' }
         }));
 
         console.log('File inserts:', fileInserts);
