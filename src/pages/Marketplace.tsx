@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Grid, List, SlidersHorizontal } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 import mockPhoto2 from "@/assets/mock-photo2.jpg";
 import mockIllustration1 from "@/assets/mock-illustration1.jpg";
@@ -14,6 +15,15 @@ import mockIllustration1 from "@/assets/mock-illustration1.jpg";
 const Marketplace = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [searchParams]);
 
   // Mock data for marketplace content
   const contentTypes = ["photo", "video", "audio", "illustration"] as const;
@@ -37,13 +47,13 @@ const Marketplace = () => {
     { value: "illustration", label: "Illustrations", count: "950K" },
   ];
 
-  const priceRanges = [
-    { value: "all", label: "Tous les prix" },
-    { value: "free", label: "Gratuit" },
-    { value: "0-10", label: "0€ - 10€" },
-    { value: "10-25", label: "10€ - 25€" },
-    { value: "25+", label: "25€ et plus" },
-  ];
+  // Filter content based on search and category
+  const filteredContent = marketplaceContent.filter(content => {
+    const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         content.author.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || content.type === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,6 +71,8 @@ const Marketplace = () => {
                 <Input
                   placeholder="Rechercher dans la marketplace..."
                   className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
@@ -103,7 +115,7 @@ const Marketplace = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                24 résultats trouvés
+                {filteredContent.length} résultats trouvés
               </span>
               <Badge variant="secondary">Tous</Badge>
             </div>
@@ -149,7 +161,7 @@ const Marketplace = () => {
             ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
             : "grid-cols-1"
         }`}>
-          {marketplaceContent.map((content) => (
+          {filteredContent.map((content) => (
             <ContentCard key={content.id} {...content} />
           ))}
         </div>

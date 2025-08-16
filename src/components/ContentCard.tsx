@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { useCart } from "@/hooks/useCart";
 
 interface ContentCardProps {
   id: string;
@@ -27,6 +28,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   downloads,
   isLiked = false,
 }) => {
+  const { addToCart } = useCart();
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case "video": return "bg-red-100 text-red-800";
@@ -34,6 +37,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       case "illustration": return "bg-purple-100 text-purple-800";
       default: return "bg-blue-100 text-blue-800";
     }
+  };
+
+  const handleAddToCart = () => {
+    addToCart({
+      id,
+      title,
+      author,
+      price,
+      type,
+      thumbnail
+    });
   };
 
   return (
@@ -73,7 +87,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   Aperçu
                 </Link>
               </Button>
-              <Button size="sm" variant="secondary">
+              <Button size="sm" variant="secondary" onClick={handleAddToCart}>
                 <ShoppingCart className="h-4 w-4" />
               </Button>
             </div>

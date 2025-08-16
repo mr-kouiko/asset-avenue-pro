@@ -145,19 +145,20 @@ const Index = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { name: "Photos", count: "2.1M", color: "bg-blue-500" },
-              { name: "Vidéos", count: "430K", color: "bg-red-500" },
-              { name: "Audio", count: "180K", color: "bg-green-500" },
-              { name: "Illustrations", count: "950K", color: "bg-purple-500" },
+              { name: "Photos", count: "2.1M", color: "bg-blue-500", category: "photo" },
+              { name: "Vidéos", count: "430K", color: "bg-red-500", category: "video" },
+              { name: "Audio", count: "180K", color: "bg-green-500", category: "audio" },
+              { name: "Illustrations", count: "950K", color: "bg-purple-500", category: "illustration" },
             ].map((category) => (
-              <div
+              <Link
                 key={category.name}
+                to={`/marketplace?category=${category.category}`}
                 className="group cursor-pointer bg-card rounded-xl p-6 text-center hover:shadow-lg transition-all duration-300"
               >
                 <div className={`w-12 h-12 ${category.color} rounded-lg mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`} />
                 <h3 className="font-semibold mb-1">{category.name}</h3>
                 <p className="text-sm text-muted-foreground">{category.count} contenus</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -227,10 +228,10 @@ const Index = () => {
             <div>
               <h4 className="font-semibold mb-3">Catégories</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li>Photos</li>
-                <li>Vidéos</li>
-                <li>Illustrations</li>
-                <li>Audio</li>
+                <li><Link to="/marketplace?category=photo" className="hover:opacity-100">Photos</Link></li>
+                <li><Link to="/marketplace?category=video" className="hover:opacity-100">Vidéos</Link></li>
+                <li><Link to="/marketplace?category=illustration" className="hover:opacity-100">Illustrations</Link></li>
+                <li><Link to="/marketplace?category=audio" className="hover:opacity-100">Audio</Link></li>
               </ul>
             </div>
 
@@ -247,10 +248,10 @@ const Index = () => {
             <div>
               <h4 className="font-semibold mb-3">Support</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li>Centre d'aide</li>
-                <li>Contact</li>
-                <li>Licences</li>
-                <li>Conditions</li>
+                <li><Link to="/support" className="hover:opacity-100">Centre d'aide</Link></li>
+                <li><Link to="/contact" className="hover:opacity-100">Contact</Link></li>
+                <li><Link to="/licenses" className="hover:opacity-100">Licences</Link></li>
+                <li><Link to="/terms" className="hover:opacity-100">Conditions</Link></li>
               </ul>
             </div>
           </div>

@@ -11,9 +11,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 
 export const Header = () => {
   const { user, signOut, loading } = useAuth();
+  const { getItemCount } = useCart();
 
   if (loading) {
     return (
@@ -71,11 +73,15 @@ export const Header = () => {
 
           {/* Cart */}
           {user && (
-            <Button variant="ghost" size="sm" className="relative">
-              <ShoppingCart className="h-4 w-4" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
-                3
-              </Badge>
+            <Button variant="ghost" size="sm" className="relative" asChild>
+              <Link to="/cart">
+                <ShoppingCart className="h-4 w-4" />
+                {getItemCount() > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
+                    {getItemCount()}
+                  </Badge>
+                )}
+              </Link>
             </Button>
           )}
 
