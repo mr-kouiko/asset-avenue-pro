@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { FileUpload } from "@/components/FileUpload";
 import { Upload as UploadIcon, X, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,8 +18,8 @@ import { toast } from "sonner";
 const Upload = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { categories, createSubmission, addDraftFiles, draftFiles } = useSellerDashboard();
   const [loading, setLoading] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -47,10 +49,14 @@ const Upload = () => {
     );
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
-    }
+  const handleFilesUploaded = (uploadedFiles: { 
+    url: string; 
+    name: string; 
+    type: string; 
+    bucket: string;
+    size: number;
+  }[]) => {
+    addDraftFiles(uploadedFiles);
   };
 
   const handleAddTag = () => {
@@ -72,16 +78,38 @@ const Upload = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.title || !formData.description) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    if (draftFiles.length === 0) {
+      toast.error('Veuillez uploader au moins un fichier');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Mock upload process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success('Contenu uploadé avec succès ! En attente de validation.');
-      navigate('/dashboard?tab=content');
+      const categoryId = formData.category || undefined;
+      const price = formData.price ? parseFloat(formData.price) : undefined;
+
+      const result = await createSubmission({
+        title: formData.title,
+        description: formData.description,
+        category_id: categoryId,
+        price,
+        tags: formData.tags
+      });
+
+      if (result) {
+        toast.success('Contenu créé avec succès ! En attente de validation.');
+        navigate('/dashboard?tab=content');
+      }
     } catch (error) {
-      toast.error('Erreur lors de l\'upload');
+      console.error('Upload error:', error);
+      toast.error('Erreur lors de la création du contenu');
     } finally {
       setLoading(false);
     }
@@ -104,43 +132,7 @@ const Upload = () => {
           {/* File Upload */}
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Fichiers</h2>
-            
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <UploadIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Glissez vos fichiers ici</h3>
-              <p className="text-muted-foreground mb-4">
-                ou cliquez pour sélectionner des fichiers
-              </p>
-              <input
-                type="file"
-                multiple
-                accept="image/*,video/*,audio/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <Label htmlFor="file-upload">
-                <Button type="button" variant="outline" asChild>
-                  <span>Sélectionner des fichiers</span>
-                </Button>
-              </Label>
-            </div>
-
-            {files.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2">Fichiers sélectionnés :</h4>
-                <div className="space-y-2">
-                  {files.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-surface p-3 rounded">
-                      <span className="text-sm">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <FileUpload onFilesUploaded={handleFilesUploaded} />
           </Card>
 
           {/* Content Details */}
@@ -166,10 +158,11 @@ const Upload = () => {
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="photo">Photos</SelectItem>
-                    <SelectItem value="video">Vidéos</SelectItem>
-                    <SelectItem value="audio">Audio</SelectItem>
-                    <SelectItem value="illustration">Illustrations</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -232,8 +225,8 @@ const Upload = () => {
 
           {/* Submit */}
           <div className="flex space-x-4">
-            <Button type="submit" size="lg" disabled={loading || files.length === 0}>
-              {loading ? 'Upload en cours...' : 'Publier le contenu'}
+            <Button type="submit" size="lg" disabled={loading || draftFiles.length === 0}>
+              {loading ? 'Création en cours...' : 'Publier le contenu'}
             </Button>
             <Button type="button" variant="outline" size="lg" asChild>
               <Link to="/dashboard">Annuler</Link>
