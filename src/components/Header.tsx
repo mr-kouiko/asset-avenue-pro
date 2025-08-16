@@ -21,12 +21,13 @@ export const Header = () => {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">AS</span>
-            </div>
-            <span className="text-xl font-bold">ArabsStock</span>
-          </Link>
+        <Link to="/" className="flex items-center space-x-2">
+          <img 
+            src="/lovable-uploads/08d52d12-e894-4f5c-ba7a-3b16e53a2b99.png" 
+            alt="VisuStock" 
+            className="h-10 w-auto"
+          />
+        </Link>
           <div className="animate-pulse bg-muted rounded h-8 w-32"></div>
         </div>
       </header>
@@ -38,10 +39,11 @@ export const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">AS</span>
-          </div>
-          <span className="text-xl font-bold">ArabsStock</span>
+          <img 
+            src="/lovable-uploads/08d52d12-e894-4f5c-ba7a-3b16e53a2b99.png" 
+            alt="VisuStock" 
+            className="h-10 w-auto"
+          />
         </Link>
 
         {/* Search Bar */}

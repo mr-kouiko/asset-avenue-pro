@@ -92,7 +92,7 @@ const Contact = () => {
                   <Mail className="h-5 w-5 text-primary mt-1" />
                   <div>
                     <p className="font-medium">Email</p>
-                    <p className="text-muted-foreground">contact@arabsstock.com</p>
+                    <p className="text-muted-foreground">contact@visustock.com</p>
                   </div>
                 </div>
                 

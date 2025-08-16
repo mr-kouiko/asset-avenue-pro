@@ -66,7 +66,7 @@ const Licenses = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Licences et droits d'usage</h1>
           <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-            Comprendre les différents types de licences disponibles sur ArabsStock pour utiliser les contenus en toute légalité
+            Comprendre les différents types de licences disponibles sur VisuStock pour utiliser les contenus en toute légalité
           </p>
         </div>
 

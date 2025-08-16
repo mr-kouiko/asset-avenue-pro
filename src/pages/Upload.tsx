@@ -124,7 +124,7 @@ const Upload = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Uploader du contenu</h1>
           <p className="text-muted-foreground">
-            Partagez vos créations avec la communauté ArabsStock
+            Partagez vos créations avec la communauté VisuStock
           </p>
         </div>
 

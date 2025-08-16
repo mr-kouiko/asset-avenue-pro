@@ -168,7 +168,7 @@ const Index = () => {
       <section className="py-16">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Pourquoi choisir ArabsStock ?</h2>
+            <h2 className="text-3xl font-bold mb-4">Pourquoi choisir VisuStock ?</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Une plateforme conçue pour les créatifs, par des créatifs
             </p>
@@ -218,7 +218,11 @@ const Index = () => {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                   <span className="text-sm font-bold text-primary-foreground">AS</span>
                 </div>
-                <span className="text-xl font-bold">ArabsStock</span>
+                <img 
+                  src="/lovable-uploads/08d52d12-e894-4f5c-ba7a-3b16e53a2b99.png" 
+                  alt="VisuStock" 
+                  className="h-10 w-auto"
+                />
               </div>
               <p className="text-sm opacity-80">
                 La marketplace de référence pour les contenus créatifs de qualité.
@@ -257,7 +261,7 @@ const Index = () => {
           </div>
 
           <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm opacity-60">
-            © 2024 ArabsStock. Tous droits réservés.
+            © 2024 VisuStock. Tous droits réservés.
           </div>
         </div>
       </footer>

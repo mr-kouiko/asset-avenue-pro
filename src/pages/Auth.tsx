@@ -111,7 +111,11 @@ const Auth = () => {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <span className="text-lg font-bold text-primary-foreground">AS</span>
           </div>
-          <span className="text-2xl font-bold">ArabsStock</span>
+          <img 
+            src="/lovable-uploads/08d52d12-e894-4f5c-ba7a-3b16e53a2b99.png" 
+            alt="VisuStock" 
+            className="h-12 w-auto mb-2"
+          />
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -126,7 +130,7 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Connexion</CardTitle>
                 <CardDescription>
-                  Connectez-vous à votre compte ArabsStock
+                  Connectez-vous à votre compte VisuStock
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -215,7 +219,7 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Créer un compte</CardTitle>
                 <CardDescription>
-                  Rejoignez la communauté ArabsStock
+                  Rejoignez la communauté VisuStock
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

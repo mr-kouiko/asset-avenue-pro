@@ -21,8 +21,8 @@ const Terms = () => {
           <Card className="p-8">
             <h2 className="text-2xl font-bold mb-4">1. Objet</h2>
             <p className="text-muted-foreground mb-4">
-              Les présentes conditions générales d'utilisation (ci-après « CGU ») régissent l'utilisation de la plateforme ArabsStock, 
-              une marketplace de contenus créatifs numériques (photos, vidéos, illustrations, audio) accessible à l'adresse arabsstock.com.
+              Les présentes conditions générales d'utilisation (ci-après « CGU ») régissent l'utilisation de la plateforme VisuStock, 
+              une marketplace de contenus créatifs numériques (photos, vidéos, illustrations, audio) accessible à l'adresse visustock.com.
             </p>
             <p className="text-muted-foreground">
               L'utilisation de la plateforme implique l'acceptation pleine et entière des présentes CGU par l'utilisateur.
@@ -32,7 +32,7 @@ const Terms = () => {
           <Card className="p-8">
             <h2 className="text-2xl font-bold mb-4">2. Définitions</h2>
             <div className="space-y-3 text-muted-foreground">
-              <p><strong>Plateforme :</strong> Le site web ArabsStock et ses services associés</p>
+              <p><strong>Plateforme :</strong> Le site web VisuStock et ses services associés</p>
               <p><strong>Utilisateur :</strong> Toute personne physique ou morale utilisant la plateforme</p>
               <p><strong>Créateur/Vendeur :</strong> Utilisateur qui met en vente ses créations sur la plateforme</p>
               <p><strong>Acheteur :</strong> Utilisateur qui acquiert des contenus sur la plateforme</p>
@@ -51,7 +51,7 @@ const Terms = () => {
                 de ses identifiants de connexion.
               </p>
               <p>
-                ArabsStock se réserve le droit de suspendre ou supprimer tout compte en cas de violation des présentes CGU.
+                VisuStock se réserve le droit de suspendre ou supprimer tout compte en cas de violation des présentes CGU.
               </p>
             </div>
           </Card>
@@ -101,12 +101,12 @@ const Terms = () => {
           <Card className="p-8">
             <h2 className="text-2xl font-bold mb-4">6. Propriété intellectuelle</h2>
             <p className="text-muted-foreground mb-4">
-              Les créateurs conservent leurs droits d'auteur sur les contenus uploadés. ArabsStock obtient une licence 
+              Les créateurs conservent leurs droits d'auteur sur les contenus uploadés. VisuStock obtient une licence 
               non-exclusive pour héberger, présenter et distribuer ces contenus.
             </p>
             <p className="text-muted-foreground">
               La plateforme, ses éléments de design, son code source et sa marque sont protégés par les droits de propriété 
-              intellectuelle d'ArabsStock.
+              intellectuelle de VisuStock.
             </p>
           </Card>
 
@@ -117,7 +117,7 @@ const Terms = () => {
                 Les prix sont affichés en euros TTC. Les paiements sont sécurisés et traités par nos partenaires de confiance.
               </p>
               <p>
-                ArabsStock prélève une commission sur chaque vente, dont le taux est communiqué aux créateurs lors de l'inscription.
+                VisuStock prélève une commission sur chaque vente, dont le taux est communiqué aux créateurs lors de l'inscription.
               </p>
               <p>
                 Les remboursements ne sont possibles qu'en cas de défaut technique empêchant le téléchargement dans les 30 jours suivant l'achat.
@@ -128,11 +128,11 @@ const Terms = () => {
           <Card className="p-8">
             <h2 className="text-2xl font-bold mb-4">8. Responsabilité</h2>
             <p className="text-muted-foreground mb-4">
-              ArabsStock fait ses meilleurs efforts pour assurer la disponibilité et la sécurité de la plateforme, 
+              VisuStock fait ses meilleurs efforts pour assurer la disponibilité et la sécurité de la plateforme, 
               mais ne peut garantir un fonctionnement sans interruption.
             </p>
             <p className="text-muted-foreground">
-              La responsabilité d'ArabsStock est limitée aux dommages directs et ne peut excéder le montant des transactions 
+              La responsabilité de VisuStock est limitée aux dommages directs et ne peut excéder le montant des transactions 
               concernées sur les 12 derniers mois.
             </p>
           </Card>
@@ -143,14 +143,14 @@ const Terms = () => {
               L'utilisateur peut supprimer son compte à tout moment depuis son espace personnel.
             </p>
             <p className="text-muted-foreground">
-              ArabsStock peut suspendre ou supprimer un compte en cas de violation des CGU, après mise en demeure restée sans effet.
+              VisuStock peut suspendre ou supprimer un compte en cas de violation des CGU, après mise en demeure restée sans effet.
             </p>
           </Card>
 
           <Card className="p-8">
             <h2 className="text-2xl font-bold mb-4">10. Modifications des CGU</h2>
             <p className="text-muted-foreground">
-              ArabsStock se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés 
+              VisuStock se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés 
               par email des modifications importantes. La poursuite de l'utilisation vaut acceptation des nouvelles conditions.
             </p>
           </Card>
@@ -169,7 +169,7 @@ const Terms = () => {
               Pour toute question relative aux présentes CGU, vous pouvez nous contacter à :
             </p>
             <div className="mt-4 text-muted-foreground">
-              <p>Email : legal@arabsstock.com</p>
+              <p>Email : legal@visustock.com</p>
               <p>Adresse : 123 Rue de la Tech, 75001 Paris, France</p>
             </div>
           </Card>

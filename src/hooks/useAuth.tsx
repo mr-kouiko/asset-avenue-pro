@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user) {
         toast({
           title: "Connexion réussie !",
-          description: "Bienvenue sur ArabsStock."
+          description: "Bienvenue sur VisuStock."
         });
         // Force page reload for clean state
         setTimeout(() => {
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       toast({
         title: "Déconnexion réussie",
-        description: "À bientôt sur ArabsStock !"
+        description: "À bientôt sur VisuStock !"
       });
       
       // Force page reload for clean state
