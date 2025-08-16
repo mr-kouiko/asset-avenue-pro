@@ -283,6 +283,36 @@ export type Database = {
         }
         Relationships: []
       }
+      role_audit: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          id: string
+          new_role: Database["public"]["Enums"]["app_role"]
+          old_role: Database["public"]["Enums"]["app_role"] | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          id?: string
+          new_role: Database["public"]["Enums"]["app_role"]
+          old_role?: Database["public"]["Enums"]["app_role"] | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          new_role?: Database["public"]["Enums"]["app_role"]
+          old_role?: Database["public"]["Enums"]["app_role"] | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -309,6 +339,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_secure_download_url: {
+        Args: { submission_id_param: string; user_id_param?: string }
+        Returns: {
+          download_url: string
+          expires_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
