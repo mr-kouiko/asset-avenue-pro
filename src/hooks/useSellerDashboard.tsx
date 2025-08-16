@@ -157,8 +157,16 @@ export const useSellerDashboard = () => {
     price?: number;
     tags?: string[];
   }) => {
+    console.log('createSubmission called with:', submissionData);
+    console.log('Current draftFiles:', draftFiles);
+    
     try {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.log('No user authenticated');
+        throw new Error('User not authenticated');
+      }
+
+      console.log('User authenticated:', user.id);
 
       // Create the submission first
       const { data: submission, error: submissionError } = await supabase
@@ -174,10 +182,13 @@ export const useSellerDashboard = () => {
         .select()
         .single();
 
+      console.log('Submission insert result:', { submission, submissionError });
+
       if (submissionError) throw submissionError;
 
       // Add draft files to the submission if any
       if (draftFiles.length > 0) {
+        console.log('Adding draft files to submission');
         const fileInserts = draftFiles.map(file => ({
           submission_id: submission.id,
           file_name: file.name,
@@ -189,6 +200,8 @@ export const useSellerDashboard = () => {
           metadata: {}
         }));
 
+        console.log('File inserts:', fileInserts);
+
         const { error: filesError } = await supabase
           .from('content_files')
           .insert(fileInserts);
@@ -196,6 +209,8 @@ export const useSellerDashboard = () => {
         if (filesError) {
           console.error('Error adding files:', filesError);
           toast.error('Contenu créé mais erreur lors de l\'ajout des fichiers');
+        } else {
+          console.log('Files added successfully');
         }
       }
 

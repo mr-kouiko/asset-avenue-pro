@@ -94,10 +94,21 @@ const Dashboard = () => {
   }
 
   const handleCreateSubmission = async () => {
+    console.log('handleCreateSubmission called with formData:', formData);
+    
     if (!formData.title || !formData.description) {
+      console.log('Missing title or description');
       toast.error('Titre et description requis');
       return;
     }
+
+    console.log('Calling createSubmission with data:', {
+      title: formData.title,
+      description: formData.description,
+      category_id: formData.category_id || undefined,
+      price: formData.price ? parseFloat(formData.price) : undefined,
+      tags: formData.tags
+    });
 
     const submission = await createSubmission({
       title: formData.title,
@@ -107,7 +118,10 @@ const Dashboard = () => {
       tags: formData.tags
     });
 
+    console.log('createSubmission result:', submission);
+
     if (submission) {
+      console.log('Submission successful, clearing form and closing dialog');
       setFormData({
         title: '',
         description: '',
@@ -117,10 +131,13 @@ const Dashboard = () => {
         currentTag: ''
       });
       setIsCreateDialogOpen(false);
+    } else {
+      console.log('Submission failed');
     }
   };
 
   const handleCloseDialog = () => {
+    console.log('handleCloseDialog called');
     clearDraftFiles();
     setIsCreateDialogOpen(false);
   };
@@ -186,7 +203,13 @@ const Dashboard = () => {
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={handleCloseDialog}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button 
+                className="flex items-center gap-2"
+                onClick={() => {
+                  console.log('Ajouter du contenu button clicked');
+                  setIsCreateDialogOpen(true);
+                }}
+              >
                 <Plus className="h-4 w-4" />
                 Ajouter du contenu
               </Button>
