@@ -17,6 +17,7 @@ import Support from "./pages/Support";
 import Contact from "./pages/Contact";
 import Licenses from "./pages/Licenses";
 import Terms from "./pages/Terms";
+import Infinity from "./pages/Infinity";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/licenses" element={<Licenses />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/infinity" element={<Infinity />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

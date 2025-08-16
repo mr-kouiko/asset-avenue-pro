@@ -57,6 +57,13 @@ export const Header = () => {
 
         {/* Navigation & Actions */}
         <div className="flex items-center space-x-4">
+          {/* Infinity Link */}
+          <Button variant="default" size="sm" asChild className="hidden md:flex">
+            <Link to="/infinity">
+              Infinity
+            </Link>
+          </Button>
+
           {/* Language Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
