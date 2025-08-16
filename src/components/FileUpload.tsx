@@ -106,10 +106,14 @@ export const FileUpload = ({
         bucket = 'original-files'; // Large images go to private bucket
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Generate unique filename
       const fileExt = uploadFile.file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      const filePath = `${user.id}/${fileName}`;
 
       // Upload to Supabase Storage with progress simulation
       const { data, error } = await supabase.storage
