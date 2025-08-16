@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
 import { ContentCard } from "@/components/ContentCard";
+import { LogoProcessor } from "@/components/LogoProcessor";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -97,6 +98,13 @@ const Index = () => {
       <Header />
       <Navigation />
       <HeroSection />
+
+      {/* Logo Background Removal Tool */}
+      <section className="py-16 bg-muted/50">
+        <div className="container">
+          <LogoProcessor />
+        </div>
+      </section>
 
       {/* Featured Content Section */}
       <section className="py-16">
