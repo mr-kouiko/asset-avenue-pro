@@ -52,11 +52,14 @@ const Dashboard = () => {
     loading, 
     stats, 
     submissions, 
-    categories, 
+    categories,
+    draftFiles,
     createSubmission, 
     updateSubmission, 
     deleteSubmission,
     addFilesToSubmission,
+    addDraftFiles,
+    clearDraftFiles,
     refreshData 
   } = useSellerDashboard();
   
@@ -115,6 +118,11 @@ const Dashboard = () => {
       });
       setIsCreateDialogOpen(false);
     }
+  };
+
+  const handleCloseDialog = () => {
+    clearDraftFiles();
+    setIsCreateDialogOpen(false);
   };
 
   const handleFilesUploaded = async (files: { url: string; name: string; type: string }[], submissionId: string) => {
@@ -176,21 +184,21 @@ const Dashboard = () => {
               Gérez votre contenu et suivez vos performances
             </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={handleCloseDialog}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 Ajouter du contenu
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Créer un nouveau contenu</DialogTitle>
                 <DialogDescription>
-                  Ajoutez les informations de votre nouveau contenu
+                  Ajoutez les informations et fichiers de votre nouveau contenu
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="title">Titre *</Label>
@@ -270,13 +278,38 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
+
+                {/* File Upload Section */}
+                <div className="border-t pt-6">
+                  <Label className="text-base font-medium">Fichiers</Label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Ajoutez vos fichiers à ce contenu. Ils seront automatiquement associés lors de la création.
+                  </p>
+                  <FileUpload
+                    onFilesUploaded={addDraftFiles}
+                    maxFiles={10}
+                    maxFileSize={100}
+                  />
+                  {draftFiles.length > 0 && (
+                    <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm font-medium text-green-600">
+                        {draftFiles.length} fichier(s) prêt(s) à être associé(s) à ce contenu
+                      </p>
+                    </div>
+                  )}
+                </div>
                 
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={handleCloseDialog}>
                     Annuler
                   </Button>
                   <Button onClick={handleCreateSubmission}>
                     Créer le contenu
+                    {draftFiles.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        +{draftFiles.length} fichier(s)
+                      </Badge>
+                    )}
                   </Button>
                 </div>
               </div>

@@ -59,6 +59,7 @@ export const useSellerDashboard = () => {
   });
   const [submissions, setSubmissions] = useState<ContentSubmission[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [draftFiles, setDraftFiles] = useState<{url: string, name: string, type: string}[]>([]);
 
   // Fetch seller statistics
   const fetchStats = async () => {
@@ -139,7 +140,16 @@ export const useSellerDashboard = () => {
     }
   };
 
-  // Create new submission
+  // Store draft files for creation
+  const addDraftFiles = (files: {url: string, name: string, type: string}[]) => {
+    setDraftFiles(prev => [...prev, ...files]);
+  };
+
+  const clearDraftFiles = () => {
+    setDraftFiles([]);
+  };
+
+  // Create a new submission with files
   const createSubmission = async (submissionData: {
     title: string;
     description: string;
@@ -147,29 +157,53 @@ export const useSellerDashboard = () => {
     price?: number;
     tags?: string[];
   }) => {
-    if (!user) return null;
-
     try {
-      const { data, error } = await supabase
+      if (!user) throw new Error('User not authenticated');
+
+      // Create the submission first
+      const { data: submission, error: submissionError } = await supabase
         .from('content_submissions')
         .insert({
           creator_id: user.id,
           title: submissionData.title,
           description: submissionData.description,
-          category_id: submissionData.category_id || null,
-          price: submissionData.price || null,
+          category_id: submissionData.category_id,
+          price: submissionData.price,
           tags: submissionData.tags || [],
-          status: 'pending'
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (submissionError) throw submissionError;
 
-      toast.success('Contenu créé avec succès');
+      // Add draft files to the submission if any
+      if (draftFiles.length > 0) {
+        const fileInserts = draftFiles.map(file => ({
+          submission_id: submission.id,
+          file_name: file.name,
+          file_path: file.url,
+          file_type: file.type,
+          file_format: file.name.split('.').pop() || '',
+          file_size: 0, // We don't have size info from the upload
+          is_original: true,
+          metadata: {}
+        }));
+
+        const { error: filesError } = await supabase
+          .from('content_files')
+          .insert(fileInserts);
+
+        if (filesError) {
+          console.error('Error adding files:', filesError);
+          toast.error('Contenu créé mais erreur lors de l\'ajout des fichiers');
+        }
+      }
+
+      toast.success(`Contenu créé avec succès${draftFiles.length > 0 ? ` avec ${draftFiles.length} fichier(s)` : ''}`);
+      clearDraftFiles();
       await fetchSubmissions();
       await fetchStats();
-      return data;
+      return submission;
     } catch (error) {
       console.error('Error creating submission:', error);
       toast.error('Erreur lors de la création du contenu');
@@ -282,13 +316,17 @@ export const useSellerDashboard = () => {
     stats,
     submissions,
     categories,
+    draftFiles,
     createSubmission,
     updateSubmission,
     deleteSubmission,
     addFilesToSubmission,
+    addDraftFiles,
+    clearDraftFiles,
     refreshData: () => {
       fetchStats();
       fetchSubmissions();
+      fetchCategories();
     }
   };
 };
