@@ -101,18 +101,21 @@ serve(async (req) => {
       hasAccess = true
     }
 
-    // Check if content is approved and user has purchased it
+    // Check if content is approved and user has active subscription or purchase
     if (submission.status === 'approved') {
-      const { data: download } = await supabaseClient
-        .from('downloads')
-        .select('*')
-        .eq('submission_id', submissionId)
+      // Check for active subscription
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('subscribed, subscription_end')
         .eq('user_id', user.id)
-        .maybeSingle()
+        .single()
 
-      if (download && (!download.expires_at || new Date(download.expires_at) > new Date())) {
+      if (profile?.subscribed && (!profile.subscription_end || new Date(profile.subscription_end) > new Date())) {
         hasAccess = true
       }
+      
+      // Note: Individual purchase logic would go here when implemented
+      // For now, subscription-based access is the primary model
     }
 
     // For preview files, allow access if content is approved
@@ -149,13 +152,17 @@ serve(async (req) => {
       )
     }
 
-    // Update download record if this is an original file
+    // Log download activity if this is an original file
     if (file.is_original) {
       await supabaseClient
         .from('downloads')
-        .update({ downloaded_at: new Date().toISOString() })
-        .eq('submission_id', submissionId)
-        .eq('user_id', user.id)
+        .insert({
+          user_id: user.id,
+          submission_id: submissionId,
+          downloaded_at: new Date().toISOString()
+        })
+        .onConflict('user_id,submission_id')
+        .ignoreDuplicates()
     }
 
     return new Response(
