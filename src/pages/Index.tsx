@@ -223,11 +223,8 @@ const Index = () => {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                  <span className="text-sm font-bold text-primary-foreground">AS</span>
-                </div>
                 <img 
-                  src="/lovable-uploads/08d52d12-e894-4f5c-ba7a-3b16e53a2b99.png" 
+                  src="/lovable-uploads/visustock-logo-no-bg.png" 
                   alt="VisuStock" 
                   className="h-10 w-auto"
                 />

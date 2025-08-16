@@ -108,11 +108,8 @@ const Auth = () => {
 
         {/* Logo */}
         <div className="flex items-center justify-center space-x-2 mb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">AS</span>
-          </div>
           <img 
-            src="/lovable-uploads/08d52d12-e894-4f5c-ba7a-3b16e53a2b99.png" 
+            src="/lovable-uploads/visustock-logo-no-bg.png" 
             alt="VisuStock" 
             className="h-12 w-auto mb-2"
           />
