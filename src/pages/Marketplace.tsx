@@ -47,6 +47,15 @@ const Marketplace = () => {
     { value: "illustration", label: "Illustrations", count: "950K" },
   ];
 
+  const priceRanges = [
+    { value: "all", label: "Tous les prix" },
+    { value: "free", label: "Gratuit" },
+    { value: "0-10", label: "0€ - 10€" },
+    { value: "10-25", label: "10€ - 25€" },
+    { value: "25-50", label: "25€ - 50€" },
+    { value: "50+", label: "50€ et plus" },
+  ];
+
   // Filter content based on search and category
   const filteredContent = marketplaceContent.filter(content => {
     const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
