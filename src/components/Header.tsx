@@ -23,7 +23,7 @@ export const Header = () => {
         <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
           <img 
-            src="/lovable-uploads/visustock-logo-no-bg.png" 
+            src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png"
             alt="VisuStock" 
             className="h-10 w-auto"
           />
@@ -40,7 +40,7 @@ export const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <img 
-            src="/lovable-uploads/visustock-logo-no-bg.png" 
+            src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
             alt="VisuStock" 
             className="h-10 w-auto"
           />

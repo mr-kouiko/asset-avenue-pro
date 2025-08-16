@@ -224,7 +224,7 @@ const Index = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <img 
-                  src="/lovable-uploads/visustock-logo-no-bg.png" 
+                  src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
                   alt="VisuStock" 
                   className="h-10 w-auto"
                 />
