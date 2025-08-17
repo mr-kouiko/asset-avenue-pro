@@ -102,7 +102,7 @@ const Infinity = () => {
               <div className="space-y-4">
                 <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
                   Débloquez une Créativité Illimitée avec{" "}
-                  <span className="text-primary-glow">StockMarket Infinity</span>
+                  <span className="text-primary-glow">VISUSTOCK Infinity</span>
                 </h1>
                 <p className="text-xl text-slate-300 max-w-2xl">
                   Contenu authentique et professionnel avec un plan illimité pour les créateurs individuels et freelances
@@ -237,7 +237,7 @@ const Infinity = () => {
               Accès illimité à notre bibliothèque
             </h2>
             <p className="text-xl text-muted-foreground">
-              Explorez la bibliothèque StockMarket Infinity
+              Explorez la bibliothèque VISUSTOCK Infinity
             </p>
           </div>
 
@@ -277,7 +277,7 @@ const Infinity = () => {
             Prêt à débloquer votre créativité ?
           </h2>
           <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-            Rejoignez des milliers de créateurs qui font confiance à StockMarket Infinity pour leurs projets.
+            Rejoignez des milliers de créateurs qui font confiance à VISUSTOCK Infinity pour leurs projets.
           </p>
           <Button 
             size="lg"
