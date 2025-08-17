@@ -210,9 +210,8 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-foreground text-background py-12">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-8">
+      <footer className="bg-foreground text-background py-12"> <div className="grid md:grid-cols-5 gap-8">
+      
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <img 
