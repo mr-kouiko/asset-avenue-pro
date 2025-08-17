@@ -21,43 +21,14 @@ const Infinity = () => {
   const displayPrice = isYearly ? Math.round(yearlyPrice / 12) : monthlyPrice;
   const originalPrice = 50;
 
-  const handleSubscribe = async () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Connexion requise",
-        description: "Vous devez être connecté pour vous abonner."
-      });
-      return;
-    }
+  const handleSubscribe = () => {
+    toast({
+      title: "Redirection vers le paiement...",
+      description: "Vous allez être redirigé vers la page de paiement sécurisée."
+    });
 
-    try {
-      toast({
-        title: "Redirection vers le paiement...",
-        description: "Vous allez être redirigé vers la page de paiement sécurisée."
-      });
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          priceId: isYearly ? 'yearly-plan' : 'monthly-plan',
-          successUrl: `${window.location.origin}/dashboard?subscription=success`,
-          cancelUrl: `${window.location.origin}/infinity?subscription=cancelled`
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la création de la session de paiement:', error);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Impossible de créer la session de paiement."
-      });
-    }
+    // Open Stripe payment link in new tab
+    window.open('https://buy.stripe.com/aFa00j3nigwM7YjeWt6sw00', '_blank');
   };
 
   const features = [
