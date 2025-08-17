@@ -143,7 +143,7 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {[
               { name: "Photos", count: "2.1M", color: "bg-blue-500", category: "photo" },
               { name: "Vidéos", count: "430K", color: "bg-red-500", category: "video" },
