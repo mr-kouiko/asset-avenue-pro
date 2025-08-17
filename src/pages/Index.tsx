@@ -251,8 +251,16 @@ const Index = () => {
               <ul className="space-y-2 text-sm opacity-80">
                 <li><Link to="/support" className="hover:opacity-100">Centre d'aide</Link></li>
                 <li><Link to="/contact" className="hover:opacity-100">Contact</Link></li>
-                <li><Link to="/licenses" className="hover:opacity-100">Licences</Link></li>
-                <li><Link to="/terms" className="hover:opacity-100">Conditions</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-3">Légal</h4>
+              <ul className="space-y-2 text-sm opacity-80">
+                <li><Link to="/terms" className="hover:opacity-100">Conditions générales</Link></li>
+                <li><Link to="/privacy-policy" className="hover:opacity-100">Politique de confidentialité</Link></li>
+                <li><Link to="/cookie-policy" className="hover:opacity-100">Politique des cookies</Link></li>
+                <li><Link to="/license-agreement" className="hover:opacity-100">Accord de licence</Link></li>
               </ul>
             </div>
           </div>

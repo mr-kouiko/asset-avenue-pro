@@ -17,6 +17,9 @@ import Support from "./pages/Support";
 import Contact from "./pages/Contact";
 import Licenses from "./pages/Licenses";
 import Terms from "./pages/Terms";
+import CookiePolicy from "./pages/CookiePolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import LicenseAgreement from "./pages/LicenseAgreement";
 import Infinity from "./pages/Infinity";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +46,9 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/licenses" element={<Licenses />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/cookie-policy" element={<CookiePolicy />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/license-agreement" element={<LicenseAgreement />} />
               <Route path="/infinity" element={<Infinity />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
