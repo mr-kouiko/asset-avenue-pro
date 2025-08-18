@@ -210,8 +210,9 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-foreground text-background py-12"> <div className="grid md:grid-cols-5 gap-8">
-      
+      <footer className="bg-foreground text-background py-12">
+        <div className="container">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <img 
@@ -236,12 +237,13 @@ const Index = () => {
             </div>
 
             <div>
-              <h4 className="font-semibold mb-3">Compte</h4>
+              <h4 className="font-semibold mb-3">Company</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li>Se connecter</li>
-                <li>S'inscrire</li>
-                <li>Espace vendeur</li>
-                <li>Mon panier</li>
+                <li><Link to="/about" className="hover:opacity-100">About VisuStock</Link></li>
+                <li><Link to="/infinity" className="hover:opacity-100">Packages & Pricing</Link></li>
+                <li><Link to="/enterprise" className="hover:opacity-100">Enterprise Solutions</Link></li>
+                <li><Link to="/blog" className="hover:opacity-100">Blog</Link></li>
+                <li><Link to="/newsroom" className="hover:opacity-100">Newsroom</Link></li>
               </ul>
             </div>
 
