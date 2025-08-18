@@ -210,63 +210,63 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-foreground text-background py-12">
+      <footer className="bg-gray-100 text-gray-800 py-12">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <img 
-                  src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
-                  alt="VisuStock" 
-                  className="h-10 w-auto"
-                />
-              </div>
-              <p className="text-sm opacity-80">
-                La marketplace de référence pour les contenus créatifs de qualité.
-              </p>
+              <h4 className="font-semibold mb-4 text-gray-900">Products</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/marketplace" className="text-gray-600 hover:text-gray-900 transition-colors">Stock Photos</Link></li>
+                <li><Link to="/marketplace?category=video" className="text-gray-600 hover:text-gray-900 transition-colors">Stock Videos</Link></li>
+                <li><Link to="/marketplace?category=illustration" className="text-gray-600 hover:text-gray-900 transition-colors">Illustrations</Link></li>
+                <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio Tracks</Link></li>
+                <li><Link to="/api" className="text-gray-600 hover:text-gray-900 transition-colors">API Access</Link></li>
+              </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-3">Catégories</h4>
-              <ul className="space-y-2 text-sm opacity-80">
-                <li><Link to="/marketplace?category=photo" className="hover:opacity-100">Photos</Link></li>
-                <li><Link to="/marketplace?category=video" className="hover:opacity-100">Vidéos</Link></li>
-                <li><Link to="/marketplace?category=illustration" className="hover:opacity-100">Illustrations</Link></li>
-                <li><Link to="/marketplace?category=audio" className="hover:opacity-100">Audio</Link></li>
+              <h4 className="font-semibold mb-4 text-gray-900">Resources</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Help Center</Link></li>
+                <li><Link to="/tutorials" className="text-gray-600 hover:text-gray-900 transition-colors">Tutorials</Link></li>
+                <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
+                <li><Link to="/community" className="text-gray-600 hover:text-gray-900 transition-colors">Community</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-3">Company</h4>
-              <ul className="space-y-2 text-sm opacity-80">
-                <li><Link to="/about" className="hover:opacity-100">About VisuStock</Link></li>
-                <li><Link to="/infinity" className="hover:opacity-100">Packages & Pricing</Link></li>
-                <li><Link to="/enterprise" className="hover:opacity-100">Enterprise Solutions</Link></li>
-                <li><Link to="/blog" className="hover:opacity-100">Blog</Link></li>
-                <li><Link to="/newsroom" className="hover:opacity-100">Newsroom</Link></li>
+              <h4 className="font-semibold mb-4 text-gray-900">Company</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors">About VisuStock</Link></li>
+                <li><Link to="/infinity" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link></li>
+                <li><Link to="/enterprise" className="text-gray-600 hover:text-gray-900 transition-colors">Enterprise</Link></li>
+                <li><Link to="/press" className="text-gray-600 hover:text-gray-900 transition-colors">Press Kit</Link></li>
+                <li><Link to="/partnerships" className="text-gray-600 hover:text-gray-900 transition-colors">Partnerships</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-3">Support</h4>
-              <ul className="space-y-2 text-sm opacity-80">
-                <li><Link to="/support" className="hover:opacity-100">Centre d'aide</Link></li>
-                <li><Link to="/contact" className="hover:opacity-100">Contact</Link></li>
+              <h4 className="font-semibold mb-4 text-gray-900">Legal</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/privacy-policy" className="text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/cookie-policy" className="text-gray-600 hover:text-gray-900 transition-colors">Cookie Policy</Link></li>
+                <li><Link to="/license-agreement" className="text-gray-600 hover:text-gray-900 transition-colors">License Agreement</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-3">Légal</h4>
-              <ul className="space-y-2 text-sm opacity-80">
-                <li><Link to="/terms" className="hover:opacity-100">Conditions générales</Link></li>
-                <li><Link to="/privacy-policy" className="hover:opacity-100">Politique de confidentialité</Link></li>
-                <li><Link to="/cookie-policy" className="hover:opacity-100">Politique des cookies</Link></li>
-                <li><Link to="/license-agreement" className="hover:opacity-100">Accord de licence</Link></li>
+              <h4 className="font-semibold mb-4 text-gray-900">Contact</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact Us</Link></li>
+                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Customer Support</Link></li>
+                <li><Link to="/sales" className="text-gray-600 hover:text-gray-900 transition-colors">Sales Inquiries</Link></li>
+                <li><Link to="/feedback" className="text-gray-600 hover:text-gray-900 transition-colors">Feedback</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm opacity-60">
+          <div className="border-t border-gray-300 mt-12 pt-8 text-center text-sm text-gray-600">
             © 2024 VisuStock. Tous droits réservés.
           </div>
         </div>
