@@ -238,7 +238,7 @@ const Index = () => {
               <h4 className="font-semibold mb-4 text-gray-900">Company</h4>
               <ul className="space-y-3 text-sm">
                 <li><Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors">About VisuStock</Link></li>
-                <li><Link to="/infinity" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link></li>
+                <li><Link to="/infinity" className="text-gray-600 hover:text-gray-900 transition-colors">Packages & Pricing</Link></li>
                 <li><Link to="/enterprise" className="text-gray-600 hover:text-gray-900 transition-colors">Enterprise</Link></li>
                 <li><Link to="/press" className="text-gray-600 hover:text-gray-900 transition-colors">Press Kit</Link></li>
                 <li><Link to="/partnerships" className="text-gray-600 hover:text-gray-900 transition-colors">Partnerships</Link></li>
