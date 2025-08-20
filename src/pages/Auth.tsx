@@ -74,7 +74,7 @@ const Auth = () => {
     await signUp(formData.registerEmail, formData.registerPassword, {
       firstName: formData.firstName,
       lastName: formData.lastName,
-      userType,
+      role: userType === "seller" ? "creator" : "client",
       storeName: formData.storeName,
       country: formData.country
     });
