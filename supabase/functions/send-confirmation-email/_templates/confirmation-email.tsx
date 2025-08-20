@@ -34,14 +34,18 @@ export const ConfirmationEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Text style={logo}>📸 VisuStock</Text>
+          <Img
+            src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/logo%20VisuStock/VISUSTOCK%20NO%20NACKGROUND.png"
+            alt="VisuStock"
+            style={logoImage}
+          />
           <Text style={tagline}>Plateforme de contenus visuels premium</Text>
         </Section>
         
         <Section style={welcomeSection}>
           <Heading style={h1}>Bienvenue !</Heading>
           <Text style={welcomeText}>
-            Cliquez sur le bouton ci-dessous pour confirmer votre inscription et commencer à utiliser VisuStock.
+            Bienvenue sur VisuStock ! Cliquez sur le bouton ci-dessous pour confirmer votre inscription et activer immédiatement votre compte.
           </Text>
         </Section>
 
@@ -50,7 +54,7 @@ export const ConfirmationEmail = ({
             href={`${supabase_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`}
             style={button}
           >
-            Confirmer mon inscription
+            Confirmer mon compte
           </Link>
         </Section>
 
@@ -67,10 +71,10 @@ export const ConfirmationEmail = ({
           <Text style={footerText}>
             <strong>Équipe VisuStock</strong><br />
             📧 support@visustock.com<br />
-            🌐 visustock.com
+            🌐 www.visustock.com
           </Text>
           <Text style={disclaimer}>
-            Si vous n'avez pas créé de compte VisuStock, vous pouvez ignorer cet email en toute sécurité.
+            Cet email a été envoyé automatiquement suite à votre inscription sur VisuStock. Si vous n'avez pas créé de compte, vous pouvez ignorer cet email en toute sécurité.
           </Text>
         </Section>
       </Container>
@@ -99,12 +103,11 @@ const logoSection = {
   textAlign: 'center' as const,
 }
 
-const logo = {
-  fontSize: '32px',
-  fontWeight: 'bold',
-  color: '#FF6B35',
-  margin: '0 0 8px',
-  lineHeight: '1.2',
+const logoImage = {
+  width: '200px',
+  height: 'auto',
+  margin: '0 auto 16px',
+  display: 'block',
 }
 
 const tagline = {
@@ -140,7 +143,7 @@ const buttonSection = {
 }
 
 const button = {
-  backgroundColor: '#FF6B35',
+  backgroundColor: '#4CAF50',
   borderRadius: '8px',
   color: '#ffffff',
   fontSize: '16px',
@@ -151,6 +154,8 @@ const button = {
   padding: '16px 32px',
   margin: '0 0 32px',
   cursor: 'pointer',
+  border: 'none',
+  boxShadow: '0 2px 4px rgba(76, 175, 80, 0.3)',
 }
 
 const helpSection = {
@@ -166,7 +171,7 @@ const helpText = {
 }
 
 const linkText = {
-  color: '#FF6B35',
+  color: '#4CAF50',
   fontSize: '14px',
   lineHeight: '1.5',
   wordBreak: 'break-all' as const,
