@@ -57,28 +57,78 @@ const Auth = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.firstName || !formData.lastName || !formData.registerEmail || 
-        !formData.registerPassword || !formData.country || !formData.acceptTerms) {
+    // Detailed validation with specific error messages
+    if (!formData.firstName) {
+      console.error('Registration error: First name is required');
+      return;
+    }
+    
+    if (!formData.lastName) {
+      console.error('Registration error: Last name is required');
+      return;
+    }
+    
+    if (!formData.registerEmail) {
+      console.error('Registration error: Email is required');
+      return;
+    }
+    
+    if (!formData.registerPassword) {
+      console.error('Registration error: Password is required');
+      return;
+    }
+    
+    if (formData.registerPassword.length < 6) {
+      console.error('Registration error: Password must be at least 6 characters');
+      return;
+    }
+    
+    if (!formData.country) {
+      console.error('Registration error: Country is required');
+      return;
+    }
+    
+    if (!formData.acceptTerms) {
+      console.error('Registration error: Terms must be accepted');
       return;
     }
 
     if (formData.registerPassword !== formData.confirmPassword) {
+      console.error('Registration error: Passwords do not match');
       return;
     }
 
     if (userType === "seller" && !formData.storeName) {
+      console.error('Registration error: Store name is required for sellers');
       return;
     }
 
-    setLoading(true);
-    await signUp(formData.registerEmail, formData.registerPassword, {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      role: userType === "seller" ? "creator" : "client",
-      storeName: formData.storeName,
-      country: formData.country
+    console.log('Starting registration process for:', {
+      email: formData.registerEmail,
+      userType,
+      role: userType === "seller" ? "creator" : "client"
     });
-    setLoading(false);
+
+    setLoading(true);
+    try {
+      const result = await signUp(formData.registerEmail, formData.registerPassword, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: userType === "seller" ? "creator" : "client",
+        storeName: formData.storeName,
+        country: formData.country
+      });
+      
+      if (result.error) {
+        console.error('Registration failed:', result.error);
+      } else {
+        console.log('Registration successful');
+      }
+    } catch (error) {
+      console.error('Registration exception:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {

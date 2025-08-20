@@ -57,17 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, userData: any) => {
+    console.log('SignUp called with:', { email, userData: { ...userData, password: '[HIDDEN]' } });
+    
     try {
       cleanupAuthState();
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        // Continue even if this fails
+        console.log('Sign out during signup failed (expected):', err);
       }
 
       const redirectUrl = `${window.location.origin}/`;
+      console.log('Using redirect URL:', redirectUrl);
       
-      const { error } = await supabase.auth.signUp({
+      const signUpData = {
         email,
         password,
         options: {
@@ -75,24 +78,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             first_name: userData.firstName,
             last_name: userData.lastName,
-            role: userData.role, // Pass role to trigger proper email sending
+            role: userData.role,
             store_name: userData.storeName,
             country: userData.country
           }
         }
+      };
+      
+      console.log('Calling supabase.auth.signUp with:', { 
+        ...signUpData, 
+        password: '[HIDDEN]',
+        options: { ...signUpData.options, emailRedirectTo: redirectUrl }
       });
+      
+      const { data, error } = await supabase.auth.signUp(signUpData);
+      
+      console.log('SignUp response:', { data: data?.user ? 'User created' : 'No user', error });
 
       if (error) {
+        console.error('SignUp error details:', error);
+        
+        let errorMessage = "Une erreur est survenue lors de l'inscription.";
+        
+        if (error.message.includes('User already registered')) {
+          errorMessage = "Cet email est déjà utilisé. Essayez de vous connecter.";
+        } else if (error.message.includes('Password')) {
+          errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
+        } else if (error.message.includes('Email')) {
+          errorMessage = "L'adresse email n'est pas valide.";
+        } else if (error.message.includes('role_audit') || error.message.includes('changed_by')) {
+          errorMessage = "Erreur de configuration. Veuillez réessayer.";
+        }
+        
         toast({
           variant: "destructive",
           title: "Erreur d'inscription",
-          description: error.message === 'User already registered' 
-            ? "Cet email est déjà utilisé. Essayez de vous connecter."
-            : "Une erreur est survenue lors de l'inscription."
+          description: errorMessage
         });
         return { error };
       }
 
+      console.log('SignUp successful');
       toast({
         title: "Inscription réussie !",
         description: "Un email de confirmation a été envoyé. Vérifiez votre boîte de réception."
@@ -100,10 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null };
     } catch (error: any) {
+      console.error('SignUp exception:', error);
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Une erreur inattendue est survenue."
+        description: "Une erreur inattendue est survenue. Veuillez réessayer."
       });
       return { error };
     }
