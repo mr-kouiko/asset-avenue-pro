@@ -9,7 +9,9 @@ import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import ProductDetail from "./pages/ProductDetail";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+import DashboardRouter from "./pages/DashboardRouter";
+import SellerDashboard from "./pages/SellerDashboard";
+import BuyerDashboard from "./pages/BuyerDashboard";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Upload from "./pages/Upload";
@@ -39,7 +41,9 @@ const App = () => (
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<DashboardRouter />} />
+              <Route path="/seller-dashboard" element={<SellerDashboard />} />
+              <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/upload" element={<Upload />} />

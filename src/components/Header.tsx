@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Search, ShoppingCart, User, Menu, Globe, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 
 export const Header = () => {
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut, loading, getUserRole } = useAuth();
   const { getItemCount } = useCart();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (user) {
+        const role = await getUserRole();
+        setUserRole(role);
+      } else {
+        setUserRole(null);
+      }
+    };
+    fetchRole();
+  }, [user, getUserRole]);
 
   if (loading) {
     return (
@@ -108,9 +122,20 @@ export const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard">Tableau de bord</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard">Mes achats</Link>
-                  </DropdownMenuItem>
+                  {userRole === 'creator' || userRole === 'admin' ? (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/seller-dashboard">Dashboard vendeur</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/upload">Uploader du contenu</Link>
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link to="/buyer-dashboard">Mes achats</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={signOut}
