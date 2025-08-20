@@ -127,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <div style="text-align: center;">
-              <a href="${supabaseUrl.replace('kdgfpophpoqugtuvfxqx.supabase.co', window?.location?.origin || 'https://kdgfpophpoqugtuvfxqx.supabase.co')}/upload" class="button">
+              <a href="https://visustock.com/upload" class="button">
                 🚀 Commencer à vendre
               </a>
             </div>

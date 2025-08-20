@@ -43,3 +43,6 @@ verify_jwt = true
 
 [functions.secure-download]
 verify_jwt = true
+
+[functions.send-vendor-emails]
+verify_jwt = true

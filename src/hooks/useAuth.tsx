@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             first_name: userData.firstName,
             last_name: userData.lastName,
-            role: userData.role || 'client', // Use provided role or default to client
+            role: userData.role, // Pass role to trigger proper email sending
             store_name: userData.storeName,
             country: userData.country
           }
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       toast({
         title: "Inscription réussie !",
-        description: "Vérifiez votre email pour confirmer votre compte."
+        description: "Un email de confirmation a été envoyé. Vérifiez votre boîte de réception."
       });
 
       return { error: null };
