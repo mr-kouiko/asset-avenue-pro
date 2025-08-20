@@ -65,6 +65,9 @@ export const useSellerDashboard = () => {
     type: string; 
     bucket?: string; 
     size?: number;
+    previewUrl?: string;
+    thumbnailUrl?: string;
+    isWatermarked?: boolean;
   }[]>([]);
 
   // Fetch seller statistics
@@ -153,13 +156,19 @@ export const useSellerDashboard = () => {
     type: string; 
     bucket: string; 
     size: number;
+    previewUrl?: string;
+    thumbnailUrl?: string;
+    isWatermarked?: boolean;
   }[]) => {
     setDraftFiles(prev => [...prev, ...files.map(file => ({
       url: file.url,
       name: file.name,
       type: file.type,
       bucket: file.bucket,
-      size: file.size
+      size: file.size,
+      previewUrl: file.previewUrl,
+      thumbnailUrl: file.thumbnailUrl,
+      isWatermarked: file.isWatermarked
     }))]);
   };
 
@@ -186,7 +195,7 @@ export const useSellerDashboard = () => {
 
       console.log('User authenticated:', user.id);
 
-      // Create the submission first
+      // Create the submission with auto-approval
       const { data: submission, error: submissionError } = await supabase
         .from('content_submissions')
         .insert({
@@ -196,6 +205,9 @@ export const useSellerDashboard = () => {
           category_id: submissionData.category_id,
           price: submissionData.price,
           tags: submissionData.tags || [],
+          status: 'approved', // Auto-approve all submissions
+          approved_at: new Date().toISOString(),
+          approved_by: user.id // Self-approved for auto-publishing
         })
         .select()
         .single();
@@ -215,8 +227,15 @@ export const useSellerDashboard = () => {
           file_format: file.name.split('.').pop() || '',
           file_size: file.size || 0,
           is_preview: false,
-          is_original: file.bucket === 'original-files',
-          metadata: { bucket: file.bucket || 'seller-content' }
+          is_original: true, // This is the original file
+          preview_path: file.previewUrl || null,
+          thumbnail_path: file.thumbnailUrl || null,
+          metadata: { 
+            bucket: file.bucket || 'original-files',
+            isWatermarked: file.isWatermarked || false,
+            hasPreview: !!file.previewUrl,
+            hasThumbnail: !!file.thumbnailUrl
+          }
         }));
 
         console.log('File inserts:', fileInserts);
@@ -233,7 +252,8 @@ export const useSellerDashboard = () => {
         }
       }
 
-      toast.success(`Contenu créé avec succès${draftFiles.length > 0 ? ` avec ${draftFiles.length} fichier(s)` : ''}`);
+      const watermarkedCount = draftFiles.filter(f => f.isWatermarked).length;
+      toast.success(`Contenu publié avec succès! ${draftFiles.length > 0 ? `${draftFiles.length} fichier(s) uploadé(s)` : ''}${watermarkedCount > 0 ? ` (${watermarkedCount} avec watermarking)` : ''}`);
       clearDraftFiles();
       await fetchSubmissions();
       await fetchStats();

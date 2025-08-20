@@ -25,6 +25,7 @@ import {
   Image,
   Film,
   Music,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -560,21 +561,52 @@ const Dashboard = () => {
                         {/* Files list */}
                         {submission.content_files && submission.content_files.length > 0 && (
                           <div className="mb-4">
-                            <h5 className="font-medium mb-2">Fichiers uploadés:</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <h5 className="font-medium mb-2 flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Fichiers ({submission.content_files.length})
+                            </h5>
+                            <div className="grid gap-2">
                               {submission.content_files.map((file) => (
-                                <div key={file.id} className="flex items-center justify-between p-2 border rounded">
+                                <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                                   <div className="flex items-center gap-2">
-                                    {file.file_type.startsWith('image/') && <Image className="h-4 w-4" />}
-                                    {file.file_type.startsWith('video/') && <Film className="h-4 w-4" />}
-                                    {file.file_type.startsWith('audio/') && <Music className="h-4 w-4" />}
-                                    <span className="text-sm truncate">{file.file_name}</span>
-                                    {file.is_original && <Badge variant="outline" className="text-xs">Original</Badge>}
-                                    {file.is_preview && <Badge variant="outline" className="text-xs">Aperçu</Badge>}
+                                    {file.file_type.startsWith('image/') ? (
+                                      <Image className="h-4 w-4" />
+                                    ) : file.file_type.startsWith('video/') ? (
+                                      <Film className="h-4 w-4" />
+                                    ) : file.file_type.startsWith('audio/') ? (
+                                      <Music className="h-4 w-4" />
+                                    ) : (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                    <div>
+                                      <p className="text-sm font-medium">{file.file_name}</p>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <span>{(file.file_size / 1024 / 1024).toFixed(1)} MB</span>
+                                        {file.is_original && (
+                                          <Badge variant="outline" className="text-xs">Original</Badge>
+                                        )}
+                                        {file.preview_path && (
+                                          <Badge variant="secondary" className="text-xs">Watermarqué</Badge>
+                                        )}
+                                        {file.thumbnail_path && (
+                                          <Badge variant="outline" className="text-xs">Miniature</Badge>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {Math.round(file.file_size / 1024)}KB
-                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    {file.preview_path && (
+                                      <Badge variant="default" className="text-xs">
+                                        <Eye className="h-3 w-3 mr-1" />
+                                        Preview
+                                      </Badge>
+                                    )}
+                                    {submission.status === 'approved' && (
+                                      <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        Publié
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -582,13 +614,16 @@ const Dashboard = () => {
                         )}
 
                         {/* File upload for existing submission */}
-                        {submission.status === 'pending' && (
+                        {submission.status === 'approved' && (
                           <div className="border-t pt-4">
                             <h5 className="font-medium mb-3">Ajouter des fichiers:</h5>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Les nouveaux fichiers seront automatiquement watermarqués et publiés.
+                            </p>
                             <FileUpload
                               onFilesUploaded={(files) => handleFilesUploaded(files, submission.id)}
-                              maxFiles={5}
-                              maxFileSize={100}
+                              maxFiles={20}
+                              maxFileSize={500}
                             />
                           </div>
                         )}
@@ -630,18 +665,22 @@ const Dashboard = () => {
               <CardContent>
                 <FileUpload
                   onFilesUploaded={(files) => {
-                    toast.success(`${files.length} fichier(s) uploadé(s). N'oubliez pas de les associer à un contenu.`);
+                    const watermarkedCount = files.filter(f => f.isWatermarked).length;
+                    toast.success(`${files.length} fichier(s) uploadé(s)${watermarkedCount > 0 ? ` (${watermarkedCount} avec watermarking)` : ''}. N'oubliez pas de les associer à un contenu.`);
                   }}
-                  maxFiles={10}
-                  maxFileSize={100}
+                  maxFiles={50}
+                  maxFileSize={500}
+                  autoUpload={true}
                 />
                 
                 <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                  <h4 className="font-medium mb-2">Conseil:</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Pour une meilleure organisation, créez d'abord un contenu via le bouton "Ajouter du contenu" 
-                    puis ajoutez vos fichiers dans l'onglet "Mon contenu".
-                  </p>
+                  <h4 className="font-medium mb-2">Upload automatisé:</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• Les images sont automatiquement watermarquées pour le marketplace</p>
+                    <p>• Les fichiers originaux restent protégés et disponibles après achat</p>
+                    <p>• Upload en lot supporté (glissez-déposez plusieurs fichiers à la fois)</p>
+                    <p>• Publication automatique - plus besoin d'attendre la validation</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

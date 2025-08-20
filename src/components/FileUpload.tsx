@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef } from "react";
-import { Upload, X, FileText, Image, Film, Music, Eye, Check } from "lucide-react";
+import { Upload, X, FileText, Image, Film, Music, Eye, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { addWatermarkToImage, shouldWatermark, generateThumbnail } from "@/utils/watermark";
 
 interface FileUploadProps {
   onFilesUploaded?: (fileUrls: { 
@@ -14,26 +15,34 @@ interface FileUploadProps {
     type: string; 
     bucket: string;
     size: number;
+    previewUrl?: string;
+    thumbnailUrl?: string;
+    isWatermarked?: boolean;
   }[]) => void;
   acceptedTypes?: string[];
   maxFileSize?: number; // in MB
   maxFiles?: number;
+  autoUpload?: boolean;
 }
 
 interface UploadFile {
   file: File;
   id: string;
   progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
   url?: string;
+  previewUrl?: string;
+  thumbnailUrl?: string;
   error?: string;
+  isWatermarked?: boolean;
 }
 
 export const FileUpload = ({ 
   onFilesUploaded, 
-  acceptedTypes = ['image/*', 'video/*', 'audio/*'],
-  maxFileSize = 100,
-  maxFiles = 10
+  acceptedTypes = ['image/*', 'video/*', 'audio/*', 'model/*'],
+  maxFileSize = 500, // Increased for 3D files
+  maxFiles = 50, // Allow more files for bulk upload
+  autoUpload = false
 }: FileUploadProps) => {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -86,7 +95,7 @@ export const FileUpload = ({
       
       newFiles.push({
         file,
-        id: `${Date.now()}-${i}`,
+        id: `${Date.now()}-${i}-${Math.random().toString(36).substring(2)}`,
         progress: 0,
         status: error ? 'error' : 'pending',
         error
@@ -98,19 +107,22 @@ export const FileUpload = ({
     }
 
     setFiles(prev => [...prev, ...newFiles]);
-  }, [files.length, maxFiles, acceptedTypes, maxFileSize]);
+
+    // Auto-upload if enabled
+    if (autoUpload && newFiles.some(f => f.status === 'pending')) {
+      // Small delay to let the UI update
+      setTimeout(() => {
+        uploadAllFiles();
+      }, 500);
+    }
+  }, [files.length, maxFiles, acceptedTypes, maxFileSize, autoUpload]);
 
   const uploadFile = async (uploadFile: UploadFile) => {
     try {
+      // Update status to uploading
       setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
+        f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 10 } : f
       ));
-
-      // Determine bucket based on file type
-      let bucket = 'seller-content';
-      if (uploadFile.file.type.startsWith('image/') && uploadFile.file.size > 2 * 1024 * 1024) {
-        bucket = 'original-files'; // Large images go to private bucket
-      }
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -119,48 +131,107 @@ export const FileUpload = ({
       // Generate unique filename
       const fileExt = uploadFile.file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const basePath = `${user.id}/${fileName}`;
 
-      // Upload to Supabase Storage with progress simulation
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, uploadFile.file);
+      // Upload original file to private bucket
+      setFiles(prev => prev.map(f => 
+        f.id === uploadFile.id ? { ...f, progress: 30 } : f
+      ));
 
-      // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
-        setFiles(prev => prev.map(f => {
-          if (f.id === uploadFile.id && f.progress < 95) {
-            return { ...f, progress: f.progress + 10 };
+      const { data: originalData, error: originalError } = await supabase.storage
+        .from('original-files')
+        .upload(basePath, uploadFile.file);
+
+      if (originalError) throw originalError;
+
+      let previewUrl: string | undefined;
+      let thumbnailUrl: string | undefined;
+      let isWatermarked = false;
+
+      // Process watermark and thumbnail for images
+      if (shouldWatermark(uploadFile.file.type)) {
+        setFiles(prev => prev.map(f => 
+          f.id === uploadFile.id ? { ...f, status: 'processing', progress: 50 } : f
+        ));
+
+        try {
+          // Generate watermarked preview
+          const watermarkedBlob = await addWatermarkToImage(uploadFile.file, {
+            opacity: 0.4,
+            position: 'center',
+            size: 25
+          });
+
+          const previewFileName = `preview_${fileName}`;
+          const previewPath = `${user.id}/${previewFileName}`;
+
+          const { data: previewData, error: previewError } = await supabase.storage
+            .from('previews')
+            .upload(previewPath, watermarkedBlob);
+
+          if (!previewError && previewData) {
+            previewUrl = previewData.path;
+            isWatermarked = true;
           }
-          return f;
-        }));
-      }, 100);
 
-      setTimeout(() => clearInterval(progressInterval), 1000);
+          setFiles(prev => prev.map(f => 
+            f.id === uploadFile.id ? { ...f, progress: 70 } : f
+          ));
 
-      if (error) throw error;
+          // Generate thumbnail
+          const thumbnailBlob = await generateThumbnail(uploadFile.file);
+          const thumbnailFileName = `thumb_${fileName}`;
+          const thumbnailPath = `${user.id}/${thumbnailFileName}`;
 
-      // Store file path instead of public URL (bucket is now private)
-      const uploadedFilePath = data.path;
+          const { data: thumbData, error: thumbError } = await supabase.storage
+            .from('thumbnails')
+            .upload(thumbnailPath, thumbnailBlob);
+
+          if (!thumbError && thumbData) {
+            thumbnailUrl = thumbData.path;
+          }
+
+        } catch (watermarkError) {
+          console.warn('Watermarking failed:', watermarkError);
+          // Continue without watermark if it fails
+        }
+      }
 
       setFiles(prev => prev.map(f => 
+        f.id === uploadFile.id ? { ...f, progress: 90 } : f
+      ));
+
+      // Final update
+      setFiles(prev => prev.map(f => 
         f.id === uploadFile.id 
-          ? { ...f, status: 'completed', progress: 100, url: uploadedFilePath }
+          ? { 
+              ...f, 
+              status: 'completed', 
+              progress: 100, 
+              url: originalData.path,
+              previewUrl,
+              thumbnailUrl,
+              isWatermarked
+            }
           : f
       ));
 
       return { 
-        url: uploadedFilePath, 
+        url: originalData.path, 
         name: uploadFile.file.name, 
         type: uploadFile.file.type,
-        bucket,
-        size: uploadFile.file.size 
+        bucket: 'original-files',
+        size: uploadFile.file.size,
+        previewUrl,
+        thumbnailUrl,
+        isWatermarked
       };
     } catch (error) {
       console.error('Upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'upload';
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id 
-          ? { ...f, status: 'error', error: 'Erreur lors de l\'upload' }
+          ? { ...f, status: 'error', error: errorMessage }
           : f
       ));
       throw error;
@@ -169,31 +240,60 @@ export const FileUpload = ({
 
   const uploadAllFiles = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending');
-    const uploadPromises = pendingFiles.map(uploadFile);
+    if (pendingFiles.length === 0) return;
+    
+    toast.info(`Début de l'upload de ${pendingFiles.length} fichier(s)...`);
     
     try {
-      const results = await Promise.allSettled(uploadPromises);
-      const successfulUploads = results
+      // Process files in smaller batches to avoid overwhelming the server
+      const batchSize = 5;
+      const batches = [];
+      for (let i = 0; i < pendingFiles.length; i += batchSize) {
+        batches.push(pendingFiles.slice(i, i + batchSize));
+      }
+
+      const allResults = [];
+      for (const batch of batches) {
+        const batchPromises = batch.map(uploadFile);
+        const batchResults = await Promise.allSettled(batchPromises);
+        allResults.push(...batchResults);
+        
+        // Small delay between batches
+        if (batches.indexOf(batch) < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      const successfulUploads = allResults
         .filter((result): result is PromiseFulfilledResult<{
           url: string; 
           name: string; 
           type: string; 
           bucket: string;
           size: number;
+          previewUrl?: string;
+          thumbnailUrl?: string;
+          isWatermarked?: boolean;
         }> => result.status === 'fulfilled')
         .map(result => result.value);
 
+      const failedCount = allResults.filter(result => result.status === 'rejected').length;
+
       if (successfulUploads.length > 0) {
         onFilesUploaded?.(successfulUploads);
-        toast.success(`${successfulUploads.length} fichier(s) uploadé(s) avec succès`);
+        toast.success(`${successfulUploads.length} fichier(s) uploadé(s) avec succès${
+          successfulUploads.filter(f => f.isWatermarked).length > 0 
+            ? ' avec watermarking automatique' 
+            : ''
+        }`);
       }
 
-      const failedCount = results.filter(result => result.status === 'rejected').length;
       if (failedCount > 0) {
-        toast.error(`${failedCount} fichier(s) ont échoué`);
+        toast.error(`${failedCount} fichier(s) ont échoué lors de l'upload`);
       }
     } catch (error) {
-      toast.error('Erreur lors de l\'upload des fichiers');
+      console.error('Bulk upload error:', error);
+      toast.error('Erreur lors de l\'upload en masse');
     }
   };
 
@@ -302,30 +402,36 @@ export const FileUpload = ({
                       <p className="text-sm font-medium truncate">
                         {uploadFile.file.name}
                       </p>
-                      <Badge variant={
+                       <Badge variant={
                         uploadFile.status === 'completed' ? 'default' :
                         uploadFile.status === 'error' ? 'destructive' :
-                        uploadFile.status === 'uploading' ? 'secondary' : 'outline'
+                        uploadFile.status === 'uploading' ? 'secondary' :
+                        uploadFile.status === 'processing' ? 'secondary' : 'outline'
                       }>
                         {uploadFile.status === 'completed' && <Check className="h-3 w-3 mr-1" />}
+                        {uploadFile.status === 'error' && <AlertCircle className="h-3 w-3 mr-1" />}
                         {uploadFile.status === 'pending' && 'En attente'}
                         {uploadFile.status === 'uploading' && 'Upload...'}
-                        {uploadFile.status === 'completed' && 'Terminé'}
+                        {uploadFile.status === 'processing' && 'Traitement...'}
+                        {uploadFile.status === 'completed' && (uploadFile.isWatermarked ? 'Terminé ✨' : 'Terminé')}
                         {uploadFile.status === 'error' && 'Erreur'}
                       </Badge>
                     </div>
                     
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{formatFileSize(uploadFile.file.size)}</span>
-                      {uploadFile.status === 'uploading' && (
+                      {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
                         <span>{Math.round(uploadFile.progress)}%</span>
                       )}
                       {uploadFile.error && (
                         <span className="text-destructive">{uploadFile.error}</span>
                       )}
+                      {uploadFile.isWatermarked && uploadFile.status === 'completed' && (
+                        <span className="text-primary text-xs">Watermarqué</span>
+                      )}
                     </div>
 
-                    {uploadFile.status === 'uploading' && (
+                    {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
                       <Progress value={uploadFile.progress} className="mt-2 h-1" />
                     )}
                   </div>

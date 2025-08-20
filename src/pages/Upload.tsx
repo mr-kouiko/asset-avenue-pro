@@ -55,6 +55,9 @@ const Upload = () => {
     type: string; 
     bucket: string;
     size: number;
+    previewUrl?: string;
+    thumbnailUrl?: string;
+    isWatermarked?: boolean;
   }[]) => {
     addDraftFiles(uploadedFiles);
   };
@@ -104,7 +107,7 @@ const Upload = () => {
       });
 
       if (result) {
-        toast.success('Contenu créé avec succès ! En attente de validation.');
+        toast.success('Contenu publié et disponible immédiatement sur le marketplace !');
         navigate('/dashboard?tab=content');
       }
     } catch (error) {
@@ -132,7 +135,10 @@ const Upload = () => {
           {/* File Upload */}
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Fichiers</h2>
-            <FileUpload onFilesUploaded={handleFilesUploaded} />
+            <p className="text-sm text-muted-foreground mb-4">
+              Glissez-déposez plusieurs fichiers à la fois. Les images seront automatiquement watermarquées pour le marketplace.
+            </p>
+            <FileUpload onFilesUploaded={handleFilesUploaded} maxFiles={100} maxFileSize={1000} />
           </Card>
 
           {/* Content Details */}
