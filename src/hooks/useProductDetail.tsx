@@ -50,43 +50,40 @@ export const useProductDetail = (productId: string) => {
         setLoading(true);
         setError(null);
 
-        // Fetch the content submission with files and creator info
-        const { data: submission, error: submissionError } = await supabase
-          .from('content_submissions')
-          .select(`
-            *,
-            content_files (*),
-            categories (id, name)
-          `)
-          .eq('id', productId)
-          .eq('status', 'approved')
-          .single();
+        // Use the secure function instead of direct table access
+        const { data: productDetails, error: productError } = await supabase
+          .rpc('get_product_detail', { product_id: productId });
 
-        if (submissionError) {
-          console.error('Error fetching submission:', submissionError);
-          throw submissionError;
+        if (productError) {
+          console.error('Error fetching product detail:', productError);
+          throw productError;
         }
 
-        if (!submission) {
+        if (!productDetails || productDetails.length === 0) {
           setError('Produit non trouvé');
           setLoading(false);
           return;
         }
 
-        // Get creator public info
-        const { data: creatorInfo } = await supabase.rpc('get_creator_public_info', {
-          creator_ids: [submission.creator_id]
-        });
+        const productInfo = productDetails[0];
 
-        const creator = creatorInfo?.[0] || { display_name: 'Créateur inconnu' };
+        // Fetch content files for the product
+        const { data: files, error: filesError } = await supabase
+          .from('content_files')
+          .select('*')
+          .eq('submission_id', productId);
+
+        if (filesError) {
+          console.error('Error fetching files:', filesError);
+        }
 
         // Determine thumbnail and preview URLs
         let thumbnail = '/placeholder.svg';
         let previewUrl: string | undefined;
-        const files = submission.content_files || [];
+        const filesList = files || [];
         
-        if (files.length > 0) {
-          const thumbnailFile = files.find((f: any) => f.thumbnail_path);
+        if (filesList.length > 0) {
+          const thumbnailFile = filesList.find((f: any) => f.thumbnail_path);
           if (thumbnailFile?.thumbnail_path) {
             const { data } = supabase.storage
               .from('thumbnails')
@@ -94,7 +91,7 @@ export const useProductDetail = (productId: string) => {
             thumbnail = data.publicUrl;
           }
 
-          const previewFile = files.find((f: any) => f.preview_path);
+          const previewFile = filesList.find((f: any) => f.preview_path);
           if (previewFile?.preview_path) {
             const { data } = supabase.storage
               .from('previews')
@@ -113,8 +110,8 @@ export const useProductDetail = (productId: string) => {
 
         // Determine content type based on files
         let contentType = 'unknown';
-        if (files.length > 0) {
-          const firstFile = files[0];
+        if (filesList.length > 0) {
+          const firstFile = filesList[0];
           if (firstFile.file_type.startsWith('image/')) contentType = 'photo';
           else if (firstFile.file_type.startsWith('video/')) contentType = 'video';
           else if (firstFile.file_type.startsWith('audio/')) contentType = 'audio';
@@ -122,21 +119,21 @@ export const useProductDetail = (productId: string) => {
         }
 
         const productData: ProductDetailData = {
-          id: submission.id,
-          title: submission.title,
-          description: submission.description,
-          author: creator.display_name,
-          authorId: submission.creator_id,
+          id: productInfo.id,
+          title: productInfo.title,
+          description: productInfo.description,
+          author: productInfo.creator_display_name, // Use the secure display name
+          authorId: 'anonymous', // Don't expose real creator ID
           type: contentType,
           thumbnail,
           previewUrl,
-          tags: submission.tags || [],
-          uploadDate: submission.created_at,
+          tags: productInfo.tags || [],
+          uploadDate: productInfo.created_at,
           likes: 0, // Would need to implement likes system
           downloads: 0, // Would need to fetch from downloads table
           views: 0, // Would need to implement views tracking
-          price: submission.price,
-          files: files.map((file: any) => ({
+          price: productInfo.price,
+          files: filesList.map((file: any) => ({
             id: file.id,
             file_name: file.file_name,
             file_path: file.file_path,
@@ -146,9 +143,9 @@ export const useProductDetail = (productId: string) => {
             preview_path: file.preview_path,
             is_original: file.is_original
           })),
-          category: submission.categories ? {
-            id: submission.categories.id,
-            name: submission.categories.name
+          category: productInfo.category_name ? {
+            id: productInfo.category_id,
+            name: productInfo.category_name
           } : undefined
         };
 

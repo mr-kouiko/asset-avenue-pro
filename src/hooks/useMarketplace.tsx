@@ -23,102 +23,67 @@ export const useMarketplace = () => {
     try {
       setLoading(true);
       
-      // Récupérer les submissions approuvées avec leurs fichiers et profils
+      // Use the secure marketplace_content view instead of direct table access
       const { data: submissions, error } = await supabase
-        .from('content_submissions')
-        .select(`
-          id,
-          title,
-          price,
-          tags,
-          category_id,
-          creator_id,
-          content_files (
-            file_path,
-            thumbnail_path,
-            preview_path,
-            file_type,
-            is_preview
-          )
-        `)
-        .eq('status', 'approved');
+        .from('marketplace_content')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching marketplace content:', error);
         return;
       }
 
-      // Utiliser la fonction sécurisée pour récupérer les profils publics des créateurs
-      const creatorIds = submissions?.map(s => s.creator_id).filter(Boolean) || [];
-      let profilesMap: Record<string, any> = {};
-      
-      if (creatorIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
-          .rpc('get_creator_public_info', { creator_ids: creatorIds });
-          
-        if (profilesError) {
-          console.error('Error fetching creator profiles:', profilesError);
-        } else {
-          profilesMap = profiles?.reduce((acc, profile) => {
-            acc[profile.user_id] = profile;
-            return acc;
-          }, {} as Record<string, any>) || {};
-        }
-      }
+      // Fetch content files separately for each submission
+      const contentWithFiles = await Promise.all(
+        (submissions || []).map(async (submission: any) => {
+          const { data: files } = await supabase
+            .from('content_files')
+            .select('*')
+            .eq('submission_id', submission.id);
 
-      // Transformer les données pour l'interface
-      const transformedContent: MarketplaceContent[] = submissions?.map((submission) => {
-        // Generate proper thumbnail URLs using Supabase storage
-        let thumbnail = '/placeholder.svg';
-        const files = submission.content_files || [];
-        
-        if (files.length > 0) {
-          // First try to find a thumbnail file
-          const thumbnailFile = files.find(file => file.thumbnail_path);
+          // Determine thumbnail URL and content type
+          const thumbnailFile = files?.find(f => f.thumbnail_path);
+          const originalFile = files?.find(f => f.is_original);
+          
+          let thumbnailUrl = '/placeholder.svg';
+          let contentType: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
+          
           if (thumbnailFile?.thumbnail_path) {
             const { data } = supabase.storage
               .from('thumbnails')
               .getPublicUrl(thumbnailFile.thumbnail_path);
-            thumbnail = data.publicUrl;
-          } else {
-            // Fall back to preview if available
-            const previewFile = files.find(file => file.preview_path);
-            if (previewFile?.preview_path) {
-              const { data } = supabase.storage
-                .from('previews')
-                .getPublicUrl(previewFile.preview_path);
-              thumbnail = data.publicUrl;
+            thumbnailUrl = data.publicUrl;
+          }
+
+          if (originalFile?.file_type) {
+            if (originalFile.file_type.startsWith('video/')) {
+              contentType = 'video';
+            } else if (originalFile.file_type.startsWith('audio/')) {
+              contentType = 'audio';
+            } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
+              contentType = 'illustration';
+            } else {
+              contentType = 'photo';
             }
           }
-        }
 
-        // Déterminer le type basé sur les fichiers
-        let type: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
-        if (submission.content_files?.some(file => file.file_type.startsWith('video/'))) {
-          type = 'video';
-        } else if (submission.content_files?.some(file => file.file_type.startsWith('audio/'))) {
-          type = 'audio';
-        } else if (submission.content_files?.some(file => file.file_type.includes('illustration'))) {
-          type = 'illustration';
-        }
+          return {
+            id: submission.id,
+            title: submission.title,
+            author: submission.creator_display_name, // Use the safe creator display name
+            price: submission.price || 0,
+            type: contentType,
+            thumbnail: thumbnailUrl,
+            likes: Math.floor(Math.random() * 2000), // Would need to implement likes system
+            downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
+            category_id: submission.category_id,
+            tags: submission.tags || [],
+          };
+        })
+      );
 
-        const profile = profilesMap[submission.creator_id];
-
-        return {
-          id: submission.id,
-          title: submission.title,
-          author: profile?.store_name || profile?.display_name || 'Créateur',
-          price: submission.price || 0,
-          type,
-          thumbnail,
-          likes: Math.floor(Math.random() * 2000), // Sera remplacé par de vraies données plus tard
-          downloads: Math.floor(Math.random() * 1000), // Sera remplacé par de vraies données plus tard
-          category_id: submission.category_id,
-          tags: submission.tags
-        };
-      }) || [];
-
-      setContent(transformedContent);
+      setContent(contentWithFiles);
     } catch (error) {
       console.error('Error in fetchMarketplaceContent:', error);
     } finally {
