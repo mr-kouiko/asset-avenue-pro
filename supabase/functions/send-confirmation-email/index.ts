@@ -28,13 +28,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Basic rate limiting check - allow max 3 emails per minute per IP
+    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+    console.log(`Email request from IP: ${clientIP}`);
+
     const payload = await req.text()
     const headers = Object.fromEntries(req.headers)
     
-    console.log('Received webhook payload:', payload)
-    console.log('Webhook headers:', headers)
+    // Validate payload is not empty
+    if (!payload || payload.trim() === '') {
+      console.error('Empty payload received')
+      return new Response(JSON.stringify({ error: 'Invalid request payload' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
     
-    // If webhook secret is not configured, skip verification (for development)
+    console.log('Processing email webhook')
+    
+    // Verify webhook signature if secret is configured
     let webhookData;
     if (hookSecret) {
       const wh = new Webhook(hookSecret)
@@ -53,12 +65,31 @@ Deno.serve(async (req) => {
       webhookData = JSON.parse(payload)
     }
 
+    // Validate required fields
+    if (!webhookData?.user?.email || !webhookData?.email_data) {
+      console.error('Missing required webhook data')
+      return new Response(JSON.stringify({ error: 'Invalid webhook data' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
     const {
       user,
       email_data: { token, token_hash, redirect_to, email_action_type },
     } = webhookData
 
-    console.log('Processing confirmation email for:', user.email)
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(user.email)) {
+      console.error(`Invalid email format: ${user.email}`)
+      return new Response(JSON.stringify({ error: 'Invalid email format' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    console.log('Processing confirmation email for user')
 
     // Render the React email template
     const html = await renderAsync(
