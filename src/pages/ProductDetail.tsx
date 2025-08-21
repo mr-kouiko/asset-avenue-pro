@@ -17,7 +17,8 @@ import {
   Calendar,
   Eye,
   Star,
-  Loader2
+  Loader2,
+  FileVideo
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
 import { VideoPlayer } from "@/components/VideoPlayer";
@@ -61,11 +62,13 @@ const ProductDetail = () => {
     );
   }
 
-  // Get file info for display
-  const originalFile = product.files.find(f => f.is_original);
+  // Get file info for display with better error handling
+  const originalFile = product.files?.find(f => f.is_original);
   const fileSize = originalFile ? `${(originalFile.file_size / (1024 * 1024)).toFixed(1)} MB` : 'N/A';
-  const fileFormat = originalFile?.file_name.split('.').pop()?.toUpperCase() || 'N/A';
-  const dimensions = 'N/A'; // Would need to extract from metadata
+  const fileFormat = originalFile?.file_name?.split('.').pop()?.toUpperCase() || product.type?.toUpperCase() || 'N/A';
+  
+  // For now, dimensions will be extracted from actual metadata when available
+  const dimensions = 'À déterminer'; // Will be updated when metadata is properly structured
 
   const licenses = [
     {
@@ -106,12 +109,23 @@ const ProductDetail = () => {
     }
   ];
 
-  // Get related products from marketplace (same author or similar category)
+  // Get related products from marketplace with better filtering
   const relatedProducts = marketplaceContent
-    .filter(item => item.id !== product.id && (
-      item.author === product.author || 
-      item.category_id === product.category?.id
-    ))
+    .filter(item => item.id !== product.id)
+    .filter(item => {
+      // Prioritize same category, then same author
+      const sameCategory = item.category_id === product.category?.id;
+      const sameAuthor = item.author === product.author;
+      return sameCategory || sameAuthor;
+    })
+    .sort((a, b) => {
+      // Sort by category match first, then by author match
+      const aCategory = a.category_id === product.category?.id ? 2 : 0;
+      const bCategory = b.category_id === product.category?.id ? 2 : 0;
+      const aAuthor = a.author === product.author ? 1 : 0;
+      const bAuthor = b.author === product.author ? 1 : 0;
+      return (bCategory + bAuthor) - (aCategory + aAuthor);
+    })
     .slice(0, 6);
 
   return (
@@ -122,38 +136,64 @@ const ProductDetail = () => {
       <div className="container py-8">
         <div className="grid lg:grid-cols-2 gap-12">
             {/* Left Column - Video/Image Display */}
-            <div className="space-y-4">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
-                {product.type === 'video' ? (
-                  <VideoPlayer 
-                    src={product.previewUrl}
-                    poster={product.thumbnail}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={product.thumbnail}
-                    alt={product.title}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setIsLiked(!isLiked)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Heart 
-                      className="h-4 w-4" 
-                      fill={isLiked ? "currentColor" : "none"}
-                    />
-                  </Button>
-                  <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+        <div className="space-y-4">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted border border-border shadow-lg">
+        {product.type === 'video' ? (
+          <VideoPlayer 
+            src={product.previewUrl}
+            thumbnail={product.thumbnail}
+            poster={product.thumbnail}
+            className="w-full h-full"
+            showThumbnailFirst={false}
+            autoPlay={false}
+            controls={true}
+            muted={false}
+          />
+        ) : (
+          <img
+            src={product.thumbnail}
+            alt={product.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = '/placeholder.svg';
+            }}
+          />
+        )}
+        <div className="absolute top-4 right-4 flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsLiked(!isLiked)}
+            className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
+          >
+            <Heart 
+              className="h-4 w-4" 
+              fill={isLiked ? "hsl(var(--primary))" : "none"}
+              color={isLiked ? "hsl(var(--primary))" : "currentColor"}
+            />
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Video indicator badge */}
+        {product.type === 'video' && (
+          <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
+            <FileVideo className="h-3 w-3" />
+            Vidéo HD
+          </div>
+        )}
+        
+        {/* VISUSTOCK watermark indicator */}
+        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow-sm">
+          © VISUSTOCK
+        </div>
+      </div>
 
             {/* Image Info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -320,15 +360,6 @@ const ProductDetail = () => {
             
             <TabsContent value="related" className="mt-8">
               <h3 className="text-xl font-semibold mb-6">Contenus similaires</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {relatedProducts.map((item) => (
-                  <ContentCard key={item.id} {...item} />
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="author" className="mt-8">
-              <h3 className="text-xl font-semibold mb-6">Plus de {product.author}</h3>
               {relatedProducts.length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {relatedProducts.map((item) => (
@@ -337,7 +368,31 @@ const ProductDetail = () => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  Aucun autre contenu de cet auteur pour le moment.
+                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                    <Eye className="h-8 w-8" />
+                  </div>
+                  <p>Aucun contenu similaire trouvé pour le moment.</p>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="author" className="mt-8">
+              <h3 className="text-xl font-semibold mb-6">Plus de {product.author}</h3>
+              {relatedProducts.filter(item => item.author === product.author).length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {relatedProducts
+                    .filter(item => item.author === product.author)
+                    .map((item) => (
+                      <ContentCard key={item.id} {...item} />
+                    ))
+                  }
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                    <User className="h-8 w-8" />
+                  </div>
+                  <p>Aucun autre contenu de cet auteur pour le moment.</p>
                 </div>
               )}
             </TabsContent>

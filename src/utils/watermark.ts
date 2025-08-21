@@ -21,7 +21,7 @@ export const addWatermarkToImage = async (
     position = 'bottom-right',
     size = 12,
     text = 'VisuStock',
-    logoPath = '/lovable-uploads/cbcf1708-4325-4f67-9462-a971922b933c.png'
+    logoPath = '/lovable-uploads/821f7e0a-33fd-4ede-8204-66bf887c8baa.png'
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -47,8 +47,8 @@ export const addWatermarkToImage = async (
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
         logoImg.onload = () => {
-          // Calculate proportional logo size (minimum 40px, maximum based on image size)
-          const logoSize = Math.max(40, Math.min(120, (canvas.width * size) / 100));
+          // Calculate proportional logo size with better visibility
+          const logoSize = Math.max(60, Math.min(150, (canvas.width * size) / 100));
           let x = canvas.width / 2 - logoSize / 2;
           let y = canvas.height / 2 - logoSize / 2;
 
@@ -71,12 +71,12 @@ export const addWatermarkToImage = async (
               break;
           }
 
-          // Create semi-transparent background for logo visibility
-          ctx.globalAlpha = opacity * 0.3;
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-          ctx.fillRect(x - 5, y - 5, logoSize + 10, logoSize + 10);
+          // Create subtle background for better logo visibility
+          ctx.globalAlpha = opacity * 0.2;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+          ctx.fillRect(x - 8, y - 8, logoSize + 16, logoSize + 16);
           
-          // Draw logo with opacity
+          // Draw logo with enhanced opacity
           ctx.globalAlpha = opacity;
           ctx.drawImage(logoImg, x, y, logoSize, logoSize);
           ctx.globalAlpha = 1;
@@ -173,7 +173,7 @@ export const addWatermarkToVideo = async (
     opacity = 0.6,
     position = 'bottom-right',
     size = 12,
-    logoPath = '/lovable-uploads/cbcf1708-4325-4f67-9462-a971922b933c.png'
+    logoPath = '/lovable-uploads/821f7e0a-33fd-4ede-8204-66bf887c8baa.png'
   } = options;
 
   // For now, video watermarking would require server-side processing with ffmpeg
