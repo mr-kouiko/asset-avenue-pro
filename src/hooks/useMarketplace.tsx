@@ -24,10 +24,14 @@ export const useMarketplace = () => {
     try {
       setLoading(true);
       
-      // Use the secure marketplace_content view instead of direct table access
+      // Get approved submissions with creator info
       const { data: submissions, error } = await supabase
-        .from('marketplace_content')
-        .select('*')
+        .from('content_submissions')
+        .select(`
+          *,
+          profiles!inner(display_name, store_name)
+        `)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -90,15 +94,15 @@ export const useMarketplace = () => {
 
           // Debug logging for store name vs display name
           console.log('Creator data:', {
-            store_name: submission.creator_store_name,
-            display_name: submission.creator_display_name,
-            final_author: submission.creator_store_name || submission.creator_display_name || 'Boutique anonyme'
+            store_name: submission.profiles?.store_name,
+            display_name: submission.profiles?.display_name,
+            final_author: submission.profiles?.store_name || submission.profiles?.display_name || 'Boutique anonyme'
           });
 
           const contentItem = {
             id: submission.id,
             title: submission.title || 'Untitled',
-            author: submission.creator_store_name || submission.creator_display_name || 'Boutique anonyme', // Use store name first, then display name as fallback
+            author: submission.profiles?.store_name || submission.profiles?.display_name || 'Boutique anonyme', // Use store name first, then display name as fallback
             price: submission.price || 0,
             type: contentType,
             thumbnail: thumbnailUrl,
