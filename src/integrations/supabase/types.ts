@@ -92,6 +92,13 @@ export type Database = {
             referencedRelation: "content_submissions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "content_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_content"
+            referencedColumns: ["id"]
+          },
         ]
       }
       content_submissions: {
@@ -207,6 +214,13 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "downloads_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
           },
         ]
@@ -336,7 +350,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      marketplace_content: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          creator_display_name: string | null
+          creator_hash: string | null
+          creator_store_name: string | null
+          description: string | null
+          id: string | null
+          price: number | null
+          tags: string[] | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_submissions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       generate_secure_download_url: {
@@ -353,6 +389,21 @@ export type Database = {
           display_name: string
           store_name: string
           user_id: string
+        }[]
+      }
+      get_product_detail: {
+        Args: { product_id: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          created_at: string
+          creator_display_name: string
+          creator_store_name: string
+          description: string
+          id: string
+          price: number
+          tags: string[]
+          title: string
         }[]
       }
       has_role: {
