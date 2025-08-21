@@ -141,7 +141,8 @@ const ProductDetail = () => {
         <div className="space-y-4">
       <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted border border-border shadow-lg">
         {product.type === 'video' ? (
-          <div className="relative w-full h-full">
+          <div className="w-full h-full bg-black rounded-xl overflow-hidden">
+            {/* Primary Video Player */}
             <VideoPlayer 
               src={product.previewUrl}
               thumbnail={product.thumbnail}
@@ -152,58 +153,54 @@ const ProductDetail = () => {
               controls={true}
               muted={false}
             />
-            {/* HTML5 Video Fallback */}
+            
+            {/* HTML5 Video Fallback - Always visible */}
             {product.previewUrl && (
               <video 
                 controls 
-                preload="metadata" 
-                poster={product.thumbnail}
-                className="absolute inset-0 w-full h-full object-cover z-50 bg-black"
-                style={{ zIndex: 9999 }}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
+                preload="metadata"
+                className="w-full h-full object-cover"
+                style={{ 
+                  minHeight: '300px',
+                  backgroundColor: '#000',
+                  display: 'block'
                 }}
               >
                 <source src={product.previewUrl} type="video/mp4" />
-                <p className="text-white p-4">Votre navigateur ne supporte pas la lecture vidéo HTML5.</p>
+                <source src={product.previewUrl} type="video/webm" />
+                <p className="text-white p-4 text-center">Votre navigateur ne supporte pas la lecture vidéo HTML5.</p>
               </video>
             )}
           </div>
         ) : product.type === 'audio' ? (
-          <div className="w-full h-full flex flex-col relative">
-            <div className="flex-1 relative">
-              <img
-                src={product.thumbnail}
-                alt={product.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = '/placeholder.svg';
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-            </div>
-            <div className="bg-white border-t p-4 relative">
+          <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl overflow-hidden">
+            {/* Audio Player Container */}
+            <div className="w-full h-full flex flex-col justify-center p-6">
               <AudioPlayer 
                 src={product.previewUrl || ''}
                 title={product.title}
                 compact={false}
-                className="bg-transparent border-none p-0"
+                className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
               />
-              {/* HTML5 Audio Fallback */}
+              
+              {/* HTML5 Audio Fallback - Always visible */}
               {product.previewUrl && (
-                <audio 
-                  controls 
-                  preload="metadata"
-                  className="w-full mt-2 z-50"
-                  style={{ zIndex: 9999 }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                >
-                  <source src={product.previewUrl} type="audio/mpeg" />
-                  <source src={product.previewUrl} type="audio/wav" />
-                  <p>Votre navigateur ne supporte pas la lecture audio HTML5.</p>
-                </audio>
+                <div className="mt-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
+                  <audio 
+                    controls 
+                    preload="metadata"
+                    className="w-full"
+                    style={{ 
+                      minHeight: '40px',
+                      display: 'block'
+                    }}
+                  >
+                    <source src={product.previewUrl} type="audio/mpeg" />
+                    <source src={product.previewUrl} type="audio/wav" />
+                    <source src={product.previewUrl} type="audio/ogg" />
+                    <p className="text-gray-700 text-center mt-2">Votre navigateur ne supporte pas la lecture audio HTML5.</p>
+                  </audio>
+                </div>
               )}
             </div>
           </div>
