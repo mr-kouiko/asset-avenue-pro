@@ -141,18 +141,36 @@ const ProductDetail = () => {
         <div className="space-y-4">
       <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted border border-border shadow-lg">
         {product.type === 'video' ? (
-          <VideoPlayer 
-            src={product.previewUrl}
-            thumbnail={product.thumbnail}
-            poster={product.thumbnail}
-            className="w-full h-full"
-            showThumbnailFirst={false}
-            autoPlay={false}
-            controls={true}
-            muted={false}
-          />
+          <div className="relative w-full h-full">
+            <VideoPlayer 
+              src={product.previewUrl}
+              thumbnail={product.thumbnail}
+              poster={product.thumbnail}
+              className="w-full h-full"
+              showThumbnailFirst={false}
+              autoPlay={false}
+              controls={true}
+              muted={false}
+            />
+            {/* HTML5 Video Fallback */}
+            {product.previewUrl && (
+              <video 
+                controls 
+                preload="metadata" 
+                poster={product.thumbnail}
+                className="absolute inset-0 w-full h-full object-cover z-50 bg-black"
+                style={{ zIndex: 9999 }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              >
+                <source src={product.previewUrl} type="video/mp4" />
+                <p className="text-white p-4">Votre navigateur ne supporte pas la lecture vidéo HTML5.</p>
+              </video>
+            )}
+          </div>
         ) : product.type === 'audio' ? (
-          <div className="w-full h-full flex flex-col">
+          <div className="w-full h-full flex flex-col relative">
             <div className="flex-1 relative">
               <img
                 src={product.thumbnail}
@@ -164,13 +182,29 @@ const ProductDetail = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
             </div>
-            <div className="bg-white border-t p-4">
+            <div className="bg-white border-t p-4 relative">
               <AudioPlayer 
                 src={product.previewUrl || ''}
                 title={product.title}
                 compact={false}
                 className="bg-transparent border-none p-0"
               />
+              {/* HTML5 Audio Fallback */}
+              {product.previewUrl && (
+                <audio 
+                  controls 
+                  preload="metadata"
+                  className="w-full mt-2 z-50"
+                  style={{ zIndex: 9999 }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                >
+                  <source src={product.previewUrl} type="audio/mpeg" />
+                  <source src={product.previewUrl} type="audio/wav" />
+                  <p>Votre navigateur ne supporte pas la lecture audio HTML5.</p>
+                </audio>
+              )}
             </div>
           </div>
         ) : (
