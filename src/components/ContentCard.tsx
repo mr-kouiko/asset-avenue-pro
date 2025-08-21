@@ -63,6 +63,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             thumbnail={thumbnail}
             className="w-full h-full object-cover"
             showThumbnailFirst={true}
+            controls={true}
+            autoPlay={false}
           />
         ) : (
           <img

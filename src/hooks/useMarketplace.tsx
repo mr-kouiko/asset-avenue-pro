@@ -61,12 +61,23 @@ export const useMarketplace = () => {
           if (originalFile?.file_type) {
             if (originalFile.file_type.startsWith('video/')) {
               contentType = 'video';
-              // Get video URL for video content
+              // Get video URL for video content - try previews bucket first, then original-files with signed URL
               if (originalFile.file_path) {
-                const { data } = supabase.storage
-                  .from('content')
-                  .getPublicUrl(originalFile.file_path);
-                videoUrl = data.publicUrl;
+                // First try to get from previews bucket (public)
+                const previewPath = originalFile.file_path.replace('/original/', '/preview/') || originalFile.file_path;
+                const { data: previewData } = supabase.storage
+                  .from('previews')
+                  .getPublicUrl(previewPath);
+                
+                // If no preview available, use signed URL from original-files
+                if (previewData?.publicUrl) {
+                  videoUrl = previewData.publicUrl;
+                } else {
+                  const { data: signedData } = await supabase.storage
+                    .from('original-files')
+                    .createSignedUrl(originalFile.file_path, 3600); // 1 hour expiry
+                  videoUrl = signedData?.signedUrl || undefined;
+                }
               }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
