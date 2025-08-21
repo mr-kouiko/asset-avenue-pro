@@ -69,8 +69,8 @@ const Marketplace = () => {
 
   // Filter content based on search and category
   const filteredContent = marketplaceContent.filter(content => {
-    const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         content.author.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (content.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (content.author || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "all" || 
                            content.category_id === selectedCategory ||
                            content.type === selectedCategory;

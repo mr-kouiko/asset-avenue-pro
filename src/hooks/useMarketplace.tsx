@@ -90,8 +90,8 @@ export const useMarketplace = () => {
 
           return {
             id: submission.id,
-            title: submission.title,
-            author: submission.creator_display_name, // Use the safe creator display name
+            title: submission.title || 'Untitled',
+            author: submission.creator_display_name || 'Anonymous', // Use the safe creator display name
             price: submission.price || 0,
             type: contentType,
             thumbnail: thumbnailUrl,
