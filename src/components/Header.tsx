@@ -13,11 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import { AuthModal } from "@/components/AuthModal";
 
 export const Header = () => {
   const { user, signOut, loading, getUserRole } = useAuth();
   const { getItemCount } = useCart();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -147,15 +149,8 @@ export const Header = () => {
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem asChild>
-                    <Link to="/auth">Se connecter</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/auth">S'inscrire</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/auth">Devenir vendeur</Link>
+                  <DropdownMenuItem onClick={() => setIsAuthModalOpen(true)}>
+                    Se connecter
                   </DropdownMenuItem>
                 </>
               )}
@@ -168,6 +163,11 @@ export const Header = () => {
           </Button>
         </div>
       </div>
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </header>
   );
 };
