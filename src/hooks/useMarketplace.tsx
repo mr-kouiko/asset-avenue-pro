@@ -39,14 +39,17 @@ export const useMarketplace = () => {
       // Get unique creator IDs
       const creatorIds = [...new Set(submissions?.map(s => s.creator_id) || [])];
       
-      // Fetch profiles for all creators
-      const { data: profiles } = await supabase
-        .from('profiles')
+      // Fetch public creator profiles (no RLS restrictions)
+      const { data: creatorProfiles } = await supabase
+        .from('public_creator_profiles')
         .select('user_id, display_name, store_name')
         .in('user_id', creatorIds);
 
       // Create a map of creator profiles for quick lookup
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(creatorProfiles?.map(p => [p.user_id, p]) || []);
+
+      console.log('Creator profiles fetched:', creatorProfiles);
+      console.log('Profile map created:', profileMap);
 
       // Fetch content files separately for each submission
       const contentWithFiles = await Promise.all(
@@ -104,18 +107,22 @@ export const useMarketplace = () => {
           // Get creator profile from the map
           const creatorProfile = profileMap.get(submission.creator_id);
           
-          // Debug logging for store name vs display name
-          console.log('Creator data for submission:', submission.title, {
-            creator_id: submission.creator_id,
-            store_name: creatorProfile?.store_name,
-            display_name: creatorProfile?.display_name,
-            final_author: creatorProfile?.store_name || creatorProfile?.display_name || 'Boutique anonyme'
-          });
+          // STRICT: Only use store_name, no fallback to display_name
+          let authorName = 'Boutique anonyme';
+          
+          if (!creatorProfile) {
+            console.error(`ERROR: No creator profile found for submission "${submission.title}" (creator_id: ${submission.creator_id})`);
+          } else if (!creatorProfile.store_name) {
+            console.error(`ERROR: Missing store_name for submission "${submission.title}" (creator_id: ${submission.creator_id}). Profile:`, creatorProfile);
+          } else {
+            authorName = creatorProfile.store_name;
+            console.log(`SUCCESS: Using store_name "${creatorProfile.store_name}" for submission "${submission.title}"`);
+          }
 
           const contentItem = {
             id: submission.id,
             title: submission.title || 'Untitled',
-            author: creatorProfile?.store_name || creatorProfile?.display_name || 'Boutique anonyme', // Use store name first, then display name as fallback
+            author: authorName, // ONLY store_name, no fallbacks
             price: submission.price || 0,
             type: contentType,
             thumbnail: thumbnailUrl,

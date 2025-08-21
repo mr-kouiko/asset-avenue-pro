@@ -122,7 +122,7 @@ export const useProductDetail = (productId: string) => {
           id: productInfo.id,
           title: productInfo.title,
           description: productInfo.description,
-          author: productInfo.creator_display_name, // Use the secure display name
+          author: productInfo.creator_store_name || 'Boutique anonyme', // Use ONLY store name, no fallback to display name
           authorId: 'anonymous', // Don't expose real creator ID
           type: contentType,
           thumbnail,
