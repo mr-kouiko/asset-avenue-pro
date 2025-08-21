@@ -140,7 +140,7 @@ export const addWatermarkToImage = async (
           );
         };
 
-        logoImg.src = '/lovable-uploads/visustock-logo-no-bg.png';
+        logoImg.src = '/lovable-uploads/a53cb12c-fa09-4796-b243-1174697170d9.png';
       } catch (error) {
         reject(error);
       }
@@ -193,7 +193,7 @@ export const addWatermarkToVideo = async (
           resolve(videoFile);
         };
 
-        logoImg.src = '/lovable-uploads/visustock-logo-no-bg.png';
+        logoImg.src = '/lovable-uploads/a53cb12c-fa09-4796-b243-1174697170d9.png';
       } catch (error) {
         reject(error);
       }
