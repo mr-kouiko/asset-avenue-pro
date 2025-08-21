@@ -1,9 +1,27 @@
 import { Search, Play, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { useSearch } from "@/hooks/useSearch";
+import { useContentStats } from "@/hooks/useContentStats";
 import heroImage from "@/assets/hero-image.jpg";
 
 export const HeroSection = () => {
+  const [searchInput, setSearchInput] = useState("");
+  const { performSearch } = useSearch();
+  const { stats, loading } = useContentStats();
+
+  const handleSearch = () => {
+    if (searchInput.trim()) {
+      performSearch(searchInput.trim());
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
   return (
     <section className="relative bg-gradient-to-r from-primary/5 via-primary-glow/5 to-primary/5 py-20">
       <div className="container">
@@ -28,9 +46,12 @@ export const HeroSection = () => {
                 <Input
                   placeholder="Rechercher..."
                   className="pl-10 h-12 text-base"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
                 />
               </div>
-              <Button size="lg" className="px-8">
+              <Button size="lg" className="px-8" onClick={handleSearch}>
                 Rechercher
               </Button>
             </div>
@@ -38,15 +59,21 @@ export const HeroSection = () => {
             {/* Stats */}
             <div className="flex gap-8 pt-6">
               <div>
-                <div className="text-2xl font-bold">4.8M+</div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.photos.toLocaleString()}
+                </div>
                 <div className="text-sm text-muted-foreground">Photos</div>
               </div>
               <div>
-                <div className="text-2xl font-bold">650K+</div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.videos.toLocaleString()}
+                </div>
                 <div className="text-sm text-muted-foreground">Vidéos</div>
               </div>
               <div>
-                <div className="text-2xl font-bold">300K+</div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.illustrations.toLocaleString()}
+                </div>
                 <div className="text-sm text-muted-foreground">Illustrations</div>
               </div>
             </div>
