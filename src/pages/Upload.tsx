@@ -89,8 +89,10 @@ const Upload = () => {
       });
 
       if (result) {
-        toast.success('Contenu publié et disponible immédiatement sur le marketplace !');
-        navigate('/seller-dashboard?tab=content');
+        toast.success('✅ Votre contenu a été publié avec succès et est maintenant visible dans la marketplace !', {
+          duration: 5000,
+        });
+        navigate('/portfolio');
       }
     } catch (error) {
       console.error('Upload error:', error);

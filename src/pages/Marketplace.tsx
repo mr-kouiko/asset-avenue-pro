@@ -8,15 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Grid, List, SlidersHorizontal } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import mockPhoto1 from "@/assets/mock-photo1.jpg";
-import mockPhoto2 from "@/assets/mock-photo2.jpg";
-import mockIllustration1 from "@/assets/mock-illustration1.jpg";
+import { useMarketplace } from "@/hooks/useMarketplace";
+import { supabase } from "@/integrations/supabase/client";
 
 const Marketplace = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState([
+    { value: "all", label: "Toutes les catégories", count: "0" }
+  ]);
   const [searchParams] = useSearchParams();
+  const { content: marketplaceContent, loading } = useMarketplace();
 
   useEffect(() => {
     const categoryParam = searchParams.get('category');
@@ -25,27 +28,30 @@ const Marketplace = () => {
     }
   }, [searchParams]);
 
-  // Mock data for marketplace content
-  const contentTypes = ["photo", "video", "audio", "illustration"] as const;
-  const marketplaceContent = Array.from({ length: 24 }, (_, i) => ({
-    id: `${i + 1}`,
-    title: `Contenu créatif ${i + 1}`,
-    author: `Créateur ${i + 1}`,
-    price: Math.floor(Math.random() * 30),
-    type: contentTypes[Math.floor(Math.random() * 4)],
-    thumbnail: [mockPhoto1, mockPhoto2, mockIllustration1][Math.floor(Math.random() * 3)],
-    likes: Math.floor(Math.random() * 2000),
-    downloads: Math.floor(Math.random() * 1000),
-    isLiked: Math.random() > 0.7,
-  }));
+  // Récupérer les catégories depuis la base
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data: categoriesData } = await supabase
+        .from('categories')
+        .select('id, name, slug');
+      
+      if (categoriesData) {
+        const formattedCategories = [
+          { value: "all", label: "Toutes les catégories", count: marketplaceContent.length.toString() },
+          ...categoriesData.map(cat => ({
+            value: cat.id,
+            label: cat.name,
+            count: marketplaceContent.filter(content => content.category_id === cat.id).length.toString()
+          }))
+        ];
+        setCategories(formattedCategories);
+      }
+    };
 
-  const categories = [
-    { value: "all", label: "Toutes les catégories", count: "4.8M" },
-    { value: "photo", label: "Photos", count: "2.1M" },
-    { value: "video", label: "Vidéos", count: "430K" },
-    { value: "audio", label: "Audio", count: "180K" },
-    { value: "illustration", label: "Illustrations", count: "950K" },
-  ];
+    if (marketplaceContent.length > 0) {
+      fetchCategories();
+    }
+  }, [marketplaceContent]);
 
   const priceRanges = [
     { value: "all", label: "Tous les prix" },
@@ -60,7 +66,9 @@ const Marketplace = () => {
   const filteredContent = marketplaceContent.filter(content => {
     const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          content.author.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || content.type === selectedCategory;
+    const matchesCategory = selectedCategory === "all" || 
+                           content.category_id === selectedCategory ||
+                           content.type === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -165,15 +173,25 @@ const Marketplace = () => {
         </div>
 
         {/* Content Grid */}
-        <div className={`grid gap-6 ${
-          viewMode === "grid" 
-            ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-            : "grid-cols-1"
-        }`}>
-          {filteredContent.map((content) => (
-            <ContentCard key={content.id} {...content} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-muted-foreground">Chargement des contenus...</div>
+          </div>
+        ) : filteredContent.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-muted-foreground">Aucun contenu trouvé</div>
+          </div>
+        ) : (
+          <div className={`grid gap-6 ${
+            viewMode === "grid" 
+              ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+              : "grid-cols-1"
+          }`}>
+            {filteredContent.map((content) => (
+              <ContentCard key={content.id} {...content} />
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="flex justify-center mt-12">

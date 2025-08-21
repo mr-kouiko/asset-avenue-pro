@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import DashboardRouter from "./pages/DashboardRouter";
 import SellerDashboard from "./pages/SellerDashboard";
 import BuyerDashboard from "./pages/BuyerDashboard";
+import Portfolio from "./pages/Portfolio";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Upload from "./pages/Upload";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardRouter />} />
               <Route path="/seller-dashboard" element={<SellerDashboard />} />
               <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+              <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/upload" element={<Upload />} />
