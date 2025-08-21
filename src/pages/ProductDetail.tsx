@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -11,39 +12,59 @@ import {
   Download, 
   ShoppingCart, 
   Share2, 
-  Info, 
   Shield, 
   User,
   Calendar,
   Eye,
-  Star
+  Star,
+  Loader2
 } from "lucide-react";
+import { useProductDetail } from "@/hooks/useProductDetail";
+import { useMarketplace } from "@/hooks/useMarketplace";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const { product, loading, error } = useProductDetail(id || '');
+  const { content: marketplaceContent } = useMarketplace();
   const [isLiked, setIsLiked] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState("standard");
 
-  // Mock product data
-  const product = {
-    id: "1",
-    title: "Magnifique coucher de soleil sur les montagnes",
-    description: "Une image époustouflante capturant la beauté naturelle d'un coucher de soleil sur une chaîne de montagnes majestueuses. Parfait pour vos projets créatifs, publications sur les réseaux sociaux, ou décoration d'intérieur.",
-    author: "Alex Photographe",
-    authorAvatar: "/placeholder.svg",
-    type: "photo",
-    thumbnail: mockPhoto1,
-    tags: ["paysage", "montagne", "coucher de soleil", "nature", "orange", "tranquillité"],
-    uploadDate: "2024-01-15",
-    dimensions: "4000 x 3000 px",
-    fileSize: "2.4 MB",
-    format: "JPG",
-    likes: 1234,
-    downloads: 567,
-    views: 8945,
-    rating: 4.8,
-    reviews: 42,
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        <div className="container py-8 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Chargement du produit...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        <div className="container py-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
+          <p className="text-muted-foreground">
+            {error || "Le produit que vous recherchez n'existe pas ou n'est plus disponible."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get file info for display
+  const originalFile = product.files.find(f => f.is_original);
+  const fileSize = originalFile ? `${(originalFile.file_size / (1024 * 1024)).toFixed(1)} MB` : 'N/A';
+  const fileFormat = originalFile?.file_name.split('.').pop()?.toUpperCase() || 'N/A';
+  const dimensions = 'N/A'; // Would need to extract from metadata
 
   const licenses = [
     {
@@ -84,39 +105,13 @@ const ProductDetail = () => {
     }
   ];
 
-  // Mock related products
-  const relatedProducts = [
-    {
-      id: "2",
-      title: "Lever de soleil dans les Alpes",
-      author: "Mountain Pro",
-      price: 18,
-      type: "photo" as const,
-      thumbnail: mockPhoto1,
-      likes: 892,
-      downloads: 234,
-    },
-    {
-      id: "3",
-      title: "Panorama de montagne",
-      author: "Nature Lover",
-      price: 12,
-      type: "photo" as const,
-      thumbnail: mockPhoto1,
-      likes: 567,
-      downloads: 123,
-    },
-    {
-      id: "4",
-      title: "Ciel dramatique au coucher",
-      author: "Sky Master",
-      price: 20,
-      type: "photo" as const,
-      thumbnail: mockPhoto1,
-      likes: 1456,
-      downloads: 678,
-    },
-  ];
+  // Get related products from marketplace (same author or similar category)
+  const relatedProducts = marketplaceContent
+    .filter(item => item.id !== product.id && (
+      item.author === product.author || 
+      item.category_id === product.category?.id
+    ))
+    .slice(0, 6);
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,15 +150,15 @@ const ProductDetail = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">Dimensions</div>
-                <div className="font-medium">{product.dimensions}</div>
+                <div className="font-medium">{dimensions}</div>
               </div>
               <div>
                 <div className="text-muted-foreground">Format</div>
-                <div className="font-medium">{product.format}</div>
+                <div className="font-medium">{fileFormat}</div>
               </div>
               <div>
                 <div className="text-muted-foreground">Taille</div>
-                <div className="font-medium">{product.fileSize}</div>
+                <div className="font-medium">{fileSize}</div>
               </div>
               <div>
                 <div className="text-muted-foreground">Type</div>
@@ -207,8 +202,8 @@ const ProductDetail = () => {
                   <span>{product.views}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-current text-yellow-500" />
-                  <span>{product.rating} ({product.reviews})</span>
+                  <Calendar className="h-4 w-4" />
+                  <span>{new Date(product.uploadDate).toLocaleDateString('fr-FR')}</span>
                 </div>
               </div>
             </div>
@@ -269,8 +264,8 @@ const ProductDetail = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="text-2xl font-bold">
-                        {license.price}€
+                       <div className="text-2xl font-bold">
+                        {product.price === null || product.price === 0 ? 'Gratuit' : `${license.price}€`}
                       </div>
                     </div>
                   </div>
@@ -309,10 +304,9 @@ const ProductDetail = () => {
         {/* Tabs Section */}
         <div className="mt-16">
           <Tabs defaultValue="related" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="related">Contenus similaires</TabsTrigger>
               <TabsTrigger value="author">Plus de cet auteur</TabsTrigger>
-              <TabsTrigger value="reviews">Avis ({product.reviews})</TabsTrigger>
             </TabsList>
             
             <TabsContent value="related" className="mt-8">
@@ -326,40 +320,17 @@ const ProductDetail = () => {
             
             <TabsContent value="author" className="mt-8">
               <h3 className="text-xl font-semibold mb-6">Plus de {product.author}</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {relatedProducts.map((item) => (
-                  <ContentCard key={item.id} {...item} />
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="reviews" className="mt-8">
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="text-4xl font-bold">{product.rating}</div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star 
-                          key={i} 
-                          className={`h-4 w-4 ${
-                            i < Math.floor(product.rating) 
-                              ? "fill-current text-yellow-500" 
-                              : "text-gray-300"
-                          }`} 
-                        />
-                      ))}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Basé sur {product.reviews} avis
-                    </div>
-                  </div>
+              {relatedProducts.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {relatedProducts.map((item) => (
+                    <ContentCard key={item.id} {...item} />
+                  ))}
                 </div>
-                
-                <div className="text-muted-foreground">
-                  Les avis clients seront bientôt disponibles.
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucun autre contenu de cet auteur pour le moment.
                 </div>
-              </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>

@@ -68,18 +68,29 @@ export const useMarketplace = () => {
 
       // Transformer les données pour l'interface
       const transformedContent: MarketplaceContent[] = submissions?.map((submission) => {
-        // Trouver la première image de preview ou thumbnail
-        const previewFile = submission.content_files?.find(file => 
-          file.is_preview && file.file_type.startsWith('image/')
-        );
-        const thumbnailFile = submission.content_files?.find(file => 
-          file.thumbnail_path && file.file_type.startsWith('image/')
-        );
+        // Generate proper thumbnail URLs using Supabase storage
+        let thumbnail = '/placeholder.svg';
+        const files = submission.content_files || [];
         
-        const thumbnail = previewFile?.file_path || 
-                         thumbnailFile?.thumbnail_path || 
-                         thumbnailFile?.file_path ||
-                         '/placeholder.svg';
+        if (files.length > 0) {
+          // First try to find a thumbnail file
+          const thumbnailFile = files.find(file => file.thumbnail_path);
+          if (thumbnailFile?.thumbnail_path) {
+            const { data } = supabase.storage
+              .from('thumbnails')
+              .getPublicUrl(thumbnailFile.thumbnail_path);
+            thumbnail = data.publicUrl;
+          } else {
+            // Fall back to preview if available
+            const previewFile = files.find(file => file.preview_path);
+            if (previewFile?.preview_path) {
+              const { data } = supabase.storage
+                .from('previews')
+                .getPublicUrl(previewFile.preview_path);
+              thumbnail = data.publicUrl;
+            }
+          }
+        }
 
         // Déterminer le type basé sur les fichiers
         let type: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';

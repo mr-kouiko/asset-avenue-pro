@@ -1,0 +1,167 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface ProductDetailData {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  authorId: string;
+  type: string;
+  thumbnail: string;
+  tags: string[];
+  uploadDate: string;
+  likes: number;
+  downloads: number;
+  views: number;
+  price: number | null;
+  files: Array<{
+    id: string;
+    file_name: string;
+    file_path: string;
+    file_type: string;
+    file_size: number;
+    thumbnail_path?: string;
+    preview_path?: string;
+    is_original: boolean;
+  }>;
+  category?: {
+    id: string;
+    name: string;
+  };
+}
+
+export const useProductDetail = (productId: string) => {
+  const [product, setProduct] = useState<ProductDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProductDetail = async () => {
+      if (!productId) {
+        setError('ID produit manquant');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch the content submission with files and creator info
+        const { data: submission, error: submissionError } = await supabase
+          .from('content_submissions')
+          .select(`
+            *,
+            content_files (*),
+            categories (id, name)
+          `)
+          .eq('id', productId)
+          .eq('status', 'approved')
+          .single();
+
+        if (submissionError) {
+          console.error('Error fetching submission:', submissionError);
+          throw submissionError;
+        }
+
+        if (!submission) {
+          setError('Produit non trouvé');
+          setLoading(false);
+          return;
+        }
+
+        // Get creator public info
+        const { data: creatorInfo } = await supabase.rpc('get_creator_public_info', {
+          creator_ids: [submission.creator_id]
+        });
+
+        const creator = creatorInfo?.[0] || { display_name: 'Créateur inconnu' };
+
+        // Determine thumbnail
+        let thumbnail = '/placeholder.svg';
+        const files = submission.content_files || [];
+        
+        if (files.length > 0) {
+          const thumbnailFile = files.find((f: any) => f.thumbnail_path);
+          if (thumbnailFile?.thumbnail_path) {
+            const { data } = supabase.storage
+              .from('thumbnails')
+              .getPublicUrl(thumbnailFile.thumbnail_path);
+            thumbnail = data.publicUrl;
+          } else {
+            const previewFile = files.find((f: any) => f.preview_path);
+            if (previewFile?.preview_path) {
+              const { data } = supabase.storage
+                .from('previews')
+                .getPublicUrl(previewFile.preview_path);
+              thumbnail = data.publicUrl;
+            }
+          }
+        }
+
+        // Determine content type based on files
+        let contentType = 'unknown';
+        if (files.length > 0) {
+          const firstFile = files[0];
+          if (firstFile.file_type.startsWith('image/')) contentType = 'photo';
+          else if (firstFile.file_type.startsWith('video/')) contentType = 'video';
+          else if (firstFile.file_type.startsWith('audio/')) contentType = 'audio';
+          else contentType = 'illustration';
+        }
+
+        const productData: ProductDetailData = {
+          id: submission.id,
+          title: submission.title,
+          description: submission.description,
+          author: creator.display_name,
+          authorId: submission.creator_id,
+          type: contentType,
+          thumbnail,
+          tags: submission.tags || [],
+          uploadDate: submission.created_at,
+          likes: 0, // Would need to implement likes system
+          downloads: 0, // Would need to fetch from downloads table
+          views: 0, // Would need to implement views tracking
+          price: submission.price,
+          files: files.map((file: any) => ({
+            id: file.id,
+            file_name: file.file_name,
+            file_path: file.file_path,
+            file_type: file.file_type,
+            file_size: file.file_size,
+            thumbnail_path: file.thumbnail_path,
+            preview_path: file.preview_path,
+            is_original: file.is_original
+          })),
+          category: submission.categories ? {
+            id: submission.categories.id,
+            name: submission.categories.name
+          } : undefined
+        };
+
+        setProduct(productData);
+      } catch (err) {
+        console.error('Error loading product:', err);
+        setError('Erreur lors du chargement du produit');
+        toast.error('Impossible de charger le produit');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetail();
+  }, [productId]);
+
+  return {
+    product,
+    loading,
+    error,
+    refetch: () => {
+      setLoading(true);
+      setError(null);
+      // Re-run the effect by updating a dependency
+    }
+  };
+};
