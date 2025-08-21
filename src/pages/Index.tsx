@@ -166,10 +166,10 @@ const Index = () => {
             <div>
               <h4 className="font-semibold mb-4 text-gray-900">Products</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/marketplace" className="text-gray-600 hover:text-gray-900 transition-colors">Stock Photos</Link></li>
-                <li><Link to="/marketplace?category=video" className="text-gray-600 hover:text-gray-900 transition-colors">Stock Videos</Link></li>
+                <li><Link to="/marketplace?category=photo" className="text-gray-600 hover:text-gray-900 transition-colors">Photos</Link></li>
+                <li><Link to="/marketplace?category=video" className="text-gray-600 hover:text-gray-900 transition-colors">Vidéos</Link></li>
                 <li><Link to="/marketplace?category=illustration" className="text-gray-600 hover:text-gray-900 transition-colors">Illustrations</Link></li>
-                <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio Tracks</Link></li>
+                <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio</Link></li>
                 <li><Link to="/api" className="text-gray-600 hover:text-gray-900 transition-colors">API Access</Link></li>
               </ul>
             </div>
