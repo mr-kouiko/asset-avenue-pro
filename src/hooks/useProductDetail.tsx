@@ -118,9 +118,9 @@ export const useProductDetail = (productId: string) => {
           else contentType = 'illustration';
         }
 
-        // For audio files, try to get public preview URL first, fallback to signed URL if authenticated
+        // For audio files, ensure everyone can access for watermarked playback
         if (contentType === 'audio' && filesList.length > 0) {
-          // First try to get a preview file (public access)
+          // First try preview file from public previews bucket
           const previewAudioFile = filesList.find((f: any) => f.is_preview && f.file_type.startsWith('audio/'));
           if (previewAudioFile?.file_path) {
             const { data } = supabase.storage
@@ -128,20 +128,38 @@ export const useProductDetail = (productId: string) => {
               .getPublicUrl(previewAudioFile.file_path);
             previewUrl = data.publicUrl;
           } else {
-            // If no preview file, try original file with signed URL (requires auth)
-            const audioFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('audio/'));
+            // Try original file from different buckets with signed URLs for everyone
+            const audioFile = filesList.find((f: any) => f.file_type.startsWith('audio/'));
             if (audioFile?.file_path) {
-              try {
-                const { data: signedData, error: signedError } = await supabase.storage
-                  .from('original-files')
-                  .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
-                
-                if (signedData?.signedUrl && !signedError) {
-                  previewUrl = signedData.signedUrl;
+              // Try multiple buckets to find the audio file
+              const buckets = ['previews', 'original-files', 'Audio VisuStock', 'seller-content'];
+              
+              for (const bucket of buckets) {
+                try {
+                  const { data: signedData, error: signedError } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
+                  
+                  if (signedData?.signedUrl && !signedError) {
+                    previewUrl = signedData.signedUrl;
+                    break; // Found a working URL, stop searching
+                  }
+                } catch (error) {
+                  // Continue to next bucket if this one fails
+                  continue;
                 }
-              } catch (error) {
-                // Silently fail for non-authenticated users
-                console.log('Could not create signed URL (user not authenticated)');
+              }
+              
+              // If signed URLs fail, try public URL from previews bucket as last resort
+              if (!previewUrl) {
+                try {
+                  const { data } = supabase.storage
+                    .from('previews')
+                    .getPublicUrl(audioFile.file_path);
+                  previewUrl = data.publicUrl;
+                } catch (error) {
+                  console.log('Could not access audio file:', error);
+                }
               }
             }
           }
