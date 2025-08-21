@@ -64,13 +64,24 @@ export const Header = () => {
 
         {/* Search Bar */}
         <div className="flex-1 max-w-lg mx-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher des photos, vidéos, illustrations..."
-              className="pl-10 pr-4"
-            />
-          </div>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target as HTMLFormElement);
+            const query = formData.get('search') as string;
+            if (query?.trim()) {
+              // Navigate to marketplace with search query
+              window.location.href = `/marketplace?search=${encodeURIComponent(query.trim())}`;
+            }
+          }}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                name="search"
+                placeholder="Rechercher des photos, vidéos, illustrations..."
+                className="pl-10 pr-4"
+              />
+            </div>
+          </form>
         </div>
 
         {/* Navigation & Actions */}
