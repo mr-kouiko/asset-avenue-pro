@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useSearch } from "@/hooks/useSearch";
+import { useContentStats } from "@/hooks/useContentStats";
 import heroImage from "@/assets/hero-image.jpg";
 
 export const HeroSection = () => {
   const [searchInput, setSearchInput] = useState("");
   const { performSearch } = useSearch();
+  const { stats, loading } = useContentStats();
 
   const handleSearch = () => {
     if (searchInput.trim()) {
@@ -52,6 +54,34 @@ export const HeroSection = () => {
               <Button size="lg" className="px-8" onClick={handleSearch}>
                 Rechercher
               </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-8 pt-6">
+              <div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.photos.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">Photos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.videos.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">Vidéos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.illustrations.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">Illustrations</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : stats.audios.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">Audio</div>
+              </div>
             </div>
           </div>
 

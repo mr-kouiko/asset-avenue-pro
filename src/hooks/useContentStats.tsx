@@ -23,20 +23,7 @@ export const useContentStats = () => {
     try {
       setLoading(true);
       
-      // Get Karim Lechheb's user ID first
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('display_name', 'karim lechheb')
-        .single();
-
-      if (profileError || !profile) {
-        console.error('Error fetching Karim profile:', profileError);
-        setStats({ photos: 0, videos: 0, audios: 0, illustrations: 0, total: 0 });
-        return;
-      }
-
-      // Get approved content with file types for Karim Lechheb only
+      // Get ALL approved content with file types from all creators
       const { data: submissions, error } = await supabase
         .from('content_submissions')
         .select(`
@@ -49,7 +36,6 @@ export const useContentStats = () => {
           )
         `)
         .eq('status', 'approved')
-        .eq('creator_id', profile.user_id)
         .eq('content_files.is_original', true);
 
       if (error) {
