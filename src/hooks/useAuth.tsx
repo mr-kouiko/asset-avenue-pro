@@ -120,8 +120,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('SignUp successful');
       
-      // Different success messages based on user type
+      // For sellers, call the vendor email function
       if (userData.role === 'creator') {
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-vendor-emails', {
+            body: {
+              userId: data.user?.id,
+              email: email,
+              displayName: `${userData.firstName} ${userData.lastName}`,
+              storeName: userData.storeName,
+              emailType: 'confirmation'
+            }
+          });
+          
+          if (emailError) {
+            console.error('Error sending vendor email:', emailError);
+          }
+        } catch (emailErr) {
+          console.error('Exception sending vendor email:', emailErr);
+        }
+        
         toast({
           title: "Demande de vendeur envoyée !",
           description: "Un email de confirmation a été envoyé. Après validation, vous pourrez accéder à votre dashboard vendeur."
