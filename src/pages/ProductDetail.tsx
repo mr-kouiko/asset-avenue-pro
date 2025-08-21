@@ -20,6 +20,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
@@ -120,31 +121,39 @@ const ProductDetail = () => {
 
       <div className="container py-8">
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Left Column - Image */}
-          <div className="space-y-4">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
-              <img
-                src={product.thumbnail}
-                alt={product.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute top-4 right-4 flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsLiked(!isLiked)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Heart 
-                    className="h-4 w-4" 
-                    fill={isLiked ? "currentColor" : "none"}
+            {/* Left Column - Video/Image Display */}
+            <div className="space-y-4">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+                {product.type === 'video' ? (
+                  <VideoPlayer 
+                    src={product.previewUrl}
+                    poster={product.thumbnail}
+                    className="w-full h-full object-cover"
                   />
-                </Button>
-                <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
-                  <Share2 className="h-4 w-4" />
-                </Button>
+                ) : (
+                  <img
+                    src={product.thumbnail}
+                    alt={product.title}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setIsLiked(!isLiked)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Heart 
+                      className="h-4 w-4" 
+                      fill={isLiked ? "currentColor" : "none"}
+                    />
+                  </Button>
+                  <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
 
             {/* Image Info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

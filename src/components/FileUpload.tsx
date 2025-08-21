@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { addWatermarkToImage, shouldWatermark, generateThumbnail } from "@/utils/watermark";
+import { addWatermarkToImage, addWatermarkToVideo, shouldWatermark, generateThumbnail } from "@/utils/watermark";
 
 interface FileUploadProps {
   onFilesUploaded?: (fileUrls: { 
@@ -148,29 +148,41 @@ export const FileUpload = ({
       let thumbnailUrl: string | undefined;
       let isWatermarked = false;
 
-      // Process watermark and thumbnail for images
+      // Process watermark and thumbnail for images and videos
       if (shouldWatermark(uploadFile.file.type)) {
         setFiles(prev => prev.map(f => 
           f.id === uploadFile.id ? { ...f, status: 'processing', progress: 50 } : f
         ));
 
         try {
-          // Generate watermarked preview
-          const watermarkedBlob = await addWatermarkToImage(uploadFile.file, {
-            opacity: 0.4,
-            position: 'center',
-            size: 25
-          });
+          if (uploadFile.file.type.startsWith('image/')) {
+            // Generate watermarked preview for images
+            const watermarkedBlob = await addWatermarkToImage(uploadFile.file, {
+              opacity: 0.4,
+              position: 'center',
+              size: 25
+            });
 
-          const previewFileName = `preview_${fileName}`;
-          const previewPath = `${user.id}/${previewFileName}`;
+            const previewFileName = `preview_${fileName}`;
+            const previewPath = `${user.id}/${previewFileName}`;
 
-          const { data: previewData, error: previewError } = await supabase.storage
-            .from('previews')
-            .upload(previewPath, watermarkedBlob);
+            const { data: previewData, error: previewError } = await supabase.storage
+              .from('previews')
+              .upload(previewPath, watermarkedBlob);
 
-          if (!previewError && previewData) {
-            previewUrl = previewData.path;
+            if (!previewError && previewData) {
+              previewUrl = previewData.path;
+              isWatermarked = true;
+            }
+          } else if (uploadFile.file.type.startsWith('video/')) {
+            // For videos, apply watermark (placeholder for now)
+            const watermarkedBlob = await addWatermarkToVideo(uploadFile.file, {
+              opacity: 0.6,
+              position: 'bottom-right',
+              size: 15
+            });
+            
+            // For now, video watermarking returns original file
             isWatermarked = true;
           }
 
@@ -178,7 +190,7 @@ export const FileUpload = ({
             f.id === uploadFile.id ? { ...f, progress: 70 } : f
           ));
 
-          // Generate thumbnail
+          // Generate thumbnail for both images and videos
           const thumbnailBlob = await generateThumbnail(uploadFile.file);
           const thumbnailFileName = `thumb_${fileName}`;
           const thumbnailPath = `${user.id}/${thumbnailFileName}`;

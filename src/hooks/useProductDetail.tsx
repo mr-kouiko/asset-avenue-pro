@@ -10,6 +10,7 @@ interface ProductDetailData {
   authorId: string;
   type: string;
   thumbnail: string;
+  previewUrl?: string;
   tags: string[];
   uploadDate: string;
   likes: number;
@@ -79,8 +80,9 @@ export const useProductDetail = (productId: string) => {
 
         const creator = creatorInfo?.[0] || { display_name: 'Créateur inconnu' };
 
-        // Determine thumbnail
+        // Determine thumbnail and preview URLs
         let thumbnail = '/placeholder.svg';
+        let previewUrl: string | undefined;
         const files = submission.content_files || [];
         
         if (files.length > 0) {
@@ -90,8 +92,16 @@ export const useProductDetail = (productId: string) => {
               .from('thumbnails')
               .getPublicUrl(thumbnailFile.thumbnail_path);
             thumbnail = data.publicUrl;
-          } else {
-            const previewFile = files.find((f: any) => f.preview_path);
+          }
+
+          const previewFile = files.find((f: any) => f.preview_path);
+          if (previewFile?.preview_path) {
+            const { data } = supabase.storage
+              .from('previews')
+              .getPublicUrl(previewFile.preview_path);
+            previewUrl = data.publicUrl;
+          } else if (!thumbnailFile) {
+            // Fallback to preview if no dedicated thumbnail
             if (previewFile?.preview_path) {
               const { data } = supabase.storage
                 .from('previews')
@@ -119,6 +129,7 @@ export const useProductDetail = (productId: string) => {
           authorId: submission.creator_id,
           type: contentType,
           thumbnail,
+          previewUrl,
           tags: submission.tags || [],
           uploadDate: submission.created_at,
           likes: 0, // Would need to implement likes system
