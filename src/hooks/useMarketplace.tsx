@@ -97,20 +97,41 @@ export const useMarketplace = () => {
               }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
-              // Get audio URL for audio content from original-files with signed URL
+              // Get audio URL for audio content - try multiple buckets for robustness
               if (originalFile.file_path) {
                 console.log('Processing audio file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                const { data: signedData, error: signedError } = await supabase.storage
-                  .from('original-files')
-                  .createSignedUrl(originalFile.file_path, 3600); // 1 hour expiry
                 
-                if (signedError) {
-                  console.error('Error creating signed URL for audio:', signedError);
-                } else if (signedData?.signedUrl) {
-                  videoUrl = signedData.signedUrl; // Using videoUrl field for audio too for now
-                  console.log('Generated audio URL:', videoUrl);
-                } else {
-                  console.warn('No signed URL generated for:', originalFile.file_path);
+                // Try multiple buckets to find the audio file
+                const buckets = ['previews', 'original-files', 'Audio VisuStock', 'seller-content'];
+                
+                for (const bucket of buckets) {
+                  try {
+                    const { data: signedData, error: signedError } = await supabase.storage
+                      .from(bucket)
+                      .createSignedUrl(originalFile.file_path, 3600); // 1 hour expiry
+                    
+                    if (signedData?.signedUrl && !signedError) {
+                      videoUrl = signedData.signedUrl; // Using videoUrl field for audio too for now
+                      console.log('Generated audio URL from bucket', bucket, ':', videoUrl);
+                      break; // Found a working URL, stop searching
+                    }
+                  } catch (error) {
+                    // Continue to next bucket if this one fails
+                    continue;
+                  }
+                }
+                
+                // If signed URLs fail, try public URL from previews bucket as last resort
+                if (!videoUrl) {
+                  try {
+                    const { data } = supabase.storage
+                      .from('previews')
+                      .getPublicUrl(originalFile.file_path);
+                    videoUrl = data.publicUrl;
+                    console.log('Using public preview URL for audio:', videoUrl);
+                  } catch (error) {
+                    console.log('Could not access audio file:', error);
+                  }
                 }
               }
             } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
