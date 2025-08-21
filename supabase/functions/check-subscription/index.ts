@@ -3,8 +3,10 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://kdgfpophpoqugtuvfxqx.supabase.co, https://preview--asset-avenue-pro.lovable.app, https://asset-avenue-pro.lovable.app",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 // Helper logging function for enhanced debugging
@@ -28,9 +30,9 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("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");
-    if (!stripeKey) throw new Error("Stripe key is not set");
-    logStep("Stripe key verified");
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) throw new Error("Stripe secret key is not configured");
+    logStep("Stripe key retrieved from environment");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
@@ -43,7 +45,7 @@ serve(async (req) => {
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId: user.id });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
