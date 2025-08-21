@@ -225,12 +225,6 @@ const ProductDetail = () => {
           </div>
         )}
         
-        {product.type === 'audio' && (
-          <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
-            <Music className="h-3 w-3" />
-            Audio HD
-          </div>
-        )}
         
         {/* VISUSTOCK watermark indicator */}
         <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow-sm">
