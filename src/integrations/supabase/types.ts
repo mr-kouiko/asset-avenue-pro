@@ -373,6 +373,30 @@ export type Database = {
           },
         ]
       }
+      public_creator_profiles: {
+        Row: {
+          avatar_url: string | null
+          creator_hash: string | null
+          display_name: string | null
+          store_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          creator_hash?: never
+          display_name?: string | null
+          store_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          creator_hash?: never
+          display_name?: string | null
+          store_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_secure_download_url: {
