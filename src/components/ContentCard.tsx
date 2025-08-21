@@ -54,6 +54,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       });
   };
 
+  // Debug logging for video content
+  if (type === "video") {
+    console.log('ContentCard - Video item:', title, 'Video URL:', videoUrl, 'Thumbnail:', thumbnail);
+  }
+
   return (
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
       <div className="relative aspect-[4/3] overflow-hidden">
