@@ -148,8 +148,8 @@ export const FileUpload = ({
       let thumbnailUrl: string | undefined;
       let isWatermarked = false;
 
-      // Process watermark and thumbnail for images and videos
-      if (shouldWatermark(uploadFile.file.type)) {
+      // Process watermark and thumbnail for images, videos, and audio
+      if (shouldWatermark(uploadFile.file.type) || uploadFile.file.type.startsWith('audio/')) {
         setFiles(prev => prev.map(f => 
           f.id === uploadFile.id ? { ...f, status: 'processing', progress: 50 } : f
         ));
@@ -178,13 +178,16 @@ export const FileUpload = ({
             // For videos, note that watermarking requires server-side processing
             // This marks the video as processed but doesn't apply watermark yet
             isWatermarked = false; // Will be true once server-side watermarking is implemented
+          } else if (uploadFile.file.type.startsWith('audio/')) {
+            // Audio files don't need watermarking, just processing
+            isWatermarked = false;
           }
 
           setFiles(prev => prev.map(f => 
             f.id === uploadFile.id ? { ...f, progress: 70 } : f
           ));
 
-          // Generate high-quality thumbnail for both images and videos
+          // Generate high-quality thumbnail for images, videos, and audio
           const thumbnailBlob = await generateThumbnail(uploadFile.file, {
             maxSize: 600,
             quality: 0.9,

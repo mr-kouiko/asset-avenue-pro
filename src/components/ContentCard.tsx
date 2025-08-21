@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { VideoPlayer } from "@/components/VideoPlayer";
+import { AudioPlayer } from "@/components/AudioPlayer";
 
 interface ContentCardProps {
   id: string;
@@ -14,6 +15,7 @@ interface ContentCardProps {
   type: "photo" | "video" | "audio" | "illustration";
   thumbnail: string;
   videoUrl?: string;
+  audioUrl?: string;
   likes: number;
   downloads: number;
   isLiked?: boolean;
@@ -27,6 +29,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   type,
   thumbnail,
   videoUrl,
+  audioUrl,
   likes,
   downloads,
   isLiked = false,
@@ -50,7 +53,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         price,
         type,
         thumbnail,
-        videoUrl
+        videoUrl,
+        audioUrl
       });
   };
 
@@ -71,6 +75,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             controls={true}
             autoPlay={false}
           />
+        ) : type === "audio" ? (
+          <div className="relative w-full h-full">
+            <img
+              src={thumbnail}
+              alt={title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-full max-w-[90%] px-4">
+                <AudioPlayer 
+                  src={audioUrl || ''}
+                  title={title}
+                  compact={true}
+                  className="bg-white/90 backdrop-blur-sm"
+                />
+              </div>
+            </div>
+          </div>
         ) : (
           <img
             src={thumbnail}

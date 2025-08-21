@@ -187,6 +187,119 @@ export const shouldWatermark = (fileType: string): boolean => {
   return fileType.startsWith('image/') || fileType.startsWith('video/');
 };
 
+// Generate audio waveform as thumbnail
+export const generateAudioThumbnail = async (
+  audioFile: File,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  const {
+    maxSize = 600,
+    quality = 0.9,
+    format = 'image/jpeg'
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Could not get canvas context'));
+      return;
+    }
+
+    // Set canvas dimensions for waveform
+    canvas.width = maxSize;
+    canvas.height = Math.round(maxSize * 0.4); // 16:10 aspect ratio
+
+    // Create a simple waveform visualization
+    const drawWaveform = async () => {
+      try {
+        // Create audio context for waveform analysis
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Get audio data
+        const channelData = audioBuffer.getChannelData(0);
+        const samples = canvas.width;
+        const blockSize = Math.floor(channelData.length / samples);
+        
+        // Clear canvas with gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#1e3a8a');
+        gradient.addColorStop(1, '#3b82f6');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw waveform
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.8;
+        
+        for (let i = 0; i < samples; i++) {
+          let sum = 0;
+          for (let j = 0; j < blockSize; j++) {
+            sum += Math.abs(channelData[i * blockSize + j] || 0);
+          }
+          const average = sum / blockSize;
+          const height = average * canvas.height * 0.8;
+          const y = (canvas.height - height) / 2;
+          
+          ctx.fillRect(i * 2, y, 1, height);
+        }
+        
+        // Add audio icon overlay
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🎵', canvas.width / 2, canvas.height / 2);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to create audio thumbnail'));
+            }
+          },
+          format,
+          quality
+        );
+        
+      } catch (error) {
+        // Fallback: create a simple audio icon thumbnail
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#1e3a8a');
+        gradient.addColorStop(1, '#3b82f6');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 72px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🎵', canvas.width / 2, canvas.height / 2);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to create audio thumbnail'));
+            }
+          },
+          format,
+          quality
+        );
+      }
+    };
+
+    drawWaveform();
+  });
+};
+
 export const generateThumbnail = async (
   file: File, 
   options: ThumbnailOptions = {}
@@ -259,6 +372,10 @@ export const generateThumbnail = async (
 
   if (file.type.startsWith('video/')) {
     return generateVideoThumbnail(file, options);
+  }
+
+  if (file.type.startsWith('audio/')) {
+    return generateAudioThumbnail(file, options);
   }
 
   // For other file types, return the original file

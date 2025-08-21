@@ -18,10 +18,12 @@ import {
   Eye,
   Star,
   Loader2,
-  FileVideo
+  FileVideo,
+  Music
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
 import { VideoPlayer } from "@/components/VideoPlayer";
+import { AudioPlayer } from "@/components/AudioPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
@@ -149,6 +151,28 @@ const ProductDetail = () => {
             controls={true}
             muted={false}
           />
+        ) : product.type === 'audio' ? (
+          <div className="w-full h-full flex flex-col">
+            <div className="flex-1 relative">
+              <img
+                src={product.thumbnail}
+                alt={product.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+            </div>
+            <div className="bg-white border-t p-4">
+              <AudioPlayer 
+                src={product.previewUrl || ''}
+                title={product.title}
+                compact={false}
+                className="bg-transparent border-none p-0"
+              />
+            </div>
+          </div>
         ) : (
           <img
             src={product.thumbnail}
@@ -181,11 +205,18 @@ const ProductDetail = () => {
           </Button>
         </div>
         
-        {/* Video indicator badge */}
+        {/* Audio/Video indicator badge */}
         {product.type === 'video' && (
           <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
             <FileVideo className="h-3 w-3" />
             Vidéo HD
+          </div>
+        )}
+        
+        {product.type === 'audio' && (
+          <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
+            <Music className="h-3 w-3" />
+            Audio HD
           </div>
         )}
         

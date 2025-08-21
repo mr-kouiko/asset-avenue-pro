@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, FileVideo, Image, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileVideo, Image, AlertCircle, CheckCircle2, Loader2, Music } from 'lucide-react';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Alert, AlertDescription } from './ui/alert';
@@ -27,7 +27,7 @@ interface VideoUploadProcessorProps {
 export const VideoUploadProcessor: React.FC<VideoUploadProcessorProps> = ({
   onFilesProcessed,
   maxFiles = 10,
-  acceptedFormats = ['video/mp4', 'video/mov', 'video/webm', 'image/jpeg', 'image/png', 'image/webp']
+  acceptedFormats = ['video/mp4', 'video/mov', 'video/webm', 'image/jpeg', 'image/png', 'image/webp', 'audio/mp3', 'audio/wav', 'audio/mpeg']
 }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -87,6 +87,16 @@ export const VideoUploadProcessor: React.FC<VideoUploadProcessorProps> = ({
             });
           } else if (file.type.startsWith('video/')) {
             const thumbnailBlob = await generateVideoThumbnail(file, {
+              maxSize: 400,
+              quality: 0.9,
+              format: 'image/jpeg'
+            });
+            result.thumbnail = new File([thumbnailBlob], `thumb_${file.name}.jpg`, {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+          } else if (file.type.startsWith('audio/')) {
+            const thumbnailBlob = await generateThumbnail(file, {
               maxSize: 400,
               quality: 0.9,
               format: 'image/jpeg'
@@ -179,7 +189,7 @@ export const VideoUploadProcessor: React.FC<VideoUploadProcessorProps> = ({
               Glissez vos fichiers ici ou cliquez pour parcourir
             </h3>
             <p className="text-muted-foreground">
-              Formats supportés: MP4, MOV, WebM, JPEG, PNG, WebP
+              Formats supportés: MP4, MOV, WebM, JPEG, PNG, WebP, MP3, WAV
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               Maximum {maxFiles} fichiers
@@ -241,6 +251,8 @@ export const VideoUploadProcessor: React.FC<VideoUploadProcessorProps> = ({
                 <div className="flex-shrink-0">
                   {file.type.startsWith('video/') ? (
                     <FileVideo className="h-8 w-8 text-primary" />
+                  ) : file.type.startsWith('audio/') ? (
+                    <Music className="h-8 w-8 text-primary" />
                   ) : (
                     <Image className="h-8 w-8 text-primary" />
                   )}

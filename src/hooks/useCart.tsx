@@ -9,6 +9,7 @@ interface CartItem {
   type: string;
   thumbnail: string;
   videoUrl?: string;
+  audioUrl?: string;
   licenseId?: string;
 }
 
