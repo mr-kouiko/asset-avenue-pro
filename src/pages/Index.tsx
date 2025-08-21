@@ -5,85 +5,12 @@ import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-import mockPhoto1 from "@/assets/mock-photo1.jpg";
-import mockPhoto2 from "@/assets/mock-photo2.jpg";
-import mockIllustration1 from "@/assets/mock-illustration1.jpg";
+import { useMarketplace } from "@/hooks/useMarketplace";
+import { useContentStats } from "@/hooks/useContentStats";
 
 const Index = () => {
-  // Mock data for featured content
-  const featuredContent = [
-    {
-      id: "1",
-      title: "Magnifique coucher de soleil sur les montagnes",
-      author: "Alex Photographe",
-      price: 15,
-      type: "photo" as const,
-      thumbnail: mockPhoto1,
-      likes: 1234,
-      downloads: 567,
-    },
-    {
-      id: "video-1",
-      title: "Vidéo de démonstration - Paysage naturel",
-      author: "Video Creator",
-      price: 25,
-      type: "video" as const,
-      thumbnail: mockPhoto1,
-      videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-      likes: 892,
-      downloads: 234,
-    },
-    {
-      id: "2",
-      title: "Architecture moderne urbaine",
-      author: "Urban Studio",
-      price: 12,
-      type: "photo" as const,
-      thumbnail: mockPhoto2,
-      likes: 892,
-      downloads: 234,
-    },
-    {
-      id: "3",
-      title: "Illustration abstraite colorée",
-      author: "Creative Art",
-      price: 8,
-      type: "illustration" as const,
-      thumbnail: mockIllustration1,
-      likes: 456,
-      downloads: 123,
-    },
-    {
-      id: "4",
-      title: "Paysage montagneux dramatique",
-      author: "Nature Pro",
-      price: 20,
-      type: "photo" as const,
-      thumbnail: mockPhoto1,
-      likes: 2341,
-      downloads: 891,
-    },
-    {
-      id: "5",
-      title: "Design graphique moderne",
-      author: "Design Master",
-      price: 0,
-      type: "illustration" as const,
-      thumbnail: mockIllustration1,
-      likes: 667,
-      downloads: 445,
-    },
-    {
-      id: "6",
-      title: "Architecture contemporaine",
-      author: "City Vision",
-      price: 18,
-      type: "photo" as const,
-      thumbnail: mockPhoto2,
-      likes: 1123,
-      downloads: 334,
-    },
-  ];
+  const { content: featuredContent, loading } = useMarketplace();
+  const { stats, loading: statsLoading } = useContentStats();
 
   const features = [
     {
@@ -127,11 +54,21 @@ const Index = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredContent.map((content) => (
-              <ContentCard key={content.id} {...content} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-muted-foreground">Chargement des contenus...</div>
+            </div>
+          ) : featuredContent.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground">Aucun contenu disponible</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredContent.slice(0, 6).map((content) => (
+                <ContentCard key={content.id} {...content} />
+              ))}
+            </div>
+          )}
 
           <div className="text-center mt-8 md:hidden">
             <Button variant="outline">
@@ -154,12 +91,12 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { name: "Photos", count: "2.1M", color: "bg-blue-500", category: "photo" },
-              { name: "Vidéos", count: "430K", color: "bg-red-500", category: "video" },
-              { name: "Audio", count: "180K", color: "bg-green-500", category: "audio" },
-              { name: "Illustrations", count: "950K", color: "bg-purple-500", category: "illustration" },
+              { name: "Photos", count: statsLoading ? "..." : stats.photos.toString(), color: "bg-blue-500", category: "photo" },
+              { name: "Vidéos", count: statsLoading ? "..." : stats.videos.toString(), color: "bg-red-500", category: "video" },
+              { name: "Audio", count: statsLoading ? "..." : stats.audios.toString(), color: "bg-green-500", category: "audio" },
+              { name: "Illustrations", count: statsLoading ? "..." : stats.illustrations.toString(), color: "bg-purple-500", category: "illustration" },
             ].map((category) => (
               <Link
                 key={category.name}
@@ -168,7 +105,9 @@ const Index = () => {
               >
                 <div className={`w-12 h-12 ${category.color} rounded-lg mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`} />
                 <h3 className="font-semibold mb-1">{category.name}</h3>
-                <p className="text-sm text-muted-foreground">{category.count} contenus</p>
+                <p className="text-sm text-muted-foreground">
+                  {category.count} contenu{!statsLoading && parseInt(category.count) > 1 ? 's' : ''}
+                </p>
               </Link>
             ))}
           </div>
