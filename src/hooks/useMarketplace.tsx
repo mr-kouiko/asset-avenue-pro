@@ -8,6 +8,7 @@ export interface MarketplaceContent {
   price: number;
   type: 'photo' | 'video' | 'audio' | 'illustration';
   thumbnail: string;
+  videoUrl?: string;
   likes: number;
   downloads: number;
   isLiked?: boolean;
@@ -48,6 +49,7 @@ export const useMarketplace = () => {
           
           let thumbnailUrl = '/placeholder.svg';
           let contentType: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
+          let videoUrl: string | undefined;
           
           if (thumbnailFile?.thumbnail_path) {
             const { data } = supabase.storage
@@ -59,6 +61,13 @@ export const useMarketplace = () => {
           if (originalFile?.file_type) {
             if (originalFile.file_type.startsWith('video/')) {
               contentType = 'video';
+              // Get video URL for video content
+              if (originalFile.file_path) {
+                const { data } = supabase.storage
+                  .from('content')
+                  .getPublicUrl(originalFile.file_path);
+                videoUrl = data.publicUrl;
+              }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
             } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
@@ -75,6 +84,7 @@ export const useMarketplace = () => {
             price: submission.price || 0,
             type: contentType,
             thumbnail: thumbnailUrl,
+            videoUrl: videoUrl,
             likes: Math.floor(Math.random() * 2000), // Would need to implement likes system
             downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
             category_id: submission.category_id,

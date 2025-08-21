@@ -23,6 +23,17 @@ const Index = () => {
       downloads: 567,
     },
     {
+      id: "video-1",
+      title: "Vidéo de démonstration - Paysage naturel",
+      author: "Video Creator",
+      price: 25,
+      type: "video" as const,
+      thumbnail: mockPhoto1,
+      videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      likes: 892,
+      downloads: 234,
+    },
+    {
       id: "2",
       title: "Architecture moderne urbaine",
       author: "Urban Studio",
