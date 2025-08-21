@@ -48,20 +48,22 @@ export const useMarketplace = () => {
         return;
       }
 
-      // Récupérer les profils séparément
+      // Utiliser la fonction sécurisée pour récupérer les profils publics des créateurs
       const creatorIds = submissions?.map(s => s.creator_id).filter(Boolean) || [];
       let profilesMap: Record<string, any> = {};
       
       if (creatorIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, store_name')
-          .in('user_id', creatorIds);
+        const { data: profiles, error: profilesError } = await supabase
+          .rpc('get_creator_public_info', { creator_ids: creatorIds });
           
-        profilesMap = profiles?.reduce((acc, profile) => {
-          acc[profile.user_id] = profile;
-          return acc;
-        }, {} as Record<string, any>) || {};
+        if (profilesError) {
+          console.error('Error fetching creator profiles:', profilesError);
+        } else {
+          profilesMap = profiles?.reduce((acc, profile) => {
+            acc[profile.user_id] = profile;
+            return acc;
+          }, {} as Record<string, any>) || {};
+        }
       }
 
       // Transformer les données pour l'interface
