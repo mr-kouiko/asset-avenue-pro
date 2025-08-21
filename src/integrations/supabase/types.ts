@@ -391,6 +391,24 @@ export type Database = {
       }
     }
     Views: {
+      admin_profiles_safe: {
+        Row: {
+          avatar_url: string | null
+          country: string | null
+          created_at: string | null
+          display_name: string | null
+          email_masked: string | null
+          id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          store_name: string | null
+          subscribed: boolean | null
+          subscription_end: string | null
+          subscription_tier: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       marketplace_content: {
         Row: {
           category_id: string | null
@@ -453,8 +471,48 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_summary: {
+        Row: {
+          event_count: number | null
+          event_type: string | null
+          first_occurrence: string | null
+          last_occurrence: string | null
+          target_table: string | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      admin_access_profile_secure: {
+        Args: {
+          access_reason?: string
+          include_sensitive_data?: boolean
+          profile_user_id: string
+        }
+        Returns: {
+          avatar_url: string
+          country: string
+          created_at: string
+          display_name: string
+          email_masked: string
+          id: string
+          store_name: string
+          subscribed: boolean
+          subscription_end: string
+          subscription_tier: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      admin_get_full_email: {
+        Args: { business_justification: string; profile_user_id: string }
+        Returns: string
+      }
+      check_admin_access_patterns: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_secure_download_url: {
         Args: { submission_id_param: string; user_id_param?: string }
         Returns: {
