@@ -156,11 +156,11 @@ export const FileUpload = ({
 
         try {
           if (uploadFile.file.type.startsWith('image/')) {
-            // Generate watermarked preview for images
+            // Generate watermarked preview for images with enhanced settings
             const watermarkedBlob = await addWatermarkToImage(uploadFile.file, {
               opacity: 0.4,
-              position: 'center',
-              size: 25
+              position: 'bottom-right',
+              size: 12
             });
 
             const previewFileName = `preview_${fileName}`;
@@ -175,23 +175,21 @@ export const FileUpload = ({
               isWatermarked = true;
             }
           } else if (uploadFile.file.type.startsWith('video/')) {
-            // For videos, apply watermark (placeholder for now)
-            const watermarkedBlob = await addWatermarkToVideo(uploadFile.file, {
-              opacity: 0.6,
-              position: 'bottom-right',
-              size: 15
-            });
-            
-            // For now, video watermarking returns original file
-            isWatermarked = true;
+            // For videos, note that watermarking requires server-side processing
+            // This marks the video as processed but doesn't apply watermark yet
+            isWatermarked = false; // Will be true once server-side watermarking is implemented
           }
 
           setFiles(prev => prev.map(f => 
             f.id === uploadFile.id ? { ...f, progress: 70 } : f
           ));
 
-          // Generate thumbnail for both images and videos
-          const thumbnailBlob = await generateThumbnail(uploadFile.file);
+          // Generate high-quality thumbnail for both images and videos
+          const thumbnailBlob = await generateThumbnail(uploadFile.file, {
+            maxSize: 600,
+            quality: 0.9,
+            format: 'image/jpeg'
+          });
           const thumbnailFileName = `thumb_${fileName}`;
           const thumbnailPath = `${user.id}/${thumbnailFileName}`;
 

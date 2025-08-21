@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
+import { VideoPlayer } from "@/components/VideoPlayer";
 
 interface ContentCardProps {
   id: string;
@@ -12,6 +13,7 @@ interface ContentCardProps {
   price: number;
   type: "photo" | "video" | "audio" | "illustration";
   thumbnail: string;
+  videoUrl?: string;
   likes: number;
   downloads: number;
   isLiked?: boolean;
@@ -24,6 +26,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   price,
   type,
   thumbnail,
+  videoUrl,
   likes,
   downloads,
   isLiked = false,
@@ -40,24 +43,34 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   };
 
   const handleAddToCart = () => {
-    addToCart({
-      id,
-      title,
-      author,
-      price,
-      type,
-      thumbnail
-    });
+      addToCart({
+        id,
+        title,
+        author,
+        price,
+        type,
+        thumbnail,
+        videoUrl
+      });
   };
 
   return (
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
       <div className="relative aspect-[4/3] overflow-hidden">
-        <img
-          src={thumbnail}
-          alt={title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {type === "video" ? (
+          <VideoPlayer 
+            src={videoUrl}
+            thumbnail={thumbnail}
+            className="w-full h-full object-cover"
+            showThumbnailFirst={true}
+          />
+        ) : (
+          <img
+            src={thumbnail}
+            alt={title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        )}
         
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300">
