@@ -91,7 +91,7 @@ export const useMarketplace = () => {
           const contentItem = {
             id: submission.id,
             title: submission.title || 'Untitled',
-            author: submission.creator_display_name || 'Anonymous', // Use the safe creator display name
+            author: submission.creator_store_name || submission.creator_display_name || 'Boutique anonyme', // Use store name first, then display name as fallback
             price: submission.price || 0,
             type: contentType,
             thumbnail: thumbnailUrl,
