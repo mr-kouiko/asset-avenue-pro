@@ -121,9 +121,6 @@ export const Header = () => {
             <DropdownMenuContent align="end" className="w-48">
               {user ? (
                 <>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard">Tableau de bord</Link>
-                  </DropdownMenuItem>
                   {userRole === 'creator' || userRole === 'admin' ? (
                     <>
                       <DropdownMenuItem asChild>
@@ -134,9 +131,14 @@ export const Header = () => {
                       </DropdownMenuItem>
                     </>
                   ) : (
-                    <DropdownMenuItem asChild>
-                      <Link to="/buyer-dashboard">Mes achats</Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard">Tableau de bord</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/buyer-dashboard">Mes achats</Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
