@@ -200,10 +200,10 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" className="px-8">
-              <Link to="/auth">Devenir vendeur</Link>
+              <Link to="/auth/seller">Devenir vendeur</Link>
             </Button>
             <Button size="lg" variant="outline" className="px-8 border-white text-white hover:bg-white hover:text-primary">
-              En savoir plus
+              <Link to="/auth">S'inscrire gratuitement</Link>
             </Button>
           </div>
         </div>

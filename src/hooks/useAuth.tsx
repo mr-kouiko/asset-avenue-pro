@@ -119,10 +119,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('SignUp successful');
-      toast({
-        title: "Inscription réussie !",
-        description: "Un email de confirmation a été envoyé. Vérifiez votre boîte de réception."
-      });
+      
+      // Different success messages based on user type
+      if (userData.role === 'creator') {
+        toast({
+          title: "Demande de vendeur envoyée !",
+          description: "Un email de confirmation a été envoyé. Après validation, vous pourrez accéder à votre dashboard vendeur."
+        });
+      } else {
+        toast({
+          title: "Inscription réussie !",
+          description: "Un email de confirmation a été envoyé. Vérifiez votre boîte de réception."
+        });
+      }
 
       return { error: null };
     } catch (error: any) {

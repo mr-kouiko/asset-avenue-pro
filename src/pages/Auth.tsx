@@ -10,8 +10,12 @@ import { Mail, Lock, User, Store, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-const Auth = () => {
-  const [userType, setUserType] = useState<"client" | "seller">("client");
+interface AuthProps {
+  userType?: "client" | "seller";
+}
+
+const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
+  const [userType, setUserType] = useState<"client" | "seller">(defaultUserType || "client");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     // Login form
@@ -35,9 +39,14 @@ const Auth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/');
+      // Redirect based on user type for seller registration
+      if (defaultUserType === "seller") {
+        navigate('/dashboard'); // Will redirect to appropriate dashboard via DashboardRouter
+      } else {
+        navigate('/');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, defaultUserType]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -264,37 +273,61 @@ const Auth = () => {
           <TabsContent value="register">
             <Card>
               <CardHeader>
-                <CardTitle>Créer un compte</CardTitle>
+                <CardTitle>{defaultUserType === "seller" ? "Devenir vendeur" : "Créer un compte"}</CardTitle>
                 <CardDescription>
-                  Rejoignez la communauté VisuStock
+                  {defaultUserType === "seller" 
+                    ? "Rejoignez notre communauté de créateurs et vendez vos œuvres"
+                    : "Rejoignez la communauté VisuStock"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <form onSubmit={handleRegister} className="space-y-4">
-                  {/* User Type Selection */}
-                  <div className="space-y-2">
-                    <Label>Type de compte</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        type="button"
-                        variant={userType === "client" ? "default" : "outline"}
-                        onClick={() => setUserType("client")}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        <User className="h-4 w-4" />
-                        Client
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={userType === "seller" ? "default" : "outline"}
-                        onClick={() => setUserType("seller")}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        <Store className="h-4 w-4" />
-                        Vendeur
-                      </Button>
+                  {/* User Type Selection - Only show if not predefined */}
+                  {!defaultUserType && (
+                    <div className="space-y-2">
+                      <Label>Type de compte</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          type="button"
+                          variant={userType === "client" ? "default" : "outline"}
+                          onClick={() => setUserType("client")}
+                          className="flex items-center justify-center gap-2"
+                        >
+                          <User className="h-4 w-4" />
+                          Client
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={userType === "seller" ? "default" : "outline"}
+                          onClick={() => setUserType("seller")}
+                          className="flex items-center justify-center gap-2"
+                        >
+                          <Store className="h-4 w-4" />
+                          Vendeur
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {/* Show selected type for predefined flows */}
+                  {defaultUserType && (
+                    <div className="text-center p-4 bg-primary/10 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 text-primary font-semibold">
+                        {defaultUserType === "seller" ? (
+                          <>
+                            <Store className="h-5 w-5" />
+                            Inscription vendeur
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-5 w-5" />
+                            Inscription client
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
@@ -429,7 +462,12 @@ const Auth = () => {
                     size="lg" 
                     disabled={loading || formData.registerPassword !== formData.confirmPassword}
                   >
-                    {loading ? "Création en cours..." : "Créer mon compte"}
+                    {loading 
+                      ? "Création en cours..." 
+                      : defaultUserType === "seller" 
+                        ? "Devenir vendeur VisuStock" 
+                        : "Créer mon compte"
+                    }
                   </Button>
                 </form>
               </CardContent>
@@ -439,6 +477,16 @@ const Auth = () => {
 
         <div className="text-center mt-6 text-sm text-muted-foreground">
           En créant un compte, vous acceptez nos conditions d'utilisation
+          <br />
+          {defaultUserType === "seller" ? (
+            <Link to="/auth" className="text-primary hover:underline mt-2 inline-block">
+              Vous êtes client ? Inscrivez-vous ici
+            </Link>
+          ) : defaultUserType === "client" ? (
+            <Link to="/auth/seller" className="text-primary hover:underline mt-2 inline-block">
+              Vous voulez vendre ? Devenez vendeur
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
