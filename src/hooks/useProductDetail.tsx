@@ -118,16 +118,31 @@ export const useProductDetail = (productId: string) => {
           else contentType = 'illustration';
         }
 
-        // For audio files, try to get signed URL for original file
+        // For audio files, try to get public preview URL first, fallback to signed URL if authenticated
         if (contentType === 'audio' && filesList.length > 0) {
-          const audioFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('audio/'));
-          if (audioFile?.file_path) {
-            const { data: signedData, error: signedError } = await supabase.storage
-              .from('original-files')
-              .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
-            
-            if (signedData?.signedUrl) {
-              previewUrl = signedData.signedUrl;
+          // First try to get a preview file (public access)
+          const previewAudioFile = filesList.find((f: any) => f.is_preview && f.file_type.startsWith('audio/'));
+          if (previewAudioFile?.file_path) {
+            const { data } = supabase.storage
+              .from('previews')
+              .getPublicUrl(previewAudioFile.file_path);
+            previewUrl = data.publicUrl;
+          } else {
+            // If no preview file, try original file with signed URL (requires auth)
+            const audioFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('audio/'));
+            if (audioFile?.file_path) {
+              try {
+                const { data: signedData, error: signedError } = await supabase.storage
+                  .from('original-files')
+                  .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
+                
+                if (signedData?.signedUrl && !signedError) {
+                  previewUrl = signedData.signedUrl;
+                }
+              } catch (error) {
+                // Silently fail for non-authenticated users
+                console.log('Could not create signed URL (user not authenticated)');
+              }
             }
           }
         }
