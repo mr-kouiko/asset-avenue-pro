@@ -346,6 +346,15 @@ export type Database = {
           expires_at: string
         }[]
       }
+      get_creator_public_info: {
+        Args: { creator_ids: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          store_name: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
