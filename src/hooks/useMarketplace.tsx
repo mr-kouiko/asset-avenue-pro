@@ -88,6 +88,13 @@ export const useMarketplace = () => {
             }
           }
 
+          // Debug logging for store name vs display name
+          console.log('Creator data:', {
+            store_name: submission.creator_store_name,
+            display_name: submission.creator_display_name,
+            final_author: submission.creator_store_name || submission.creator_display_name || 'Boutique anonyme'
+          });
+
           const contentItem = {
             id: submission.id,
             title: submission.title || 'Untitled',
