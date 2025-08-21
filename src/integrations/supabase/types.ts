@@ -99,6 +99,13 @@ export type Database = {
             referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "content_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "public_file_access"
+            referencedColumns: ["content_id"]
+          },
         ]
       }
       content_submissions: {
@@ -222,6 +229,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "downloads_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "public_file_access"
+            referencedColumns: ["content_id"]
           },
         ]
       }
@@ -386,7 +400,7 @@ export type Database = {
           creator_store_name: string | null
           description: string | null
           id: string | null
-          price: number | null
+          price_range: string | null
           tags: string[] | null
           title: string | null
         }
@@ -421,6 +435,21 @@ export type Database = {
           display_name?: string | null
           store_name?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      public_file_access: {
+        Row: {
+          content_id: string | null
+          file_format: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          has_thumbnail: boolean | null
+          id: string | null
+          is_preview: boolean | null
+          metadata: Json | null
+          public_file_url: string | null
         }
         Relationships: []
       }
