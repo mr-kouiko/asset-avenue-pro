@@ -231,8 +231,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div 
             className="relative w-full h-full cursor-pointer group"
             onClick={() => {
-              // Try to reload src if it was initially undefined
-              console.log('Attempting to reload video source...');
+              console.log('Thumbnail clicked, trying to reload video...');
+              window.location.reload(); // Force page reload to retry video loading
             }}
           >
             <img 
@@ -247,7 +247,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </div>
             </div>
             <div className="absolute bottom-4 left-4 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
-              Cliquez pour lire
+              Appuyez pour réessayer
             </div>
           </div>
         ) : (
@@ -258,6 +258,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <p className="text-muted-foreground">
               {videoError ? 'Impossible de charger la vidéo' : 'Vidéo en cours de traitement...'}
             </p>
+            {videoError && (
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-2 text-sm text-primary hover:underline"
+              >
+                Rafraîchir la page
+              </button>
+            )}
           </div>
         )}
       </div>

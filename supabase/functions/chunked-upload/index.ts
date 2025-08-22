@@ -1,5 +1,63 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Helper function to get MIME type from file extension
+function getMimeType(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  
+  const mimeTypes: { [key: string]: string } = {
+    // Video formats
+    'mp4': 'video/mp4',
+    'webm': 'video/webm',
+    'mov': 'video/quicktime',
+    'avi': 'video/x-msvideo',
+    'mkv': 'video/x-matroska',
+    'flv': 'video/x-flv',
+    'wmv': 'video/x-ms-wmv',
+    'm4v': 'video/x-m4v',
+    '3gp': 'video/3gpp',
+    'ogv': 'video/ogg',
+    
+    // Audio formats
+    'mp3': 'audio/mpeg',
+    'wav': 'audio/wav',
+    'flac': 'audio/flac',
+    'aac': 'audio/aac',
+    'ogg': 'audio/ogg',
+    'wma': 'audio/x-ms-wma',
+    'm4a': 'audio/mp4',
+    'opus': 'audio/opus',
+    
+    // Image formats
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'bmp': 'image/bmp',
+    'webp': 'image/webp',
+    'svg': 'image/svg+xml',
+    'tiff': 'image/tiff',
+    'ico': 'image/x-icon',
+    
+    // Document formats
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'txt': 'text/plain',
+    'rtf': 'application/rtf',
+    'zip': 'application/zip',
+    'rar': 'application/x-rar-compressed',
+    '7z': 'application/x-7z-compressed',
+    'tar': 'application/x-tar',
+    'gz': 'application/gzip'
+  }
+  
+  return mimeTypes[ext || ''] || 'application/octet-stream'
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -304,12 +362,17 @@ async function handleChunkMerge(req: Request, userId: string) {
     let uploadAttempts = 0
     const maxUploadAttempts = 3
     let uploadData
+    
+    // Determine correct MIME type for the merged file
+    const contentType = getMimeType(fileName)
+    console.log(`Using MIME type: ${contentType} for file: ${fileName}`)
 
     while (uploadAttempts < maxUploadAttempts) {
       try {
         const { data, error: uploadError } = await supabase.storage
           .from(bucket)
           .upload(finalPath, mergedBuffer, {
+            contentType: contentType,
             cacheControl: '3600',
             upsert: false
           })
@@ -326,6 +389,7 @@ async function handleChunkMerge(req: Request, userId: string) {
             const { data: retryData, error: retryError } = await supabase.storage
               .from(bucket)
               .upload(newFinalPath, mergedBuffer, {
+                contentType: contentType,
                 cacheControl: '3600',
                 upsert: false
               })
@@ -345,6 +409,7 @@ async function handleChunkMerge(req: Request, userId: string) {
         console.error(`Upload attempt ${uploadAttempts} failed:`, error)
         
         if (uploadAttempts >= maxUploadAttempts) {
+          console.error(`Chunk merge failed:`, error)
           throw error
         }
         
