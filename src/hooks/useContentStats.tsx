@@ -6,6 +6,7 @@ interface ContentStats {
   videos: number;
   audios: number;
   illustrations: number;
+  ebooks: number;
   total: number;
 }
 
@@ -15,6 +16,7 @@ export const useContentStats = () => {
     videos: 0,
     audios: 0,
     illustrations: 0,
+    ebooks: 0,
     total: 0
   });
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export const useContentStats = () => {
       let videos = 0; 
       let audios = 0;
       let illustrations = 0;
+      let ebooks = 0;
 
       submissions?.forEach((submission: any) => {
         const fileType = submission.content_files[0]?.file_type;
@@ -56,20 +59,23 @@ export const useContentStats = () => {
           videos++;
         } else if (fileType?.startsWith('audio/')) {
           audios++;
-        } else if (fileType?.includes('vector') || fileType === 'application/pdf') {
+        } else if (fileType === 'application/pdf' || fileType === 'application/epub+zip' || fileType?.includes('ebook')) {
+          ebooks++;
+        } else if (fileType?.includes('vector')) {
           illustrations++;
         } else if (fileType?.startsWith('image/')) {
           photos++;
         }
       });
 
-      const total = photos + videos + audios + illustrations;
+      const total = photos + videos + audios + illustrations + ebooks;
 
       setStats({
         photos,
         videos,
         audios,
         illustrations,
+        ebooks,
         total
       });
     } catch (error) {
