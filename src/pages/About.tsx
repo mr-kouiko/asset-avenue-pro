@@ -205,27 +205,46 @@ const About = () => {
       <Navigation />
       
       {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary-glow/5 to-background"></div>
+      <section className="relative py-20 lg:py-32 overflow-hidden min-h-[80vh] flex items-center">
+        {/* Video Background */}
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/visustock-logo-watermark.png"
+        >
+          <source
+            src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/video%20HERO/VHP_5-27.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ2aWRvIEhFUk8vVkhQXzUtMjcud2VibSIsImlhdCI6MTc1NTg5OTQ4MCwiZXhwIjoyNjE5ODEzMDgwfQ.1cGP04BgDX011TPQKh2PfY5VGz0rdPK3Zx0wN5LcOFs"
+            type="video/webm"
+          />
+          Your browser does not support the video tag.
+        </video>
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40"></div>
+        
+        {/* Content */}
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-lg">
               {t.hero.title}{" "}
-              <span className="text-primary">{t.hero.titleHighlight}</span>
+              <span className="text-primary drop-shadow-lg">{t.hero.titleHighlight}</span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto drop-shadow-md">
               {t.hero.subtitle}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Badge variant="secondary" className="px-4 py-2 text-base">
+              <Badge variant="secondary" className="px-4 py-2 text-base bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30">
                 <Globe className="w-4 h-4 mr-2" />
                 {t.hero.badges.globalCommunity}
               </Badge>
-              <Badge variant="secondary" className="px-4 py-2 text-base">
+              <Badge variant="secondary" className="px-4 py-2 text-base bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30">
                 <Users className="w-4 h-4 mr-2" />
                 {t.hero.badges.diverseCreators}
               </Badge>
-              <Badge variant="secondary" className="px-4 py-2 text-base">
+              <Badge variant="secondary" className="px-4 py-2 text-base bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30">
                 <Heart className="w-4 h-4 mr-2" />
                 {t.hero.badges.inclusivePlatform}
               </Badge>
