@@ -148,12 +148,30 @@ export const useProductDetail = (productId: string) => {
               if (signedData?.signedUrl && !signedError) {
                 previewUrl = signedData.signedUrl;
               } else {
-                console.warn('Could not create signed URL for video file, will show loading state');
-                previewUrl = null; // Set to null to indicate video is not available yet
+                console.warn('Could not create signed URL for video file, trying preview URL fallback');
+                // Fallback to preview URL if available
+                const previewFile = filesList.find((f: any) => f.preview_path);
+                if (previewFile?.preview_path) {
+                  const { data } = supabase.storage
+                    .from('previews')
+                    .getPublicUrl(previewFile.preview_path);
+                  previewUrl = data.publicUrl;
+                } else {
+                  previewUrl = undefined; // Keep undefined to show thumbnail with play button
+                }
               }
             } catch (error) {
               console.warn('Could not create signed URL for video file:', error);
-              previewUrl = null; // Set to null to indicate video is not available yet
+              // Fallback to preview URL if available
+              const previewFile = filesList.find((f: any) => f.preview_path);
+              if (previewFile?.preview_path) {
+                const { data } = supabase.storage
+                  .from('previews')
+                  .getPublicUrl(previewFile.preview_path);
+                previewUrl = data.publicUrl;
+              } else {
+                previewUrl = undefined; // Keep undefined to show thumbnail with play button
+              }
             }
           }
         }

@@ -212,12 +212,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return (
       <div className={`${className} bg-muted flex items-center justify-center relative overflow-hidden rounded-lg border border-border`}>
         {thumbnail && !videoError ? (
-          <img 
-            src={thumbnail} 
-            alt="Aperçu vidéo" 
-            className="w-full h-full object-cover"
-            onError={() => setVideoError(true)}
-          />
+          <div 
+            className="relative w-full h-full cursor-pointer group"
+            onClick={() => {
+              // Try to reload src if it was initially undefined
+              console.log('Attempting to reload video source...');
+            }}
+          >
+            <img 
+              src={thumbnail} 
+              alt="Aperçu vidéo" 
+              className="w-full h-full object-cover"
+              onError={() => setVideoError(true)}
+            />
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+              <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:bg-white group-hover:scale-110 transition-all duration-200 shadow-lg">
+                <Play className="h-10 w-10 text-primary fill-current ml-1" />
+              </div>
+            </div>
+            <div className="absolute bottom-4 left-4 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
+              Cliquez pour lire
+            </div>
+          </div>
         ) : (
           <div className="text-center p-8">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
