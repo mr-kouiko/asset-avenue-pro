@@ -45,30 +45,46 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !src) return;
 
-    const handleLoadStart = () => setIsLoading(true);
-    const handleCanPlay = () => setIsLoading(false);
+    const handleLoadStart = () => {
+      console.log('Video load started:', src);
+      setIsLoading(true);
+    };
+    const handleCanPlay = () => {
+      console.log('Video can play:', src);
+      setIsLoading(false);
+    };
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleDurationChange = () => setDuration(video.duration);
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleError = () => {
+    const handleError = (e) => {
+      console.error('Video error:', e, 'Source:', src);
       setVideoError(true);
+      setIsLoading(false);
+    };
+    const handleLoadedMetadata = () => {
+      console.log('Video metadata loaded:', src);
       setIsLoading(false);
     };
 
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('error', handleError);
 
+    // Force reload of video source
+    video.load();
+
     return () => {
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
       video.removeEventListener('play', handlePlay);
@@ -305,7 +321,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         autoPlay={hasUserInteracted && autoPlay}
         muted={isMuted}
         playsInline={true}
-        onError={() => setVideoError(true)}
+        crossOrigin="anonymous"
+        onError={(e) => {
+          console.error('Video playback error:', e.currentTarget.error, 'Source:', src);
+          setVideoError(true);
+        }}
         onClick={togglePlay}
         onTouchEnd={(e) => {
           e.preventDefault();
@@ -315,6 +335,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <source src={src} type="video/mp4" />
         <source src={src} type="video/webm" />
         <source src={src} type="video/mov" />
+        <source src={src} type="video/quicktime" />
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 

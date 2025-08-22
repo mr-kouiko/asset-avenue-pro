@@ -82,17 +82,39 @@ export const useMarketplace = () => {
               // Get video URL for video content from original-files with signed URL
               if (originalFile.file_path) {
                 console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                const { data: signedData, error: signedError } = await supabase.storage
-                  .from('original-files')
-                  .createSignedUrl(originalFile.file_path, 3600); // 1 hour expiry
-                
-                if (signedError) {
-                  console.error('Error creating signed URL for video:', signedError);
-                } else if (signedData?.signedUrl) {
-                  videoUrl = signedData.signedUrl;
-                  console.log('Generated video URL:', videoUrl);
-                } else {
-                  console.warn('No signed URL generated for:', originalFile.file_path);
+                try {
+                  const { data: signedData, error: signedError } = await supabase.storage
+                    .from('original-files')
+                    .createSignedUrl(originalFile.file_path, 7200); // 2 hours expiry for better mobile reliability
+                  
+                  if (signedError) {
+                    console.error('Error creating signed URL for video:', signedError);
+                    // Try public URL as fallback
+                    const { data: publicData } = supabase.storage
+                      .from('original-files')
+                      .getPublicUrl(originalFile.file_path);
+                    videoUrl = publicData.publicUrl;
+                    console.log('Using public URL fallback for video:', videoUrl);
+                  } else if (signedData?.signedUrl) {
+                    videoUrl = signedData.signedUrl;
+                    console.log('Generated video URL:', videoUrl);
+                  } else {
+                    console.warn('No signed URL generated for:', originalFile.file_path);
+                    // Try public URL as fallback
+                    const { data: publicData } = supabase.storage
+                      .from('original-files')
+                      .getPublicUrl(originalFile.file_path);
+                    videoUrl = publicData.publicUrl;
+                    console.log('Using public URL fallback for video:', videoUrl);
+                  }
+                } catch (error) {
+                  console.error('Exception creating signed URL for video:', error);
+                  // Try public URL as fallback
+                  const { data: publicData } = supabase.storage
+                    .from('original-files')
+                    .getPublicUrl(originalFile.file_path);
+                  videoUrl = publicData.publicUrl;
+                  console.log('Using public URL fallback for video:', videoUrl);
                 }
               }
             } else if (originalFile.file_type.startsWith('audio/')) {
@@ -100,17 +122,39 @@ export const useMarketplace = () => {
               // Get audio URL for audio content from original-files with signed URL
               if (originalFile.file_path) {
                 console.log('Processing audio file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                const { data: signedData, error: signedError } = await supabase.storage
-                  .from('original-files')
-                  .createSignedUrl(originalFile.file_path, 3600); // 1 hour expiry
-                
-                if (signedError) {
-                  console.error('Error creating signed URL for audio:', signedError);
-                } else if (signedData?.signedUrl) {
-                  videoUrl = signedData.signedUrl; // Using videoUrl field for audio too for now
-                  console.log('Generated audio URL:', videoUrl);
-                } else {
-                  console.warn('No signed URL generated for:', originalFile.file_path);
+                try {
+                  const { data: signedData, error: signedError } = await supabase.storage
+                    .from('original-files')
+                    .createSignedUrl(originalFile.file_path, 7200); // 2 hours expiry for better mobile reliability
+                  
+                  if (signedError) {
+                    console.error('Error creating signed URL for audio:', signedError);
+                    // Try public URL as fallback
+                    const { data: publicData } = supabase.storage
+                      .from('original-files')
+                      .getPublicUrl(originalFile.file_path);
+                    videoUrl = publicData.publicUrl; // Using videoUrl field for audio too for now
+                    console.log('Using public URL fallback for audio:', videoUrl);
+                  } else if (signedData?.signedUrl) {
+                    videoUrl = signedData.signedUrl; // Using videoUrl field for audio too for now
+                    console.log('Generated audio URL:', videoUrl);
+                  } else {
+                    console.warn('No signed URL generated for:', originalFile.file_path);
+                    // Try public URL as fallback
+                    const { data: publicData } = supabase.storage
+                      .from('original-files')
+                      .getPublicUrl(originalFile.file_path);
+                    videoUrl = publicData.publicUrl;
+                    console.log('Using public URL fallback for audio:', videoUrl);
+                  }
+                } catch (error) {
+                  console.error('Exception creating signed URL for audio:', error);
+                  // Try public URL as fallback
+                  const { data: publicData } = supabase.storage
+                    .from('original-files')
+                    .getPublicUrl(originalFile.file_path);
+                  videoUrl = publicData.publicUrl;
+                  console.log('Using public URL fallback for audio:', videoUrl);
                 }
               }
             } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {

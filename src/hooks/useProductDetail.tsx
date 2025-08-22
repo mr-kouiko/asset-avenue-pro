@@ -141,37 +141,33 @@ export const useProductDetail = (productId: string) => {
           const videoFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('video/'));
           if (videoFile?.file_path) {
             try {
+              console.log('Attempting to create signed URL for video:', videoFile.file_path);
               const { data: signedData, error: signedError } = await supabase.storage
                 .from('original-files')
-                .createSignedUrl(videoFile.file_path, 3600); // 1 hour expiry
+                .createSignedUrl(videoFile.file_path, 7200); // 2 hours expiry for better mobile reliability
               
               if (signedData?.signedUrl && !signedError) {
                 previewUrl = signedData.signedUrl;
+                console.log('Successfully created signed URL for video:', previewUrl);
               } else {
-                console.warn('Could not create signed URL for video file, trying preview URL fallback');
-                // Fallback to preview URL if available
-                const previewFile = filesList.find((f: any) => f.preview_path);
-                if (previewFile?.preview_path) {
-                  const { data } = supabase.storage
-                    .from('previews')
-                    .getPublicUrl(previewFile.preview_path);
-                  previewUrl = data.publicUrl;
-                } else {
-                  previewUrl = undefined; // Keep undefined to show thumbnail with play button
-                }
+                console.warn('Could not create signed URL for video file, error:', signedError);
+                // Try public URL first as fallback
+                console.log('Trying public URL fallback for video file');
+                const { data: publicData } = supabase.storage
+                  .from('original-files')
+                  .getPublicUrl(videoFile.file_path);
+                previewUrl = publicData.publicUrl;
+                console.log('Using public URL for video:', previewUrl);
               }
             } catch (error) {
-              console.warn('Could not create signed URL for video file:', error);
-              // Fallback to preview URL if available
-              const previewFile = filesList.find((f: any) => f.preview_path);
-              if (previewFile?.preview_path) {
-                const { data } = supabase.storage
-                  .from('previews')
-                  .getPublicUrl(previewFile.preview_path);
-                previewUrl = data.publicUrl;
-              } else {
-                previewUrl = undefined; // Keep undefined to show thumbnail with play button
-              }
+              console.error('Exception creating signed URL for video file:', error);
+              // Try public URL as fallback
+              console.log('Using public URL fallback due to exception');
+              const { data: publicData } = supabase.storage
+                .from('original-files')
+                .getPublicUrl(videoFile.file_path);
+              previewUrl = publicData.publicUrl;
+              console.log('Using public URL for video:', previewUrl);
             }
           }
         }
