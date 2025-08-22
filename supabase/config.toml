@@ -49,3 +49,6 @@ verify_jwt = true
 
 [functions.send-confirmation-email]
 verify_jwt = false
+
+[functions.generate-video-preview]
+verify_jwt = true

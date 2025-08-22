@@ -10,12 +10,14 @@ import {
   generateVideoThumbnail, 
   shouldWatermark 
 } from '@/utils/watermark';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProcessedFile {
   original: File;
   watermarked?: File;
   thumbnail?: File;
   previewUrl?: string;
+  previewPath?: string; // Path to watermarked preview video in storage
 }
 
 interface VideoUploadProcessorProps {
@@ -95,6 +97,40 @@ export const VideoUploadProcessor: React.FC<VideoUploadProcessorProps> = ({
               type: 'image/jpeg',
               lastModified: Date.now()
             });
+
+            // Generate watermarked preview for videos
+            try {
+              // First upload the original video to a temporary location
+              const tempPath = `temp_videos/${Date.now()}_${file.name}`;
+              const { error: uploadError } = await supabase.storage
+                .from('videos')
+                .upload(tempPath, file);
+
+              if (uploadError) {
+                console.error('Error uploading temp video:', uploadError);
+                toast.error(`Erreur upload: ${file.name}`);
+              } else {
+                // Call the edge function to generate watermarked preview
+                const { data: previewData, error: previewError } = await supabase.functions
+                  .invoke('generate-video-preview', {
+                    body: { videoPath: tempPath }
+                  });
+
+                if (previewError) {
+                  console.error('Error generating preview:', previewError);
+                  toast.error(`Erreur watermark: ${file.name}`);
+                } else if (previewData?.previewPath) {
+                  result.previewPath = previewData.previewPath;
+                  toast.success(`Preview avec watermark générée: ${file.name}`);
+                }
+
+                // Clean up temporary file
+                await supabase.storage.from('videos').remove([tempPath]);
+              }
+            } catch (videoError) {
+              console.error('Error processing video preview:', videoError);
+              toast.error(`Erreur traitement vidéo: ${file.name}`);
+            }
           } else if (file.type.startsWith('audio/')) {
             const thumbnailBlob = await generateThumbnail(file, {
               maxSize: 400,
@@ -307,6 +343,7 @@ export const VideoUploadProcessor: React.FC<VideoUploadProcessorProps> = ({
                   <div>✓ Fichier original</div>
                   {processed.thumbnail && <div>✓ Miniature générée</div>}
                   {processed.watermarked && <div>✓ Watermark appliqué</div>}
+                  {processed.previewPath && <div>✓ Preview vidéo avec watermark</div>}
                 </div>
               </div>
             ))}
