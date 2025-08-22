@@ -32,6 +32,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +73,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [src]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -105,6 +124,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!isFullscreen) {
+        const element = containerRef.current as any;
+        if (element?.requestFullscreen) {
+          await element.requestFullscreen();
+        } else if (element?.webkitRequestFullscreen) {
+          await element.webkitRequestFullscreen();
+        } else if (element?.mozRequestFullScreen) {
+          await element.mozRequestFullScreen();
+        } else if (element?.msRequestFullscreen) {
+          await element.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+      }
+    } catch (error) {
+      console.error('Fullscreen toggle failed:', error);
+    }
   };
 
   if (!src) {
@@ -269,7 +317,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => containerRef.current?.requestFullscreen()}
+              onClick={toggleFullscreen}
               className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
             >
               <Maximize2 className="h-4 w-4" />
