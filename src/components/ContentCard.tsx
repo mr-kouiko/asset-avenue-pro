@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { AudioPlayer } from "@/components/AudioPlayer";
+import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 
 interface ContentCardProps {
   id: string;
@@ -35,6 +36,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   isLiked = false,
 }) => {
   const { addToCart } = useCart();
+  
+  // Create watermarked preview for images
+  const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
+    imageUrl: type === 'photo' || type === 'illustration' ? thumbnail : undefined,
+    enabled: type === 'photo' || type === 'illustration'
+  });
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -94,11 +101,20 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </div>
           </div>
         ) : (
-          <img
-            src={thumbnail}
-            alt={title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <div className="relative">
+            <img
+              src={watermarkedUrl || thumbnail}
+              alt={title}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                isProcessing ? 'opacity-75' : ''
+              }`}
+            />
+            {isProcessing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
         )}
         
         {/* Overlay */}

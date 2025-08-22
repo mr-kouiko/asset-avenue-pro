@@ -1,9 +1,10 @@
 export interface WatermarkOptions {
   opacity?: number;
-  position?: 'center' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  position?: 'center' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'repeated-diagonal';
   size?: number; // percentage of canvas width
   text?: string;
   logoPath?: string;
+  spacing?: number; // spacing between repeated watermarks
 }
 
 export interface ThumbnailOptions {
@@ -185,6 +186,167 @@ export const addWatermarkToVideo = async (
 
 export const shouldWatermark = (fileType: string): boolean => {
   return fileType.startsWith('image/') || fileType.startsWith('video/');
+};
+
+// Create web preview with repeated diagonal watermark
+export const createWebPreviewWithWatermark = async (
+  imageFile: File,
+  options: WatermarkOptions = {}
+): Promise<Blob> => {
+  const {
+    opacity = 0.3,
+    text = 'VisuStock',
+    logoPath = '/lovable-uploads/visustock-logo-no-bg.png',
+    spacing = 200
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Resize image to max width of 1280px while maintaining aspect ratio
+        const maxWidth = 1280;
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw the original image
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Load watermark logo
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        
+        logoImg.onload = () => {
+          // Create repeated diagonal watermark pattern
+          const watermarkSize = 120; // Fixed size for consistency
+          const diagonalSpacing = spacing;
+          
+          // Calculate how many watermarks we need across the diagonal
+          const diagonal = Math.sqrt(width * width + height * height);
+          const watermarksNeeded = Math.ceil(diagonal / diagonalSpacing) + 2;
+          
+          // Save the current context state
+          ctx.save();
+          
+          // Set up for repeated watermarks
+          ctx.globalAlpha = opacity;
+          
+          // Create the diagonal pattern
+          for (let row = -watermarksNeeded; row <= watermarksNeeded; row++) {
+            for (let col = -watermarksNeeded; col <= watermarksNeeded; col++) {
+              // Calculate position on a 45-degree diagonal grid
+              const x = (col * diagonalSpacing) + (row * diagonalSpacing * 0.5);
+              const y = row * diagonalSpacing * 0.866; // sqrt(3)/2 for proper diagonal spacing
+              
+              // Only draw if the watermark would be visible on the canvas
+              if (x + watermarkSize > -100 && x < width + 100 && 
+                  y + watermarkSize > -100 && y < height + 100) {
+                
+                ctx.save();
+                // Rotate 45 degrees around the watermark center
+                ctx.translate(x + watermarkSize/2, y + watermarkSize/2);
+                ctx.rotate(Math.PI / 4); // 45 degrees
+                
+                // Draw the logo centered
+                ctx.drawImage(logoImg, -watermarkSize/2, -watermarkSize/2, watermarkSize, watermarkSize);
+                
+                ctx.restore();
+              }
+            }
+          }
+          
+          // Restore the context state
+          ctx.restore();
+
+          // Convert to blob
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to create web preview with watermark'));
+              }
+            },
+            'image/jpeg',
+            0.85 // Good quality for web preview
+          );
+        };
+
+        logoImg.onerror = () => {
+          // Fallback to text watermark pattern
+          const fontSize = 32;
+          ctx.font = `bold ${fontSize}px Arial`;
+          ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+          ctx.strokeStyle = `rgba(0, 0, 0, ${opacity * 0.5})`;
+          ctx.lineWidth = 2;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          // Create diagonal text pattern
+          const diagonalSpacing = spacing;
+          const diagonal = Math.sqrt(width * width + height * height);
+          const watermarksNeeded = Math.ceil(diagonal / diagonalSpacing) + 2;
+          
+          ctx.save();
+          
+          for (let row = -watermarksNeeded; row <= watermarksNeeded; row++) {
+            for (let col = -watermarksNeeded; col <= watermarksNeeded; col++) {
+              const x = (col * diagonalSpacing) + (row * diagonalSpacing * 0.5);
+              const y = row * diagonalSpacing * 0.866;
+              
+              if (x > -100 && x < width + 100 && y > -100 && y < height + 100) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(Math.PI / 4);
+                
+                // Draw text with stroke for better visibility
+                ctx.strokeText(text, 0, 0);
+                ctx.fillText(text, 0, 0);
+                
+                ctx.restore();
+              }
+            }
+          }
+          
+          ctx.restore();
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to create web preview with text watermark'));
+              }
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+
+        logoImg.src = logoPath;
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(imageFile);
+  });
 };
 
 // Generate audio waveform as thumbnail

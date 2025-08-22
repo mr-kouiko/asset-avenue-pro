@@ -25,6 +25,7 @@ import { useProductDetail } from "@/hooks/useProductDetail";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
+import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
@@ -33,6 +34,12 @@ const ProductDetail = () => {
   const { content: marketplaceContent } = useMarketplace();
   const [isLiked, setIsLiked] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState("standard");
+
+  // Create watermarked preview for images
+  const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
+    imageUrl: (product?.type === 'photo' || product?.type === 'illustration') ? product?.thumbnail : undefined,
+    enabled: product?.type === 'photo' || product?.type === 'illustration'
+  });
 
   if (loading) {
     return (
@@ -200,14 +207,24 @@ const ProductDetail = () => {
             </div>
           </div>
         ) : (
-          <img
-            src={product.thumbnail}
-            alt={product.title}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/placeholder.svg';
-            }}
-          />
+          <div className="relative">
+            <img
+              src={watermarkedUrl || product.thumbnail}
+              alt={product.title}
+              className={`w-full h-full object-cover ${isProcessing ? 'opacity-75' : ''}`}
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder.svg';
+              }}
+            />
+            {isProcessing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Application du filigrane de protection...</span>
+                </div>
+              </div>
+            )}
+          </div>
         )}
         <div className="absolute top-4 right-4 flex gap-2">
           <Button
