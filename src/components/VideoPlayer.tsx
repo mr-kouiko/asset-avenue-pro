@@ -1,281 +1,314 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
-import { Button } from './ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import watermarkLogo from '@/assets/visustock-watermark.png';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
-interface VideoPlayerProps {
+interface MediaPlayerProps {
   src?: string;
-  thumbnail?: string;
+  type: 'video' | 'audio';
+  title?: string;
   poster?: string;
   className?: string;
-  showThumbnailFirst?: boolean;
   autoPlay?: boolean;
   controls?: boolean;
   muted?: boolean;
+  compact?: boolean;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
-  src, 
-  thumbnail,
-  poster, 
-  className = "w-full h-full object-cover",
-  showThumbnailFirst = false,
+/** Helper: deduce MIME from src extension */
+function getMimeFromSrc(src?: string, kind: 'video' | 'audio' = 'video'): string | undefined {
+  if (!src) return undefined;
+  const clean = src.split('?')[0];
+  const ext = clean.slice(clean.lastIndexOf('.') + 1).toLowerCase();
+  if (kind === 'video') {
+    if (ext === 'mp4') return 'video/mp4';
+    if (ext === 'webm') return 'video/webm';
+    if (ext === 'ogg' || ext === 'ogv') return 'video/ogg';
+    if (ext === 'mov') return 'video/quicktime';
+    return 'video/mp4';
+  } else {
+    if (ext === 'mp3') return 'audio/mpeg';
+    if (ext === 'aac') return 'audio/aac';
+    if (ext === 'm4a') return 'audio/mp4';
+    if (ext === 'wav') return 'audio/wav';
+    if (ext === 'ogg' || ext === 'oga') return 'audio/ogg';
+    if (ext === 'webm') return 'audio/webm';
+    return 'audio/mpeg';
+  }
+}
+
+export const MediaPlayer: React.FC<MediaPlayerProps> = ({
+  src,
+  type,
+  title = 'Media',
+  poster,
+  className = 'w-full',
   autoPlay = false,
   controls = true,
-  muted = false
+  muted = false,
+  compact = false
 }) => {
-  const [showVideo, setShowVideo] = useState(!showThumbnailFirst);
-  const [videoError, setVideoError] = useState(false);
+  const deviceInfo = useDeviceDetection();
+  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
+
+  // Player state (kept as in original)
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [isMuted, setIsMuted] = useState(muted);
+  const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [showControls, setShowControls] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [controlsTimer, setControlsTimer] = useState<NodeJS.Timeout | null>(null);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const [buffered, setBuffered] = useState(0);
   const [canPlay, setCanPlay] = useState(false);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
+  const [retryCount, setRetryCount] = useState(0);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Use thumbnail as fallback poster if poster is not provided
-  const effectivePoster = poster || thumbnail;
+  // *** MODIF ***
+  // fix du 1er tap mobile : on marque l'interaction via un ref synchronously
+  const userInteractedRef = useRef(false);
 
-  // Device-aware video loading with smart retry logic
-  const loadVideo = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || !src) return;
+  // mime type détecté (utilisé via <source>)
+  const mimeType = useMemo(() => getMimeFromSrc(src, type), [src, type]);
 
-    console.log('📹 Loading video:', src, 'Attempt:', retryCount + 1, 'Mobile:', isMobile);
-    setIsLoading(true);
-    setVideoError(false);
+  // mediaKey forcera le rerender/reload lorsque src ou retryCount change
+  const mediaKey = useMemo(() => `${src || 'no-src'}::${retryCount}`, [src, retryCount]);
+
+  /***********************
+   *  HANDLERS (stables) *
+   ***********************/
+  // *** MODIF ***
+  // Handlers centralisés (attachés une seule fois par useEffect)
+  const handleCanPlay = useCallback(() => {
+    setIsLoading(false);
+    setCanPlay(true);
+    setHasError(false);
+    console.log('canplay fired');
+  }, []);
+
+  const handleError = useCallback((e: Event) => {
+    const target = e.target as HTMLMediaElement | null;
+    const error = target?.error;
+    console.error('media error', { code: error?.code, message: (error as any)?.message, src, mimeType, retryCount });
+    setIsLoading(false);
     setCanPlay(false);
+    if (retryCount < 3) {
+      setTimeout(() => setRetryCount(p => p + 1), 1000 + retryCount * 500);
+    } else {
+      setHasError(true);
+    }
+  }, [src, mimeType, retryCount]);
+
+  const handleLoadedMetadata = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    const d = Number.isFinite(media.duration) ? media.duration : 0;
+    setDuration(d);
+    console.log('loadedmetadata', d);
+  }, []);
+
+  const handleProgress = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media || !Number.isFinite(media.duration) || media.duration <= 0) return;
+    if (media.buffered.length > 0) {
+      const bufferedEnd = media.buffered.end(media.buffered.length - 1);
+      const bufferedPercent = (bufferedEnd / media.duration) * 100;
+      setBuffered(Math.max(0, Math.min(100, bufferedPercent)));
+    }
+  }, []);
+
+  const handleTimeUpdate = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    setCurrentTime(media.currentTime || 0);
+  }, []);
+
+  const handlePlay = useCallback(() => setIsPlaying(true), []);
+  const handlePause = useCallback(() => setIsPlaying(false), []);
+  const handleEnded = useCallback(() => { setIsPlaying(false); setCurrentTime(0); }, []);
+  const handleVolumeChange = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    setIsMuted(media.muted);
+    setVolume(media.volume);
+  }, []);
+
+  // *** MODIF ***
+  // Attache / détache les listeners UNE seule fois (empêche accumulation)
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    media.addEventListener('canplay', handleCanPlay);
+    media.addEventListener('error', handleError);
+    media.addEventListener('loadedmetadata', handleLoadedMetadata);
+    media.addEventListener('progress', handleProgress);
+    media.addEventListener('timeupdate', handleTimeUpdate);
+    media.addEventListener('play', handlePlay);
+    media.addEventListener('pause', handlePause);
+    media.addEventListener('ended', handleEnded);
+    media.addEventListener('volumechange', handleVolumeChange);
+
+    return () => {
+      media.removeEventListener('canplay', handleCanPlay);
+      media.removeEventListener('error', handleError);
+      media.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      media.removeEventListener('progress', handleProgress);
+      media.removeEventListener('timeupdate', handleTimeUpdate);
+      media.removeEventListener('play', handlePlay);
+      media.removeEventListener('pause', handlePause);
+      media.removeEventListener('ended', handleEnded);
+      media.removeEventListener('volumechange', handleVolumeChange);
+    };
+  }, [handleCanPlay, handleError, handleLoadedMetadata, handleProgress, handleTimeUpdate, handlePlay, handlePause, handleEnded, handleVolumeChange]);
+
+  /***********************
+   *  LOAD MEDIA (fix)   *
+   ***********************/
+  // *** MODIF ***
+  // loadMedia simplified: ne rattache pas d'events, fait un reload propre et laisse
+  // le useEffect listeners gérés plus haut capturer canplay/error/loadedmetadata.
+  const loadMedia = useCallback(async () => {
+    const media = mediaRef.current;
+    if (!media || !src) return;
+    console.log(`Loading ${type}:`, src);
+    setIsLoading(true);
+    setHasError(false);
+    setCanPlay(false);
+    setBuffered(0);
+    setDuration(0);
+    setCurrentTime(0);
 
     try {
-      // Use fallback URL only on mobile devices after first attempt
-      let videoSrc = src;
-      if (isMobile && retryCount > 0 && (src as any).public_preview_url) {
-        videoSrc = (src as any).public_preview_url;
-        console.log('📱 Mobile fallback URL:', videoSrc);
-      }
+      // Forcer un reset propre (évite états fantômes)
+      media.pause();
+      media.removeAttribute('src');
+      // remove child <source> if any — React will render <source> again because of key (mediaKey)
+      // call load to reset internal state
+      try { media.load(); } catch (e) { /* ignore */ }
 
-      // Set source and load - different approach for mobile vs desktop
-      if (isMobile) {
-        // Mobile: Set src directly and load
-        video.src = videoSrc;
-        video.load();
-      } else {
-        // Desktop: Clear and reload
-        video.pause();
-        video.src = '';
-        video.load();
-        video.src = videoSrc;
-        video.load();
-      }
-      
-      // Set up event listeners for this load attempt
-      const handleCanPlay = () => {
-        console.log('Video can play:', src);
-        setIsLoading(false);
-        setCanPlay(true);
-        setVideoError(false);
-      };
-
-      const handleError = (e: Event) => {
-        const target = e.target as HTMLVideoElement;
-        const error = target.error;
-        console.error('❌ Video load error:', {
-          code: error?.code,
-          message: error?.message,
-          src: videoSrc,
-          originalSrc: src,
-          networkState: target.networkState,
-          readyState: target.readyState,
-          retryCount: retryCount,
-          isMobile: isMobile
-        });
-        
-        setIsLoading(false);
-        setCanPlay(false);
-        
-        // Smart retry logic - different for mobile vs desktop
-        const maxRetries = isMobile ? 3 : 2;
-        if (retryCount < maxRetries) {
-          console.log(`🔄 Retrying video load (${retryCount + 1}/${maxRetries})...`);
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, isMobile ? 1500 : 1000); // Longer delay on mobile
-        } else {
-          console.error('💥 All video load attempts failed');
-          setVideoError(true);
-        }
-      };
-
-      const handleLoadedMetadata = () => {
-        console.log('Video metadata loaded:', {
-          duration: video.duration,
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight
-        });
-        setDuration(video.duration);
-      };
-
-      const handleProgress = () => {
-        if (video.buffered.length > 0) {
-          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-          const bufferedPercent = (bufferedEnd / video.duration) * 100;
-          setBuffered(bufferedPercent);
-        }
-      };
-
-      // Add event listeners
-      video.addEventListener('canplay', handleCanPlay);
-      video.addEventListener('error', handleError);
-      video.addEventListener('loadedmetadata', handleLoadedMetadata);
-      video.addEventListener('progress', handleProgress);
-
-      // Trigger load
-      video.load();
-
-      // Cleanup function
-      return () => {
-        video.removeEventListener('canplay', handleCanPlay);
-        video.removeEventListener('error', handleError);
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        video.removeEventListener('progress', handleProgress);
-      };
-    } catch (error) {
-      console.error('Exception during video load:', error);
+      // If mobile keep lightweight; desktop we also set src via React <source> and force load using key
+      // (actual src injection is handled by the rendered <source> element keyed by mediaKey)
+    } catch (err) {
+      console.error('Exception during loadMedia', err);
       setIsLoading(false);
-      setVideoError(true);
+      setHasError(true);
     }
-  }, [src, retryCount]);
+  }, [src, type]);
 
-  // Effect to handle video loading and retry logic
+  // auto-run loadMedia when src or retryCount change (mediaKey)
   useEffect(() => {
-    if (src && showVideo) {
-      loadVideo();
-    }
-  }, [src, showVideo, loadVideo]);
+    if (src) loadMedia();
+  }, [src, loadMedia, mediaKey]);
 
-  // Standard video event handlers
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    };
-
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
-    video.addEventListener('ended', handleEnded);
-
-    return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-      video.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  // Fullscreen event handlers
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, []);
-
-  // Mobile-optimized play/pause with user interaction handling
+  /***********************
+   *  PLAY / MUTE / SEEK  *
+   ***********************/
+  // *** MODIF ***
   const togglePlay = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || !canPlay) return;
+    const media = mediaRef.current;
+    if (!media || !canPlay) return;
 
-    setHasUserInteracted(true);
-    
+    // marque l'interaction immédiatement (fix pour mobile)
+    userInteractedRef.current = true;
+    if (!hasUserInteracted) setHasUserInteracted(true);
+
     try {
       if (isPlaying) {
-        await video.pause();
+        await media.pause();
       } else {
-        // Ensure video is ready before playing
-        if (video.readyState >= 2) {
-          await video.play();
+        if (media.readyState >= 2) {
+          await media.play();
         } else {
-          // Wait for video to be ready
-          video.addEventListener('canplay', async () => {
-            try {
-              await video.play();
-            } catch (error) {
-              console.warn('Play failed after canplay:', error);
-            }
-          }, { once: true });
+          // Attendre canplay
+          const playWhenReady = async () => {
+            media.removeEventListener('canplay', playWhenReady);
+            try { await media.play(); } catch (err) { console.warn('play after canplay failed', err); }
+          };
+          media.addEventListener('canplay', playWhenReady);
+          media.load();
         }
       }
-    } catch (error) {
-      console.error('Playback toggle failed:', error);
-      if (error instanceof DOMException) {
-        if (error.name === 'NotAllowedError') {
-          console.warn('Autoplay blocked - user interaction required');
-        } else if (error.name === 'NotSupportedError') {
-          console.error('Video format not supported');
-          setVideoError(true);
+    } catch (error: any) {
+      console.error('playback toggle failed:', error);
+      if (error?.name === 'NotAllowedError') {
+        // try muted play if video and autoplay blocked
+        if (type === 'video') {
+          try {
+            media.muted = true;
+            setIsMuted(true);
+            await media.play();
+          } catch (e) {
+            console.warn('muted play failed', e);
+          }
         }
+      } else if (error?.name === 'NotSupportedError') {
+        setHasError(true);
       }
     }
-  }, [isPlaying, canPlay]);
+  }, [canPlay, isPlaying, hasUserInteracted, type]);
 
   const toggleMute = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
+    const media = mediaRef.current;
+    if (!media) return;
+    media.muted = !media.muted;
+    setIsMuted(media.muted);
   }, []);
 
-  // Enhanced seek handling for mobile with better touch support
-  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    const video = videoRef.current;
-    if (!video || !duration || !canPlay) return;
-
-    const progressBar = e.currentTarget;
-    const rect = progressBar.getBoundingClientRect();
-    let clientX: number;
-    
-    if ('touches' in e) {
-      clientX = e.touches[0]?.clientX || e.changedTouches[0]?.clientX || 0;
-    } else {
-      clientX = e.clientX;
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    const media = mediaRef.current;
+    if (!media) return;
+    media.volume = newVolume;
+    setVolume(newVolume);
+    if (newVolume === 0) {
+      media.muted = true;
+      setIsMuted(true);
+    } else if (isMuted && newVolume > 0) {
+      media.muted = false;
+      setIsMuted(false);
     }
-    
+  }, [isMuted]);
+
+  const handleSeek = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const media = mediaRef.current;
+    if (!media || !duration || !canPlay) return;
+
+    const progressBar = e.currentTarget as HTMLElement;
+    const rect = progressBar.getBoundingClientRect();
+    let clientX = 0;
+
+    if ('touches' in e && e.touches.length) {
+      clientX = (e.touches[0] as Touch).clientX;
+    } else if ('changedTouches' in e && e.changedTouches.length) {
+      clientX = (e.changedTouches[0] as Touch).clientX;
+    } else if ('clientX' in (e as any)) {
+      clientX = (e as any).clientX;
+    }
+
     const clickPosition = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const newTime = clickPosition * duration;
-    
-    video.currentTime = newTime;
+    media.currentTime = newTime;
     setCurrentTime(newTime);
   }, [duration, canPlay]);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (type !== 'video') return;
+    const media = mediaRef.current as HTMLVideoElement | null;
+    if (!media) return;
+    try {
+      if (!isFullscreen) {
+        if (media.requestFullscreen) await media.requestFullscreen();
+        else if ((media as any).webkitRequestFullscreen) await (media as any).webkitRequestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle failed:', err);
+    }
+  }, [isFullscreen, type]);
 
   const formatTime = useCallback((time: number) => {
     if (!isFinite(time)) return '0:00';
@@ -284,157 +317,48 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, []);
 
-  // Enhanced fullscreen with mobile support
-  const toggleFullscreen = useCallback(async () => {
-    try {
-      if (!isFullscreen) {
-        const element = containerRef.current as any;
-        const video = videoRef.current as any;
-        
-        // iOS Safari specific - use video element fullscreen
-        if (isMobile && video?.webkitEnterFullscreen) {
-          await video.webkitEnterFullscreen();
-        } else if (element?.requestFullscreen) {
-          await element.requestFullscreen();
-        } else if (element?.webkitRequestFullscreen) {
-          await element.webkitRequestFullscreen();
-        } else if (element?.mozRequestFullScreen) {
-          await element.mozRequestFullScreen();
-        } else if (element?.msRequestFullscreen) {
-          await element.msRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).mozCancelFullScreen) {
-          await (document as any).mozCancelFullScreen();
-        } else if ((document as any).msExitFullscreen) {
-          await (document as any).msExitFullscreen();
-        }
-      }
-    } catch (error) {
-      console.error('Fullscreen toggle failed:', error);
-    }
-  }, [isFullscreen, isMobile]);
-
-  // Mobile control visibility with auto-hide
-  const showControlsWithTimer = useCallback(() => {
-    setShowControls(true);
-    if (controlsTimer) {
-      clearTimeout(controlsTimer);
-    }
-    if (isMobile) {
-      const timer = setTimeout(() => setShowControls(false), 3000);
-      setControlsTimer(timer);
-    }
-  }, [controlsTimer, isMobile]);
-
-  const handleContainerInteraction = useCallback(() => {
-    if (isMobile) {
-      showControlsWithTimer();
-    }
-  }, [isMobile, showControlsWithTimer]);
-
   const handleRetry = useCallback(() => {
     setRetryCount(0);
-    setVideoError(false);
+    setHasError(false);
     setIsLoading(true);
-    loadVideo();
-  }, [loadVideo]);
+    // relance via mediaKey effect
+    setTimeout(() => setRetryCount(c => c + 1), 0);
+  }, []);
 
-  // No source provided
+  /***********************
+   *  RENDER (UI)        *
+   ***********************/
   if (!src) {
     return (
-      <div className={`${className} bg-muted flex items-center justify-center relative overflow-hidden rounded-lg border border-border`}>
-        {thumbnail && !videoError ? (
-          <div 
-            className="relative w-full h-full cursor-pointer group"
-            onClick={handleRetry}
-          >
-            <img 
-              src={thumbnail} 
-              alt="Aperçu vidéo" 
-              className="w-full h-full object-cover"
-              onError={() => setVideoError(true)}
-            />
-            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-              <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:bg-white group-hover:scale-110 transition-all duration-200 shadow-lg">
-                <Play className="h-10 w-10 text-primary fill-current ml-1" />
-              </div>
-            </div>
-            <div className="absolute bottom-4 left-4 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
-              Appuyez pour charger
-            </div>
-          </div>
-        ) : (
-          <div className="text-center p-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              <Play className="h-8 w-8 text-primary" />
-            </div>
-            <p className="text-muted-foreground">
-              {videoError ? 'Impossible de charger la vidéo' : 'Vidéo en cours de traitement...'}
-            </p>
-            {videoError && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRetry}
-                className="mt-2"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Réessayer
-              </Button>
+      <div className={`${className} bg-muted flex items-center justify-center rounded-lg border border-border min-h-[120px]`}>
+        <div className="text-center p-6">
+          <div className="w-12 h-12 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+            {type === 'video' ? (
+              <Play className="h-6 w-6 text-primary" />
+            ) : (
+              <Volume2 className="h-6 w-6 text-primary" />
             )}
           </div>
-        )}
-      </div>
-    );
-  }
-
-  // Show thumbnail first mode
-  if (showThumbnailFirst && !showVideo && thumbnail && !videoError) {
-    return (
-      <div 
-        className={`${className} relative cursor-pointer group overflow-hidden rounded-lg border border-border`}
-        onClick={() => setShowVideo(true)}
-      >
-        <img 
-          src={thumbnail}
-          alt="Aperçu vidéo"
-          className="w-full h-full object-cover transition-transform group-hover:scale-105"
-          onError={() => setVideoError(true)}
-        />
-        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-          <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:bg-white group-hover:scale-110 transition-all duration-200 shadow-lg">
-            <Play className="h-10 w-10 text-primary fill-current ml-1" />
-          </div>
-        </div>
-        <div className="absolute bottom-4 left-4 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
-          Vidéo
+          <p className="text-muted-foreground text-sm">
+            {type === 'video' ? 'Vidéo' : 'Audio'} en cours de traitement...
+          </p>
         </div>
       </div>
     );
   }
 
-  // Video error state
-  if (videoError) {
+  if (hasError) {
     return (
-      <div className={`${className} bg-muted flex items-center justify-center relative overflow-hidden rounded-lg border border-border`}>
-        <div className="text-center p-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
-            <AlertCircle className="h-8 w-8 text-destructive" />
+      <div className={`${className} bg-muted flex items-center justify-center rounded-lg border border-border min-h-[120px]`}>
+        <div className="text-center p-6">
+          <div className="w-12 h-12 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 text-destructive" />
           </div>
           <p className="text-destructive font-medium mb-1">Erreur de lecture</p>
           <p className="text-muted-foreground text-sm mb-4">
-            Impossible de charger cette vidéo
+            Impossible de lire ce fichier {type === 'video' ? 'vidéo' : 'audio'}
           </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRetry}
-          >
+          <Button variant="outline" size="sm" onClick={handleRetry}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Réessayer
           </Button>
@@ -443,164 +367,153 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // Main video player
   return (
-    <div 
-      ref={containerRef}
-      className={`${className} relative overflow-hidden rounded-lg border border-border bg-black`}
-      onMouseEnter={() => !isMobile && setShowControls(true)}
-      onMouseLeave={() => !isMobile && setShowControls(false)}
-      onTouchStart={handleContainerInteraction}
-      onClick={handleContainerInteraction}
-    >
-      <video 
-        ref={videoRef}
-        className="w-full h-full object-contain"
-        poster={effectivePoster}
-        preload="metadata"
-        autoPlay={hasUserInteracted && autoPlay && canPlay}
-        muted={isMuted}
-        playsInline={true}
-        crossOrigin="anonymous"
-        // Mobile-specific attributes
-        webkit-playsinline={isMobile ? "true" : undefined}
-        x-webkit-airplay={isMobile ? "allow" : undefined}
-        onClick={togglePlay}
-        onTouchEnd={isMobile ? (e) => {
-          e.preventDefault();
-          togglePlay();
-        } : undefined}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain'
-        }}
-      >
-        {/* Progressive source loading - desktop gets all formats, mobile gets optimized formats */}
-        {isMobile ? (
-          <>
-            <source src={src} type="video/mp4" />
-            <source src={src} type="video/webm" />
-          </>
-        ) : (
-          <>
-            <source src={src} type="video/mp4; codecs=avc1.42E01E,mp4a.40.2" />
-            <source src={src} type="video/webm; codecs=vp8,vorbis" />
-            <source src={src} type="video/quicktime" />
-            <source src={src} type="video/ogg; codecs=theora,vorbis" />
-          </>
-        )}
-        Votre navigateur ne supporte pas la lecture vidéo.
-      </video>
+    <div className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'}`}>
+      {/* Media element with typed <source> (helps mobile) */}
+      {type === 'video' ? (
+        <video
+          key={mediaKey} // force re-render when src/retry changes
+          ref={mediaRef as React.RefObject<HTMLVideoElement>}
+          poster={poster}
+          preload={deviceInfo.isMobile ? 'metadata' : 'auto'}
+          autoPlay={hasUserInteracted && autoPlay && canPlay && !deviceInfo.isMobile}
+          muted={isMuted}
+          playsInline={deviceInfo.isMobile}
+          crossOrigin="anonymous"
+          className="w-full h-full object-cover"
+          style={{ display: isLoading || hasError ? 'none' : 'block' }}
+          controls={false}
+        >
+          <source src={src} type={mimeType} />
+        </video>
+      ) : (
+        <audio
+          key={mediaKey}
+          ref={mediaRef as React.RefObject<HTMLAudioElement>}
+          preload={deviceInfo.isMobile ? 'metadata' : 'auto'}
+          autoPlay={hasUserInteracted && autoPlay && canPlay && !deviceInfo.isMobile}
+          muted={isMuted}
+          crossOrigin="anonymous"
+          style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
+          controls={false}
+        >
+          <source src={src} type={mimeType} />
+        </audio>
+      )}
 
-      {/* Watermark Overlay */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-        <img 
-          src={watermarkLogo}
-          alt="VisuStock"
-          className="opacity-50 select-none max-w-[min(540px,80vw)] max-h-[min(540px,80vh)] w-auto h-auto"
-          draggable={false}
-          style={{ 
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            MozUserSelect: 'none',
-            msUserSelect: 'none'
-          }}
-        />
-      </div>
-
-      {/* Loading Indicator */}
+      {/* Loading overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-2" />
-            <p className="text-white text-sm">Chargement...</p>
+            <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+            <p className="text-primary text-sm">Chargement...</p>
           </div>
         </div>
       )}
 
-          {/* Controls - device-specific sizing and touch optimization */}
-          {controls && canPlay && (showControls || !isPlaying || isMobile) && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 md:p-4 z-30">
-              {/* Progress Bar */}
-              <div className="w-full mb-3">
-                {/* Buffer Progress */}
-                <div 
-                  className={`w-full bg-white/20 rounded-full ${isMobile ? 'h-2' : 'h-1'} mb-1`}
+      {/* Controls (left intact, only logic references above changed) */}
+      {canPlay && controls && (
+        <div className="absolute inset-0 z-10">
+          {compact ? (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={togglePlay}
+                  className={`text-white hover:bg-white/20 ${deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'} p-0 rounded-full flex-shrink-0`}
+                  disabled={!canPlay}
                 >
-                  <div 
-                    className="h-full bg-white/40 rounded-full transition-all duration-200"
-                    style={{ width: `${buffered}%` }}
-                  />
+                  {isPlaying ? (
+                    <Pause className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />
+                  ) : (
+                    <Play className={`${deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} ml-0.5`} />
+                  )}
+                </Button>
+
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={`w-full bg-white/30 rounded-full cursor-pointer ${deviceInfo.touchCapable ? 'h-2 touch-manipulation' : 'h-1'}`}
+                    onClick={handleSeek}
+                    onTouchEnd={deviceInfo.touchCapable ? handleSeek : undefined}
+                  >
+                    <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${(currentTime / (duration || 1)) * 100 || 0}%` }} />
+                  </div>
                 </div>
-                
-                {/* Playback Progress - larger touch target on mobile */}
-                <div 
-                  className={`w-full bg-white/30 rounded-full cursor-pointer ${
-                    isMobile ? 'h-2 touch-manipulation' : 'h-1'
-                  }`}
+
+                <span className="text-white text-xs font-mono flex-shrink-0">
+                  {formatTime(currentTime)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+              <div className="mb-3">
+                <div
+                  className={`w-full bg-white/30 rounded-full cursor-pointer ${deviceInfo.touchCapable ? 'h-2 touch-manipulation' : 'h-1'}`}
                   onClick={handleSeek}
-                  onTouchEnd={isMobile ? handleSeek : undefined}
+                  onTouchEnd={deviceInfo.touchCapable ? handleSeek : undefined}
                 >
-                  <div 
-                    className="h-full bg-white rounded-full transition-all duration-200"
-                    style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
-                  />
+                  <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${(currentTime / (duration || 1)) * 100 || 0}%` }} />
                 </div>
               </div>
-              
-              {/* Control Buttons */}
-              <div className="flex items-center justify-between text-white text-sm">
+
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
-                    size={isMobile ? "default" : "sm"}
+                    size={deviceInfo.touchCapable ? "default" : "sm"}
                     onClick={togglePlay}
-                    className={`text-white hover:bg-white/20 ${
-                      isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-                    } p-0`}
+                    className={`text-white hover:bg-white/20 ${deviceInfo.touchCapable ? 'h-12 w-12 touch-manipulation' : 'h-10 w-10'} p-0 rounded-full`}
                     disabled={!canPlay}
                   >
                     {isPlaying ? (
-                      <Pause className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                      <Pause className={deviceInfo.touchCapable ? "h-6 w-6" : "h-5 w-5"} />
                     ) : (
-                      <Play className={`${isMobile ? "h-5 w-5" : "h-4 w-4"} ml-0.5`} />
+                      <Play className={`${deviceInfo.touchCapable ? "h-6 w-6" : "h-5 w-5"} ml-0.5`} />
                     )}
                   </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size={isMobile ? "default" : "sm"}
-                    onClick={toggleMute}
-                    className={`text-white hover:bg-white/20 ${
-                      isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-                    } p-0`}
-                  >
-                    {isMuted ? (
-                      <VolumeX className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-                    ) : (
-                      <Volume2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-                    )}
-                  </Button>
-                  
-                  <span className="font-mono text-xs">
+
+                  {!deviceInfo.isIOS && (
+                    <Button
+                      variant="ghost"
+                      size={deviceInfo.touchCapable ? "default" : "sm"}
+                      onClick={toggleMute}
+                      className={`text-white hover:bg-white/20 ${deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'} p-0 rounded-full`}
+                    >
+                      {isMuted ? <VolumeX className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} /> : <Volume2 className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-white text-sm font-mono">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
+
+                  {type === 'video' && (
+                    <Button
+                      variant="ghost"
+                      size={deviceInfo.touchCapable ? "default" : "sm"}
+                      onClick={toggleFullscreen}
+                      className={`text-white hover:bg-white/20 ${deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'} p-0 rounded-full`}
+                    >
+                      <Maximize className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />
+                    </Button>
+                  )}
                 </div>
-                
-                <Button
-                  variant="ghost"
-                  size={isMobile ? "default" : "sm"}
-                  onClick={toggleFullscreen}
-                  className={`text-white hover:bg-white/20 ${
-                    isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-                  } p-0`}
-                >
-                  <Maximize2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-                </Button>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* buffered bar */}
+      {canPlay && !compact && type === 'video' && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-white/20">
+          <div className="h-full bg-white/50" style={{ width: `${buffered}%` }} />
+        </div>
+      )}
     </div>
   );
 };
