@@ -164,55 +164,55 @@ const Index = () => {
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
             <div>
-              <h4 className="font-semibold mb-4 text-gray-900">Products</h4>
+              <h4 className="font-semibold mb-4 text-gray-900">Produits</h4>
               <ul className="space-y-3 text-sm">
                 <li><Link to="/marketplace?category=photo" className="text-gray-600 hover:text-gray-900 transition-colors">Photos</Link></li>
                 <li><Link to="/marketplace?category=video" className="text-gray-600 hover:text-gray-900 transition-colors">Vidéos</Link></li>
                 <li><Link to="/marketplace?category=illustration" className="text-gray-600 hover:text-gray-900 transition-colors">Illustrations</Link></li>
                 <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio</Link></li>
-                <li><Link to="/api" className="text-gray-600 hover:text-gray-900 transition-colors">API Access</Link></li>
+                <li><Link to="/api" className="text-gray-600 hover:text-gray-900 transition-colors">Accès API</Link></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4 text-gray-900">Resources</h4>
+              <h4 className="font-semibold mb-4 text-gray-900">Ressources</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Help Center</Link></li>
-                <li><Link to="/tutorials" className="text-gray-600 hover:text-gray-900 transition-colors">Tutorials</Link></li>
+                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Centre d'aide</Link></li>
+                <li><Link to="/tutorials" className="text-gray-600 hover:text-gray-900 transition-colors">Tutoriels</Link></li>
                 <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
-                <li><Link to="/community" className="text-gray-600 hover:text-gray-900 transition-colors">Community</Link></li>
+                <li><Link to="/community" className="text-gray-600 hover:text-gray-900 transition-colors">Communauté</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4 text-gray-900">Company</h4>
+              <h4 className="font-semibold mb-4 text-gray-900">Entreprise</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors">About VisuStock</Link></li>
+                <li><Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors">À propos de VisuStock</Link></li>
                 <li><Link to="/infinity" className="text-gray-600 hover:text-gray-900 transition-colors">Infinity</Link></li>
-                <li><Link to="/packages-pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Packages & Pricing</Link></li>
-                <li><Link to="/enterprise" className="text-gray-600 hover:text-gray-900 transition-colors">Enterprise</Link></li>
-                <li><Link to="/press" className="text-gray-600 hover:text-gray-900 transition-colors">Press Kit</Link></li>
-                <li><Link to="/partnerships" className="text-gray-600 hover:text-gray-900 transition-colors">Partnerships</Link></li>
+                <li><Link to="/packages-pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Forfaits et tarifs</Link></li>
+                <li><Link to="/enterprise" className="text-gray-600 hover:text-gray-900 transition-colors">Entreprise</Link></li>
+                <li><Link to="/press" className="text-gray-600 hover:text-gray-900 transition-colors">Kit presse</Link></li>
+                <li><Link to="/partnerships" className="text-gray-600 hover:text-gray-900 transition-colors">Partenariats</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4 text-gray-900">Legal</h4>
+              <h4 className="font-semibold mb-4 text-gray-900">Légal</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</Link></li>
-                <li><Link to="/privacy-policy" className="text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/cookie-policy" className="text-gray-600 hover:text-gray-900 transition-colors">Cookie Policy</Link></li>
-                <li><Link to="/license-agreement" className="text-gray-600 hover:text-gray-900 transition-colors">License Agreement</Link></li>
+                <li><Link to="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">Conditions d'utilisation</Link></li>
+                <li><Link to="/privacy-policy" className="text-gray-600 hover:text-gray-900 transition-colors">Politique de confidentialité</Link></li>
+                <li><Link to="/cookie-policy" className="text-gray-600 hover:text-gray-900 transition-colors">Politique des cookies</Link></li>
+                <li><Link to="/license-agreement" className="text-gray-600 hover:text-gray-900 transition-colors">Accord de licence</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-semibold mb-4 text-gray-900">Contact</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact Us</Link></li>
-                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Customer Support</Link></li>
-                <li><Link to="/sales" className="text-gray-600 hover:text-gray-900 transition-colors">Sales Inquiries</Link></li>
-                <li><Link to="/feedback" className="text-gray-600 hover:text-gray-900 transition-colors">Feedback</Link></li>
+                <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Nous contacter</Link></li>
+                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Support client</Link></li>
+                <li><Link to="/sales" className="text-gray-600 hover:text-gray-900 transition-colors">Demandes commerciales</Link></li>
+                <li><Link to="/feedback" className="text-gray-600 hover:text-gray-900 transition-colors">Commentaires</Link></li>
               </ul>
             </div>
           </div>
