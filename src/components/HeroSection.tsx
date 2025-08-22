@@ -56,8 +56,25 @@ export const HeroSection = () => {
     }
   };
   return (
-    <section className="relative bg-gradient-to-r from-primary/5 via-primary-glow/5 to-primary/5 py-20">
-      <div className="container">
+    <section className="relative py-20 overflow-hidden">
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
+      </video>
+      
+      {/* Fallback Background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary-glow/5 to-primary/5"></div>
+      
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/40"></div>
+      
+      <div className="container relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-12">
           {/* Left Content */}
           <div className="flex-1 space-y-6">
