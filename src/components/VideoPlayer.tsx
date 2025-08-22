@@ -3,6 +3,32 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2 } from 'lucide-react'
 import { Button } from './ui/button';
 import watermarkLogo from '@/assets/visustock-watermark-large.png';
 
+// CSS pour le mode plein écran
+const fullscreenStyles = `
+  .fullscreen-container:fullscreen {
+    background: black;
+  }
+  
+  .fullscreen-container:fullscreen .fullscreen-watermark {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 2147483647 !important;
+    pointer-events: none !important;
+  }
+`;
+
+// Injecter les styles
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = fullscreenStyles;
+  document.head.appendChild(styleElement);
+}
+
 interface VideoPlayerProps {
   src?: string;
   thumbnail?: string;
@@ -32,14 +58,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Use thumbnail as fallback poster if poster is not provided
   const effectivePoster = poster || thumbnail;
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    const container = containerRef.current;
+    if (!video || !container) return;
 
     const handleLoadStart = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);
@@ -52,6 +81,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsLoading(false);
     };
 
+    // Fullscreen event handlers
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -59,6 +93,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('error', handleError);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       video.removeEventListener('loadstart', handleLoadStart);
@@ -68,6 +103,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('error', handleError);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [src]);
 
@@ -104,6 +140,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const enterFullscreen = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    if (container.requestFullscreen) {
+      container.requestFullscreen();
+    }
   };
 
   // If no src provided but we need watermark, show placeholder with info
@@ -196,7 +241,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   return (
     <div 
-      className={`${className} relative overflow-hidden rounded-lg border border-border bg-black`}
+      ref={containerRef}
+      className={`${className} relative overflow-hidden rounded-lg border border-border bg-black ${isFullscreen ? 'fullscreen-container' : ''}`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
@@ -216,12 +262,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
-      {/* Watermark overlay for preview videos */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+      {/* Watermark overlay - works in both normal and fullscreen */}
+      <div 
+        className={`absolute inset-0 flex items-center justify-center pointer-events-none ${isFullscreen ? 'fullscreen-watermark' : ''}`}
+        style={{ zIndex: 50 }}
+      >
         <img 
           src={watermarkLogo}
           alt="VisuStock"
-          className="w-[280px] h-[280px] opacity-50 select-none"
+          className={`${isFullscreen ? 'w-[400px] h-[400px]' : 'w-[280px] h-[280px]'} opacity-50 select-none`}
           draggable={false}
           style={{ 
             userSelect: 'none',
@@ -292,7 +341,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => videoRef.current?.requestFullscreen()}
+              onClick={enterFullscreen}
               className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
             >
               <Maximize2 className="h-4 w-4" />
