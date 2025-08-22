@@ -79,69 +79,25 @@ export const useMarketplace = () => {
           if (originalFile?.file_type) {
             if (originalFile.file_type.startsWith('video/')) {
               contentType = 'video';
-              // Get video URL for video content from original-files with signed URL
+              // Get video URL for video content from original-files bucket
               if (originalFile.file_path) {
                 console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                try {
-                  // First try signed URL with extended expiry for mobile
-                  const { data: signedData, error: signedError } = await supabase.storage
-                    .from('original-files')
-                    .createSignedUrl(originalFile.file_path, 24 * 60 * 60); // 24 hours expiry for mobile reliability
-                  
-                  if (signedData?.signedUrl && !signedError) {
-                    videoUrl = signedData.signedUrl;
-                    console.log('✅ Generated signed video URL:', videoUrl);
-                  } else {
-                    console.warn('⚠️ Signed URL failed, trying public URL fallback:', signedError);
-                    // Fallback to public URL
-                    const { data: publicData } = supabase.storage
-                      .from('original-files')
-                      .getPublicUrl(originalFile.file_path);
-                    videoUrl = publicData.publicUrl;
-                    console.log('📺 Using public video URL:', videoUrl);
-                  }
-                } catch (error) {
-                  console.error('❌ Exception creating video URL, using public fallback:', error);
-                  // Emergency fallback to public URL
-                  const { data: publicData } = supabase.storage
-                    .from('original-files')
-                    .getPublicUrl(originalFile.file_path);
-                  videoUrl = publicData.publicUrl;
-                  console.log('🚨 Emergency public video URL:', videoUrl);
-                }
+                const { data: publicData } = supabase.storage
+                  .from('original-files')
+                  .getPublicUrl(originalFile.file_path);
+                videoUrl = publicData.publicUrl;
+                console.log('📺 Generated video URL:', videoUrl);
               }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
-              // Get audio URL for audio content from original-files with signed URL
+              // Get audio URL for audio content from original-files bucket
               if (originalFile.file_path) {
                 console.log('Processing audio file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                try {
-                  // First try signed URL with extended expiry for mobile
-                  const { data: signedData, error: signedError } = await supabase.storage
-                    .from('original-files')
-                    .createSignedUrl(originalFile.file_path, 24 * 60 * 60); // 24 hours expiry for mobile reliability
-                  
-                  if (signedData?.signedUrl && !signedError) {
-                    videoUrl = signedData.signedUrl; // Using videoUrl field for audio too
-                    console.log('🎵 Generated signed audio URL:', videoUrl);
-                  } else {
-                    console.warn('⚠️ Audio signed URL failed, trying public URL fallback:', signedError);
-                    // Fallback to public URL
-                    const { data: publicData } = supabase.storage
-                      .from('original-files')
-                      .getPublicUrl(originalFile.file_path);
-                    videoUrl = publicData.publicUrl;
-                    console.log('🔊 Using public audio URL:', videoUrl);
-                  }
-                } catch (error) {
-                  console.error('❌ Exception creating audio URL, using public fallback:', error);
-                  // Emergency fallback to public URL
-                  const { data: publicData } = supabase.storage
-                    .from('original-files')
-                    .getPublicUrl(originalFile.file_path);
-                  videoUrl = publicData.publicUrl;
-                  console.log('🚨 Emergency public audio URL:', videoUrl);
-                }
+                const { data: publicData } = supabase.storage
+                  .from('original-files')
+                  .getPublicUrl(originalFile.file_path);
+                videoUrl = publicData.publicUrl; // Using videoUrl field for audio too
+                console.log('🎵 Generated audio URL:', videoUrl);
               }
             } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
               contentType = 'illustration';
