@@ -50,11 +50,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     };
   }, [src]);
 
-  // Watermark system - Volume forcé à 120% non modifiable
+  // Watermark system - Volume forcé à 100% non modifiable
   const forceWatermarkVolume = () => {
     const watermark = watermarkRef.current;
     if (watermark) {
-      watermark.volume = 1.2; // Force 120% volume
+      watermark.volume = 1.0; // Force 100% volume (maximum autorisé)
     }
   };
 
@@ -63,7 +63,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     if (!watermark) return;
 
     // Configure watermark audio avec volume forcé
-    watermark.volume = 1.2; // Force 120% volume
+    watermark.volume = 1.0; // Force 100% volume (maximum autorisé)
     watermark.preload = 'auto';
 
     // Protection contre les changements de volume
@@ -80,7 +80,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         const watermark = watermarkRef.current;
         if (watermark && isPlaying) {
           // Force le volume avant chaque lecture
-          watermark.volume = 1.2;
+          watermark.volume = 1.0;
           watermark.currentTime = 0;
           watermark.play().catch(console.error);
         }
