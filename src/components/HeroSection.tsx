@@ -79,11 +79,11 @@ export const HeroSection = () => {
           {/* Left Content */}
           <div className="flex-1 space-y-6">
             <div className="space-y-4">
-              <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-lg leading-tight">
                 {t.title}{" "}
-                <span className="text-primary">{t.titleHighlight}</span>
+                <span className="text-primary drop-shadow-lg">{t.titleHighlight}</span>
               </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl">
+              <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl drop-shadow-md">
                 {t.subtitle}
               </p>
             </div>
@@ -108,28 +108,28 @@ export const HeroSection = () => {
             {/* Stats */}
             <div className="flex gap-8 pt-6">
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.photos.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground">{t.statsLabels.photos}</div>
+                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.photos}</div>
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.videos.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground">{t.statsLabels.videos}</div>
+                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.videos}</div>
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.illustrations.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground">{t.statsLabels.illustrations}</div>
+                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.illustrations}</div>
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.audios.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground">{t.statsLabels.audio}</div>
+                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.audio}</div>
               </div>
             </div>
           </div>
@@ -145,12 +145,12 @@ export const HeroSection = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl" />
               
               {/* Floating Cards */}
-              <div className="absolute -top-4 -right-4 bg-white rounded-lg shadow-lg p-3 animate-bounce">
-                <TrendingUp className="h-6 w-6 text-green-500" />
+              <div className="absolute -top-4 -right-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg shadow-lg p-3 animate-bounce">
+                <TrendingUp className="h-6 w-6 text-white drop-shadow-md" />
               </div>
-              <div className="absolute -bottom-4 -left-4 bg-white rounded-lg shadow-lg p-3 flex items-center gap-2">
-                <Play className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium">4K Video</span>
+              <div className="absolute -bottom-4 -left-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg shadow-lg p-3 flex items-center gap-2">
+                <Play className="h-5 w-5 text-primary drop-shadow-md" />
+                <span className="text-sm font-medium text-white drop-shadow-sm">4K Video</span>
               </div>
             </div>
           </div>
