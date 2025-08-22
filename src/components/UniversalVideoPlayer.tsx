@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { detectDevice, getMediaPlayerConfig, getOptimalMediaFormats } from '@/utils/deviceDetection';
-import logoWatermark from '@/assets/visustock-logo-watermark.png';
+
 
 interface UniversalVideoPlayerProps {
   src?: string;
@@ -502,22 +502,6 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
-      {/* Watermark */}
-      <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none">
-        <img 
-          src={logoWatermark}
-          alt="VisuStock Watermark"
-          className="w-32 h-auto opacity-80 drop-shadow-lg select-none"
-          draggable={false}
-          style={{ 
-            userSelect: 'none',
-            pointerEvents: 'none',
-            WebkitUserSelect: 'none',
-            MozUserSelect: 'none',
-            msUserSelect: 'none'
-          }}
-        />
-      </div>
 
       {/* Loading indicator */}
       {isLoading && (
