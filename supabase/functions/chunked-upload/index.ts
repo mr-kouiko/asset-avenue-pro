@@ -1,42 +1,58 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Helper function to get MIME type from file extension
+// Enhanced MIME type detection with mobile browser compatibility
 function getMimeType(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase()
   
   const mimeTypes: { [key: string]: string } = {
-    // Video formats
+    // Video formats - optimized for mobile playback
     'mp4': 'video/mp4',
     'webm': 'video/webm',
     'mov': 'video/quicktime',
     'avi': 'video/x-msvideo',
     'mkv': 'video/x-matroska',
-    'flv': 'video/x-flv',
+    'flv': 'video/x-flv', 
     'wmv': 'video/x-ms-wmv',
     'm4v': 'video/x-m4v',
     '3gp': 'video/3gpp',
+    '3g2': 'video/3gpp2',
     'ogv': 'video/ogg',
+    'ts': 'video/mp2t',
+    'mts': 'video/mp2t',
+    'vob': 'video/dvd',
     
-    // Audio formats
+    // Audio formats - mobile compatible
     'mp3': 'audio/mpeg',
     'wav': 'audio/wav',
     'flac': 'audio/flac',
     'aac': 'audio/aac',
     'ogg': 'audio/ogg',
+    'oga': 'audio/ogg',
     'wma': 'audio/x-ms-wma',
     'm4a': 'audio/mp4',
     'opus': 'audio/opus',
+    'webm': 'audio/webm',
+    'amr': 'audio/amr',
+    'au': 'audio/basic',
+    'mid': 'audio/midi',
+    'midi': 'audio/midi',
+    'ra': 'audio/x-realaudio',
+    'aiff': 'audio/x-aiff',
     
     // Image formats
     'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
+    'jpeg': 'image/jpeg', 
     'png': 'image/png',
     'gif': 'image/gif',
     'bmp': 'image/bmp',
     'webp': 'image/webp',
     'svg': 'image/svg+xml',
     'tiff': 'image/tiff',
+    'tif': 'image/tiff',
     'ico': 'image/x-icon',
+    'heic': 'image/heic',
+    'heif': 'image/heif',
+    'avif': 'image/avif',
     
     // Document formats
     'pdf': 'application/pdf',
@@ -55,13 +71,24 @@ function getMimeType(fileName: string): string {
     'gz': 'application/gzip'
   }
   
-  return mimeTypes[ext || ''] || 'application/octet-stream'
+  const mimeType = mimeTypes[ext || ''] || 'application/octet-stream'
+  console.log(`MIME type detection: ${fileName} -> ${ext} -> ${mimeType}`)
+  return mimeType
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Enhanced CORS headers for mobile compatibility
+function getCorsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, range',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'public, max-age=31536000'
+  }
 }
+
+const corsHeaders = getCorsHeaders()
 
 interface ChunkUploadRequest {
   chunkIndex: number
@@ -358,60 +385,77 @@ async function handleChunkMerge(req: Request, userId: string) {
       return `${userId}/${finalFileName}`
     })()
 
-    // Upload merged file to final destination with retry logic
+    // Upload merged file to final destination with retry logic and mobile optimization
     let uploadAttempts = 0
     const maxUploadAttempts = 3
     let uploadData
+    let finalPathUsed = finalPath
     
     // Determine correct MIME type for the merged file
     const contentType = getMimeType(fileName)
     console.log(`Using MIME type: ${contentType} for file: ${fileName}`)
+    
+    // Enhanced upload options for mobile compatibility
+    const uploadOptions = {
+      contentType: contentType,
+      cacheControl: 'public, max-age=31536000, immutable',
+      upsert: false,
+      metadata: {
+        originalFileName: fileName,
+        uploadedAt: new Date().toISOString(),
+        fileSize: mergedBuffer.length.toString(),
+        mimeType: contentType
+      }
+    }
 
     while (uploadAttempts < maxUploadAttempts) {
       try {
+        uploadAttempts++
+        console.log(`Upload attempt ${uploadAttempts}/${maxUploadAttempts} for ${fileName}`)
+        
         const { data, error: uploadError } = await supabase.storage
           .from(bucket)
-          .upload(finalPath, mergedBuffer, {
-            contentType: contentType,
-            cacheControl: '3600',
-            upsert: false
-          })
+          .upload(finalPathUsed, mergedBuffer, uploadOptions)
 
         if (uploadError) {
-          if (uploadError.message.includes('already exists') && uploadAttempts < maxUploadAttempts - 1) {
-            // Try with modified path
+          console.error(`Upload error on attempt ${uploadAttempts}:`, uploadError)
+          
+          if (uploadError.message.includes('already exists')) {
+            // Generate unique path and retry
             const timestamp = Date.now()
-            const randomStr = Math.random().toString(36).substring(2)
+            const randomStr = Math.random().toString(36).substring(2, 8)
             const pathParts = finalPath.split('.')
-            pathParts[pathParts.length - 2] += `_${timestamp}_${randomStr}`
-            const newFinalPath = pathParts.join('.')
-            
-            const { data: retryData, error: retryError } = await supabase.storage
-              .from(bucket)
-              .upload(newFinalPath, mergedBuffer, {
-                contentType: contentType,
-                cacheControl: '3600',
-                upsert: false
-              })
-
-            if (retryError) throw retryError
-            uploadData = retryData
-            break
+            const extension = pathParts.pop()
+            const baseName = pathParts.join('.')
+            finalPathUsed = `${baseName}_${timestamp}_${randomStr}.${extension}`
+            console.log(`File exists, trying new path: ${finalPathUsed}`)
+            continue
+          } else if (uploadError.message.includes('mime type') && uploadAttempts <= 2) {
+            // Try with application/octet-stream as fallback
+            console.log('MIME type rejected, trying with application/octet-stream')
+            uploadOptions.contentType = 'application/octet-stream'
+            continue
           } else {
             throw uploadError
           }
         } else {
           uploadData = data
+          console.log(`Successfully uploaded ${fileName} to ${finalPathUsed}`)
           break
         }
       } catch (error) {
-        uploadAttempts++
         console.error(`Upload attempt ${uploadAttempts} failed:`, error)
         
         if (uploadAttempts >= maxUploadAttempts) {
-          console.error(`Chunk merge failed:`, error)
-          throw error
+          console.error(`All upload attempts failed for ${fileName}:`, error)
+          throw new Error(`Failed to upload merged file after ${maxUploadAttempts} attempts: ${error.message}`)
         }
+        
+        // Wait before retry with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, uploadAttempts - 1), 5000)
+        console.log(`Waiting ${delay}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
         
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts))

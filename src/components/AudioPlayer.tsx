@@ -1,329 +1,423 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, SkipBack, SkipForward } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, Pause, Volume2, VolumeX, Loader2, AlertCircle, RotateCcw, Music } from 'lucide-react';
 import { Button } from './ui/button';
-import { Slider } from './ui/slider';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AudioPlayerProps {
-  src: string;
+  src?: string;
   title?: string;
   className?: string;
+  autoPlay?: boolean;
+  controls?: boolean;
+  muted?: boolean;
+  poster?: string;
   compact?: boolean;
 }
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ 
   src, 
-  title, 
-  className = "", 
-  compact = false 
+  title = "Audio",
+  className = "w-full h-full",
+  autoPlay = false,
+  controls = true,
+  muted = false,
+  poster,
+  compact = false
 }) => {
+  const [audioError, setAudioError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMuted, setIsMuted] = useState(muted);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [canPlay, setCanPlay] = useState(false);
+  
   const audioRef = useRef<HTMLAudioElement>(null);
-  const watermarkRef = useRef<HTMLAudioElement>(null);
-  const watermarkIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useIsMobile();
 
+  // Mobile-optimized audio loading with retry logic
+  const loadAudio = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio || !src) return;
+
+    console.log('🎵 Loading audio:', src, 'Attempt:', retryCount + 1);
+    setIsLoading(true);
+    setAudioError(false);
+    setCanPlay(false);
+
+    try {
+      // Clear existing sources and reload
+      audio.load();
+      
+      const handleCanPlay = () => {
+        console.log('✅ Audio can play:', src);
+        setIsLoading(false);
+        setCanPlay(true);
+        setAudioError(false);
+      };
+
+      const handleError = (e: Event) => {
+        const target = e.target as HTMLAudioElement;
+        const error = target.error;
+        console.error('❌ Audio load error:', {
+          code: error?.code,
+          message: error?.message,
+          src: src,
+          networkState: target.networkState,
+          readyState: target.readyState
+        });
+        
+        setIsLoading(false);
+        setCanPlay(false);
+        
+        if (retryCount < 2) {
+          console.log('🔄 Retrying audio load in 1 second...');
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 1000);
+        } else {
+          setAudioError(true);
+        }
+      };
+
+      const handleLoadedMetadata = () => {
+        console.log('📊 Audio metadata loaded:', {
+          duration: audio.duration,
+          src: src
+        });
+        setDuration(audio.duration);
+      };
+
+      const handleProgress = () => {
+        if (audio.buffered.length > 0) {
+          const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
+          const bufferedPercent = (bufferedEnd / audio.duration) * 100;
+          setBuffered(bufferedPercent);
+        }
+      };
+
+      // Add event listeners
+      audio.addEventListener('canplay', handleCanPlay);
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.addEventListener('progress', handleProgress);
+
+      // Trigger load
+      audio.load();
+
+      // Cleanup function
+      return () => {
+        audio.removeEventListener('canplay', handleCanPlay);
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.removeEventListener('progress', handleProgress);
+      };
+    } catch (error) {
+      console.error('💥 Exception during audio load:', error);
+      setIsLoading(false);
+      setAudioError(true);
+    }
+  }, [src, retryCount]);
+
+  // Effect to handle audio loading and retry logic
+  useEffect(() => {
+    if (src) {
+      loadAudio();
+    }
+  }, [src, loadAudio]);
+
+  // Standard audio event handlers
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleLoadStart = () => setIsLoading(true);
-    const handleCanPlay = () => setIsLoading(false);
-    const handleEnded = () => setIsPlaying(false);
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+    const handleVolumeChange = () => {
+      setIsMuted(audio.muted);
+      setVolume(audio.volume);
+    };
 
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('loadstart', handleLoadStart);
-    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('volumechange', handleVolumeChange);
 
     return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('loadstart', handleLoadStart);
-      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('volumechange', handleVolumeChange);
     };
-  }, [src]);
-
-  // Watermark system - Volume forcé à 100% non modifiable
-  const forceWatermarkVolume = () => {
-    const watermark = watermarkRef.current;
-    if (watermark) {
-      watermark.volume = 1.0; // Force 100% volume (maximum autorisé)
-    }
-  };
-
-  useEffect(() => {
-    const watermark = watermarkRef.current;
-    if (!watermark) return;
-
-    // Configure watermark audio avec volume forcé
-    watermark.volume = 1.0; // Force 100% volume (maximum autorisé)
-    watermark.preload = 'auto';
-
-    // Protection contre les changements de volume
-    const volumeWatcher = setInterval(forceWatermarkVolume, 100);
-
-    return () => clearInterval(volumeWatcher);
   }, []);
 
-  // Handle watermark interval
-  useEffect(() => {
-    if (isPlaying) {
-      // Jouer immédiatement le watermark dès le début
-      watermarkIntervalRef.current = setInterval(() => {
-        const watermark = watermarkRef.current;
-        if (watermark && isPlaying) {
-          // Force le volume avant chaque lecture
-          watermark.volume = 1.0;
-          watermark.currentTime = 0;
-          watermark.play().catch(console.error);
-        }
-      }, 25000); // 25 seconds
-    } else {
-      // Clear interval when paused
-      if (watermarkIntervalRef.current) {
-        clearInterval(watermarkIntervalRef.current);
-        watermarkIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (watermarkIntervalRef.current) {
-        clearInterval(watermarkIntervalRef.current);
-        watermarkIntervalRef.current = null;
-      }
-    };
-  }, [isPlaying]);
-
-  const togglePlayPause = async () => {
+  // Mobile-optimized play/pause with user interaction handling
+  const togglePlay = useCallback(async () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !canPlay) return;
 
     setHasUserInteracted(true);
-
+    
     try {
       if (isPlaying) {
         await audio.pause();
-        setIsPlaying(false);
       } else {
-        await audio.play();
-        setIsPlaying(true);
+        // Ensure audio is ready before playing
+        if (audio.readyState >= 2) {
+          await audio.play();
+        } else {
+          // Wait for audio to be ready
+          audio.addEventListener('canplay', async () => {
+            try {
+              await audio.play();
+            } catch (error) {
+              console.warn('⚠️ Play failed after canplay:', error);
+            }
+          }, { once: true });
+        }
       }
     } catch (error) {
-      console.error('Erreur de lecture audio:', error);
-      // Handle autoplay restrictions on mobile
-      if (error instanceof DOMException && error.name === 'NotAllowedError') {
-        console.warn('Autoplay blocked - user interaction required');
+      console.error('🚫 Audio playback toggle failed:', error);
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          console.warn('🔒 Autoplay blocked - user interaction required');
+        } else if (error.name === 'NotSupportedError') {
+          console.error('❌ Audio format not supported');
+          setAudioError(true);
+        }
       }
     }
-  };
+  }, [isPlaying, canPlay]);
 
-  const handleSeek = (value: number[]) => {
+  const toggleMute = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio || !duration) return;
+    if (!audio) return;
 
-    const newTime = (value[0] / 100) * duration;
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
+    audio.muted = !audio.muted;
+    setIsMuted(audio.muted);
+  }, []);
 
-  const handleVolumeChange = (value: number[]) => {
+  const handleVolumeChange = useCallback((newVolume: number) => {
     const audio = audioRef.current;
-    if (!audio || isMobile) return; // Disable volume control on mobile
+    if (!audio) return;
 
-    const newVolume = value[0] / 100;
     audio.volume = newVolume;
     setVolume(newVolume);
-  };
+    if (newVolume === 0) {
+      setIsMuted(true);
+    } else if (isMuted && newVolume > 0) {
+      audio.muted = false;
+      setIsMuted(false);
+    }
+  }, [isMuted]);
 
-  const skipForward = () => {
+  // Enhanced seek handling for mobile
+  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.min(audio.currentTime + 10, duration);
-  };
+    if (!audio || !duration || !canPlay) return;
 
-  const skipBackward = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.max(audio.currentTime - 10, 0);
-  };
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    let clientX: number;
+    
+    if ('touches' in e) {
+      clientX = e.touches[0]?.clientX || e.changedTouches[0]?.clientX || 0;
+    } else {
+      clientX = e.clientX;
+    }
+    
+    const clickPosition = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const newTime = clickPosition * duration;
+    
+    audio.currentTime = newTime;
+    setCurrentTime(newTime);
+  }, [duration, canPlay]);
 
-  const formatTime = (time: number): string => {
+  const formatTime = useCallback((time: number) => {
+    if (!isFinite(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const handleRetry = useCallback(() => {
+    setRetryCount(0);
+    setAudioError(false);
+    setIsLoading(true);
+    loadAudio();
+  }, [loadAudio]);
 
-  if (compact) {
+  // No source provided
+  if (!src) {
     return (
-      <div className={`flex items-center gap-2 p-3 bg-card border rounded-lg ${className}`}>
-        <audio ref={audioRef} src={src} preload="metadata" />
-        <audio 
-          ref={watermarkRef} 
-          src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NTU4MDczODIsImV4cCI6MjUzMzQwNzM4Mn0.X1wAUqA7uWHgB3F_szPfM7nEeKHAiHCzovHLHO_jT6I" 
-          preload="auto" 
-          style={{ display: 'none' }}
-        />
-        
-        <Button
-          variant="outline"
-          size={isMobile ? "default" : "sm"}
-          onClick={togglePlayPause}
-          disabled={isLoading}
-          className={`flex-shrink-0 ${isMobile ? 'h-10 w-10 touch-manipulation' : ''}`}
-          aria-label={isPlaying ? "Pause audio" : "Play audio"}
-        >
-          {isLoading ? (
-            <div className="w-4 h-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          ) : isPlaying ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </Button>
-
-        <div className="flex-1 space-y-1">
-          {title && (
-            <p className={`font-medium truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>{title}</p>
-          )}
-          
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className={isMobile ? 'text-xs' : ''}>{formatTime(currentTime)}</span>
-            <div className="flex-1">
-              <Slider
-                value={[progressPercentage]}
-                onValueChange={handleSeek}
-                max={100}
-                step={0.1}
-                className={`w-full ${isMobile ? 'touch-manipulation' : ''}`}
-              />
-            </div>
-            <span className={isMobile ? 'text-xs' : ''}>{formatTime(duration)}</span>
+      <div className={`${className} bg-muted flex items-center justify-center relative overflow-hidden rounded-lg border border-border min-h-[120px]`}>
+        <div className="text-center p-6">
+          <div className="w-12 h-12 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+            <Music className="h-6 w-6 text-primary" />
           </div>
+          <p className="text-muted-foreground text-sm">
+            Audio en cours de traitement...
+          </p>
         </div>
       </div>
     );
   }
 
+  // Audio error state
+  if (audioError) {
+    return (
+      <div className={`${className} bg-muted flex items-center justify-center relative overflow-hidden rounded-lg border border-border min-h-[120px]`}>
+        <div className="text-center p-6">
+          <div className="w-12 h-12 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <p className="text-destructive font-medium mb-1">Erreur de lecture</p>
+          <p className="text-muted-foreground text-sm mb-4">
+            Impossible de lire ce fichier audio
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRetry}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main audio player
   return (
-    <div className={`bg-card border rounded-lg p-3 md:p-4 space-y-3 md:space-y-4 ${className}`}>
-      <audio ref={audioRef} src={src} preload="metadata" />
+    <div className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : 'min-h-[140px]'}`}>
       <audio 
-        ref={watermarkRef} 
-        src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NTU4MDczODIsImV4cCI6MjUzMzQwNzM4Mn0.X1wAUqA7uWHgB3F_szPfM7nEeKHAiHCzovHLHO_jT6I" 
-        preload="auto" 
-        style={{ display: 'none' }}
-      />
-      
-      {title && (
-        <div className="text-center">
-          <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>{title}</h3>
+        ref={audioRef}
+        preload="metadata"
+        autoPlay={hasUserInteracted && autoPlay && canPlay}
+        muted={isMuted}
+        crossOrigin="anonymous"
+      >
+        <source src={src} type="audio/mpeg" />
+        <source src={src} type="audio/wav" />
+        <source src={src} type="audio/ogg" />
+        <source src={src} type="audio/aac" />
+        <source src={src} type="audio/mp4" />
+        Votre navigateur ne supporte pas la lecture audio.
+      </audio>
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+          <div className="text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+            <p className="text-primary text-sm">Chargement...</p>
+          </div>
         </div>
       )}
 
-      {/* Waveform Visualization Placeholder - Responsive height */}
-      <div className={`bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 rounded-lg flex items-center justify-center relative overflow-hidden ${
-        isMobile ? 'h-16' : 'h-20'
-      }`}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`flex items-end gap-1 ${isMobile ? 'h-10' : 'h-12'}`}>
-            {Array.from({ length: isMobile ? 30 : 50 }, (_, i) => (
-              <div
-                key={i}
-                className={`bg-primary transition-all duration-200 ${
-                  isPlaying ? 'animate-pulse' : ''
-                }`}
-                style={{
-                  width: '2px',
-                  height: `${Math.random() * 100}%`,
-                  opacity: progressPercentage > ((i * 2) / (isMobile ? 0.6 : 1)) ? 1 : 0.3,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Bar - Enhanced for touch */}
-      <div className="space-y-2">
-        <Slider
-          value={[progressPercentage]}
-          onValueChange={handleSeek}
-          max={100}
-          step={0.1}
-          className={`w-full ${isMobile ? 'touch-manipulation' : ''}`}
-        />
-        <div className={`flex justify-between text-muted-foreground ${
-          isMobile ? 'text-xs' : 'text-sm'
-        }`}>
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
-
-      {/* Controls - Mobile-optimized */}
-      <div className={`flex items-center justify-center ${isMobile ? 'gap-3' : 'gap-4'}`}>
-        <Button
-          variant="outline"
-          size={isMobile ? "default" : "sm"}
-          onClick={skipBackward}
-          disabled={isLoading}
-          className={isMobile ? 'h-10 w-10 touch-manipulation' : ''}
-          aria-label="Skip backward 10 seconds"
-        >
-          <SkipBack className="h-4 w-4" />
-        </Button>
-
-        <Button
-          size={isMobile ? "default" : "lg"}
-          onClick={togglePlayPause}
-          disabled={isLoading}
-          className={`rounded-full ${isMobile ? 'w-12 h-12 touch-manipulation' : 'w-12 h-12'}`}
-          aria-label={isPlaying ? "Pause audio" : "Play audio"}
-        >
-          {isLoading ? (
-            <div className="w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          ) : isPlaying ? (
-            <Pause className="h-5 w-5" />
+      {/* Player Interface */}
+      {canPlay && (
+        <div className={`relative z-10 ${compact ? 'p-2 flex items-center' : 'p-4 h-full flex flex-col justify-center'}`}>
+          {/* Compact Layout */}
+          {compact ? (
+            <div className="flex items-center w-full gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={togglePlay}
+                className="text-foreground hover:bg-primary/10 h-8 w-8 p-0 rounded-full flex-shrink-0"
+                disabled={!canPlay}
+                aria-label={isPlaying ? "Pause audio" : "Play audio"}
+              >
+                {isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4 ml-0.5" />
+                )}
+              </Button>
+              
+              <div className="flex-1 min-w-0">
+                {title && <p className="text-sm font-medium truncate">{title}</p>}
+                <div 
+                  className="w-full bg-muted/80 rounded-full cursor-pointer h-1 mt-1"
+                  onClick={handleSeek}
+                  onTouchEnd={handleSeek}
+                >
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all duration-200"
+                    style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                  />
+                </div>
+              </div>
+              
+              <span className="text-xs text-muted-foreground font-mono flex-shrink-0">
+                {formatTime(currentTime)}
+              </span>
+            </div>
           ) : (
-            <Play className="h-5 w-5" />
+            <>
+              {/* Full Layout */}
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                  <Music className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-foreground truncate">{title}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <div 
+                  className={`w-full bg-muted/80 rounded-full cursor-pointer ${
+                    isMobile ? 'h-2 touch-manipulation' : 'h-1'
+                  }`}
+                  onClick={handleSeek}
+                  onTouchEnd={handleSeek}
+                >
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all duration-200"
+                    style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                  />
+                </div>
+              </div>
+
+              {controls && (
+                <div className="flex items-center justify-center">
+                  <Button
+                    variant="ghost"
+                    size={isMobile ? "default" : "sm"}
+                    onClick={togglePlay}
+                    className={`text-foreground hover:bg-primary/10 ${
+                      isMobile ? 'h-12 w-12 touch-manipulation' : 'h-10 w-10'
+                    } p-0 rounded-full`}
+                    disabled={!canPlay}
+                    aria-label={isPlaying ? "Pause audio" : "Play audio"}
+                  >
+                    {isPlaying ? (
+                      <Pause className={isMobile ? "h-6 w-6" : "h-5 w-5"} />
+                    ) : (
+                      <Play className={`${isMobile ? "h-6 w-6" : "h-5 w-5"} ml-0.5`} />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
-        </Button>
-
-        <Button
-          variant="outline"
-          size={isMobile ? "default" : "sm"}
-          onClick={skipForward}
-          disabled={isLoading}
-          className={isMobile ? 'h-10 w-10 touch-manipulation' : ''}
-          aria-label="Skip forward 10 seconds"
-        >
-          <SkipForward className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Volume Control - Hidden on mobile as it's not supported */}
-      {!isMobile && (
-        <div className="flex items-center gap-3">
-          <Volume2 className="h-4 w-4 text-muted-foreground" />
-          <Slider
-            value={[volume * 100]}
-            onValueChange={handleVolumeChange}
-            max={100}
-            step={1}
-            className="flex-1"
-          />
         </div>
       )}
     </div>

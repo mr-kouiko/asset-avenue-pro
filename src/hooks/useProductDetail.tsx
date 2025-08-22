@@ -118,56 +118,66 @@ export const useProductDetail = (productId: string) => {
           else contentType = 'illustration';
         }
 
-        // For audio files, try to get signed URL for original file
+        // For audio files, try to get signed URL for original file with mobile optimization
         if (contentType === 'audio' && filesList.length > 0) {
           const audioFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('audio/'));
           if (audioFile?.file_path) {
             try {
+              console.log('🎵 Creating signed URL for audio:', audioFile.file_path);
               const { data: signedData, error: signedError } = await supabase.storage
                 .from('original-files')
-                .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
+                .createSignedUrl(audioFile.file_path, 14400); // 4 hours expiry for mobile reliability
               
               if (signedData?.signedUrl && !signedError) {
                 previewUrl = signedData.signedUrl;
+                console.log('✅ Signed audio URL created:', previewUrl);
+              } else {
+                console.warn('⚠️ Audio signed URL failed, using public fallback:', signedError);
+                const { data: publicData } = supabase.storage
+                  .from('original-files')
+                  .getPublicUrl(audioFile.file_path);
+                previewUrl = publicData.publicUrl;
+                console.log('🔊 Public audio URL:', previewUrl);
               }
             } catch (error) {
-              console.warn('Could not create signed URL for audio file:', error);
+              console.warn('❌ Audio URL creation failed, using public fallback:', error);
+              const { data: publicData } = supabase.storage
+                .from('original-files')
+                .getPublicUrl(audioFile.file_path);
+              previewUrl = publicData.publicUrl;
+              console.log('🚨 Emergency audio URL:', previewUrl);
             }
           }
         }
 
-        // For video files, try to get signed URL for original file
+        // For video files, try to get signed URL for original file with mobile optimization
         if (contentType === 'video' && filesList.length > 0) {
           const videoFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('video/'));
           if (videoFile?.file_path) {
             try {
-              console.log('Attempting to create signed URL for video:', videoFile.file_path);
+              console.log('🎬 Creating signed URL for video:', videoFile.file_path);
               const { data: signedData, error: signedError } = await supabase.storage
                 .from('original-files')
-                .createSignedUrl(videoFile.file_path, 7200); // 2 hours expiry for better mobile reliability
+                .createSignedUrl(videoFile.file_path, 14400); // 4 hours expiry for mobile reliability
               
               if (signedData?.signedUrl && !signedError) {
                 previewUrl = signedData.signedUrl;
-                console.log('Successfully created signed URL for video:', previewUrl);
+                console.log('✅ Signed video URL created:', previewUrl);
               } else {
-                console.warn('Could not create signed URL for video file, error:', signedError);
-                // Try public URL first as fallback
-                console.log('Trying public URL fallback for video file');
+                console.warn('⚠️ Signed URL failed, using public fallback:', signedError);
                 const { data: publicData } = supabase.storage
                   .from('original-files')
                   .getPublicUrl(videoFile.file_path);
                 previewUrl = publicData.publicUrl;
-                console.log('Using public URL for video:', previewUrl);
+                console.log('📺 Public video URL:', previewUrl);
               }
             } catch (error) {
-              console.error('Exception creating signed URL for video file:', error);
-              // Try public URL as fallback
-              console.log('Using public URL fallback due to exception');
+              console.error('❌ Video URL creation failed, using public fallback:', error);
               const { data: publicData } = supabase.storage
                 .from('original-files')
                 .getPublicUrl(videoFile.file_path);
               previewUrl = publicData.publicUrl;
-              console.log('Using public URL for video:', previewUrl);
+              console.log('🚨 Emergency video URL:', previewUrl);
             }
           }
         }
