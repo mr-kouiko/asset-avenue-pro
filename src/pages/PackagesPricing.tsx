@@ -6,15 +6,138 @@ import { Switch } from "@/components/ui/switch";
 import { Check, CreditCard, Zap, Star } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const PackagesPricing = () => {
   const [isYearly, setIsYearly] = useState(false);
   const { toast } = useToast();
+  const { language } = useLanguage();
+
+  const content = {
+    fr: {
+      hero: {
+        title: "Packages & Pricing",
+        subtitle: "Choisissez le forfait parfait pour alimenter vos besoins créatifs. Accédez à une bibliothèque illimitée d'images, vidéos, vecteurs et audios."
+      },
+      credits: {
+        title: "Credit Packages",
+        subtitle: "Achat unique avec validité de téléchargement d'un an",
+        credits: "crédits",
+        buyNow: "Buy Now",
+        disclaimer: "Ce forfait permet de télécharger une combinaison de fichiers avec licence standard.",
+        toast: {
+          title: "Redirection vers le paiement...",
+          description: (credits: number, price: number) => `Achat de ${credits} crédits pour $${price}`
+        }
+      },
+      subscription: {
+        title: "Subscription Packages", 
+        subtitle: "Abonnement renouvelable pour une meilleure valeur avec validité de téléchargement d'un mois",
+        monthly: "Mensuel",
+        yearly: "Annuel",
+        savePercent: "Économisez 16%",
+        bestValue: "Best Value",
+        credits: "crédits",
+        month: "mois",
+        monthly_: "mensuel",
+        subscribeNow: "Subscribe Now",
+        disclaimer: "Renouvelé automatiquement, le renouvellement peut être annulé à tout moment",
+        toast: {
+          title: "Redirection vers le paiement...",
+          description: (credits: number, price: number, isYearly: boolean) => 
+            `Abonnement ${credits} crédits pour $${price}/${isYearly ? 'mois (facturation annuelle)' : 'mois'}`
+        }
+      },
+      features: {
+        title: "Pourquoi choisir VisuStock ?",
+        license: {
+          title: "Licence Standard Incluse",
+          description: "Tous les téléchargements incluent notre licence standard pour un usage commercial"
+        },
+        premium: {
+          title: "Contenu Premium", 
+          description: "Accès à des millions d'images, vecteurs, vidéos et audios de haute qualité"
+        },
+        instant: {
+          title: "Téléchargement Instantané",
+          description: "Téléchargez immédiatement tous vos fichiers en haute résolution"
+        }
+      },
+      contentTypes: {
+        photos: "photos",
+        videos: "vidéos", 
+        vectors: "vecteurs",
+        audios: "audios",
+        aiImages: "images AI",
+        or: "ou"
+      }
+    },
+    en: {
+      hero: {
+        title: "Packages & Pricing",
+        subtitle: "Choose the perfect package to fuel your creative needs. Access an unlimited library of images, videos, vectors, and audio."
+      },
+      credits: {
+        title: "Credit Packages",
+        subtitle: "One-time purchase with one year download validity",
+        credits: "credits",
+        buyNow: "Buy Now",
+        disclaimer: "This package allows downloading a combination of files with standard license.",
+        toast: {
+          title: "Redirecting to payment...",
+          description: (credits: number, price: number) => `Purchase ${credits} credits for $${price}`
+        }
+      },
+      subscription: {
+        title: "Subscription Packages",
+        subtitle: "Renewable subscription for better value with one month download validity", 
+        monthly: "Monthly",
+        yearly: "Yearly",
+        savePercent: "Save 16%",
+        bestValue: "Best Value",
+        credits: "credits",
+        month: "month",
+        monthly_: "monthly",
+        subscribeNow: "Subscribe Now",
+        disclaimer: "Auto-renewed, renewal can be cancelled anytime",
+        toast: {
+          title: "Redirecting to payment...",
+          description: (credits: number, price: number, isYearly: boolean) =>
+            `Subscribe ${credits} credits for $${price}/${isYearly ? 'month (annual billing)' : 'month'}`
+        }
+      },
+      features: {
+        title: "Why Choose VisuStock?",
+        license: {
+          title: "Standard License Included",
+          description: "All downloads include our standard license for commercial use"
+        },
+        premium: {
+          title: "Premium Content",
+          description: "Access millions of high-quality images, vectors, videos, and audio"
+        },
+        instant: {
+          title: "Instant Download",
+          description: "Download all your files immediately in high resolution"
+        }
+      },
+      contentTypes: {
+        photos: "photos",
+        videos: "videos",
+        vectors: "vectors", 
+        audios: "audio",
+        aiImages: "AI images",
+        or: "or"
+      }
+    }
+  };
+
+  const t = content[language];
 
   const handleBuyCredits = (credits: number, price: number) => {
     toast({
-      title: "Redirection vers le paiement...",
-      description: `Achat de ${credits} crédits pour $${price}`
+      title: t.credits.toast.title,
+      description: t.credits.toast.description(credits, price)
     });
     // Redirect to payment for credits
     window.open('https://buy.stripe.com/credits', '_blank');
@@ -25,8 +148,8 @@ const PackagesPricing = () => {
     const price = isYearly ? Math.round(yearlyPrice / 12) : monthlyPrice;
     
     toast({
-      title: "Redirection vers le paiement...",
-      description: `Abonnement ${credits} crédits pour $${price}/${isYearly ? 'mois (facturation annuelle)' : 'mois'}`
+      title: t.subscription.toast.title,
+      description: t.subscription.toast.description(credits, price, isYearly)
     });
     // Redirect to subscription payment
     window.open('https://buy.stripe.com/subscription', '_blank');
@@ -93,10 +216,10 @@ const PackagesPricing = () => {
         <div className="container py-16 lg:py-24">
           <div className="text-center space-y-6 max-w-4xl mx-auto">
             <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
-              Packages & Pricing
+              {t.hero.title}
             </h1>
             <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              Choisissez le forfait parfait pour alimenter vos besoins créatifs. Accédez à une bibliothèque illimitée d'images, vidéos, vecteurs et audios.
+              {t.hero.subtitle}
             </p>
           </div>
         </div>
@@ -107,10 +230,10 @@ const PackagesPricing = () => {
         <div className="container">
           <div className="text-center space-y-4 mb-12">
             <h2 className="text-3xl font-bold text-foreground">
-              Credit Packages
+              {t.credits.title}
             </h2>
             <p className="text-lg text-muted-foreground">
-              Achat unique avec validité de téléchargement d'un an
+              {t.credits.subtitle}
             </p>
           </div>
 
@@ -121,15 +244,15 @@ const PackagesPricing = () => {
                   <div className="text-center space-y-6">
                     <div>
                       <div className="text-3xl font-bold text-foreground">${pkg.price}</div>
-                      <div className="text-lg text-muted-foreground">{pkg.credits} crédits</div>
+                      <div className="text-lg text-muted-foreground">{pkg.credits} {t.credits.credits}</div>
                     </div>
                     
                     <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>{pkg.photos} photos ou</p>
-                      <p>{pkg.videos} vidéos ou</p>
-                      <p>{pkg.vectors} vecteurs ou</p>
-                      <p>{pkg.audios} audios ou</p>
-                      <p>{pkg.aiImages} images AI</p>
+                      <p>{pkg.photos} {t.contentTypes.photos} {t.contentTypes.or}</p>
+                      <p>{pkg.videos} {t.contentTypes.videos} {t.contentTypes.or}</p>
+                      <p>{pkg.vectors} {t.contentTypes.vectors} {t.contentTypes.or}</p>
+                      <p>{pkg.audios} {t.contentTypes.audios} {t.contentTypes.or}</p>
+                      <p>{pkg.aiImages} {t.contentTypes.aiImages}</p>
                     </div>
 
                     <Button 
@@ -137,11 +260,11 @@ const PackagesPricing = () => {
                       onClick={() => handleBuyCredits(pkg.credits, pkg.price)}
                     >
                       <CreditCard className="w-4 h-4 mr-2" />
-                      Buy Now
+                      {t.credits.buyNow}
                     </Button>
 
                     <p className="text-xs text-muted-foreground">
-                      Ce forfait permet de télécharger une combinaison de fichiers avec licence standard.
+                      {t.credits.disclaimer}
                     </p>
                   </div>
                 </CardContent>
@@ -156,27 +279,27 @@ const PackagesPricing = () => {
         <div className="container">
           <div className="text-center space-y-4 mb-12">
             <h2 className="text-3xl font-bold text-foreground">
-              Subscription Packages
+              {t.subscription.title}
             </h2>
             <p className="text-lg text-muted-foreground">
-              Abonnement renouvelable pour une meilleure valeur avec validité de téléchargement d'un mois
+              {t.subscription.subtitle}
             </p>
 
             {/* Billing Toggle */}
             <div className="flex items-center justify-center space-x-4 mt-8">
               <span className={!isYearly ? "font-semibold text-foreground" : "text-muted-foreground"}>
-                Mensuel
+                {t.subscription.monthly}
               </span>
               <Switch
                 checked={isYearly}
                 onCheckedChange={setIsYearly}
               />
               <span className={isYearly ? "font-semibold text-foreground" : "text-muted-foreground"}>
-                Annuel
+                {t.subscription.yearly}
               </span>
               {isYearly && (
                 <Badge className="bg-primary text-primary-foreground">
-                  Économisez 16%
+                  {t.subscription.savePercent}
                 </Badge>
               )}
             </div>
@@ -197,7 +320,7 @@ const PackagesPricing = () => {
                   {pkg.popular && (
                     <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1">
                       <Star className="w-3 h-3 mr-1" />
-                      Best Value
+                      {t.subscription.bestValue}
                     </Badge>
                   )}
                   
@@ -206,16 +329,16 @@ const PackagesPricing = () => {
                       <div>
                         <div className="text-3xl font-bold text-foreground">${displayPrice}</div>
                         <div className="text-lg text-muted-foreground">
-                          {pkg.credits} crédits/{isYearly ? 'mois' : 'mensuel'}
+                          {pkg.credits} {t.subscription.credits}/{isYearly ? t.subscription.month : t.subscription.monthly_}
                         </div>
                       </div>
                       
                       <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>{pkg.photos} photos ou</p>
-                        <p>{pkg.videos} vidéos ou</p>
-                        <p>{pkg.vectors} vecteurs ou</p>
-                        <p>{pkg.audios} audios ou</p>
-                        <p>{pkg.aiImages} images AI</p>
+                        <p>{pkg.photos} {t.contentTypes.photos} {t.contentTypes.or}</p>
+                        <p>{pkg.videos} {t.contentTypes.videos} {t.contentTypes.or}</p>
+                        <p>{pkg.vectors} {t.contentTypes.vectors} {t.contentTypes.or}</p>
+                        <p>{pkg.audios} {t.contentTypes.audios} {t.contentTypes.or}</p>
+                        <p>{pkg.aiImages} {t.contentTypes.aiImages}</p>
                       </div>
 
                       <Button 
@@ -227,11 +350,11 @@ const PackagesPricing = () => {
                         onClick={() => handleSubscribe(pkg.credits, pkg.monthlyPrice)}
                       >
                         <Zap className="w-4 h-4 mr-2" />
-                        Subscribe Now
+                        {t.subscription.subscribeNow}
                       </Button>
 
                       <p className="text-xs text-muted-foreground">
-                        Renouvelé automatiquement, le renouvellement peut être annulé à tout moment
+                        {t.subscription.disclaimer}
                       </p>
                     </div>
                   </CardContent>
@@ -247,7 +370,7 @@ const PackagesPricing = () => {
         <div className="container">
           <div className="text-center space-y-4 mb-12">
             <h2 className="text-3xl font-bold text-foreground">
-              Pourquoi choisir VisuStock ?
+              {t.features.title}
             </h2>
           </div>
           
@@ -257,10 +380,10 @@ const PackagesPricing = () => {
                 <Check className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold text-foreground">
-                Licence Standard Incluse
+                {t.features.license.title}
               </h3>
               <p className="text-muted-foreground">
-                Tous les téléchargements incluent notre licence standard pour un usage commercial
+                {t.features.license.description}
               </p>
             </div>
 
@@ -269,10 +392,10 @@ const PackagesPricing = () => {
                 <Star className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold text-foreground">
-                Contenu Premium
+                {t.features.premium.title}
               </h3>
               <p className="text-muted-foreground">
-                Accès à des millions d'images, vecteurs, vidéos et audios de haute qualité
+                {t.features.premium.description}
               </p>
             </div>
 
@@ -281,10 +404,10 @@ const PackagesPricing = () => {
                 <Zap className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold text-foreground">
-                Téléchargement Instantané
+                {t.features.instant.title}
               </h3>
               <p className="text-muted-foreground">
-                Téléchargez immédiatement tous vos fichiers en haute résolution
+                {t.features.instant.description}
               </p>
             </div>
           </div>
