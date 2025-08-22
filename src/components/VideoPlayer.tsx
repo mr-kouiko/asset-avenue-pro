@@ -192,14 +192,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
-      {/* Watermark Overlay */}
+      {/* Watermark Overlay - Always visible */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
         <img 
           src={watermarkLogo}
           alt="VisuStock"
-          className="w-24 h-24 opacity-40 select-none"
+          className="w-32 h-32 opacity-50 select-none"
           draggable={false}
-          style={{ userSelect: 'none' }}
+          style={{ 
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none'
+          }}
+          onError={(e) => {
+            console.error('Watermark failed to load:', e);
+          }}
         />
       </div>
 
