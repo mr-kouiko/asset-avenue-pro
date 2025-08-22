@@ -214,7 +214,6 @@ const About = () => {
           muted
           playsInline
           preload="metadata"
-          poster="/visustock-logo-watermark.png"
           onError={(e) => {
             console.error('Video failed to load:', e);
             // Hide video and show fallback background
