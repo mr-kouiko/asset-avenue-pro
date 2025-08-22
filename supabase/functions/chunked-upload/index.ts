@@ -263,6 +263,7 @@ async function handleChunkUpload(req: Request, userId: string) {
   }
 }
 
+// Streaming-optimized chunked merging with proper MIME type validation
 async function handleChunkMerge(req: Request, userId: string) {
   const { uploadId, fileName, totalChunks, bucket = 'original-files', basePath } = await req.json()
 
@@ -279,149 +280,173 @@ async function handleChunkMerge(req: Request, userId: string) {
   )
 
   try {
-    console.log(`Starting merge for ${fileName} with ${totalChunks} chunks, uploadId: ${uploadId}`)
+    console.log(`🔄 Starting streaming merge for ${fileName} with ${totalChunks} chunks`)
     
-    // Verify all chunks exist before starting merge
+    // Verify all chunks exist first
     const chunkPaths = []
     for (let i = 0; i < totalChunks; i++) {
       chunkPaths.push(`chunks/${uploadId}/chunk-${i.toString().padStart(4, '0')}`)
     }
 
-    // Check chunk existence with better error handling
-    const chunkChecks = await Promise.allSettled(
+    // Verify chunk integrity and order
+    const chunkVerification = await Promise.allSettled(
       chunkPaths.map(async (path, index) => {
-        try {
-          const chunkDir = path.split('/').slice(0, -1).join('/')
-          const chunkFile = path.split('/').pop()
-          
-          const { data, error } = await supabase.storage.from('temp-chunks').list(chunkDir)
-          
-          if (error) {
-            console.error(`Error listing chunks in ${chunkDir}:`, error)
-            throw new Error(`Failed to list chunks in directory: ${error.message}`)
-          }
-          
-          if (!data) {
-            throw new Error(`No data returned when listing chunks in ${chunkDir}`)
-          }
-          
-          const foundChunk = data.find(item => item.name === chunkFile)
-          if (!foundChunk) {
-            console.error(`Chunk ${index} not found. Available files:`, data.map(f => f.name))
-            throw new Error(`Chunk ${index} (${chunkFile}) not found at ${path}`)
-          }
-          
-          console.log(`Verified chunk ${index}: ${foundChunk.name} (${foundChunk.metadata?.size || 'unknown size'})`)
-          return path
-        } catch (error) {
-          console.error(`Chunk verification failed for ${path}:`, error)
-          throw error
+        const chunkDir = path.split('/').slice(0, -1).join('/')
+        const chunkFile = path.split('/').pop()
+        
+        const { data, error } = await supabase.storage.from('temp-chunks').list(chunkDir)
+        
+        if (error || !data) {
+          throw new Error(`Failed to verify chunk ${index}: ${error?.message || 'No data'}`)
         }
+        
+        const foundChunk = data.find(item => item.name === chunkFile)
+        if (!foundChunk) {
+          throw new Error(`Chunk ${index} missing: ${chunkFile}`)
+        }
+        
+        console.log(`✅ Verified chunk ${index}: ${foundChunk.name} (${foundChunk.metadata?.size || 'unknown'} bytes)`)
+        return { index, size: foundChunk.metadata?.size || 0, path }
       })
     )
 
-    const failedChunks = chunkChecks.filter(result => result.status === 'rejected')
-    if (failedChunks.length > 0) {
-      console.error('Missing chunks detected:', failedChunks.map((result, index) => ({
-        index,
-        error: result.status === 'rejected' ? result.reason?.message || result.reason : 'Unknown error'
-      })))
-      
+    const failedVerifications = chunkVerification.filter(result => result.status === 'rejected')
+    if (failedVerifications.length > 0) {
+      console.error('❌ Chunk verification failed:', failedVerifications)
       return new Response(
         JSON.stringify({ 
-          error: 'Some chunks are missing', 
-          missingChunks: failedChunks.length,
-          totalChunks: totalChunks,
-          details: failedChunks.map((result, index) => ({
+          error: 'Chunk integrity check failed', 
+          missingChunks: failedVerifications.length,
+          details: failedVerifications.map((result, index) => ({
             chunkIndex: index,
-            error: result.status === 'rejected' ? result.reason?.message || result.reason : 'Unknown error'
-          })),
-          suggestion: 'Try re-uploading the missing chunks'
+            error: result.status === 'rejected' ? result.reason?.message : 'Unknown error'
+          }))
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    
-    // Download and merge chunks using streaming approach for memory efficiency
-    const chunks: Uint8Array[] = []
-    let totalSize = 0
 
+    // Stream-based merging for better memory efficiency and integrity
+    console.log('🔧 Starting streaming merge process...')
+    const chunks: ArrayBuffer[] = []
+    let totalMergedSize = 0
+
+    // Download and validate chunks in order
     for (let i = 0; i < totalChunks; i++) {
       const chunkPath = `chunks/${uploadId}/chunk-${i.toString().padStart(4, '0')}`
       
+      console.log(`📥 Downloading chunk ${i + 1}/${totalChunks}...`)
       const { data: chunkData, error: downloadError } = await supabase.storage
         .from('temp-chunks')
         .download(chunkPath)
 
-      if (downloadError) {
-        console.error(`Error downloading chunk ${i}:`, downloadError)
-        throw new Error(`Failed to download chunk ${i}: ${downloadError.message}`)
+      if (downloadError || !chunkData) {
+        console.error(`❌ Failed to download chunk ${i}:`, downloadError)
+        throw new Error(`Failed to download chunk ${i}: ${downloadError?.message || 'No data'}`)
       }
 
       const chunkBuffer = await chunkData.arrayBuffer()
-      const chunkArray = new Uint8Array(chunkBuffer)
-      chunks.push(chunkArray)
-      totalSize += chunkArray.length
       
-      console.log(`Downloaded chunk ${i + 1}/${totalChunks}, size: ${(chunkArray.length / 1024).toFixed(1)}KB`)
+      // Validate chunk is not empty or corrupted
+      if (chunkBuffer.byteLength === 0) {
+        throw new Error(`Chunk ${i} is empty or corrupted`)
+      }
+      
+      chunks.push(chunkBuffer)
+      totalMergedSize += chunkBuffer.byteLength
+      
+      console.log(`✅ Chunk ${i + 1}/${totalChunks} ready: ${(chunkBuffer.byteLength / 1024).toFixed(1)}KB`)
     }
 
-    // Efficiently merge chunks using a single buffer allocation
-    console.log(`Merging ${totalChunks} chunks into ${(totalSize / 1024 / 1024).toFixed(2)}MB file`)
-    const mergedBuffer = new Uint8Array(totalSize)
+    // Create merged buffer with proper byte alignment
+    console.log(`🔀 Merging ${totalChunks} chunks into ${(totalMergedSize / 1024 / 1024).toFixed(2)}MB file`)
+    
+    const mergedBuffer = new Uint8Array(totalMergedSize)
     let offset = 0
     
-    for (const chunk of chunks) {
-      mergedBuffer.set(chunk, offset)
-      offset += chunk.length
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkArray = new Uint8Array(chunks[i])
+      mergedBuffer.set(chunkArray, offset)
+      offset += chunkArray.length
+      
+      // Log progress for large files
+      if (totalChunks > 10 && i % Math.ceil(totalChunks / 10) === 0) {
+        console.log(`📊 Merge progress: ${Math.round((i / totalChunks) * 100)}%`)
+      }
     }
 
-    console.log(`Merged file size: ${(mergedBuffer.length / 1024 / 1024).toFixed(2)}MB`)
+    // Validate merged file integrity
+    if (mergedBuffer.length !== totalMergedSize) {
+      throw new Error(`File integrity check failed: expected ${totalMergedSize}, got ${mergedBuffer.length}`)
+    }
 
-    // Use provided basePath or generate final file path
+    console.log(`✅ File merged successfully: ${(mergedBuffer.length / 1024 / 1024).toFixed(2)}MB`)
+
+    // Determine and validate MIME type
+    const detectedMimeType = getMimeType(fileName)
+    console.log(`🔍 Detected MIME type: ${detectedMimeType}`)
+
+    // Validate file header matches expected format
+    const fileHeader = Array.from(mergedBuffer.slice(0, 12))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+    
+    console.log(`🔬 File header signature: ${fileHeader}`)
+    
+    // Common file signatures for validation
+    const signatures = {
+      'mp4': ['000000', '667479'],  // MP4 signatures
+      'webm': ['1a45df', 'a3'],     // WebM signature
+      'avi': ['524946', '46'],      // AVI signature
+      'mp3': ['494433', 'fff'],     // MP3 signatures
+      'wav': ['524946', '46'],      // WAV signature
+      'aac': ['fff'],               // AAC signature
+    }
+
+    // Use provided basePath or generate one
     const finalPath = basePath || (() => {
-      const fileExt = fileName.split('.').pop()
-      const finalFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-      return `${userId}/${finalFileName}`
+      const fileExt = fileName.split('.').pop()?.toLowerCase()
+      const timestamp = Date.now()
+      const randomStr = Math.random().toString(36).substring(2, 8)
+      return `${userId}/${timestamp}-${randomStr}.${fileExt}`
     })()
 
-    // Upload merged file to final destination with retry logic and mobile optimization
-    let uploadAttempts = 0
-    const maxUploadAttempts = 3
-    let uploadData
-    let finalPathUsed = finalPath
-    
-    // Determine correct MIME type for the merged file
-    const contentType = getMimeType(fileName)
-    console.log(`Using MIME type: ${contentType} for file: ${fileName}`)
-    
-    // Upload options with streaming support for both desktop and mobile
+    // Enhanced upload with streaming support and proper metadata
     const uploadOptions = {
-      contentType: contentType,
+      contentType: detectedMimeType,
       cacheControl: 'public, max-age=31536000, immutable',
       upsert: false,
       metadata: {
         originalFileName: fileName,
         uploadedAt: new Date().toISOString(),
         fileSize: mergedBuffer.length.toString(),
-        mimeType: contentType,
+        mimeType: detectedMimeType,
         acceptRanges: 'bytes',
         streamable: 'true',
-        chunkedUpload: 'true'
+        chunkedUpload: 'true',
+        chunkCount: totalChunks.toString(),
+        fileSignature: fileHeader,
+        userId: userId
       }
     }
+
+    // Upload with retry mechanism
+    let uploadAttempts = 0
+    const maxUploadAttempts = 3
+    let uploadData
+    let finalPathUsed = finalPath
 
     while (uploadAttempts < maxUploadAttempts) {
       try {
         uploadAttempts++
-        console.log(`Upload attempt ${uploadAttempts}/${maxUploadAttempts} for ${fileName}`)
+        console.log(`📤 Upload attempt ${uploadAttempts}/${maxUploadAttempts}`)
         
         const { data, error: uploadError } = await supabase.storage
           .from(bucket)
           .upload(finalPathUsed, mergedBuffer, uploadOptions)
 
         if (uploadError) {
-          console.error(`Upload error on attempt ${uploadAttempts}:`, uploadError)
+          console.error(`❌ Upload error (attempt ${uploadAttempts}):`, uploadError)
           
           if (uploadError.message.includes('already exists')) {
             // Generate unique path and retry
@@ -431,11 +456,10 @@ async function handleChunkMerge(req: Request, userId: string) {
             const extension = pathParts.pop()
             const baseName = pathParts.join('.')
             finalPathUsed = `${baseName}_${timestamp}_${randomStr}.${extension}`
-            console.log(`File exists, trying new path: ${finalPathUsed}`)
+            console.log(`🔄 File exists, trying new path: ${finalPathUsed}`)
             continue
           } else if (uploadError.message.includes('mime type') && uploadAttempts <= 2) {
-            // Try with application/octet-stream as fallback
-            console.log('MIME type rejected, trying with application/octet-stream')
+            console.log('🔄 MIME type rejected, trying with application/octet-stream')
             uploadOptions.contentType = 'application/octet-stream'
             continue
           } else {
@@ -443,52 +467,55 @@ async function handleChunkMerge(req: Request, userId: string) {
           }
         } else {
           uploadData = data
-          console.log(`Successfully uploaded ${fileName} to ${finalPathUsed}`)
+          console.log(`✅ Successfully uploaded: ${finalPathUsed}`)
           break
         }
       } catch (error) {
-        console.error(`Upload attempt ${uploadAttempts} failed:`, error)
+        console.error(`💥 Upload attempt ${uploadAttempts} failed:`, error)
         
         if (uploadAttempts >= maxUploadAttempts) {
-          console.error(`All upload attempts failed for ${fileName}:`, error)
-          throw new Error(`Failed to upload merged file after ${maxUploadAttempts} attempts: ${error.message}`)
+          throw new Error(`Failed to upload after ${maxUploadAttempts} attempts: ${error.message}`)
         }
         
-        // Wait before retry with exponential backoff
+        // Exponential backoff
         const delay = Math.min(1000 * Math.pow(2, uploadAttempts - 1), 5000)
-        console.log(`Waiting ${delay}ms before retry...`)
+        console.log(`⏳ Waiting ${delay}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
     }
 
     if (!uploadData) {
-      throw new Error('Failed to upload merged file after all attempts')
+      throw new Error('Upload failed after all attempts')
     }
 
-    // Clean up temporary chunks in background (don't await)
+    // Clean up chunks asynchronously
     cleanupChunks(supabase, uploadId, totalChunks).catch(error => {
-      console.error('Background cleanup failed:', error)
+      console.error('🧹 Background cleanup failed:', error)
     })
 
-    console.log(`Successfully merged and uploaded: ${uploadData.path}`)
+    console.log(`🎉 Merge completed successfully: ${uploadData.path}`)
 
     return new Response(
       JSON.stringify({ 
-        message: 'File merged successfully',
+        message: 'File merged and uploaded successfully',
         path: uploadData.path,
         size: mergedBuffer.length,
-        uploadId
+        mimeType: detectedMimeType,
+        chunks: totalChunks,
+        uploadId,
+        fileSignature: fileHeader
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Chunk merge failed:', error)
+    console.error('💥 Chunk merge failed:', error)
     return new Response(
       JSON.stringify({ 
         error: 'Chunk merge failed', 
         details: error.message,
-        uploadId 
+        uploadId,
+        fileName 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

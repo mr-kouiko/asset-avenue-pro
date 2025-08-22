@@ -22,8 +22,8 @@ import {
   Music
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
-import { VideoPlayer } from "@/components/VideoPlayer";
-import { AudioPlayer } from "@/components/AudioPlayer";
+import { UniversalVideoPlayer } from "@/components/UniversalVideoPlayer";
+import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
@@ -151,8 +151,8 @@ const ProductDetail = () => {
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
               <>
-                {/* Primary Video Player */}
-                <VideoPlayer 
+                {/* Primary Universal Video Player */}
+                <UniversalVideoPlayer 
                   src={product.previewUrl}
                   className="w-full h-full"
                   showThumbnailFirst={false}
@@ -195,15 +195,14 @@ const ProductDetail = () => {
           </div>
         ) : product.type === 'audio' ? (
           <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl overflow-hidden">
-            {/* Audio Player Container */}
+            {/* Universal Audio Player Container */}
             <div className="w-full h-full flex flex-col justify-center p-6">
-              <AudioPlayer 
+              <UniversalAudioPlayer 
                 src={product.previewUrl || ''}
                 title={product.title}
                 compact={false}
                 className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
               />
-              
             </div>
           </div>
         ) : (
