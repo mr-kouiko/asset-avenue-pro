@@ -213,14 +213,28 @@ const About = () => {
           loop
           muted
           playsInline
+          preload="metadata"
           poster="/visustock-logo-watermark.png"
+          onError={(e) => {
+            console.error('Video failed to load:', e);
+            // Hide video and show fallback background
+            e.currentTarget.style.display = 'none';
+          }}
+          onLoadStart={() => console.log('Video loading started')}
+          onCanPlay={() => console.log('Video can play')}
         >
-          <source
-            src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/video%20HERO/VHP_5-27.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ2aWRvIEhFUk8vVkhQXzUtMjcud2VibSIsImlhdCI6MTc1NTg5OTQ4MCwiZXhwIjoyNjE5ODEzMDgwfQ.1cGP04BgDX011TPQKh2PfY5VGz0rdPK3Zx0wN5LcOFs"
-            type="video/webm"
+          <source 
+            src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/video%20HERO/VHP_5-27.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ2aWRvIEhFUk8vVkhQXzUtMjcud2VibSIsImlhdCI6MTc1NTg5OTQ4MCwiZXhwIjoyNjE5ODEzMDgwfQ.1cGP04BgDX011TPQKh2PfY5VGz0rdPK3Zx0wN5LcOFs" 
+            type="video/webm" 
           />
           Your browser does not support the video tag.
         </video>
+        
+        {/* Fallback Background */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-gradient-to-br from-primary/20 via-primary-glow/10 to-background"
+          style={{ backgroundImage: 'url(/visustock-logo-watermark.png)' }}
+        ></div>
         
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/40"></div>
