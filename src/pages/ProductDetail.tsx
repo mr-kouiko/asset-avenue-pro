@@ -22,8 +22,7 @@ import {
   Music
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
-import { UniversalVideoPlayer } from "@/components/UniversalVideoPlayer";
-import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
+import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
@@ -150,33 +149,16 @@ const ProductDetail = () => {
         {product.type === 'video' ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
-              <>
-                {/* Primary Universal Video Player */}
-                <UniversalVideoPlayer 
-                  src={product.previewUrl}
-                  className="w-full h-full"
-                  showThumbnailFirst={false}
-                  autoPlay={false}
-                  controls={true}
-                  muted={false}
-                />
-                
-                {/* HTML5 Video Fallback */}
-                <video 
-                  controls 
-                  preload="metadata"
-                  className="w-full h-full object-cover"
-                  style={{ 
-                    minHeight: '300px',
-                    backgroundColor: '#000',
-                    display: 'block'
-                  }}
-                >
-                  <source src={product.previewUrl} type="video/mp4" />
-                  <source src={product.previewUrl} type="video/webm" />
-                  <p className="text-white p-4 text-center">Votre navigateur ne supporte pas la lecture vidéo HTML5.</p>
-                </video>
-              </>
+              <MediaPlayer 
+                src={product.previewUrl}
+                type="video"
+                title={product.title}
+                poster={product.thumbnail}
+                className="w-full h-full"
+                autoPlay={false}
+                controls={true}
+                muted={false}
+              />
             ) : (
               /* Video not available - show loading/waiting message */
               <div className="w-full h-full flex items-center justify-center text-white">
@@ -197,11 +179,14 @@ const ProductDetail = () => {
           <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl overflow-hidden">
             {/* Universal Audio Player Container */}
             <div className="w-full h-full flex flex-col justify-center p-6">
-              <UniversalAudioPlayer 
+              <MediaPlayer 
                 src={product.previewUrl || ''}
+                type="audio"
                 title={product.title}
-                compact={false}
                 className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
+                autoPlay={false}
+                controls={true}
+                muted={false}
               />
             </div>
           </div>
