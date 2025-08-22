@@ -1,4 +1,47 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+const userInteractedRef = useRef(false);
+
+const togglePlay = useCallback(async () => {
+  const media = mediaRef.current;
+  if (!media || !canPlay) return;
+
+  // Marque immédiatement l'interaction (pas d'attente setState)
+  userInteractedRef.current = true;
+  if (!hasUserInteracted) setHasUserInteracted(true);
+
+  try {
+    if (isPlaying) {
+      await media.pause();
+    } else {
+      // Ne bloque pas sur mobile si l'utilisateur vient de cliquer
+      if (media.readyState >= 2) {
+        await media.play();
+      } else {
+        media.addEventListener('canplay', async function onReady() {
+          media.removeEventListener('canplay', onReady);
+          try { await media.play(); } catch (_)
+
+2/2
+
+
+
+
+
+
+
+Vous avez dit :
+réecris tout afin que je puisse coller lensemble et effacer l ancien code
+
+
+ChatGPT a dit :
+
+Réflexion durant 13s
+Voici une version réécrite complète du composant, prête à coller et à remplacer l’ancien code.
+Elle corrige : doublons de listeners, blocage du premier tap mobile, reload propre de la source, usage du MIME via <source>, gestion du retry, guards sur le buffering/duration, et nettoyage complet.
+
+tsx
+Copier
+Modifier
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
@@ -15,354 +58,335 @@ interface MediaPlayerProps {
   compact?: boolean;
 }
 
+/** Util: déduction du MIME à partir de l'extension du src */
+function getMimeFromSrc(src: string | undefined, kind: 'video' | 'audio'): string | undefined {
+  if (!src) return undefined;
+  const clean = src.split('?')[0];
+  const ext = clean.slice(clean.lastIndexOf('.') + 1).toLowerCase();
+  if (kind === 'video') {
+    if (ext === 'mp4') return 'video/mp4';
+    if (ext === 'webm') return 'video/webm';
+    if (ext === 'ogg' || ext === 'ogv') return 'video/ogg';
+    if (ext === 'mov') return 'video/quicktime';
+    return 'video/mp4';
+  } else {
+    if (ext === 'mp3') return 'audio/mpeg';
+    if (ext === 'aac') return 'audio/aac';
+    if (ext === 'm4a') return 'audio/mp4';
+    if (ext === 'wav') return 'audio/wav';
+    if (ext === 'ogg' || ext === 'oga') return 'audio/ogg';
+    if (ext === 'webm') return 'audio/webm';
+    return 'audio/mpeg';
+  }
+}
+
 /**
- * Universal Media Player - Works on all devices
- * Device-aware optimizations for both desktop and mobile
+ * Universal Media Player (réécrit)
+ * - Listeners attachés une seule fois + cleanup
+ * - Reload propre de la source
+ * - MIME fourni via <source>
+ * - Retry contrôlé
+ * - Fix du premier tap mobile (ref)
  */
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   src,
   type,
-  title = "Media",
+  title = 'Media',
   poster,
-  className = "w-full",
+  className = 'w-full',
   autoPlay = false,
   controls = true,
   muted = false,
-  compact = false
+  compact = false,
 }) => {
   const deviceInfo = useDeviceDetection();
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
-  
-  // Player state
+
+  // Etat player
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [isMuted, setIsMuted] = useState(muted);
-  const [volume, setVolume] = useState(1);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [buffered, setBuffered] = useState(0);
-  const [canPlay, setCanPlay] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(muted);
+  const [volume, setVolume] = useState<number>(1);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [buffered, setBuffered] = useState<number>(0);
+  const [canPlay, setCanPlay] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  /**
-   * Device-specific media loading with MIME type validation
-   */
-  const loadMedia = useCallback(async () => {
-    const media = mediaRef.current;
-    if (!media || !src) return;
+  // Interaction utilisateur (fix du 1er tap mobile)
+  const userInteractedRef = useRef<boolean>(false);
 
-    console.log(`🎵 [${deviceInfo.isMobile ? 'Mobile' : 'Desktop'}] Loading ${type}:`, src);
-    setIsLoading(true);
+  // MIME calculé
+  const mimeType = useMemo(() => getMimeFromSrc(src, type), [src, type]);
+
+  // Clé pour forcer un reload quand src change ou retry
+  const mediaKey = useMemo(() => `${src || 'no-src'}::${retryCount}`, [src, retryCount]);
+
+  // Handlers stables (une seule attache)
+  const handleCanPlay = useCallback(() => {
+    setIsLoading(false);
+    setCanPlay(true);
     setHasError(false);
-    setCanPlay(false);
+  }, []);
 
-    try {
-      // Smart URL processing with MIME type detection
-      let mediaSrc = src;
-      let detectedMimeType = '';
-
-      // Extract file extension for MIME type validation
-      const urlParts = src.split('?')[0].split('.');
-      const extension = urlParts[urlParts.length - 1]?.toLowerCase();
-      
-      if (type === 'video') {
-        switch (extension) {
-          case 'mp4': detectedMimeType = 'video/mp4'; break;
-          case 'webm': detectedMimeType = 'video/webm'; break;
-          case 'ogg': detectedMimeType = 'video/ogg'; break;
-          case 'mov': detectedMimeType = 'video/quicktime'; break;
-          default: detectedMimeType = 'video/mp4';
-        }
-      } else {
-        switch (extension) {
-          case 'mp3': detectedMimeType = 'audio/mpeg'; break;
-          case 'aac': detectedMimeType = 'audio/aac'; break;
-          case 'm4a': detectedMimeType = 'audio/mp4'; break;
-          case 'wav': detectedMimeType = 'audio/wav'; break;
-          case 'ogg': detectedMimeType = 'audio/ogg'; break;
-          case 'webm': detectedMimeType = 'audio/webm'; break;
-          default: detectedMimeType = 'audio/mpeg';
-        }
-      }
-
-      console.log(`📋 Detected MIME type: ${detectedMimeType} for extension: ${extension}`);
-
-      // Device-specific loading strategy
-      if (deviceInfo.isMobile) {
-        // Mobile: Lightweight loading approach
-        media.src = mediaSrc;
-        media.load();
-      } else {
-        // Desktop: Full reload for consistency
-        media.pause();
-        media.src = '';
-        media.load();
-        media.src = mediaSrc;
-        media.load();
-      }
-
-      // Event handlers with device-specific optimizations
-      const handleCanPlay = () => {
-        console.log(`✅ ${type} ready:`, mediaSrc);
-        setIsLoading(false);
-        setCanPlay(true);
-        setHasError(false);
-      };
-
-      const handleError = (e: Event) => {
-        const target = e.target as HTMLMediaElement;
-        const error = target.error;
-        
-        console.error(`❌ ${type} error:`, {
-          code: error?.code,
-          message: error?.message,
-          src: mediaSrc,
-          mimeType: detectedMimeType,
-          device: deviceInfo.isMobile ? 'Mobile' : 'Desktop',
-          retryCount
-        });
-        
-        setIsLoading(false);
-        setCanPlay(false);
-        
-        // Smart retry with fallback logic
-        if (retryCount < 3) {
-          console.log(`🔄 Retrying ${type} (${retryCount + 1}/3)...`);
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, 1000 + (retryCount * 500));
-        } else {
-          console.error(`💥 All ${type} retry attempts failed`);
-          setHasError(true);
-        }
-      };
-
-      const handleLoadedMetadata = () => {
-        console.log(`📊 ${type} metadata loaded:`, {
-          duration: media.duration,
-          mimeType: detectedMimeType,
-          device: deviceInfo.isMobile ? 'Mobile' : 'Desktop'
-        });
-        setDuration(media.duration);
-      };
-
-      const handleProgress = () => {
-        if (media.buffered.length > 0) {
-          const bufferedEnd = media.buffered.end(media.buffered.length - 1);
-          const bufferedPercent = (bufferedEnd / media.duration) * 100;
-          setBuffered(bufferedPercent);
-        }
-      };
-
-      // Attach event listeners
-      media.addEventListener('canplay', handleCanPlay);
-      media.addEventListener('error', handleError);
-      media.addEventListener('loadedmetadata', handleLoadedMetadata);
-      media.addEventListener('progress', handleProgress);
-
-      return () => {
-        media.removeEventListener('canplay', handleCanPlay);
-        media.removeEventListener('error', handleError);
-        media.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        media.removeEventListener('progress', handleProgress);
-      };
-    } catch (error) {
-      console.error(`💥 Exception during ${type} load:`, error);
+  const handleError = useCallback(
+    (e: Event) => {
+      const target = e.target as HTMLMediaElement | null;
+      const error = target?.error;
+      console.error('❌ media error:', {
+        code: error?.code,
+        message: (error as any)?.message,
+        src,
+        mimeType,
+        device: deviceInfo.isMobile ? 'Mobile' : 'Desktop',
+        retryCount,
+      });
       setIsLoading(false);
-      setHasError(true);
-    }
-  }, [src, type, retryCount, deviceInfo]);
+      setCanPlay(false);
 
-  // Media loading effect
-  useEffect(() => {
-    if (src) {
-      loadMedia();
-    }
-  }, [src, loadMedia]);
+      if (retryCount < 3) {
+        // Petit backoff pour relancer un reload propre
+        setTimeout(() => setRetryCount((p) => p + 1), 800 + retryCount * 400);
+      } else {
+        setHasError(true);
+      }
+    },
+    [src, mimeType, deviceInfo.isMobile, retryCount]
+  );
 
-  // Standard media event handlers
+  const handleLoadedMetadata = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    const d = Number.isFinite(media.duration) ? media.duration : 0;
+    setDuration(d);
+  }, []);
+
+  const handleProgress = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media || !Number.isFinite(media.duration) || media.duration <= 0) return;
+    if (media.buffered.length > 0) {
+      const end = media.buffered.end(media.buffered.length - 1);
+      const pct = Math.max(0, Math.min(100, (end / media.duration) * 100));
+      setBuffered(pct);
+    }
+  }, []);
+
+  const handleTimeUpdate = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    setCurrentTime(media.currentTime || 0);
+  }, []);
+
+  const handlePlayEvt = useCallback(() => setIsPlaying(true), []);
+  const handlePauseEvt = useCallback(() => setIsPlaying(false), []);
+  const handleEndedEvt = useCallback(() => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  }, []);
+  const handleVolumeEvt = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    setIsMuted(media.muted);
+    setVolume(media.volume);
+  }, []);
+
+  // Attache/cleanup unique des listeners DOM
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
 
-    const handleTimeUpdate = () => setCurrentTime(media.currentTime);
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    };
-    const handleVolumeChange = () => {
-      setIsMuted(media.muted);
-      setVolume(media.volume);
-    };
-
+    media.addEventListener('canplay', handleCanPlay);
+    media.addEventListener('error', handleError);
+    media.addEventListener('loadedmetadata', handleLoadedMetadata);
+    media.addEventListener('progress', handleProgress);
     media.addEventListener('timeupdate', handleTimeUpdate);
-    media.addEventListener('play', handlePlay);
-    media.addEventListener('pause', handlePause);
-    media.addEventListener('ended', handleEnded);
-    media.addEventListener('volumechange', handleVolumeChange);
+    media.addEventListener('play', handlePlayEvt);
+    media.addEventListener('pause', handlePauseEvt);
+    media.addEventListener('ended', handleEndedEvt);
+    media.addEventListener('volumechange', handleVolumeEvt);
 
     return () => {
+      media.removeEventListener('canplay', handleCanPlay);
+      media.removeEventListener('error', handleError);
+      media.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      media.removeEventListener('progress', handleProgress);
       media.removeEventListener('timeupdate', handleTimeUpdate);
-      media.removeEventListener('play', handlePlay);
-      media.removeEventListener('pause', handlePause);
-      media.removeEventListener('ended', handleEnded);
-      media.removeEventListener('volumechange', handleVolumeChange);
+      media.removeEventListener('play', handlePlayEvt);
+      media.removeEventListener('pause', handlePauseEvt);
+      media.removeEventListener('ended', handleEndedEvt);
+      media.removeEventListener('volumechange', handleVolumeEvt);
     };
-  }, []);
+  }, [
+    handleCanPlay,
+    handleError,
+    handleLoadedMetadata,
+    handleProgress,
+    handleTimeUpdate,
+    handlePlayEvt,
+    handlePauseEvt,
+    handleEndedEvt,
+    handleVolumeEvt,
+  ]);
 
-  /**
-   * Device-aware play/pause with mobile autoplay restrictions
-   */
+  // Chargement / reload de la source (réagit à src + retry)
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    if (!src) {
+      setIsLoading(false);
+      setHasError(false);
+      setCanPlay(false);
+      return;
+    }
+    // Reset propre avant de laisser React rerender <source>
+    setIsLoading(true);
+    setHasError(false);
+    setCanPlay(false);
+    setBuffered(0);
+    setDuration(0);
+    setCurrentTime(0);
+
+    // Reset hard: retirer src direct, forcer load, la <source> (avec key) va être recréée
+    media.removeAttribute('src');
+    try {
+      media.load();
+    } catch (_) {}
+  }, [mediaKey, src]);
+
+  // Contrôles
   const togglePlay = useCallback(async () => {
     const media = mediaRef.current;
     if (!media || !canPlay) return;
 
-    setHasUserInteracted(true);
-    
+    // Marquer l'interaction immédiatement (fix mobile)
+    userInteractedRef.current = true;
+
     try {
       if (isPlaying) {
         await media.pause();
       } else {
-        // Respect mobile autoplay restrictions
-        if (deviceInfo.isMobile && !hasUserInteracted) {
-          console.warn('📱 Mobile autoplay blocked - requires user interaction');
-          return;
-        }
-        
         if (media.readyState >= 2) {
           await media.play();
         } else {
-          // Wait for media to be ready
-          const playWhenReady = async () => {
+          // Joue dès que prêt
+          const onReady = async () => {
+            media.removeEventListener('canplay', onReady);
             try {
               await media.play();
-            } catch (error) {
-              console.warn(`⚠️ ${type} play failed after canplay:`, error);
+            } catch (err) {
+              console.warn('⚠️ play after canplay failed:', err);
             }
           };
-          media.addEventListener('canplay', playWhenReady, { once: true });
+          media.addEventListener('canplay', onReady, { once: true });
+          media.load();
         }
       }
-    } catch (error) {
-      console.error(`🚫 ${type} playback toggle failed:`, error);
-      
-      if (error instanceof DOMException) {
-        if (error.name === 'NotAllowedError') {
-          console.warn('🔒 Autoplay blocked - user interaction required');
-        } else if (error.name === 'NotSupportedError') {
-          console.error(`❌ ${type} format not supported`);
-          setHasError(true);
+    } catch (error: any) {
+      console.error('🚫 playback toggle failed:', { name: error?.name, message: error?.message });
+      if (error?.name === 'NotAllowedError') {
+        // Autoplay bloqué — l'utilisateur vient de cliquer donc on réessaie muted si vidéo
+        if (type === 'video') {
+          try {
+            media.muted = true;
+            setIsMuted(true);
+            await media.play();
+          } catch (e) {
+            console.warn('🔇 muted play also failed:', e);
+          }
         }
+      } else if (error?.name === 'NotSupportedError') {
+        setHasError(true);
       }
     }
-  }, [isPlaying, canPlay, deviceInfo, hasUserInteracted, type]);
+  }, [canPlay, isPlaying, type]);
 
   const toggleMute = useCallback(() => {
     const media = mediaRef.current;
     if (!media) return;
-
     media.muted = !media.muted;
     setIsMuted(media.muted);
   }, []);
 
-  const handleVolumeChange = useCallback((newVolume: number) => {
-    const media = mediaRef.current;
-    if (!media) return;
+  const handleVolumeChangeUI = useCallback(
+    (newVolume: number) => {
+      const media = mediaRef.current;
+      if (!media) return;
+      media.volume = newVolume;
+      setVolume(newVolume);
+      if (newVolume === 0) {
+        media.muted = true;
+        setIsMuted(true);
+      } else if (isMuted && newVolume > 0) {
+        media.muted = false;
+        setIsMuted(false);
+      }
+    },
+    [isMuted]
+  );
 
-    media.volume = newVolume;
-    setVolume(newVolume);
-    if (newVolume === 0) {
-      setIsMuted(true);
-    } else if (isMuted && newVolume > 0) {
-      media.muted = false;
-      setIsMuted(false);
-    }
-  }, [isMuted]);
+  const handleSeek = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      const media = mediaRef.current;
+      if (!media || !canPlay || !Number.isFinite(duration) || duration <= 0) return;
 
-  /**
-   * Touch-friendly seek handling
-   */
-  const handleSeek = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    const media = mediaRef.current;
-    if (!media || !duration || !canPlay) return;
+      const el = e.currentTarget as HTMLElement;
+      const rect = el.getBoundingClientRect();
+      const clientX =
+        'touches' in e
+          ? e.touches[0]?.clientX ?? e.changedTouches[0]?.clientX ?? 0
+          : (e as React.MouseEvent).clientX;
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const newTime = ratio * duration;
 
-    const progressBar = e.currentTarget;
-    const rect = progressBar.getBoundingClientRect();
-    let clientX: number;
-    
-    if ('touches' in e) {
-      clientX = e.touches[0]?.clientX || e.changedTouches[0]?.clientX || 0;
-    } else {
-      clientX = e.clientX;
-    }
-    
-    const clickPosition = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const newTime = clickPosition * duration;
-    
-    media.currentTime = newTime;
-    setCurrentTime(newTime);
-  }, [duration, canPlay]);
+      media.currentTime = newTime;
+      setCurrentTime(newTime);
+    },
+    [canPlay, duration]
+  );
 
-  /**
-   * Fullscreen handling for video
-   */
   const toggleFullscreen = useCallback(async () => {
     if (type !== 'video') return;
-    
-    const media = mediaRef.current;
+    const media = mediaRef.current as HTMLVideoElement | null;
     if (!media) return;
-
     try {
       if (!isFullscreen) {
-        if (media.requestFullscreen) {
-          await media.requestFullscreen();
-        } else if ((media as any).webkitRequestFullscreen) {
-          await (media as any).webkitRequestFullscreen();
-        }
+        if (media.requestFullscreen) await media.requestFullscreen();
+        else if ((media as any).webkitRequestFullscreen) await (media as any).webkitRequestFullscreen();
         setIsFullscreen(true);
       } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        }
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
         setIsFullscreen(false);
       }
-    } catch (error) {
-      console.warn('Fullscreen toggle failed:', error);
+    } catch (err) {
+      console.warn('Fullscreen toggle failed:', err);
     }
-  }, [type, isFullscreen]);
+  }, [isFullscreen, type]);
 
-  const formatTime = useCallback((time: number) => {
-    if (!isFinite(time)) return '0:00';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const formatTime = useCallback((t: number) => {
+    if (!Number.isFinite(t) || t < 0) return '0:00';
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   }, []);
 
   const handleRetry = useCallback(() => {
     setRetryCount(0);
     setHasError(false);
     setIsLoading(true);
-    loadMedia();
-  }, [loadMedia]);
+    // Le useEffect sur mediaKey relancera le reload
+    setTimeout(() => setRetryCount((p) => p + 1), 0);
+  }, []);
 
-  // No source provided
+  // Squelettes d'état
   if (!src) {
     return (
       <div className={`${className} bg-muted flex items-center justify-center rounded-lg border border-border min-h-[120px]`}>
         <div className="text-center p-6">
           <div className="w-12 h-12 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-            {type === 'video' ? (
-              <Play className="h-6 w-6 text-primary" />
-            ) : (
-              <Volume2 className="h-6 w-6 text-primary" />
-            )}
+            {type === 'video' ? <Play className="h-6 w-6 text-primary" /> : <Volume2 className="h-6 w-6 text-primary" />}
           </div>
           <p className="text-muted-foreground text-sm">
             {type === 'video' ? 'Vidéo' : 'Audio'} en cours de traitement...
@@ -372,7 +396,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     );
   }
 
-  // Error state
   if (hasError) {
     return (
       <div className={`${className} bg-muted flex items-center justify-center rounded-lg border border-border min-h-[120px]`}>
@@ -393,34 +416,50 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     );
   }
 
-  // Main player interface
   return (
-    <div className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'}`}>
-      {/* Media element with device-specific attributes */}
+    <div
+      className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${
+        compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'
+      }`}
+      role="group"
+      aria-label={title}
+    >
+      {/* Media element avec <source> typé pour aider iOS/Android */}
       {type === 'video' ? (
         <video
+          key={mediaKey}
           ref={mediaRef as React.RefObject<HTMLVideoElement>}
           poster={poster}
           preload={deviceInfo.isMobile ? 'metadata' : 'auto'}
-          autoPlay={hasUserInteracted && autoPlay && canPlay && !deviceInfo.isMobile}
+          // Autoplay: on laisse desktop décider; sur mobile il faudra interaction
+          autoPlay={autoPlay && !deviceInfo.isMobile}
           muted={isMuted}
-          playsInline={deviceInfo.isMobile}
+          playsInline
           crossOrigin="anonymous"
           className="w-full h-full object-cover"
-          style={{ display: isLoading || hasError ? 'none' : 'block' }}
-        />
+          style={{ display: isLoading ? 'none' : 'block' }}
+          controls={false}
+        >
+          {/* React regen ce <source> quand src/mime changent */}
+          <source src={src} type={mimeType} />
+        </video>
       ) : (
         <audio
+          key={mediaKey}
           ref={mediaRef as React.RefObject<HTMLAudioElement>}
           preload={deviceInfo.isMobile ? 'metadata' : 'auto'}
-          autoPlay={hasUserInteracted && autoPlay && canPlay && !deviceInfo.isMobile}
+          autoPlay={autoPlay && !deviceInfo.isMobile}
           muted={isMuted}
           crossOrigin="anonymous"
+          // On cache l'élément natif si on dessine nos contrôles
           style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
-        />
+          controls={false}
+        >
+          <source src={src} type={mimeType} />
+        </audio>
       )}
 
-      {/* Loading indicator */}
+      {/* Overlay chargement */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
           <div className="text-center">
@@ -430,11 +469,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </div>
       )}
 
-      {/* Player controls overlay */}
+      {/* Contrôles */}
       {canPlay && controls && (
         <div className="absolute inset-0 z-10">
           {compact ? (
-            // Compact controls
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
               <div className="flex items-center gap-2">
                 <Button
@@ -444,49 +482,45 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   className={`text-white hover:bg-white/20 ${
                     deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
                   } p-0 rounded-full flex-shrink-0`}
-                  disabled={!canPlay}
                 >
                   {isPlaying ? (
-                    <Pause className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />
+                    <Pause className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
                   ) : (
-                    <Play className={`${deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} ml-0.5`} />
+                    <Play className={`${deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} ml-0.5`} />
                   )}
                 </Button>
-                
+
                 <div className="flex-1 min-w-0">
-                  <div 
+                  <div
                     className={`w-full bg-white/30 rounded-full cursor-pointer ${
                       deviceInfo.touchCapable ? 'h-2 touch-manipulation' : 'h-1'
                     }`}
                     onClick={handleSeek}
                     onTouchEnd={deviceInfo.touchCapable ? handleSeek : undefined}
                   >
-                    <div 
+                    <div
                       className="h-full bg-primary rounded-full transition-all duration-200"
-                      style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                      style={{ width: `${(currentTime / (duration || 1)) * 100 || 0}%` }}
                     />
                   </div>
                 </div>
-                
-                <span className="text-white text-xs font-mono flex-shrink-0">
-                  {formatTime(currentTime)}
-                </span>
+
+                <span className="text-white text-xs font-mono flex-shrink-0">{formatTime(currentTime)}</span>
               </div>
             </div>
           ) : (
-            // Full controls
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
               <div className="mb-3">
-                <div 
+                <div
                   className={`w-full bg-white/30 rounded-full cursor-pointer ${
                     deviceInfo.touchCapable ? 'h-2 touch-manipulation' : 'h-1'
                   }`}
                   onClick={handleSeek}
                   onTouchEnd={deviceInfo.touchCapable ? handleSeek : undefined}
                 >
-                  <div 
+                  <div
                     className="h-full bg-primary rounded-full transition-all duration-200"
-                    style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                    style={{ width: `${(currentTime / (duration || 1)) * 100 || 0}%` }}
                   />
                 </div>
               </div>
@@ -495,34 +529,33 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
-                    size={deviceInfo.touchCapable ? "default" : "sm"}
+                    size={deviceInfo.touchCapable ? 'default' : 'sm'}
                     onClick={togglePlay}
                     className={`text-white hover:bg-white/20 ${
                       deviceInfo.touchCapable ? 'h-12 w-12 touch-manipulation' : 'h-10 w-10'
                     } p-0 rounded-full`}
-                    disabled={!canPlay}
                   >
                     {isPlaying ? (
-                      <Pause className={deviceInfo.touchCapable ? "h-6 w-6" : "h-5 w-5"} />
+                      <Pause className={deviceInfo.touchCapable ? 'h-6 w-6' : 'h-5 w-5'} />
                     ) : (
-                      <Play className={`${deviceInfo.touchCapable ? "h-6 w-6" : "h-5 w-5"} ml-0.5`} />
+                      <Play className={`${deviceInfo.touchCapable ? 'h-6 w-6' : 'h-5 w-5'} ml-0.5`} />
                     )}
                   </Button>
-                  
-                  {/* Volume control - hidden on iOS */}
+
+                  {/* Volume (masqué iOS si nécessaire côté CSS si non voulu) */}
                   {!deviceInfo.isIOS && (
                     <Button
                       variant="ghost"
-                      size={deviceInfo.touchCapable ? "default" : "sm"}
+                      size={deviceInfo.touchCapable ? 'default' : 'sm'}
                       onClick={toggleMute}
                       className={`text-white hover:bg-white/20 ${
                         deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
                       } p-0 rounded-full`}
                     >
                       {isMuted ? (
-                        <VolumeX className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />
+                        <VolumeX className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
                       ) : (
-                        <Volume2 className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />
+                        <Volume2 className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
                       )}
                     </Button>
                   )}
@@ -532,24 +565,30 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   <span className="text-white text-sm font-mono">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
-                  
-                  {/* Fullscreen for video */}
+
                   {type === 'video' && (
                     <Button
                       variant="ghost"
-                      size={deviceInfo.touchCapable ? "default" : "sm"}
+                      size={deviceInfo.touchCapable ? 'default' : 'sm'}
                       onClick={toggleFullscreen}
                       className={`text-white hover:bg-white/20 ${
                         deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
                       } p-0 rounded-full`}
                     >
-                      <Maximize className={deviceInfo.touchCapable ? "h-5 w-5" : "h-4 w-4"} />
+                      <Maximize className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
                     </Button>
                   )}
                 </div>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Barre de buffer discrète (optionnelle) */}
+      {canPlay && !compact && type === 'video' && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-white/20">
+          <div className="h-full bg-white/50" style={{ width: `${buffered}%` }} />
         </div>
       )}
     </div>
