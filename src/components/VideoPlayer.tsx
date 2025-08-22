@@ -197,7 +197,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <img 
           src={watermarkLogo}
           alt="VisuStock"
-          className="w-32 h-32 opacity-50 select-none"
+          className="w-[320px] h-[320px] opacity-50 select-none"
           draggable={false}
           style={{ 
             userSelect: 'none',
