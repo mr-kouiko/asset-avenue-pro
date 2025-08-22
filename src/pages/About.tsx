@@ -213,19 +213,15 @@ const About = () => {
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="auto"
           onError={(e) => {
             console.error('Video failed to load:', e);
-            // Hide video and show fallback background
             e.currentTarget.style.display = 'none';
           }}
-          onLoadStart={() => console.log('Video loading started')}
-          onCanPlay={() => console.log('Video can play')}
+          onLoadedData={() => console.log('Video loaded successfully')}
+          onCanPlayThrough={() => console.log('Video can play through')}
         >
-          <source 
-            src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/video%20HERO/VHP_5-27.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ2aWRvIEhFUk8vVkhQXzUtMjcud2VibSIsImlhdCI6MTc1NTg5OTQ4MCwiZXhwIjoyNjE5ODEzMDgwfQ.1cGP04BgDX011TPQKh2PfY5VGz0rdPK3Zx0wN5LcOFs" 
-            type="video/webm" 
-          />
+          <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20HERO/VHP_5-27.webm" type="video/webm" />
           Your browser does not support the video tag.
         </video>
         
