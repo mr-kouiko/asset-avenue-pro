@@ -47,27 +47,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Use thumbnail as fallback poster if poster is not provided
   const effectivePoster = poster || thumbnail;
 
-  // Mobile-optimized video loading with retry logic and URL fallback
+  // Device-aware video loading with smart retry logic
   const loadVideo = useCallback(async () => {
     const video = videoRef.current;
     if (!video || !src) return;
 
-    console.log('📹 Loading video:', src, 'Attempt:', retryCount + 1);
+    console.log('📹 Loading video:', src, 'Attempt:', retryCount + 1, 'Mobile:', isMobile);
     setIsLoading(true);
     setVideoError(false);
     setCanPlay(false);
 
     try {
-      // Try to use fallback URL if main URL fails and we have it available
+      // Use fallback URL only on mobile devices after first attempt
       let videoSrc = src;
-      if (retryCount > 0 && (src as any).public_preview_url) {
+      if (isMobile && retryCount > 0 && (src as any).public_preview_url) {
         videoSrc = (src as any).public_preview_url;
-        console.log('🔄 Using fallback public URL:', videoSrc);
+        console.log('📱 Mobile fallback URL:', videoSrc);
       }
 
-      // Clear existing sources and set new source
-      video.src = videoSrc;
-      video.load();
+      // Set source and load - different approach for mobile vs desktop
+      if (isMobile) {
+        // Mobile: Set src directly and load
+        video.src = videoSrc;
+        video.load();
+      } else {
+        // Desktop: Clear and reload
+        video.pause();
+        video.src = '';
+        video.load();
+        video.src = videoSrc;
+        video.load();
+      }
       
       // Set up event listeners for this load attempt
       const handleCanPlay = () => {
@@ -87,18 +97,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           originalSrc: src,
           networkState: target.networkState,
           readyState: target.readyState,
-          retryCount: retryCount
+          retryCount: retryCount,
+          isMobile: isMobile
         });
         
         setIsLoading(false);
         setCanPlay(false);
         
-        // Try fallback URL or retry
-        if (retryCount < 3) {
-          console.log('🔄 Retrying video load in 1 second...');
+        // Smart retry logic - different for mobile vs desktop
+        const maxRetries = isMobile ? 3 : 2;
+        if (retryCount < maxRetries) {
+          console.log(`🔄 Retrying video load (${retryCount + 1}/${maxRetries})...`);
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
-          }, 1000);
+          }, isMobile ? 1500 : 1000); // Longer delay on mobile
         } else {
           console.error('💥 All video load attempts failed');
           setVideoError(true);
@@ -450,24 +462,34 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         muted={isMuted}
         playsInline={true}
         crossOrigin="anonymous"
-        webkit-playsinline="true"
-        x-webkit-airplay="allow"
+        // Mobile-specific attributes
+        webkit-playsinline={isMobile ? "true" : undefined}
+        x-webkit-airplay={isMobile ? "allow" : undefined}
         onClick={togglePlay}
-        onTouchEnd={(e) => {
+        onTouchEnd={isMobile ? (e) => {
           e.preventDefault();
           togglePlay();
-        }}
+        } : undefined}
         style={{
           width: '100%',
           height: '100%',
           objectFit: 'contain'
         }}
       >
-        {/* Multiple source formats for maximum compatibility */}
-        <source src={src} type="video/mp4; codecs=avc1.42E01E,mp4a.40.2" />
-        <source src={src} type="video/webm; codecs=vp8,vorbis" />
-        <source src={src} type="video/quicktime" />
-        <source src={src} type="video/ogg; codecs=theora,vorbis" />
+        {/* Progressive source loading - desktop gets all formats, mobile gets optimized formats */}
+        {isMobile ? (
+          <>
+            <source src={src} type="video/mp4" />
+            <source src={src} type="video/webm" />
+          </>
+        ) : (
+          <>
+            <source src={src} type="video/mp4; codecs=avc1.42E01E,mp4a.40.2" />
+            <source src={src} type="video/webm; codecs=vp8,vorbis" />
+            <source src={src} type="video/quicktime" />
+            <source src={src} type="video/ogg; codecs=theora,vorbis" />
+          </>
+        )}
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
@@ -497,95 +519,88 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Controls */}
-      {controls && canPlay && (showControls || !isPlaying || isMobile) && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 md:p-4 z-30">
-          {/* Progress Bar */}
-          <div className="w-full mb-3">
-            {/* Buffer Progress */}
-            <div 
-              className={`w-full bg-white/20 rounded-full ${isMobile ? 'h-2' : 'h-1'} mb-1`}
-            >
-              <div 
-                className="h-full bg-white/40 rounded-full transition-all duration-200"
-                style={{ width: `${buffered}%` }}
-              />
-            </div>
-            
-            {/* Playback Progress */}
-            <div 
-              className={`w-full bg-white/30 rounded-full cursor-pointer ${
-                isMobile ? 'h-2 touch-manipulation' : 'h-1'
-              }`}
-              onClick={handleSeek}
-              onTouchEnd={handleSeek}
-              role="slider"
-              aria-label="Video progress"
-              tabIndex={0}
-            >
-              <div 
-                className="h-full bg-primary rounded-full transition-all duration-200"
-                style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Control Buttons */}
-          <div className="flex items-center justify-between text-white">
-            <div className="flex items-center gap-2 md:gap-3">
-              <Button
-                variant="ghost"
-                size={isMobile ? "default" : "sm"}
-                onClick={togglePlay}
-                className={`text-white hover:text-white hover:bg-white/20 ${
-                  isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-                } p-0`}
-                disabled={!canPlay}
-                aria-label={isPlaying ? "Pause video" : "Play video"}
-              >
-                {isPlaying ? (
-                  <Pause className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-                ) : (
-                  <Play className={`${isMobile ? "h-5 w-5" : "h-4 w-4"} ml-0.5`} />
-                )}
-              </Button>
-
-              {/* Volume control (hidden on iOS) */}
-              {!isMobile && (
+          {/* Controls - device-specific sizing and touch optimization */}
+          {controls && canPlay && (showControls || !isPlaying || isMobile) && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 md:p-4 z-30">
+              {/* Progress Bar */}
+              <div className="w-full mb-3">
+                {/* Buffer Progress */}
+                <div 
+                  className={`w-full bg-white/20 rounded-full ${isMobile ? 'h-2' : 'h-1'} mb-1`}
+                >
+                  <div 
+                    className="h-full bg-white/40 rounded-full transition-all duration-200"
+                    style={{ width: `${buffered}%` }}
+                  />
+                </div>
+                
+                {/* Playback Progress - larger touch target on mobile */}
+                <div 
+                  className={`w-full bg-white/30 rounded-full cursor-pointer ${
+                    isMobile ? 'h-2 touch-manipulation' : 'h-1'
+                  }`}
+                  onClick={handleSeek}
+                  onTouchEnd={isMobile ? handleSeek : undefined}
+                >
+                  <div 
+                    className="h-full bg-white rounded-full transition-all duration-200"
+                    style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                  />
+                </div>
+              </div>
+              
+              {/* Control Buttons */}
+              <div className="flex items-center justify-between text-white text-sm">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size={isMobile ? "default" : "sm"}
+                    onClick={togglePlay}
+                    className={`text-white hover:bg-white/20 ${
+                      isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                    } p-0`}
+                    disabled={!canPlay}
+                  >
+                    {isPlaying ? (
+                      <Pause className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                    ) : (
+                      <Play className={`${isMobile ? "h-5 w-5" : "h-4 w-4"} ml-0.5`} />
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size={isMobile ? "default" : "sm"}
+                    onClick={toggleMute}
+                    className={`text-white hover:bg-white/20 ${
+                      isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                    } p-0`}
+                  >
+                    {isMuted ? (
+                      <VolumeX className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                    ) : (
+                      <Volume2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                    )}
+                  </Button>
+                  
+                  <span className="font-mono text-xs">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
+                </div>
+                
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={toggleMute}
-                  className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
-                  aria-label={isMuted ? "Unmute video" : "Mute video"}
+                  size={isMobile ? "default" : "sm"}
+                  onClick={toggleFullscreen}
+                  className={`text-white hover:bg-white/20 ${
+                    isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                  } p-0`}
                 >
-                  {isMuted ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
+                  <Maximize2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                 </Button>
-              )}
-
-              <span className={`font-mono ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
+              </div>
             </div>
-
-            <Button
-              variant="ghost"
-              size={isMobile ? "default" : "sm"}
-              onClick={toggleFullscreen}
-              className={`text-white hover:text-white hover:bg-white/20 ${
-                isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-              } p-0`}
-              aria-label="Toggle fullscreen"
-            >
-              <Maximize2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-            </Button>
-          </div>
-        </div>
-      )}
+          )}
     </div>
   );
 };

@@ -1,11 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Enhanced MIME type detection with mobile browser compatibility
+// Enhanced MIME type detection with accurate format mapping
 function getMimeType(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase()
   
   const mimeTypes: { [key: string]: string } = {
-    // Video formats - optimized for mobile playback
+    // Video formats - precise MIME types for better compatibility
     'mp4': 'video/mp4',
     'webm': 'video/webm',
     'mov': 'video/quicktime',
@@ -21,7 +21,7 @@ function getMimeType(fileName: string): string {
     'mts': 'video/mp2t',
     'vob': 'video/dvd',
     
-    // Audio formats - mobile compatible
+    // Audio formats - accurate MIME types
     'mp3': 'audio/mpeg',
     'wav': 'audio/wav',
     'flac': 'audio/flac',
@@ -31,7 +31,7 @@ function getMimeType(fileName: string): string {
     'wma': 'audio/x-ms-wma',
     'm4a': 'audio/mp4',
     'opus': 'audio/opus',
-    'webm': 'audio/webm',
+    'webm': 'audio/webm', // WebM audio
     'amr': 'audio/amr',
     'au': 'audio/basic',
     'mid': 'audio/midi',
@@ -72,20 +72,19 @@ function getMimeType(fileName: string): string {
   }
   
   const mimeType = mimeTypes[ext || ''] || 'application/octet-stream'
-  console.log(`MIME type detection: ${fileName} -> ${ext} -> ${mimeType}`)
+  console.log(`📄 MIME type detection: ${fileName} -> ${ext} -> ${mimeType}`)
   return mimeType
 }
 
-// Enhanced CORS headers for mobile compatibility and streaming
+// CORS headers optimized for both desktop and mobile browsers
 function getCorsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, range, cache-control',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, range, cache-control, user-agent',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
-    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, ETag, Last-Modified',
     'Accept-Ranges': 'bytes',
-    'Cache-Control': 'public, max-age=31536000, immutable',
-    'Content-Type': 'application/octet-stream'
+    'Cache-Control': 'public, max-age=31536000, immutable'
   }
 }
 
@@ -396,7 +395,7 @@ async function handleChunkMerge(req: Request, userId: string) {
     const contentType = getMimeType(fileName)
     console.log(`Using MIME type: ${contentType} for file: ${fileName}`)
     
-    // Enhanced upload options for mobile compatibility and streaming
+    // Upload options with streaming support for both desktop and mobile
     const uploadOptions = {
       contentType: contentType,
       cacheControl: 'public, max-age=31536000, immutable',
@@ -407,7 +406,8 @@ async function handleChunkMerge(req: Request, userId: string) {
         fileSize: mergedBuffer.length.toString(),
         mimeType: contentType,
         acceptRanges: 'bytes',
-        streamable: 'true'
+        streamable: 'true',
+        chunkedUpload: 'true'
       }
     }
 
