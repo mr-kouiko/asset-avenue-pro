@@ -69,29 +69,55 @@ Deno.serve(async (req) => {
 })
 
 async function initializeUpload(req: Request, userId: string) {
-  const { fileName, fileSize, totalChunks } = await req.json()
-  
-  // Generate unique upload ID
-  const uploadId = `${userId}-${Date.now()}-${Math.random().toString(36).substring(2)}`
-  
-  // Store upload metadata in a temporary table or storage
-  // For now, we'll use a simple in-memory approach with a KV store pattern
-  const uploadMetadata = {
-    uploadId,
-    fileName,
-    fileSize,
-    totalChunks,
-    userId,
-    createdAt: new Date().toISOString(),
-    chunks: new Array(totalChunks).fill(false)
+  try {
+    const { fileName, fileSize, totalChunks, basePath } = await req.json()
+    
+    if (!fileName || !fileSize || !totalChunks) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameters: fileName, fileSize, totalChunks' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Generate unique upload ID with better entropy
+    const uploadId = `${userId}-${Date.now()}-${Math.random().toString(36).substring(2)}-${Math.random().toString(36).substring(2)}`
+    
+    // Store upload metadata
+    const uploadMetadata = {
+      uploadId,
+      fileName,
+      fileSize,
+      totalChunks,
+      userId,
+      basePath: basePath || `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}`,
+      createdAt: new Date().toISOString(),
+      chunks: new Array(totalChunks).fill(false),
+      status: 'initialized'
+    }
+    
+    console.log('Initialized upload:', {
+      uploadId,
+      fileName,
+      fileSize: `${(fileSize / 1024 / 1024).toFixed(2)}MB`,
+      totalChunks,
+      userId
+    })
+    
+    return new Response(
+      JSON.stringify({ 
+        uploadId, 
+        message: 'Upload initialized successfully',
+        metadata: uploadMetadata 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    console.error('Initialize upload error:', error)
+    return new Response(
+      JSON.stringify({ error: 'Failed to initialize upload', details: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-  
-  console.log('Initialized upload:', uploadMetadata)
-  
-  return new Response(
-    JSON.stringify({ uploadId, message: 'Upload initialized' }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
 }
 
 async function handleChunkUpload(req: Request, userId: string) {
@@ -153,7 +179,14 @@ async function handleChunkUpload(req: Request, userId: string) {
 }
 
 async function handleChunkMerge(req: Request, userId: string) {
-  const { uploadId, fileName, totalChunks, bucket = 'original-files' } = await req.json()
+  const { uploadId, fileName, totalChunks, bucket = 'original-files', basePath } = await req.json()
+
+  if (!uploadId || !fileName || !totalChunks) {
+    return new Response(
+      JSON.stringify({ error: 'Missing required parameters: uploadId, fileName, totalChunks' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -161,9 +194,39 @@ async function handleChunkMerge(req: Request, userId: string) {
   )
 
   try {
-    console.log(`Starting merge for ${fileName} with ${totalChunks} chunks`)
+    console.log(`Starting merge for ${fileName} with ${totalChunks} chunks, uploadId: ${uploadId}`)
     
-    // Collect all chunks using streaming approach
+    // Verify all chunks exist before starting merge
+    const chunkPaths = []
+    for (let i = 0; i < totalChunks; i++) {
+      chunkPaths.push(`chunks/${uploadId}/chunk-${i.toString().padStart(4, '0')}`)
+    }
+
+    // Check chunk existence in parallel
+    const chunkChecks = await Promise.allSettled(
+      chunkPaths.map(async (path, index) => {
+        const { data, error } = await supabase.storage.from('temp-chunks').list(path.split('/').slice(0, -1).join('/'))
+        if (error || !data.find(item => item.name === path.split('/').pop())) {
+          throw new Error(`Chunk ${index} not found at ${path}`)
+        }
+        return path
+      })
+    )
+
+    const failedChunks = chunkChecks.filter(result => result.status === 'rejected')
+    if (failedChunks.length > 0) {
+      console.error('Missing chunks:', failedChunks)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Some chunks are missing', 
+          missingChunks: failedChunks.length,
+          details: failedChunks.map((result, index) => ({ index, error: result.reason }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Download and merge chunks using streaming approach for memory efficiency
     const chunks: Uint8Array[] = []
     let totalSize = 0
 
@@ -184,10 +247,11 @@ async function handleChunkMerge(req: Request, userId: string) {
       chunks.push(chunkArray)
       totalSize += chunkArray.length
       
-      console.log(`Downloaded chunk ${i + 1}/${totalChunks}, size: ${chunkArray.length}`)
+      console.log(`Downloaded chunk ${i + 1}/${totalChunks}, size: ${(chunkArray.length / 1024).toFixed(1)}KB`)
     }
 
     // Efficiently merge chunks using a single buffer allocation
+    console.log(`Merging ${totalChunks} chunks into ${(totalSize / 1024 / 1024).toFixed(2)}MB file`)
     const mergedBuffer = new Uint8Array(totalSize)
     let offset = 0
     
@@ -196,36 +260,85 @@ async function handleChunkMerge(req: Request, userId: string) {
       offset += chunk.length
     }
 
-    console.log(`Merged file size: ${mergedBuffer.length} bytes`)
+    console.log(`Merged file size: ${(mergedBuffer.length / 1024 / 1024).toFixed(2)}MB`)
 
-    // Generate final file path
-    const fileExt = fileName.split('.').pop()
-    const finalFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-    const finalPath = `${userId}/${finalFileName}`
+    // Use provided basePath or generate final file path
+    const finalPath = basePath || (() => {
+      const fileExt = fileName.split('.').pop()
+      const finalFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+      return `${userId}/${finalFileName}`
+    })()
 
-    // Upload merged file to final destination
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(finalPath, mergedBuffer, {
-        cacheControl: '3600',
-        upsert: false
-      })
+    // Upload merged file to final destination with retry logic
+    let uploadAttempts = 0
+    const maxUploadAttempts = 3
+    let uploadData
 
-    if (uploadError) {
-      console.error('Final upload error:', uploadError)
-      throw uploadError
+    while (uploadAttempts < maxUploadAttempts) {
+      try {
+        const { data, error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(finalPath, mergedBuffer, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (uploadError) {
+          if (uploadError.message.includes('already exists') && uploadAttempts < maxUploadAttempts - 1) {
+            // Try with modified path
+            const timestamp = Date.now()
+            const randomStr = Math.random().toString(36).substring(2)
+            const pathParts = finalPath.split('.')
+            pathParts[pathParts.length - 2] += `_${timestamp}_${randomStr}`
+            const newFinalPath = pathParts.join('.')
+            
+            const { data: retryData, error: retryError } = await supabase.storage
+              .from(bucket)
+              .upload(newFinalPath, mergedBuffer, {
+                cacheControl: '3600',
+                upsert: false
+              })
+
+            if (retryError) throw retryError
+            uploadData = retryData
+            break
+          } else {
+            throw uploadError
+          }
+        } else {
+          uploadData = data
+          break
+        }
+      } catch (error) {
+        uploadAttempts++
+        console.error(`Upload attempt ${uploadAttempts} failed:`, error)
+        
+        if (uploadAttempts >= maxUploadAttempts) {
+          throw error
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts))
+      }
     }
 
-    // Clean up temporary chunks in background
-    EdgeRuntime.waitUntil(cleanupChunks(supabase, uploadId, totalChunks))
+    if (!uploadData) {
+      throw new Error('Failed to upload merged file after all attempts')
+    }
 
-    console.log(`Successfully merged and uploaded: ${finalPath}`)
+    // Clean up temporary chunks in background (don't await)
+    cleanupChunks(supabase, uploadId, totalChunks).catch(error => {
+      console.error('Background cleanup failed:', error)
+    })
+
+    console.log(`Successfully merged and uploaded: ${uploadData.path}`)
 
     return new Response(
       JSON.stringify({ 
         message: 'File merged successfully',
         path: uploadData.path,
-        size: mergedBuffer.length
+        size: mergedBuffer.length,
+        uploadId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -233,7 +346,11 @@ async function handleChunkMerge(req: Request, userId: string) {
   } catch (error) {
     console.error('Chunk merge failed:', error)
     return new Response(
-      JSON.stringify({ error: 'Chunk merge failed', details: error.message }),
+      JSON.stringify({ 
+        error: 'Chunk merge failed', 
+        details: error.message,
+        uploadId 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
