@@ -122,12 +122,38 @@ export const useProductDetail = (productId: string) => {
         if (contentType === 'audio' && filesList.length > 0) {
           const audioFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('audio/'));
           if (audioFile?.file_path) {
-            const { data: signedData, error: signedError } = await supabase.storage
-              .from('original-files')
-              .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
-            
-            if (signedData?.signedUrl) {
-              previewUrl = signedData.signedUrl;
+            try {
+              const { data: signedData, error: signedError } = await supabase.storage
+                .from('original-files')
+                .createSignedUrl(audioFile.file_path, 3600); // 1 hour expiry
+              
+              if (signedData?.signedUrl && !signedError) {
+                previewUrl = signedData.signedUrl;
+              }
+            } catch (error) {
+              console.warn('Could not create signed URL for audio file:', error);
+            }
+          }
+        }
+
+        // For video files, try to get signed URL for original file
+        if (contentType === 'video' && filesList.length > 0) {
+          const videoFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('video/'));
+          if (videoFile?.file_path) {
+            try {
+              const { data: signedData, error: signedError } = await supabase.storage
+                .from('original-files')
+                .createSignedUrl(videoFile.file_path, 3600); // 1 hour expiry
+              
+              if (signedData?.signedUrl && !signedError) {
+                previewUrl = signedData.signedUrl;
+              } else {
+                console.warn('Could not create signed URL for video file, will show loading state');
+                previewUrl = null; // Set to null to indicate video is not available yet
+              }
+            } catch (error) {
+              console.warn('Could not create signed URL for video file:', error);
+              previewUrl = null; // Set to null to indicate video is not available yet
             }
           }
         }

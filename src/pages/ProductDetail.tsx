@@ -142,32 +142,48 @@ const ProductDetail = () => {
       <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted border border-border shadow-lg">
         {product.type === 'video' ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
-            {/* Primary Video Player */}
-            <VideoPlayer 
-              src={product.previewUrl}
-              className="w-full h-full"
-              showThumbnailFirst={false}
-              autoPlay={false}
-              controls={true}
-              muted={false}
-            />
-            
-            {/* HTML5 Video Fallback - Always visible */}
-            {product.previewUrl && (
-              <video 
-                controls 
-                preload="metadata"
-                className="w-full h-full object-cover"
-                style={{ 
-                  minHeight: '300px',
-                  backgroundColor: '#000',
-                  display: 'block'
-                }}
-              >
-                <source src={product.previewUrl} type="video/mp4" />
-                <source src={product.previewUrl} type="video/webm" />
-                <p className="text-white p-4 text-center">Votre navigateur ne supporte pas la lecture vidéo HTML5.</p>
-              </video>
+            {product.previewUrl ? (
+              <>
+                {/* Primary Video Player */}
+                <VideoPlayer 
+                  src={product.previewUrl}
+                  className="w-full h-full"
+                  showThumbnailFirst={false}
+                  autoPlay={false}
+                  controls={true}
+                  muted={false}
+                />
+                
+                {/* HTML5 Video Fallback */}
+                <video 
+                  controls 
+                  preload="metadata"
+                  className="w-full h-full object-cover"
+                  style={{ 
+                    minHeight: '300px',
+                    backgroundColor: '#000',
+                    display: 'block'
+                  }}
+                >
+                  <source src={product.previewUrl} type="video/mp4" />
+                  <source src={product.previewUrl} type="video/webm" />
+                  <p className="text-white p-4 text-center">Votre navigateur ne supporte pas la lecture vidéo HTML5.</p>
+                </video>
+              </>
+            ) : (
+              /* Video not available - show loading/waiting message */
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <div className="text-center p-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-primary/20 rounded-full flex items-center justify-center">
+                    <FileVideo className="h-8 w-8 text-primary animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Vidéo en cours de traitement</h3>
+                  <p className="text-white/70 text-sm">
+                    La vidéo est actuellement en cours de préparation.<br />
+                    Elle sera disponible sous peu.
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         ) : product.type === 'audio' ? (
