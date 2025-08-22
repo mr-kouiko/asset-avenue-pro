@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import watermarkLogo from '@/assets/visustock-watermark.png';
 
 interface VideoPlayerProps {
@@ -33,8 +34,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsTimer, setControlsTimer] = useState<NodeJS.Timeout | null>(null);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   // Use thumbnail as fallback poster if poster is not provided
   const effectivePoster = poster || thumbnail;
@@ -91,14 +95,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, []);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (isPlaying) {
-      video.pause();
-    } else {
-      video.play();
+    setHasUserInteracted(true);
+    
+    try {
+      if (isPlaying) {
+        await video.pause();
+      } else {
+        // For mobile browsers, especially iOS Safari
+        await video.play();
+      }
+    } catch (error) {
+      console.error('Playback failed:', error);
+      // Handle autoplay restrictions on mobile
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        console.warn('Autoplay blocked - user interaction required');
+      }
     }
   };
 
@@ -110,14 +125,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(video.muted);
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Enhanced seek handling for both mouse and touch
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     const video = videoRef.current;
     if (!video || !duration) return;
 
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
-    const clickPosition = (e.clientX - rect.left) / rect.width;
-    video.currentTime = clickPosition * duration;
+    let clientX: number;
+    
+    if ('touches' in e) {
+      // Touch event
+      clientX = e.touches[0]?.clientX || e.changedTouches[0]?.clientX || 0;
+    } else {
+      // Mouse event
+      clientX = e.clientX;
+    }
+    
+    const clickPosition = (clientX - rect.left) / rect.width;
+    const newTime = Math.max(0, Math.min(clickPosition * duration, duration));
+    video.currentTime = newTime;
+    setCurrentTime(newTime);
   };
 
   const formatTime = (time: number) => {
@@ -130,7 +158,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     try {
       if (!isFullscreen) {
         const element = containerRef.current as any;
-        if (element?.requestFullscreen) {
+        const video = videoRef.current as any;
+        
+        // Try different fullscreen methods, prioritizing video element for mobile
+        if (isMobile && video?.webkitEnterFullscreen) {
+          // iOS Safari specific - use video element fullscreen
+          await video.webkitEnterFullscreen();
+        } else if (element?.requestFullscreen) {
           await element.requestFullscreen();
         } else if (element?.webkitRequestFullscreen) {
           await element.webkitRequestFullscreen();
@@ -152,6 +186,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     } catch (error) {
       console.error('Fullscreen toggle failed:', error);
+    }
+  };
+
+  // Handle mobile control visibility
+  const showControlsWithTimer = () => {
+    setShowControls(true);
+    if (controlsTimer) {
+      clearTimeout(controlsTimer);
+    }
+    // Auto-hide controls after 3 seconds on mobile
+    if (isMobile) {
+      const timer = setTimeout(() => setShowControls(false), 3000);
+      setControlsTimer(timer);
+    }
+  };
+
+  const handleContainerInteraction = () => {
+    if (isMobile) {
+      showControlsWithTimer();
     }
   };
 
@@ -223,18 +276,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     <div 
       ref={containerRef}
       className={`${className} relative overflow-hidden rounded-lg border border-border bg-black`}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
+      onMouseEnter={() => !isMobile && setShowControls(true)}
+      onMouseLeave={() => !isMobile && setShowControls(false)}
+      onTouchStart={handleContainerInteraction}
+      onClick={handleContainerInteraction}
     >
       <video 
         ref={videoRef}
         className="w-full h-full object-contain"
         poster={effectivePoster}
         preload="metadata"
-        autoPlay={autoPlay}
+        autoPlay={hasUserInteracted && autoPlay}
         muted={isMuted}
+        playsInline={true}
         onError={() => setVideoError(true)}
         onClick={togglePlay}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          togglePlay();
+        }}
       >
         <source src={src} type="video/mp4" />
         <source src={src} type="video/webm" />
@@ -242,12 +302,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
-      {/* Watermark Overlay - Always visible */}
+      {/* Watermark Overlay - Always visible, responsive sizing */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
         <img 
           src={watermarkLogo}
           alt="VisuStock"
-          className="w-[540px] h-[540px] opacity-50 select-none"
+          className="opacity-50 select-none max-w-[min(540px,80vw)] max-h-[min(540px,80vh)] w-auto h-auto"
           draggable={false}
           style={{ 
             userSelect: 'none',
@@ -267,12 +327,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {controls && (showControls || !isPlaying) && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 z-30">
-          {/* Progress Bar */}
+      {controls && (showControls || !isPlaying || isMobile) && (
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 md:p-4 z-30">
+          {/* Progress Bar - Enhanced for touch */}
           <div 
-            className="w-full h-1 bg-white/30 rounded-full mb-3 cursor-pointer"
+            className={`w-full bg-white/30 rounded-full mb-3 cursor-pointer ${
+              isMobile ? 'h-2 touch-manipulation' : 'h-1'
+            }`}
             onClick={handleSeek}
+            onTouchEnd={handleSeek}
+            role="slider"
+            aria-label="Video progress"
+            tabIndex={0}
           >
             <div 
               className="h-full bg-primary rounded-full transition-all duration-200"
@@ -280,47 +346,57 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             />
           </div>
 
-          {/* Controls */}
+          {/* Controls - Mobile-optimized sizing */}
           <div className="flex items-center justify-between text-white">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <Button
                 variant="ghost"
-                size="sm"
+                size={isMobile ? "default" : "sm"}
                 onClick={togglePlay}
-                className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
+                className={`text-white hover:text-white hover:bg-white/20 ${
+                  isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                } p-0`}
+                aria-label={isPlaying ? "Pause video" : "Play video"}
               >
                 {isPlaying ? (
-                  <Pause className="h-4 w-4" />
+                  <Pause className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                 ) : (
-                  <Play className="h-4 w-4 ml-0.5" />
+                  <Play className={`${isMobile ? "h-5 w-5" : "h-4 w-4"} ml-0.5`} />
                 )}
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleMute}
-                className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
-              >
-                {isMuted ? (
-                  <VolumeX className="h-4 w-4" />
-                ) : (
-                  <Volume2 className="h-4 w-4" />
-                )}
-              </Button>
+              {/* Hide volume control on iOS as it's not supported */}
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleMute}
+                  className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
+                  aria-label={isMuted ? "Unmute video" : "Mute video"}
+                >
+                  {isMuted ? (
+                    <VolumeX className="h-4 w-4" />
+                  ) : (
+                    <Volume2 className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
 
-              <span className="text-sm font-mono">
+              <span className={`font-mono ${isMobile ? 'text-xs' : 'text-sm'}`}>
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
 
             <Button
               variant="ghost"
-              size="sm"
+              size={isMobile ? "default" : "sm"}
               onClick={toggleFullscreen}
-              className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
+              className={`text-white hover:text-white hover:bg-white/20 ${
+                isMobile ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+              } p-0`}
+              aria-label="Toggle fullscreen"
             >
-              <Maximize2 className="h-4 w-4" />
+              <Maximize2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
             </Button>
           </div>
         </div>

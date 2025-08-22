@@ -111,3 +111,34 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile-optimized touch controls */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target size */
+  button, [role="button"], [role="slider"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing for mobile interactions */
+  .mobile-spacing {
+    padding: 0.75rem;
+  }
+  
+  /* Smooth transitions for touch interactions */
+  button:active, [role="button"]:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+}

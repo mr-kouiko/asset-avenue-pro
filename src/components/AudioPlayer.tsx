@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AudioPlayerProps {
   src: string;
@@ -21,9 +22,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const watermarkRef = useRef<HTMLAudioElement>(null);
   const watermarkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -105,6 +108,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const audio = audioRef.current;
     if (!audio) return;
 
+    setHasUserInteracted(true);
+
     try {
       if (isPlaying) {
         await audio.pause();
@@ -115,6 +120,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       }
     } catch (error) {
       console.error('Erreur de lecture audio:', error);
+      // Handle autoplay restrictions on mobile
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        console.warn('Autoplay blocked - user interaction required');
+      }
     }
   };
 
@@ -129,7 +138,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   const handleVolumeChange = (value: number[]) => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || isMobile) return; // Disable volume control on mobile
 
     const newVolume = value[0] / 100;
     audio.volume = newVolume;
@@ -169,10 +178,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         
         <Button
           variant="outline"
-          size="sm"
+          size={isMobile ? "default" : "sm"}
           onClick={togglePlayPause}
           disabled={isLoading}
-          className="flex-shrink-0"
+          className={`flex-shrink-0 ${isMobile ? 'h-10 w-10 touch-manipulation' : ''}`}
+          aria-label={isPlaying ? "Pause audio" : "Play audio"}
         >
           {isLoading ? (
             <div className="w-4 h-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -185,21 +195,21 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
         <div className="flex-1 space-y-1">
           {title && (
-            <p className="text-sm font-medium truncate">{title}</p>
+            <p className={`font-medium truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>{title}</p>
           )}
           
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{formatTime(currentTime)}</span>
+            <span className={isMobile ? 'text-xs' : ''}>{formatTime(currentTime)}</span>
             <div className="flex-1">
               <Slider
                 value={[progressPercentage]}
                 onValueChange={handleSeek}
                 max={100}
                 step={0.1}
-                className="w-full"
+                className={`w-full ${isMobile ? 'touch-manipulation' : ''}`}
               />
             </div>
-            <span>{formatTime(duration)}</span>
+            <span className={isMobile ? 'text-xs' : ''}>{formatTime(duration)}</span>
           </div>
         </div>
       </div>
@@ -207,7 +217,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   }
 
   return (
-    <div className={`bg-card border rounded-lg p-4 space-y-4 ${className}`}>
+    <div className={`bg-card border rounded-lg p-3 md:p-4 space-y-3 md:space-y-4 ${className}`}>
       <audio ref={audioRef} src={src} preload="metadata" />
       <audio 
         ref={watermarkRef} 
@@ -218,15 +228,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       {title && (
         <div className="text-center">
-          <h3 className="font-semibold text-lg">{title}</h3>
+          <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>{title}</h3>
         </div>
       )}
 
-      {/* Waveform Visualization Placeholder */}
-      <div className="h-20 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 rounded-lg flex items-center justify-center relative overflow-hidden">
+      {/* Waveform Visualization Placeholder - Responsive height */}
+      <div className={`bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 rounded-lg flex items-center justify-center relative overflow-hidden ${
+        isMobile ? 'h-16' : 'h-20'
+      }`}>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex items-end gap-1 h-12">
-            {Array.from({ length: 50 }, (_, i) => (
+          <div className={`flex items-end gap-1 ${isMobile ? 'h-10' : 'h-12'}`}>
+            {Array.from({ length: isMobile ? 30 : 50 }, (_, i) => (
               <div
                 key={i}
                 className={`bg-primary transition-all duration-200 ${
@@ -235,7 +247,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 style={{
                   width: '2px',
                   height: `${Math.random() * 100}%`,
-                  opacity: progressPercentage > (i * 2) ? 1 : 0.3,
+                  opacity: progressPercentage > ((i * 2) / (isMobile ? 0.6 : 1)) ? 1 : 0.3,
                 }}
               />
             ))}
@@ -243,37 +255,42 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - Enhanced for touch */}
       <div className="space-y-2">
         <Slider
           value={[progressPercentage]}
           onValueChange={handleSeek}
           max={100}
           step={0.1}
-          className="w-full"
+          className={`w-full ${isMobile ? 'touch-manipulation' : ''}`}
         />
-        <div className="flex justify-between text-sm text-muted-foreground">
+        <div className={`flex justify-between text-muted-foreground ${
+          isMobile ? 'text-xs' : 'text-sm'
+        }`}>
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-4">
+      {/* Controls - Mobile-optimized */}
+      <div className={`flex items-center justify-center ${isMobile ? 'gap-3' : 'gap-4'}`}>
         <Button
           variant="outline"
-          size="sm"
+          size={isMobile ? "default" : "sm"}
           onClick={skipBackward}
           disabled={isLoading}
+          className={isMobile ? 'h-10 w-10 touch-manipulation' : ''}
+          aria-label="Skip backward 10 seconds"
         >
           <SkipBack className="h-4 w-4" />
         </Button>
 
         <Button
-          size="lg"
+          size={isMobile ? "default" : "lg"}
           onClick={togglePlayPause}
           disabled={isLoading}
-          className="rounded-full w-12 h-12"
+          className={`rounded-full ${isMobile ? 'w-12 h-12 touch-manipulation' : 'w-12 h-12'}`}
+          aria-label={isPlaying ? "Pause audio" : "Play audio"}
         >
           {isLoading ? (
             <div className="w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -286,25 +303,29 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
         <Button
           variant="outline"
-          size="sm"
+          size={isMobile ? "default" : "sm"}
           onClick={skipForward}
           disabled={isLoading}
+          className={isMobile ? 'h-10 w-10 touch-manipulation' : ''}
+          aria-label="Skip forward 10 seconds"
         >
           <SkipForward className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Volume Control */}
-      <div className="flex items-center gap-3">
-        <Volume2 className="h-4 w-4 text-muted-foreground" />
-        <Slider
-          value={[volume * 100]}
-          onValueChange={handleVolumeChange}
-          max={100}
-          step={1}
-          className="flex-1"
-        />
-      </div>
+      {/* Volume Control - Hidden on mobile as it's not supported */}
+      {!isMobile && (
+        <div className="flex items-center gap-3">
+          <Volume2 className="h-4 w-4 text-muted-foreground" />
+          <Slider
+            value={[volume * 100]}
+            onValueChange={handleVolumeChange}
+            max={100}
+            step={1}
+            className="flex-1"
+          />
+        </div>
+      )}
     </div>
   );
 };
