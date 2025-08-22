@@ -75,7 +75,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   // Handle watermark interval
   useEffect(() => {
     if (isPlaying) {
-      // Start watermark interval when playing
+      // Jouer immédiatement le watermark dès le début
       watermarkIntervalRef.current = setInterval(() => {
         const watermark = watermarkRef.current;
         if (watermark && isPlaying) {
