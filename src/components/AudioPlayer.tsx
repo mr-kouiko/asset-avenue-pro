@@ -22,6 +22,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [volume, setVolume] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const watermarkRef = useRef<HTMLAudioElement>(null);
+  const watermarkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -47,6 +49,43 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       audio.removeEventListener('ended', handleEnded);
     };
   }, [src]);
+
+  // Watermark system
+  useEffect(() => {
+    const watermark = watermarkRef.current;
+    if (!watermark) return;
+
+    // Configure watermark audio
+    watermark.volume = 0.3; // Discret
+    watermark.preload = 'auto';
+  }, []);
+
+  // Handle watermark interval
+  useEffect(() => {
+    if (isPlaying) {
+      // Start watermark interval when playing
+      watermarkIntervalRef.current = setInterval(() => {
+        const watermark = watermarkRef.current;
+        if (watermark && isPlaying) {
+          watermark.currentTime = 0;
+          watermark.play().catch(console.error);
+        }
+      }, 25000); // 25 seconds
+    } else {
+      // Clear interval when paused
+      if (watermarkIntervalRef.current) {
+        clearInterval(watermarkIntervalRef.current);
+        watermarkIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (watermarkIntervalRef.current) {
+        clearInterval(watermarkIntervalRef.current);
+        watermarkIntervalRef.current = null;
+      }
+    };
+  }, [isPlaying]);
 
   const togglePlayPause = async () => {
     const audio = audioRef.current;
@@ -107,6 +146,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     return (
       <div className={`flex items-center gap-2 p-3 bg-card border rounded-lg ${className}`}>
         <audio ref={audioRef} src={src} preload="metadata" />
+        <audio 
+          ref={watermarkRef} 
+          src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NTU4MDczODIsImV4cCI6MjUzMzQwNzM4Mn0.X1wAUqA7uWHgB3F_szPfM7nEeKHAiHCzovHLHO_jT6I" 
+          preload="auto" 
+          style={{ display: 'none' }}
+        />
         
         <Button
           variant="outline"
@@ -150,6 +195,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   return (
     <div className={`bg-card border rounded-lg p-4 space-y-4 ${className}`}>
       <audio ref={audioRef} src={src} preload="metadata" />
+      <audio 
+        ref={watermarkRef} 
+        src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NTU4MDczODIsImV4cCI6MjUzMzQwNzM4Mn0.X1wAUqA7uWHgB3F_szPfM7nEeKHAiHCzovHLHO_jT6I" 
+        preload="auto" 
+        style={{ display: 'none' }}
+      />
       
       {title && (
         <div className="text-center">

@@ -183,25 +183,6 @@ const ProductDetail = () => {
                 className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
               />
               
-              {/* HTML5 Audio Fallback - Always visible */}
-              {product.previewUrl && (
-                <div className="mt-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
-                  <audio 
-                    controls 
-                    preload="metadata"
-                    className="w-full"
-                    style={{ 
-                      minHeight: '40px',
-                      display: 'block'
-                    }}
-                  >
-                    <source src={product.previewUrl} type="audio/mpeg" />
-                    <source src={product.previewUrl} type="audio/wav" />
-                    <source src={product.previewUrl} type="audio/ogg" />
-                    <p className="text-gray-700 text-center mt-2">Votre navigateur ne supporte pas la lecture audio HTML5.</p>
-                  </audio>
-                </div>
-              )}
             </div>
           </div>
         ) : (
@@ -244,12 +225,6 @@ const ProductDetail = () => {
           </div>
         )}
         
-        {product.type === 'audio' && (
-          <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
-            <Music className="h-3 w-3" />
-            Audio HD
-          </div>
-        )}
         
         {/* VISUSTOCK watermark indicator */}
         <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow-sm">
