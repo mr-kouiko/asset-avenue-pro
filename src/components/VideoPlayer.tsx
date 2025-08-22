@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
+import watermarkLogo from '@/assets/visustock-watermark.png';
 
 interface VideoPlayerProps {
   src?: string;
@@ -191,14 +192,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
+      {/* Watermark Overlay */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <img 
+          src={watermarkLogo}
+          alt="VisuStock"
+          className="w-24 h-24 opacity-40 select-none"
+          draggable={false}
+          style={{ userSelect: 'none' }}
+        />
+      </div>
+
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
       )}
 
       {controls && (showControls || !isPlaying) && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 z-30">
           {/* Progress Bar */}
           <div 
             className="w-full h-1 bg-white/30 rounded-full mb-3 cursor-pointer"
