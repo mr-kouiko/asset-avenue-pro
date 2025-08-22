@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import logoWatermark from '@/assets/visustock-logo.png';
 
 interface MediaPlayerProps {
   src?: string;
@@ -405,6 +406,17 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         >
           <source src={src} type={mimeType} />
         </audio>
+      )}
+
+      {/* Watermark for videos */}
+      {type === 'video' && canPlay && !isLoading && (
+        <div className="absolute top-4 right-4 z-15 pointer-events-none">
+          <img 
+            src={logoWatermark} 
+            alt="VisuStock" 
+            className="h-8 opacity-70 drop-shadow-md"
+          />
+        </div>
       )}
 
       {/* Loading overlay */}

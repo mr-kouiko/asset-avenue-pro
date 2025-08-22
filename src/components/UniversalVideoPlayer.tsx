@@ -3,6 +3,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2, AlertCircle, RotateC
 import { Button } from './ui/button';
 import { detectDevice, getMediaPlayerConfig, getOptimalMediaFormats } from '@/utils/deviceDetection';
 import watermarkLogo from '@/assets/visustock-watermark.png';
+import logoWatermark from '@/assets/visustock-logo.png';
 
 interface UniversalVideoPlayerProps {
   src?: string;
@@ -503,11 +504,11 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
       </video>
 
       {/* Watermark */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+      <div className="absolute top-4 right-4 pointer-events-none z-15">
         <img 
-          src={watermarkLogo}
+          src={logoWatermark}
           alt="VisuStock"
-          className="opacity-50 select-none max-w-[min(540px,80vw)] max-h-[min(540px,80vh)] w-auto h-auto"
+          className="h-8 opacity-70 drop-shadow-md select-none"
           draggable={false}
           style={{ 
             userSelect: 'none',
