@@ -239,11 +239,6 @@ const ProductDetail = () => {
           </div>
         )}
         
-        
-        {/* VISUSTOCK watermark indicator */}
-        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow-sm">
-          © VISUSTOCK
-        </div>
       </div>
 
             {/* Image Info */}
