@@ -76,15 +76,16 @@ function getMimeType(fileName: string): string {
   return mimeType
 }
 
-// Enhanced CORS headers for mobile compatibility
+// Enhanced CORS headers for mobile compatibility and streaming
 function getCorsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, range',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, range, cache-control',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control',
     'Accept-Ranges': 'bytes',
-    'Cache-Control': 'public, max-age=31536000'
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    'Content-Type': 'application/octet-stream'
   }
 }
 
@@ -395,7 +396,7 @@ async function handleChunkMerge(req: Request, userId: string) {
     const contentType = getMimeType(fileName)
     console.log(`Using MIME type: ${contentType} for file: ${fileName}`)
     
-    // Enhanced upload options for mobile compatibility
+    // Enhanced upload options for mobile compatibility and streaming
     const uploadOptions = {
       contentType: contentType,
       cacheControl: 'public, max-age=31536000, immutable',
@@ -404,7 +405,9 @@ async function handleChunkMerge(req: Request, userId: string) {
         originalFileName: fileName,
         uploadedAt: new Date().toISOString(),
         fileSize: mergedBuffer.length.toString(),
-        mimeType: contentType
+        mimeType: contentType,
+        acceptRanges: 'bytes',
+        streamable: 'true'
       }
     }
 

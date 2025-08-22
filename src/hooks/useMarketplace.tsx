@@ -86,7 +86,7 @@ export const useMarketplace = () => {
                   // First try signed URL with extended expiry for mobile
                   const { data: signedData, error: signedError } = await supabase.storage
                     .from('original-files')
-                    .createSignedUrl(originalFile.file_path, 14400); // 4 hours expiry for mobile reliability
+                    .createSignedUrl(originalFile.file_path, 24 * 60 * 60); // 24 hours expiry for mobile reliability
                   
                   if (signedData?.signedUrl && !signedError) {
                     videoUrl = signedData.signedUrl;
@@ -119,7 +119,7 @@ export const useMarketplace = () => {
                   // First try signed URL with extended expiry for mobile
                   const { data: signedData, error: signedError } = await supabase.storage
                     .from('original-files')
-                    .createSignedUrl(originalFile.file_path, 14400); // 4 hours expiry for mobile reliability
+                    .createSignedUrl(originalFile.file_path, 24 * 60 * 60); // 24 hours expiry for mobile reliability
                   
                   if (signedData?.signedUrl && !signedError) {
                     videoUrl = signedData.signedUrl; // Using videoUrl field for audio too

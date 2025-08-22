@@ -39,7 +39,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const isMobile = useIsMobile();
 
-  // Mobile-optimized audio loading with retry logic
+  // Mobile-optimized audio loading with retry logic and URL fallback
   const loadAudio = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio || !src) return;
@@ -50,7 +50,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     setCanPlay(false);
 
     try {
-      // Clear existing sources and reload
+      // Try to use fallback URL if main URL fails and we have it available
+      let audioSrc = src;
+      if (retryCount > 0 && (src as any).public_preview_url) {
+        audioSrc = (src as any).public_preview_url;
+        console.log('🔄 Using fallback public URL:', audioSrc);
+      }
+
+      // Clear existing sources and set new source
+      audio.src = audioSrc;
       audio.load();
       
       const handleCanPlay = () => {
@@ -66,20 +74,24 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         console.error('❌ Audio load error:', {
           code: error?.code,
           message: error?.message,
-          src: src,
+          src: audioSrc,
+          originalSrc: src,
           networkState: target.networkState,
-          readyState: target.readyState
+          readyState: target.readyState,
+          retryCount: retryCount
         });
         
         setIsLoading(false);
         setCanPlay(false);
         
-        if (retryCount < 2) {
+        // Try fallback URL or retry
+        if (retryCount < 3) {
           console.log('🔄 Retrying audio load in 1 second...');
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
           }, 1000);
         } else {
+          console.error('💥 All audio load attempts failed');
           setAudioError(true);
         }
       };
@@ -308,12 +320,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         autoPlay={hasUserInteracted && autoPlay && canPlay}
         muted={isMuted}
         crossOrigin="anonymous"
+        webkit-playsinline="true"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px'
+        }}
       >
-        <source src={src} type="audio/mpeg" />
-        <source src={src} type="audio/wav" />
-        <source src={src} type="audio/ogg" />
-        <source src={src} type="audio/aac" />
-        <source src={src} type="audio/mp4" />
+        {/* Multiple source formats for maximum mobile compatibility */}
+        <source src={src} type="audio/mpeg; codecs=mp3" />
+        <source src={src} type="audio/mp4; codecs=mp4a.40.2" />
+        <source src={src} type="audio/aac; codecs=mp4a.40.2" />
+        <source src={src} type="audio/wav; codecs=1" />
+        <source src={src} type="audio/ogg; codecs=vorbis" />
+        <source src={src} type="audio/webm; codecs=vorbis" />
         Votre navigateur ne supporte pas la lecture audio.
       </audio>
 

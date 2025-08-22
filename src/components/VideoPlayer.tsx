@@ -47,18 +47,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Use thumbnail as fallback poster if poster is not provided
   const effectivePoster = poster || thumbnail;
 
-  // Mobile-optimized video loading with retry logic
+  // Mobile-optimized video loading with retry logic and URL fallback
   const loadVideo = useCallback(async () => {
     const video = videoRef.current;
     if (!video || !src) return;
 
-    console.log('Loading video:', src, 'Attempt:', retryCount + 1);
+    console.log('📹 Loading video:', src, 'Attempt:', retryCount + 1);
     setIsLoading(true);
     setVideoError(false);
     setCanPlay(false);
 
     try {
-      // Clear existing sources
+      // Try to use fallback URL if main URL fails and we have it available
+      let videoSrc = src;
+      if (retryCount > 0 && (src as any).public_preview_url) {
+        videoSrc = (src as any).public_preview_url;
+        console.log('🔄 Using fallback public URL:', videoSrc);
+      }
+
+      // Clear existing sources and set new source
+      video.src = videoSrc;
       video.load();
       
       // Set up event listeners for this load attempt
@@ -72,23 +80,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const handleError = (e: Event) => {
         const target = e.target as HTMLVideoElement;
         const error = target.error;
-        console.error('Video load error:', {
+        console.error('❌ Video load error:', {
           code: error?.code,
           message: error?.message,
-          src: src,
+          src: videoSrc,
+          originalSrc: src,
           networkState: target.networkState,
-          readyState: target.readyState
+          readyState: target.readyState,
+          retryCount: retryCount
         });
         
         setIsLoading(false);
         setCanPlay(false);
         
-        if (retryCount < 2) {
-          console.log('Retrying video load in 1 second...');
+        // Try fallback URL or retry
+        if (retryCount < 3) {
+          console.log('🔄 Retrying video load in 1 second...');
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
           }, 1000);
         } else {
+          console.error('💥 All video load attempts failed');
           setVideoError(true);
         }
       };
@@ -438,15 +450,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         muted={isMuted}
         playsInline={true}
         crossOrigin="anonymous"
+        webkit-playsinline="true"
+        x-webkit-airplay="allow"
         onClick={togglePlay}
         onTouchEnd={(e) => {
           e.preventDefault();
           togglePlay();
         }}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain'
+        }}
       >
-        <source src={src} type="video/mp4" />
-        <source src={src} type="video/webm" />
+        {/* Multiple source formats for maximum compatibility */}
+        <source src={src} type="video/mp4; codecs=avc1.42E01E,mp4a.40.2" />
+        <source src={src} type="video/webm; codecs=vp8,vorbis" />
         <source src={src} type="video/quicktime" />
+        <source src={src} type="video/ogg; codecs=theora,vorbis" />
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 

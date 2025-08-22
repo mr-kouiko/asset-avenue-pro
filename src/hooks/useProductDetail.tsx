@@ -126,7 +126,7 @@ export const useProductDetail = (productId: string) => {
               console.log('🎵 Creating signed URL for audio:', audioFile.file_path);
               const { data: signedData, error: signedError } = await supabase.storage
                 .from('original-files')
-                .createSignedUrl(audioFile.file_path, 14400); // 4 hours expiry for mobile reliability
+                .createSignedUrl(audioFile.file_path, 24 * 60 * 60); // 24 hours expiry for mobile reliability
               
               if (signedData?.signedUrl && !signedError) {
                 previewUrl = signedData.signedUrl;
@@ -158,7 +158,7 @@ export const useProductDetail = (productId: string) => {
               console.log('🎬 Creating signed URL for video:', videoFile.file_path);
               const { data: signedData, error: signedError } = await supabase.storage
                 .from('original-files')
-                .createSignedUrl(videoFile.file_path, 14400); // 4 hours expiry for mobile reliability
+                .createSignedUrl(videoFile.file_path, 24 * 60 * 60); // 24 hours expiry for mobile reliability
               
               if (signedData?.signedUrl && !signedError) {
                 previewUrl = signedData.signedUrl;
