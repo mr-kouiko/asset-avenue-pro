@@ -59,9 +59,43 @@ export const FileUpload = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInstanceRef = useRef<string>(`upload-${Date.now()}`);
 
+  // Cleanup function to remove all upload instances and listeners
+  const cleanupUploadInstances = useCallback(() => {
+    console.log('🧹 Cleaning up upload instances and listeners')
+    
+    // Clear all ongoing uploads
+    files.forEach(file => {
+      if (file.abortController && !file.abortController.signal.aborted) {
+        file.abortController.abort()
+      }
+    })
+    
+    // Clear the files state
+    setFiles([])
+    
+    // Remove any global event listeners that might have been added
+    document.removeEventListener('dragover', preventDefault, true)
+    document.removeEventListener('drop', preventDefault, true)
+    window.removeEventListener('beforeunload', cleanupUploadInstances)
+    
+    uploadInstanceRef.current = `upload-${Date.now()}`
+    console.log('✅ Cleanup completed, new instance:', uploadInstanceRef.current)
+  }, [files])
+
+  // Prevent default drag behaviors globally
+  const preventDefault = useCallback((e: Event) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
   // Cleanup on unmount and remove old instances
   useEffect(() => {
     const currentInstance = uploadInstanceRef.current;
+    
+    // Add global drag prevention
+    document.addEventListener('dragover', preventDefault, true)
+    document.addEventListener('drop', preventDefault, true)
+    window.addEventListener('beforeunload', cleanupUploadInstances)
     
     // Clear any existing upload instances
     const existingUploads = document.querySelectorAll('[data-upload-instance]');
@@ -72,18 +106,10 @@ export const FileUpload = ({
     });
     
     return () => {
-      // Cleanup function to abort all ongoing uploads
-      setFiles(prevFiles => {
-        prevFiles.forEach(file => {
-          if (file.abortController && !file.abortController.signal.aborted) {
-            file.abortController.abort('Component unmounting');
-          }
-        });
-        return [];
-      });
+      cleanupUploadInstances()
       console.log(`FileUpload instance ${currentInstance} cleaned up`);
     };
-  }, []);
+  }, [cleanupUploadInstances, preventDefault])
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image className="h-4 w-4" />;
@@ -99,6 +125,93 @@ export const FileUpload = ({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  // Enhanced retry operation with exponential backoff and jitter
+  const retryOperation = async <T,>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxRetries: number = 3
+  ): Promise<T> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await operation()
+        if (attempt > 1) {
+          console.log(`✅ ${operationName} succeeded on attempt ${attempt}`)
+        }
+        return result
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.warn(`❌ ${operationName} attempt ${attempt}/${maxRetries} failed:`, errorMessage)
+        
+        if (attempt === maxRetries) {
+          throw new Error(`${operationName} failed after ${maxRetries} attempts. Last error: ${errorMessage}`)
+        }
+        
+        // Exponential backoff with jitter: 1s, 2s, 4s + random 0-1s
+        const baseDelay = Math.min(1000 * Math.pow(2, attempt - 1), 8000)
+        const jitter = Math.random() * 1000
+        const delay = baseDelay + jitter
+        
+        console.log(`⏳ Retrying ${operationName} in ${Math.round(delay)}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    
+    throw new Error(`${operationName} failed after ${maxRetries} attempts`)
+  }
+
+  // Helper function to update file progress with more detailed status
+  const updateFileProgress = (fileId: string, progress: number, status: UploadFile['status'], message?: string) => {
+    setFiles(prev => prev.map(f => 
+      f.id === fileId ? { 
+        ...f, 
+        progress: Math.min(100, Math.max(0, progress)), 
+        status,
+        ...(message && { error: status === 'error' ? message : undefined })
+      } : f
+    ))
+  }
+
+  // Upload a single chunk with retries
+  const uploadSingleChunk = async (
+    chunk: Blob, 
+    chunkIndex: number, 
+    totalChunks: number, 
+    uploadId: string, 
+    fileName: string, 
+    uploadFile: UploadFile
+  ): Promise<void> => {
+    const session = await supabase.auth.getSession()
+    if (!session.data.session?.access_token) {
+      throw new Error('No valid session found')
+    }
+
+    const formData = new FormData()
+    formData.append('chunk', chunk)
+    formData.append('chunkIndex', chunkIndex.toString())
+    formData.append('totalChunks', totalChunks.toString())
+    formData.append('fileName', fileName)
+    formData.append('uploadId', uploadId)
+
+    await retryOperation(async () => {
+      const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=upload-chunk`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
+        },
+        body: formData,
+        signal: uploadFile.abortController?.signal
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(`Chunk ${chunkIndex + 1} upload failed: ${errorData.error || response.statusText}`)
+      }
+
+      console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`)
+    }, `upload chunk ${chunkIndex + 1}/${totalChunks}`)
+  }
 
   const validateFile = (file: File): string | null => {
     // Check file size
@@ -257,144 +370,152 @@ export const FileUpload = ({
       }
     }
 
-    // Initialize chunked upload with server
-    const session = await supabase.auth.getSession();
-    if (!session.data.session?.access_token) {
-      throw new Error('No valid session found');
-    }
+    // 1. Initialize chunked upload with server
+    updateFileProgress(uploadFile.id, 5, 'uploading', 'Initializing upload...')
+    
+    const initResponse = await retryOperation(async () => {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session?.access_token) {
+        throw new Error('No valid session found');
+      }
 
-    const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=init-upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.data.session.access_token}`,
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileSize: file.size,
-        totalChunks,
-        basePath
-      }),
-      signal: abortController.signal
-    });
+      const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=init-upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          totalChunks,
+          basePath
+        }),
+        signal: abortController.signal
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to initialize chunked upload: ${response.status} ${errorText}`);
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`Failed to initialize upload: ${errorData.error || response.statusText}`);
+      }
 
-    const initData = await response.json();
-    const uploadId = initData.uploadId;
+      return response.json();
+    }, 'initialize upload');
+
+    const uploadId = initResponse.uploadId;
+    const fileName = file.name;
     
     setFiles(prev => prev.map(f => 
       f.id === uploadFile.id ? { ...f, uploadId } : f
     ));
 
-    let uploadedChunks = 0;
+    console.log(`🚀 Starting chunked upload: ${totalChunks} chunks for ${fileName}`);
 
-    // Upload chunks with real progress tracking
-    for (let i = 0; i < totalChunks; i++) {
-      if (abortController.signal.aborted) {
-        throw new Error('Upload cancelled');
-      }
-
-      const chunk = chunks[i];
-      const formData = new FormData();
-      formData.append('chunk', chunk);
-      formData.append('chunkIndex', i.toString());
-      formData.append('totalChunks', totalChunks.toString());
-      formData.append('fileName', file.name);
-      formData.append('uploadId', uploadId);
-
-      // Upload chunk with retry logic
-      let retryCount = 0;
-      const maxRetries = 3;
-      let chunkUploaded = false;
-
-      while (!chunkUploaded && retryCount <= maxRetries) {
-        try {
-          const chunkResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=upload-chunk`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.data.session.access_token}`,
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
-            },
-            body: formData,
-            signal: abortController.signal
-          });
-
-          if (!chunkResponse.ok) {
-            const errorText = await chunkResponse.text();
-            throw new Error(`Chunk upload failed: ${chunkResponse.status} ${errorText}`);
+    // 2. Parallel chunk upload with retries and better coordination
+    const uploadChunks = async (chunks: Blob[], uploadId: string, fileName: string): Promise<void> => {
+      const maxConcurrentUploads = 2 // Reduced concurrent uploads for better reliability
+      const chunkStatus = new Array(chunks.length).fill(false)
+      let uploadedCount = 0
+      
+      // Upload chunks in batches with proper verification
+      for (let i = 0; i < chunks.length; i += maxConcurrentUploads) {
+        const batch = chunks.slice(i, i + maxConcurrentUploads)
+        const batchPromises = batch.map(async (chunk, batchIndex) => {
+          const chunkIndex = i + batchIndex
+          const maxRetries = 3
+          let attempt = 0
+          
+          while (attempt < maxRetries && !chunkStatus[chunkIndex]) {
+            try {
+              await uploadSingleChunk(chunk, chunkIndex, chunks.length, uploadId, fileName, uploadFile)
+              chunkStatus[chunkIndex] = true
+              uploadedCount++
+              
+              // Update progress more granularly
+              const progress = Math.round((uploadedCount / chunks.length) * 70) // 70% for upload phase
+              updateFileProgress(uploadFile.id, 15 + progress, 'uploading', `Uploaded chunk ${uploadedCount}/${chunks.length}`)
+              break
+            } catch (error) {
+              attempt++
+              console.warn(`Chunk ${chunkIndex} upload attempt ${attempt} failed:`, error)
+              
+              if (attempt < maxRetries) {
+                // Exponential backoff with jitter
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 1000, 10000)
+                await new Promise(resolve => setTimeout(resolve, delay))
+              } else {
+                throw new Error(`Failed to upload chunk ${chunkIndex} after ${maxRetries} attempts: ${error.message}`)
+              }
+            }
           }
-          
-          uploadedChunks++;
-          chunkUploaded = true;
-          
-          // Calculate more accurate progress with upload speed consideration
-          const uploadProgress = (uploadedChunks / totalChunks) * 70; // 70% for upload phase
-          const currentProgress = 15 + uploadProgress;
-          
-          setFiles(prev => prev.map(f => 
-            f.id === uploadFile.id ? { 
-              ...f, 
-              progress: Math.round(currentProgress),
-              uploadedChunks,
-              status: 'uploading'
-            } : f
-          ));
-
-        } catch (error) {
-          retryCount++;
-          if (retryCount > maxRetries) {
-            throw new Error(`Failed to upload chunk ${i + 1} after ${maxRetries} retries: ${error.message}`);
-          }
-          
-          console.warn(`Chunk ${i + 1} upload failed, retrying (${retryCount}/${maxRetries}):`, error);
-          
-          // Exponential backoff with jitter
-          const baseDelay = Math.pow(2, retryCount) * 1000;
-          const jitter = Math.random() * 1000;
-          await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
+        })
+        
+        // Wait for this batch to complete before starting the next
+        await Promise.all(batchPromises)
+        
+        // Small delay between batches to avoid overwhelming the server
+        if (i + maxConcurrentUploads < chunks.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
+      
+      // Verify all chunks were uploaded
+      const failedChunks = chunkStatus.map((status, index) => status ? null : index).filter(index => index !== null)
+      if (failedChunks.length > 0) {
+        throw new Error(`Failed to upload chunks: ${failedChunks.join(', ')}`)
+      }
     }
 
-    // Merge chunks on server
-    setFiles(prev => prev.map(f => 
-      f.id === uploadFile.id ? { ...f, progress: 85, status: 'merging' } : f
-    ));
-
-    const mergeResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=merge-chunks`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.data.session.access_token}`,
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
-      },
-      body: JSON.stringify({
-        uploadId,
-        fileName: file.name,
-        totalChunks,
-        bucket: 'original-files',
-        basePath
-      }),
-      signal: abortController.signal
-    });
-
-    if (!mergeResponse.ok) {
-      const errorText = await mergeResponse.text();
-      throw new Error(`Failed to merge chunks: ${mergeResponse.status} ${errorText}`);
-    }
-
-    const mergeData = await mergeResponse.json();
+    // 3. Execute chunk uploads
+    await uploadChunks(chunks, uploadId, fileName)
     
-    setFiles(prev => prev.map(f => 
-      f.id === uploadFile.id ? { ...f, progress: 95, status: 'processing' } : f
-    ));
+    // Add a small delay to ensure all chunks are fully written
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 4. Merge chunks on server with retry logic
+    updateFileProgress(uploadFile.id, 85, 'merging', 'Merging file chunks...')
+    
+    const mergeResponse = await retryOperation(async () => {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session?.access_token) {
+        throw new Error('No valid session found');
+      }
 
-    return mergeData.path;
+      const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=merge-chunks`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
+        },
+        body: JSON.stringify({
+          uploadId,
+          fileName,
+          totalChunks: chunks.length,
+          bucket: 'original-files',
+          basePath
+        }),
+        signal: abortController.signal
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown merge error' }))
+        
+        // If chunks are missing, provide helpful error message
+        if (errorData.error?.includes('missing') || response.status === 400) {
+          throw new Error(`Some file chunks are missing. This may be due to network issues. Please try uploading again. Details: ${errorData.error}`)
+        }
+        
+        throw new Error(`Merge failed: ${errorData.error || response.statusText}`)
+      }
+      
+      return response.json()
+    }, 'merge chunks', 2) // Reduced retries for merge as it's more likely to be a permanent issue
+    
+    console.log('📦 Merge completed:', mergeResponse)
+
+    return mergeResponse.path;
   };
 
   const uploadFile = async (uploadFile: UploadFile) => {
@@ -661,7 +782,7 @@ export const FileUpload = ({
   }, [handleFiles]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-upload-instance={uploadInstanceRef.current}>
       {/* Upload Zone */}
       <Card 
         className={`border-2 border-dashed transition-all duration-200 ${
@@ -712,7 +833,7 @@ export const FileUpload = ({
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={() => setFiles([])}
+                onClick={cleanupUploadInstances}
               >
                 Tout supprimer
               </Button>
@@ -742,13 +863,15 @@ export const FileUpload = ({
                        <Badge variant={
                         uploadFile.status === 'completed' ? 'default' :
                         uploadFile.status === 'error' ? 'destructive' :
-                        uploadFile.status === 'uploading' ? 'secondary' :
+                        uploadFile.status === 'uploading' || uploadFile.status === 'merging' ? 'secondary' :
                         uploadFile.status === 'processing' ? 'secondary' : 'outline'
                       }>
                         {uploadFile.status === 'completed' && <Check className="h-3 w-3 mr-1" />}
                         {uploadFile.status === 'error' && <AlertCircle className="h-3 w-3 mr-1" />}
                         {uploadFile.status === 'pending' && 'En attente'}
+                        {uploadFile.status === 'compressing' && 'Compression...'}
                         {uploadFile.status === 'uploading' && 'Upload...'}
+                        {uploadFile.status === 'merging' && 'Fusion...'}
                         {uploadFile.status === 'processing' && 'Traitement...'}
                         {uploadFile.status === 'completed' && (uploadFile.isWatermarked ? 'Terminé ✨' : 'Terminé')}
                         {uploadFile.status === 'error' && 'Erreur'}
@@ -764,7 +887,7 @@ export const FileUpload = ({
                           </Badge>
                         )}
                       </div>
-                      {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
+                      {(uploadFile.status === 'uploading' || uploadFile.status === 'processing' || uploadFile.status === 'merging') && (
                         <div className="flex items-center gap-2">
                           {uploadFile.chunks && uploadFile.uploadedChunks && (
                             <span className="text-xs">
@@ -785,7 +908,7 @@ export const FileUpload = ({
                       )}
                     </div>
 
-                    {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
+                    {(uploadFile.status === 'uploading' || uploadFile.status === 'processing' || uploadFile.status === 'merging' || uploadFile.status === 'compressing') && (
                       <Progress value={uploadFile.progress} className="mt-2 h-1" />
                     )}
                   </div>

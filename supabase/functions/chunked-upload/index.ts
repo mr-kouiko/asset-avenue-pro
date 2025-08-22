@@ -202,25 +202,56 @@ async function handleChunkMerge(req: Request, userId: string) {
       chunkPaths.push(`chunks/${uploadId}/chunk-${i.toString().padStart(4, '0')}`)
     }
 
-    // Check chunk existence in parallel
+    // Check chunk existence with better error handling
     const chunkChecks = await Promise.allSettled(
       chunkPaths.map(async (path, index) => {
-        const { data, error } = await supabase.storage.from('temp-chunks').list(path.split('/').slice(0, -1).join('/'))
-        if (error || !data.find(item => item.name === path.split('/').pop())) {
-          throw new Error(`Chunk ${index} not found at ${path}`)
+        try {
+          const chunkDir = path.split('/').slice(0, -1).join('/')
+          const chunkFile = path.split('/').pop()
+          
+          const { data, error } = await supabase.storage.from('temp-chunks').list(chunkDir)
+          
+          if (error) {
+            console.error(`Error listing chunks in ${chunkDir}:`, error)
+            throw new Error(`Failed to list chunks in directory: ${error.message}`)
+          }
+          
+          if (!data) {
+            throw new Error(`No data returned when listing chunks in ${chunkDir}`)
+          }
+          
+          const foundChunk = data.find(item => item.name === chunkFile)
+          if (!foundChunk) {
+            console.error(`Chunk ${index} not found. Available files:`, data.map(f => f.name))
+            throw new Error(`Chunk ${index} (${chunkFile}) not found at ${path}`)
+          }
+          
+          console.log(`Verified chunk ${index}: ${foundChunk.name} (${foundChunk.metadata?.size || 'unknown size'})`)
+          return path
+        } catch (error) {
+          console.error(`Chunk verification failed for ${path}:`, error)
+          throw error
         }
-        return path
       })
     )
 
     const failedChunks = chunkChecks.filter(result => result.status === 'rejected')
     if (failedChunks.length > 0) {
-      console.error('Missing chunks:', failedChunks)
+      console.error('Missing chunks detected:', failedChunks.map((result, index) => ({
+        index,
+        error: result.status === 'rejected' ? result.reason?.message || result.reason : 'Unknown error'
+      })))
+      
       return new Response(
         JSON.stringify({ 
           error: 'Some chunks are missing', 
           missingChunks: failedChunks.length,
-          details: failedChunks.map((result, index) => ({ index, error: result.reason }))
+          totalChunks: totalChunks,
+          details: failedChunks.map((result, index) => ({
+            chunkIndex: index,
+            error: result.status === 'rejected' ? result.reason?.message || result.reason : 'Unknown error'
+          })),
+          suggestion: 'Try re-uploading the missing chunks'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
