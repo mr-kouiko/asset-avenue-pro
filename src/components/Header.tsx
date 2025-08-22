@@ -14,10 +14,12 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { AuthModal } from "@/components/AuthModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const Header = () => {
   const { user, signOut, loading, getUserRole } = useAuth();
   const { getItemCount } = useCart();
+  const { language, setLanguage, t } = useLanguage();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -37,7 +39,7 @@ export const Header = () => {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to={`/${language}`} className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png"
             alt="VisuStock" 
@@ -54,7 +56,7 @@ export const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to={`/${language}`} className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
             alt="VisuStock" 
@@ -70,14 +72,14 @@ export const Header = () => {
             const query = formData.get('search') as string;
             if (query?.trim()) {
               // Navigate to marketplace with search query
-              window.location.href = `/marketplace?search=${encodeURIComponent(query.trim())}`;
+              window.location.href = `/${language}/marketplace?search=${encodeURIComponent(query.trim())}`;
             }
           }}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="search"
-                placeholder="Rechercher des photos, vidéos, illustrations..."
+                placeholder={t('search.placeholder')}
                 className="pl-10 pr-4"
               />
             </div>
@@ -88,7 +90,7 @@ export const Header = () => {
         <div className="flex items-center space-x-4">
           {/* Infinity Link */}
           <Button variant="default" size="sm" asChild className="hidden md:flex">
-            <Link to="/infinity">
+            <Link to={`/${language}/infinity`}>
               Infinity
             </Link>
           </Button>
@@ -98,19 +100,23 @@ export const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <Globe className="h-4 w-4 mr-1" />
-                FR
+                {language.toUpperCase()}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Français</DropdownMenuItem>
-              <DropdownMenuItem>English</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage('fr')}>
+                Français
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage('en')}>
+                English
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Cart */}
           {user && (
             <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link to="/cart">
+              <Link to={`/${language}/cart`}>
                 <ShoppingCart className="h-4 w-4" />
                 {getItemCount() > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
@@ -126,7 +132,7 @@ export const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <User className="h-4 w-4 mr-1" />
-                {user ? "Mon Compte" : "Compte"}
+                {user ? t('header.account') : t('header.account.guest')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -135,19 +141,19 @@ export const Header = () => {
                   {userRole === 'creator' || userRole === 'admin' ? (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link to="/seller-dashboard">Dashboard vendeur</Link>
+                        <Link to={`/${language}/seller-dashboard`}>{t('header.seller.dashboard')}</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/upload">Uploader du contenu</Link>
+                        <Link to={`/${language}/upload`}>{t('header.upload')}</Link>
                       </DropdownMenuItem>
                     </>
                   ) : (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link to="/dashboard">Tableau de bord</Link>
+                        <Link to={`/${language}/dashboard`}>{t('header.dashboard')}</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/buyer-dashboard">Mes achats</Link>
+                        <Link to={`/${language}/buyer-dashboard`}>{t('header.purchases')}</Link>
                       </DropdownMenuItem>
                     </>
                   )}
@@ -157,13 +163,13 @@ export const Header = () => {
                     className="text-destructive focus:text-destructive cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Se déconnecter
+                    {t('header.logout')}
                   </DropdownMenuItem>
                 </>
               ) : (
                 <>
                   <DropdownMenuItem onClick={() => setIsAuthModalOpen(true)}>
-                    Se connecter
+                    {t('header.login')}
                   </DropdownMenuItem>
                 </>
               )}

@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { CartProvider } from "./hooks/useCart";
 import { SearchProvider } from "./hooks/useSearch";
+import { LanguageProvider } from "./contexts/LanguageContext";
+import { LanguageRedirect } from "./components/LanguageRedirect";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import ProductDetail from "./pages/ProductDetail";
@@ -28,6 +30,8 @@ import Infinity from "./pages/Infinity";
 import PackagesPricing from "./pages/PackagesPricing";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
+import IndexEN from "./pages/en/IndexEN";
+import AboutEN from "./pages/en/AboutEN";
 
 const queryClient = new QueryClient();
 
@@ -39,34 +43,86 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <SearchProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/seller" element={<Auth userType="seller" />} />
-              <Route path="/dashboard" element={<DashboardRouter />} />
-              <Route path="/seller-dashboard" element={<SellerDashboard />} />
-              <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
-              <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/upload" element={<Upload />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/licenses" element={<Licenses />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/cookie-policy" element={<CookiePolicy />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/license-agreement" element={<LicenseAgreement />} />
-              <Route path="/infinity" element={<Infinity />} />
-              <Route path="/packages-pricing" element={<PackagesPricing />} />
-              <Route path="/about" element={<About />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            </SearchProvider>
+            <LanguageProvider>
+              <SearchProvider>
+                <LanguageRedirect />
+                <Routes>
+                  {/* French Routes */}
+                  <Route path="/fr" element={<Index />} />
+                  <Route path="/fr/marketplace" element={<Marketplace />} />
+                  <Route path="/fr/product/:id" element={<ProductDetail />} />
+                  <Route path="/fr/auth" element={<Auth />} />
+                  <Route path="/fr/auth/seller" element={<Auth userType="seller" />} />
+                  <Route path="/fr/dashboard" element={<DashboardRouter />} />
+                  <Route path="/fr/seller-dashboard" element={<SellerDashboard />} />
+                  <Route path="/fr/buyer-dashboard" element={<BuyerDashboard />} />
+                  <Route path="/fr/portfolio" element={<Portfolio />} />
+                  <Route path="/fr/cart" element={<Cart />} />
+                  <Route path="/fr/checkout" element={<Checkout />} />
+                  <Route path="/fr/upload" element={<Upload />} />
+                  <Route path="/fr/support" element={<Support />} />
+                  <Route path="/fr/contact" element={<Contact />} />
+                  <Route path="/fr/licenses" element={<Licenses />} />
+                  <Route path="/fr/terms" element={<Terms />} />
+                  <Route path="/fr/cookie-policy" element={<CookiePolicy />} />
+                  <Route path="/fr/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/fr/license-agreement" element={<LicenseAgreement />} />
+                  <Route path="/fr/infinity" element={<Infinity />} />
+                  <Route path="/fr/packages-pricing" element={<PackagesPricing />} />
+                  <Route path="/fr/about" element={<About />} />
+                  
+                  {/* English Routes */}
+                  <Route path="/en" element={<IndexEN />} />
+                  <Route path="/en/marketplace" element={<Marketplace />} />
+                  <Route path="/en/product/:id" element={<ProductDetail />} />
+                  <Route path="/en/auth" element={<Auth />} />
+                  <Route path="/en/auth/seller" element={<Auth userType="seller" />} />
+                  <Route path="/en/dashboard" element={<DashboardRouter />} />
+                  <Route path="/en/seller-dashboard" element={<SellerDashboard />} />
+                  <Route path="/en/buyer-dashboard" element={<BuyerDashboard />} />
+                  <Route path="/en/portfolio" element={<Portfolio />} />
+                  <Route path="/en/cart" element={<Cart />} />
+                  <Route path="/en/checkout" element={<Checkout />} />
+                  <Route path="/en/upload" element={<Upload />} />
+                  <Route path="/en/support" element={<Support />} />
+                  <Route path="/en/contact" element={<Contact />} />
+                  <Route path="/en/licenses" element={<Licenses />} />
+                  <Route path="/en/terms" element={<Terms />} />
+                  <Route path="/en/cookie-policy" element={<CookiePolicy />} />
+                  <Route path="/en/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/en/license-agreement" element={<LicenseAgreement />} />
+                  <Route path="/en/infinity" element={<Infinity />} />
+                  <Route path="/en/packages-pricing" element={<PackagesPricing />} />
+                  <Route path="/en/about" element={<AboutEN />} />
+                  
+                  {/* Legacy redirects - any routes without language prefix redirect to FR */}
+                  <Route path="/marketplace" element={<Marketplace />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/seller" element={<Auth userType="seller" />} />
+                  <Route path="/dashboard" element={<DashboardRouter />} />
+                  <Route path="/seller-dashboard" element={<SellerDashboard />} />
+                  <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+                  <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/upload" element={<Upload />} />
+                  <Route path="/support" element={<Support />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/licenses" element={<Licenses />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/cookie-policy" element={<CookiePolicy />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/license-agreement" element={<LicenseAgreement />} />
+                  <Route path="/infinity" element={<Infinity />} />
+                  <Route path="/packages-pricing" element={<PackagesPricing />} />
+                  <Route path="/about" element={<About />} />
+                  
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </SearchProvider>
+            </LanguageProvider>
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
