@@ -183,6 +183,25 @@ const ProductDetail = () => {
                 className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
               />
               
+              {/* HTML5 Audio Fallback - Always visible */}
+              {product.previewUrl && (
+                <div className="mt-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
+                  <audio 
+                    controls 
+                    preload="metadata"
+                    className="w-full"
+                    style={{ 
+                      minHeight: '40px',
+                      display: 'block'
+                    }}
+                  >
+                    <source src={product.previewUrl} type="audio/mpeg" />
+                    <source src={product.previewUrl} type="audio/wav" />
+                    <source src={product.previewUrl} type="audio/ogg" />
+                    <p className="text-gray-700 text-center mt-2">Votre navigateur ne supporte pas la lecture audio HTML5.</p>
+                  </audio>
+                </div>
+              )}
             </div>
           </div>
         ) : (
