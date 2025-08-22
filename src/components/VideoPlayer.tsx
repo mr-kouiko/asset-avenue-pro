@@ -33,6 +33,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Use thumbnail as fallback poster if poster is not provided
   const effectivePoster = poster || thumbnail;
@@ -172,6 +173,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   return (
     <div 
+      ref={containerRef}
       className={`${className} relative overflow-hidden rounded-lg border border-border bg-black`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
@@ -193,7 +195,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       </video>
 
       {/* Watermark Overlay - Always visible */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
         <img 
           src={watermarkLogo}
           alt="VisuStock"
@@ -267,7 +269,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => videoRef.current?.requestFullscreen()}
+              onClick={() => containerRef.current?.requestFullscreen()}
               className="text-white hover:text-white hover:bg-white/20 h-8 w-8 p-0"
             >
               <Maximize2 className="h-4 w-4" />
