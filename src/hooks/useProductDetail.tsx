@@ -136,24 +136,35 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For video files, try to get signed URL for original file
+        // For video files, check for preview with watermark first, then fallback to original
         if (contentType === 'video' && filesList.length > 0) {
-          const videoFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('video/'));
-          if (videoFile?.file_path) {
-            try {
-              const { data: signedData, error: signedError } = await supabase.storage
-                .from('original-files')
-                .createSignedUrl(videoFile.file_path, 3600); // 1 hour expiry
-              
-              if (signedData?.signedUrl && !signedError) {
-                previewUrl = signedData.signedUrl;
-              } else {
-                console.warn('Could not create signed URL for video file, will show loading state');
-                previewUrl = null; // Set to null to indicate video is not available yet
+          // First try to find a preview with watermark
+          const previewFile = filesList.find((f: any) => f.preview_path && f.preview_path.includes('_preview'));
+          if (previewFile?.preview_path) {
+            const { data } = supabase.storage
+              .from('previews')
+              .getPublicUrl(previewFile.preview_path);
+            previewUrl = data.publicUrl;
+          } else {
+            // Fallback to original video file with signed URL
+            const videoFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('video/'));
+            if (videoFile?.file_path) {
+              try {
+                const { data: signedData, error: signedError } = await supabase.storage
+                  .from('original-files')
+                  .createSignedUrl(videoFile.file_path, 3600);
+                
+                if (signedData?.signedUrl && !signedError) {
+                  previewUrl = signedData.signedUrl;
+                } else {
+                  console.warn('Could not create signed URL for video file:', signedError);
+                  // For now, we'll show the video player with overlay watermark
+                  previewUrl = 'watermark-needed';
+                }
+              } catch (error) {
+                console.warn('Could not create signed URL for video file:', error);
+                previewUrl = 'watermark-needed';
               }
-            } catch (error) {
-              console.warn('Could not create signed URL for video file:', error);
-              previewUrl = null; // Set to null to indicate video is not available yet
             }
           }
         }

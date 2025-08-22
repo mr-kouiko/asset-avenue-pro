@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
+import watermarkLogo from '@/assets/visustock-watermark-large.png';
 
 interface VideoPlayerProps {
   src?: string;
@@ -105,16 +106,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  if (!src) {
+  // If no src provided but we need watermark, show placeholder with info
+  if (!src || src === 'watermark-needed') {
     return (
       <div className={`${className} bg-muted flex items-center justify-center relative overflow-hidden rounded-lg border border-border`}>
         {thumbnail && !videoError ? (
-          <img 
-            src={thumbnail} 
-            alt="Aperçu vidéo" 
-            className="w-full h-full object-cover"
-            onError={() => setVideoError(true)}
-          />
+          <div className="relative w-full h-full">
+            <img 
+              src={thumbnail} 
+              alt="Aperçu vidéo" 
+              className="w-full h-full object-cover"
+              onError={() => setVideoError(true)}
+            />
+            {/* Watermark overlay */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <img 
+                src={watermarkLogo}
+                alt="VisuStock"
+                className="w-[280px] h-[280px] opacity-60 select-none"
+                draggable={false}
+                style={{ 
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none'
+                }}
+              />
+            </div>
+            <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-2 rounded text-sm font-medium">
+              Aperçu avec watermark • VisuStock
+            </div>
+          </div>
         ) : (
           <div className="text-center p-8">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
@@ -122,6 +144,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
             <p className="text-muted-foreground">
               {videoError ? 'Impossible de charger la vidéo' : 'Vidéo en cours de traitement...'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Les achats incluent la version sans watermark
             </p>
           </div>
         )}
@@ -190,6 +215,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <source src={src} type="video/mov" />
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
+
+      {/* Watermark overlay for preview videos */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <img 
+          src={watermarkLogo}
+          alt="VisuStock"
+          className="w-[280px] h-[280px] opacity-50 select-none"
+          draggable={false}
+          style={{ 
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none'
+          }}
+          onError={(e) => {
+            console.error('Watermark failed to load:', e);
+          }}
+        />
+      </div>
 
       {/* Loading overlay */}
       {isLoading && (
