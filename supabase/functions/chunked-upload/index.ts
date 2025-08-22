@@ -456,10 +456,6 @@ async function handleChunkMerge(req: Request, userId: string) {
         console.log(`Waiting ${delay}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts))
-      }
     }
 
     if (!uploadData) {
