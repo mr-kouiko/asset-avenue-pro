@@ -22,7 +22,7 @@ export const addWatermarkToImage = async (
     position = 'bottom-right',
     size = 12,
     text = 'VisuStock',
-    logoPath = '/lovable-uploads/821f7e0a-33fd-4ede-8204-66bf887c8baa.png'
+    logoPath = '/visustock-logo-watermark.png'
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -174,7 +174,7 @@ export const addWatermarkToVideo = async (
     opacity = 0.6,
     position = 'bottom-right',
     size = 12,
-    logoPath = '/lovable-uploads/821f7e0a-33fd-4ede-8204-66bf887c8baa.png'
+    logoPath = '/visustock-logo-watermark.png'
   } = options;
 
   // For now, video watermarking would require server-side processing with ffmpeg
@@ -196,7 +196,7 @@ export const createWebPreviewWithWatermark = async (
   const {
     opacity = 0.3,
     text = 'VisuStock',
-    logoPath = '/lovable-uploads/visustock-logo-no-bg.png',
+    logoPath = '/visustock-logo-watermark.png',
     spacing = 200
   } = options;
 
