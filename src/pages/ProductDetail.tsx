@@ -145,8 +145,6 @@ const ProductDetail = () => {
             {/* Primary Video Player */}
             <VideoPlayer 
               src={product.previewUrl}
-              thumbnail={product.thumbnail}
-              poster={product.thumbnail}
               className="w-full h-full"
               showThumbnailFirst={false}
               autoPlay={false}
