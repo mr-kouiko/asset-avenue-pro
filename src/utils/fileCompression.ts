@@ -198,14 +198,21 @@ export const createFileChunks = (file: File, chunkSize: number = 5 * 1024 * 1024
 };
 
 /**
- * Calculate optimal chunk size based on file size
+ * Calculate optimal chunk size based on file size and network conditions
  * @param fileSize - Size of the file in bytes
  * @returns number - Optimal chunk size in bytes
  */
 export const getOptimalChunkSize = (fileSize: number): number => {
-  if (fileSize < 10 * 1024 * 1024) return 1 * 1024 * 1024; // 1MB for small files
-  if (fileSize < 100 * 1024 * 1024) return 5 * 1024 * 1024; // 5MB for medium files
-  return 10 * 1024 * 1024; // 10MB for large files
+  // For files under 10MB, use single upload (no chunking)
+  if (fileSize < 10 * 1024 * 1024) return fileSize;
+  
+  // For larger files, use dynamic chunk sizing based on total size
+  if (fileSize < 50 * 1024 * 1024) return 2 * 1024 * 1024;   // 2MB chunks for 10-50MB files
+  if (fileSize < 200 * 1024 * 1024) return 5 * 1024 * 1024;  // 5MB chunks for 50-200MB files
+  if (fileSize < 1024 * 1024 * 1024) return 10 * 1024 * 1024; // 10MB chunks for 200MB-1GB files
+  
+  // For very large files (>1GB), use 20MB chunks to reduce number of requests
+  return 20 * 1024 * 1024;
 };
 
 /**

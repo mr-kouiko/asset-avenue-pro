@@ -195,20 +195,22 @@ export const FileUpload = ({
     }
 
     // Initialize chunked upload with server
-    const { data: initData, error: initError } = await supabase.functions.invoke('chunked-upload', {
-      body: {
+    const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=init-upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         fileName: file.name,
         fileSize: file.size,
         totalChunks
-      },
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      })
     });
 
-    if (initError || !initData?.uploadId) {
-      throw new Error('Failed to initialize chunked upload');
+    const initData = await response.json();
+    if (!response.ok) {
+      throw new Error(initData.error || 'Failed to initialize chunked upload');
     }
 
     const uploadId = initData.uploadId;
@@ -235,12 +237,18 @@ export const FileUpload = ({
 
       while (!chunkUploaded && retryCount <= maxRetries) {
         try {
-          const { data: chunkData, error: chunkError } = await supabase.functions.invoke('chunked-upload', {
-            body: formData,
-            method: 'POST'
+          const chunkResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=upload-chunk`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            },
+            body: formData
           });
 
-          if (chunkError) throw chunkError;
+          if (!chunkResponse.ok) {
+            const errorData = await chunkResponse.json();
+            throw new Error(errorData.error || 'Chunk upload failed');
+          }
           
           uploadedChunks++;
           chunkUploaded = true;
@@ -271,18 +279,23 @@ export const FileUpload = ({
       f.id === uploadFile.id ? { ...f, progress: 85, status: 'processing' } : f
     ));
 
-    const { data: mergeData, error: mergeError } = await supabase.functions.invoke('chunked-upload', {
-      body: {
+    const mergeResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=merge-chunks`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         uploadId,
         fileName: file.name,
         totalChunks,
         bucket: 'original-files'
-      },
-      method: 'POST'
+      })
     });
 
-    if (mergeError || !mergeData?.path) {
-      throw new Error('Failed to merge chunks');
+    const mergeData = await mergeResponse.json();
+    if (!mergeResponse.ok) {
+      throw new Error(mergeData.error || 'Failed to merge chunks');
     }
 
     return mergeData.path;
