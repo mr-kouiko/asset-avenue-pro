@@ -227,8 +227,7 @@ const About = () => {
         
         {/* Fallback Background */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-gradient-to-br from-primary/20 via-primary-glow/10 to-background"
-          style={{ backgroundImage: 'url(/visustock-logo-watermark.png)' }}
+          className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary-glow/10 to-background"
         ></div>
         
         {/* Overlay */}
