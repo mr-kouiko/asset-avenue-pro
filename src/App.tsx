@@ -27,6 +27,7 @@ import LicenseAgreement from "./pages/LicenseAgreement";
 import Infinity from "./pages/Infinity";
 import PackagesPricing from "./pages/PackagesPricing";
 import NotFound from "./pages/NotFound";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/license-agreement" element={<LicenseAgreement />} />
               <Route path="/infinity" element={<Infinity />} />
               <Route path="/packages-pricing" element={<PackagesPricing />} />
+              <Route path="/about" element={<About />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
