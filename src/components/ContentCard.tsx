@@ -85,8 +85,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
               <div className="w-full max-w-[90%] px-4">
                 <AudioPlayer 
-                  audioPaths={audioUrl ? [audioUrl] : []}
-                  watermarkUrl="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NTU4MDczODIsImV4cCI6MjUzMzQwNzM4Mn0.X1wAUqA7uWHgB3F_szPfM7nEeKHAiHCzovHLHO_jT6I"
+                  src={audioUrl || ''}
+                  title={title}
+                  compact={true}
+                  className="bg-white/90 backdrop-blur-sm"
                 />
               </div>
             </div>

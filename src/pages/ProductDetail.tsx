@@ -177,8 +177,10 @@ const ProductDetail = () => {
             {/* Audio Player Container */}
             <div className="w-full h-full flex flex-col justify-center p-6">
               <AudioPlayer 
-                audioPaths={product.previewUrl ? [product.previewUrl] : []}
-                watermarkUrl="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NTU4MDczODIsImV4cCI6MjUzMzQwNzM4Mn0.X1wAUqA7uWHgB3F_szPfM7nEeKHAiHCzovHLHO_jT6I"
+                src={product.previewUrl || ''}
+                title={product.title}
+                compact={false}
+                className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
               />
               
             </div>
@@ -223,6 +225,12 @@ const ProductDetail = () => {
           </div>
         )}
         
+        {product.type === 'audio' && (
+          <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
+            <Music className="h-3 w-3" />
+            Audio HD
+          </div>
+        )}
         
         {/* VISUSTOCK watermark indicator */}
         <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-600 shadow-sm">
