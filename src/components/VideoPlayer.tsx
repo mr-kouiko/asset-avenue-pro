@@ -168,7 +168,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <img 
                 src={watermarkLogo}
                 alt="VisuStock"
-                className="w-[280px] h-[280px] opacity-60 select-none"
+                className="w-[840px] h-[840px] opacity-60 select-none"
                 draggable={false}
                 style={{ 
                   userSelect: 'none',
@@ -270,7 +270,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <img 
           src={watermarkLogo}
           alt="VisuStock"
-          className={`${isFullscreen ? 'w-[400px] h-[400px]' : 'w-[280px] h-[280px]'} opacity-50 select-none`}
+          className={`${isFullscreen ? 'w-[1200px] h-[1200px]' : 'w-[840px] h-[840px]'} opacity-50 select-none`}
           draggable={false}
           style={{ 
             userSelect: 'none',
