@@ -127,7 +127,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const handlePlay = useCallback(() => setIsPlaying(true), []);
   const handlePause = useCallback(() => setIsPlaying(false), []);
   const handleEnded = useCallback(() => { setIsPlaying(false); setCurrentTime(0); }, []);
-  const handleVolumeChange = useCallback(() => {
+  const handleVolumeChangeEvent = useCallback(() => {
     const media = mediaRef.current;
     if (!media) return;
     setIsMuted(media.muted);
@@ -147,7 +147,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     media.addEventListener('play', handlePlay);
     media.addEventListener('pause', handlePause);
     media.addEventListener('ended', handleEnded);
-    media.addEventListener('volumechange', handleVolumeChange);
+    media.addEventListener('volumechange', handleVolumeChangeEvent);
 
     return () => {
       media.removeEventListener('canplay', handleCanPlay);
@@ -158,9 +158,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       media.removeEventListener('play', handlePlay);
       media.removeEventListener('pause', handlePause);
       media.removeEventListener('ended', handleEnded);
-      media.removeEventListener('volumechange', handleVolumeChange);
+      media.removeEventListener('volumechange', handleVolumeChangeEvent);
     };
-  }, [handleCanPlay, handleError, handleLoadedMetadata, handleProgress, handleTimeUpdate, handlePlay, handlePause, handleEnded, handleVolumeChange]);
+  }, [handleCanPlay, handleError, handleLoadedMetadata, handleProgress, handleTimeUpdate, handlePlay, handlePause, handleEnded, handleVolumeChangeEvent]);
 
   /***********************
    *  LOAD MEDIA (fix)   *
