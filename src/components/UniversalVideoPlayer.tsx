@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { detectDevice, getMediaPlayerConfig, getOptimalMediaFormats } from '@/utils/deviceDetection';
-import watermarkLogo from '@/assets/visustock-watermark.png';
-import logoWatermark from '@/assets/visustock-logo.png';
+import logoWatermark from '@/assets/visustock-logo-watermark.png';
 
 interface UniversalVideoPlayerProps {
   src?: string;
@@ -504,14 +503,15 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
       </video>
 
       {/* Watermark */}
-      <div className="absolute top-4 right-4 pointer-events-none z-15">
+      <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none">
         <img 
           src={logoWatermark}
-          alt="VisuStock"
-          className="h-8 opacity-70 drop-shadow-md select-none"
+          alt="VisuStock Watermark"
+          className="w-32 h-auto opacity-80 drop-shadow-lg select-none"
           draggable={false}
           style={{ 
             userSelect: 'none',
+            pointerEvents: 'none',
             WebkitUserSelect: 'none',
             MozUserSelect: 'none',
             msUserSelect: 'none'
