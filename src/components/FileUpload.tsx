@@ -181,8 +181,8 @@ export const FileUpload = ({
       f.id === uploadFile.id ? { ...f, abortController, chunks, uploadedChunks: 0 } : f
     ));
     
-    // If file is small enough, upload directly
-    if (chunks.length === 1) {
+    // If file is small enough (< 10MB), upload directly
+    if (file.size < 10 * 1024 * 1024) {
       const { data, error } = await supabase.storage
         .from('original-files')
         .upload(basePath, file, {
@@ -194,40 +194,98 @@ export const FileUpload = ({
       return data.path;
     }
 
-    // For chunked upload, we'll simulate it with a single upload
-    // Real chunked upload would require server-side multipart upload support
-    let uploadProgress = 20;
-    const progressIncrement = 60 / totalChunks;
+    // Initialize chunked upload with server
+    const { data: initData, error: initError } = await supabase.functions.invoke('chunked-upload', {
+      body: {
+        fileName: file.name,
+        fileSize: file.size,
+        totalChunks
+      },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
 
+    if (initError || !initData?.uploadId) {
+      throw new Error('Failed to initialize chunked upload');
+    }
+
+    const uploadId = initData.uploadId;
+    let uploadedChunks = 0;
+
+    // Upload chunks with real progress tracking
     for (let i = 0; i < totalChunks; i++) {
       if (abortController.signal.aborted) {
         throw new Error('Upload cancelled');
       }
 
-      // Simulate chunk upload progress
-      uploadProgress += progressIncrement;
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { 
-          ...f, 
-          progress: Math.min(uploadProgress, 80),
-          uploadedChunks: i + 1
-        } : f
-      ));
+      const chunk = chunks[i];
+      const formData = new FormData();
+      formData.append('chunk', chunk);
+      formData.append('chunkIndex', i.toString());
+      formData.append('totalChunks', totalChunks.toString());
+      formData.append('fileName', file.name);
+      formData.append('uploadId', uploadId);
 
-      // Small delay to show progress
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Upload chunk with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      let chunkUploaded = false;
+
+      while (!chunkUploaded && retryCount <= maxRetries) {
+        try {
+          const { data: chunkData, error: chunkError } = await supabase.functions.invoke('chunked-upload', {
+            body: formData,
+            method: 'POST'
+          });
+
+          if (chunkError) throw chunkError;
+          
+          uploadedChunks++;
+          chunkUploaded = true;
+          
+          // Update progress
+          const progress = 20 + (uploadedChunks / totalChunks) * 60; // 20-80% for upload
+          setFiles(prev => prev.map(f => 
+            f.id === uploadFile.id ? { 
+              ...f, 
+              progress: Math.round(progress),
+              uploadedChunks
+            } : f
+          ));
+
+        } catch (error) {
+          retryCount++;
+          if (retryCount > maxRetries) {
+            throw new Error(`Failed to upload chunk ${i + 1} after ${maxRetries} retries`);
+          }
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
+      }
     }
 
-    // Final upload (in a real implementation, this would be assembling chunks)
-    const { data, error } = await supabase.storage
-      .from('original-files')
-      .upload(basePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+    // Merge chunks on server
+    setFiles(prev => prev.map(f => 
+      f.id === uploadFile.id ? { ...f, progress: 85, status: 'processing' } : f
+    ));
 
-    if (error) throw error;
-    return data.path;
+    const { data: mergeData, error: mergeError } = await supabase.functions.invoke('chunked-upload', {
+      body: {
+        uploadId,
+        fileName: file.name,
+        totalChunks,
+        bucket: 'original-files'
+      },
+      method: 'POST'
+    });
+
+    if (mergeError || !mergeData?.path) {
+      throw new Error('Failed to merge chunks');
+    }
+
+    return mergeData.path;
   };
 
   const uploadFile = async (uploadFile: UploadFile) => {
