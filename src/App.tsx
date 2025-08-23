@@ -32,6 +32,11 @@ import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import IndexEN from "./pages/en/IndexEN";
 import AboutEN from "./pages/en/AboutEN";
+import ContactEN from "./pages/en/ContactEN";
+import TermsEN from "./pages/en/TermsEN";
+import CookiePolicyEN from "./pages/en/CookiePolicyEN";
+import PrivacyPolicyEN from "./pages/en/PrivacyPolicyEN";
+import LicenseAgreementEN from "./pages/en/LicenseAgreementEN";
 
 const queryClient = new QueryClient();
 
@@ -85,12 +90,12 @@ const App = () => (
                   <Route path="/en/checkout" element={<Checkout />} />
                   <Route path="/en/upload" element={<Upload />} />
                   <Route path="/en/support" element={<Support />} />
-                  <Route path="/en/contact" element={<Contact />} />
+                  <Route path="/en/contact" element={<ContactEN />} />
                   <Route path="/en/licenses" element={<Licenses />} />
-                  <Route path="/en/terms" element={<Terms />} />
-                  <Route path="/en/cookie-policy" element={<CookiePolicy />} />
-                  <Route path="/en/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/en/license-agreement" element={<LicenseAgreement />} />
+                  <Route path="/en/terms" element={<TermsEN />} />
+                  <Route path="/en/cookie-policy" element={<CookiePolicyEN />} />
+                  <Route path="/en/privacy-policy" element={<PrivacyPolicyEN />} />
+                  <Route path="/en/license-agreement" element={<LicenseAgreementEN />} />
                   <Route path="/en/infinity" element={<Infinity />} />
                   <Route path="/en/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/en/about" element={<AboutEN />} />
