@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { FileUpload } from "@/components/FileUpload";
-import { Upload as UploadIcon, X, Plus } from "lucide-react";
+import { SimpleFileUpload } from "@/components/SimpleFileUpload";
+import { useContentManagement } from "@/hooks/useContentManagement";
+import { Upload as UploadIcon, X, Plus, Save } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -20,8 +21,16 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 const Upload = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { categories, createSubmission, addDraftFiles, draftFiles } = useSellerDashboard();
-  const [loading, setLoading] = useState(false);
+  const { categories } = useSellerDashboard();
+  const { 
+    loading, 
+    uploadedFiles, 
+    handleFilesUploaded, 
+    removeFile, 
+    publishContent, 
+    saveDraft 
+  } = useContentManagement();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -30,19 +39,6 @@ const Upload = () => {
     tags: [] as string[],
     currentTag: ''
   });
-
-  const handleFilesUploaded = (uploadedFiles: {
-    url: string; 
-    name: string; 
-    type: string; 
-    bucket: string;
-    size: number;
-    previewUrl?: string;
-    thumbnailUrl?: string;
-    isWatermarked?: boolean;
-  }[]) => {
-    addDraftFiles(uploadedFiles);
-  };
 
   const handleAddTag = () => {
     if (formData.currentTag && !formData.tags.includes(formData.currentTag)) {
@@ -61,45 +57,46 @@ const Upload = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.title || !formData.description) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
+      toast.error('Please fill in all required fields');
       return;
     }
 
-    if (draftFiles.length === 0) {
-      toast.error('Veuillez uploader au moins un fichier');
+    const categoryId = formData.category || undefined;
+    const price = formData.price ? parseFloat(formData.price) : 0;
+
+    const success = await publishContent({
+      title: formData.title,
+      description: formData.description,
+      category_id: categoryId,
+      price,
+      tags: formData.tags
+    });
+
+    if (success) {
+      navigate('/seller-dashboard');
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!formData.title || !formData.description) {
+      toast.error('Please fill in title and description to save as draft');
       return;
     }
 
-    setLoading(true);
+    const categoryId = formData.category || undefined;
+    const price = formData.price ? parseFloat(formData.price) : 0;
 
-    try {
-      const categoryId = formData.category || undefined;
-      const price = formData.price ? parseFloat(formData.price) : undefined;
-
-      const result = await createSubmission({
-        title: formData.title,
-        description: formData.description,
-        category_id: categoryId,
-        price,
-        tags: formData.tags
-      });
-
-      if (result) {
-        toast.success('✅ Votre contenu a été publié avec succès et est maintenant visible dans la marketplace !', {
-          duration: 5000,
-        });
-        navigate('/portfolio');
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Erreur lors de la création du contenu');
-    } finally {
-      setLoading(false);
-    }
+    await saveDraft({
+      title: formData.title,
+      description: formData.description,
+      category_id: categoryId,
+      price,
+      tags: formData.tags
+    });
   };
 
   return (
@@ -119,37 +116,41 @@ const Upload = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handlePublish} className="space-y-8">
             {/* File Upload */}
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Fichiers</h2>
+              <h2 className="text-xl font-semibold mb-4">Files</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Glissez-déposez plusieurs fichiers à la fois. Les images seront automatiquement watermarquées pour le marketplace.
+                Drag and drop multiple files at once. Images will be automatically watermarked for the marketplace.
               </p>
-              <FileUpload onFilesUploaded={handleFilesUploaded} maxFiles={100} maxFileSize={1000} />
+              <SimpleFileUpload 
+                onFilesUploaded={handleFilesUploaded} 
+                maxFiles={100} 
+                maxFileSize={1000} 
+              />
             </Card>
 
             {/* Content Details */}
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Détails du contenu</h2>
+              <h2 className="text-xl font-semibold mb-4">Content Details</h2>
               
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="title">Titre *</Label>
+                  <Label htmlFor="title">Title *</Label>
                   <Input 
                     id="title"
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Titre de votre création"
+                    placeholder="Title of your creation"
                     required
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="category">Catégorie *</Label>
+                  <Label htmlFor="category">Category</Label>
                   <Select onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une catégorie" />
+                      <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
@@ -167,14 +168,14 @@ const Upload = () => {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Décrivez votre création..."
+                    placeholder="Describe your creation..."
                     rows={4}
                     required
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="price">Prix (€)</Label>
+                  <Label htmlFor="price">Price ($)</Label>
                   <Input 
                     id="price"
                     type="number"
@@ -182,7 +183,7 @@ const Upload = () => {
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="0 pour gratuit"
+                    placeholder="0 for free"
                   />
                 </div>
                 
@@ -192,7 +193,7 @@ const Upload = () => {
                     <Input 
                       value={formData.currentTag}
                       onChange={(e) => setFormData(prev => ({ ...prev, currentTag: e.target.value }))}
-                      placeholder="Ajouter un tag"
+                      placeholder="Add a tag"
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                     />
                     <Button type="button" variant="outline" onClick={handleAddTag}>
@@ -219,11 +220,25 @@ const Upload = () => {
 
             {/* Submit */}
             <div className="flex space-x-4">
-              <Button type="submit" size="lg" disabled={loading || draftFiles.length === 0}>
-                {loading ? 'Création en cours...' : 'Publier le contenu'}
+              <Button 
+                type="submit" 
+                size="lg" 
+                disabled={loading || uploadedFiles.length === 0 || !formData.title || !formData.description}
+              >
+                {loading ? 'Publishing...' : 'Publish Content'}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="lg" 
+                onClick={handleSaveDraft}
+                disabled={loading || uploadedFiles.length === 0}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Draft
               </Button>
               <Button type="button" variant="outline" size="lg" asChild>
-                <Link to="/seller-dashboard">Annuler</Link>
+                <Link to="/seller-dashboard">Cancel</Link>
               </Button>
             </div>
           </form>
