@@ -37,6 +37,7 @@ import TermsEN from "./pages/en/TermsEN";
 import CookiePolicyEN from "./pages/en/CookiePolicyEN";
 import PrivacyPolicyEN from "./pages/en/PrivacyPolicyEN";
 import LicenseAgreementEN from "./pages/en/LicenseAgreementEN";
+import InfinityEN from "./pages/en/InfinityEN";
 
 const queryClient = new QueryClient();
 
@@ -96,7 +97,7 @@ const App = () => (
                   <Route path="/en/cookie-policy" element={<CookiePolicyEN />} />
                   <Route path="/en/privacy-policy" element={<PrivacyPolicyEN />} />
                   <Route path="/en/license-agreement" element={<LicenseAgreementEN />} />
-                  <Route path="/en/infinity" element={<Infinity />} />
+                  <Route path="/en/infinity" element={<InfinityEN />} />
                   <Route path="/en/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/en/about" element={<AboutEN />} />
                   
