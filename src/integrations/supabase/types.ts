@@ -177,6 +177,74 @@ export type Database = {
           },
         ]
       }
+      contents: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+          is_watermarked: boolean | null
+          preview_url: string | null
+          price: number | null
+          status: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id?: string
+          is_watermarked?: boolean | null
+          preview_url?: string | null
+          price?: number | null
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_watermarked?: boolean | null
+          preview_url?: string | null
+          price?: number | null
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contents_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       downloads: {
         Row: {
           created_at: string
