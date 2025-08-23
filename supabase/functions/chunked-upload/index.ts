@@ -5,21 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Accept-Ranges': 'bytes'
 };
-
-interface ChunkUploadRequest {
-  chunk?: number[];
-  chunkIndex?: number;
-  totalChunks?: number;
-  fileName?: string;
-  uploadId?: string;
-  action?: string;
-  mimeType?: string;
-  enableStreaming?: boolean;
-  acceptRanges?: boolean;
-  fileSize?: number;
-}
 
 serve(async (req) => {
   console.log(`📤 Chunked upload request: ${req.method}`);
@@ -35,24 +21,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const body: ChunkUploadRequest = await req.json();
-    console.log(`🔄 Processing request:`, { 
-      action: body.action || 'upload',
-      uploadId: body.uploadId,
-      fileName: body.fileName,
-      chunkIndex: body.chunkIndex,
-      totalChunks: body.totalChunks,
-      mimeType: body.mimeType,
-      enableStreaming: body.enableStreaming,
-      acceptRanges: body.acceptRanges
-    });
+    const url = new URL(req.url);
+    const action = url.searchParams.get('action');
 
-    if (body.action === 'finalize') {
-      // Finalize upload by merging chunks with streaming support
-      return await finalizeUpload(supabase, body);
+    console.log(`🔄 Processing action: ${action}`);
+
+    if (action === 'init-upload') {
+      return await initUpload(req, supabase);
+    } else if (action === 'upload-chunk') {
+      return await uploadChunk(req, supabase);
+    } else if (action === 'merge-chunks') {
+      return await mergeChunks(req, supabase);
     } else {
-      // Upload chunk
-      return await uploadChunk(supabase, body);
+      throw new Error(`Unknown action: ${action}`);
     }
   } catch (error) {
     console.error('💥 Chunked upload error:', error);
@@ -69,29 +50,54 @@ serve(async (req) => {
   }
 });
 
-/**
- * Upload individual chunk with enhanced error handling
- */
-async function uploadChunk(supabase: any, body: ChunkUploadRequest) {
-  const { chunk, chunkIndex, totalChunks, fileName, uploadId, mimeType } = body;
+async function initUpload(req: Request, supabase: any) {
+  const { fileName, fileSize, totalChunks, basePath } = await req.json();
+  
+  if (!fileName || !fileSize || !totalChunks || !basePath) {
+    throw new Error('Missing required parameters for upload initialization');
+  }
 
-  if (!chunk || chunkIndex === undefined || !totalChunks || !fileName || !uploadId) {
+  const uploadId = `${Date.now()}_${Math.random().toString(36).substring(2)}`;
+  
+  console.log(`🆔 Initialized upload: ${uploadId} for ${fileName} (${totalChunks} chunks)`);
+
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      uploadId,
+      message: 'Upload initialized successfully' 
+    }),
+    { 
+      status: 200, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
+}
+
+async function uploadChunk(req: Request, supabase: any) {
+  const formData = await req.formData();
+  const chunk = formData.get('chunk') as File;
+  const chunkIndex = parseInt(formData.get('chunkIndex') as string);
+  const totalChunks = parseInt(formData.get('totalChunks') as string);
+  const fileName = formData.get('fileName') as string;
+  const uploadId = formData.get('uploadId') as string;
+
+  if (!chunk || isNaN(chunkIndex) || !totalChunks || !fileName || !uploadId) {
     throw new Error('Missing required chunk upload parameters');
   }
 
-  console.log(`📦 Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${fileName} (${mimeType})`);
+  console.log(`📦 Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${fileName}`);
 
   try {
-    // Convert number array back to Uint8Array
-    const chunkData = new Uint8Array(chunk);
     const chunkFileName = `${uploadId}_chunk_${chunkIndex.toString().padStart(6, '0')}`;
+    const chunkArrayBuffer = await chunk.arrayBuffer();
+    const chunkData = new Uint8Array(chunkArrayBuffer);
 
-    // Upload chunk to storage with proper content type
+    // Upload chunk to temp-chunks bucket
     const { error: uploadError } = await supabase.storage
-      .from('content')
-      .upload(`chunks/${chunkFileName}`, chunkData, {
+      .from('temp-chunks')
+      .upload(`${uploadId}/${chunkFileName}`, chunkData, {
         contentType: 'application/octet-stream',
-        duplex: 'half',
         upsert: false
       });
 
@@ -120,25 +126,20 @@ async function uploadChunk(supabase: any, body: ChunkUploadRequest) {
   }
 }
 
-/**
- * Finalize upload by merging chunks with streaming support
- */
-async function finalizeUpload(supabase: any, body: ChunkUploadRequest) {
-  const { uploadId, fileName, totalChunks, mimeType, enableStreaming, acceptRanges, fileSize } = body;
+async function mergeChunks(req: Request, supabase: any) {
+  const { uploadId, fileName, totalChunks, bucket, basePath } = await req.json();
 
-  if (!uploadId || !fileName || !totalChunks) {
-    throw new Error('Missing required finalization parameters');
+  if (!uploadId || !fileName || !totalChunks || !basePath) {
+    throw new Error('Missing required merge parameters');
   }
 
-  console.log(`🔄 Finalizing streaming upload for ${fileName} (${totalChunks} chunks, ${fileSize} bytes)`);
+  console.log(`🔄 Merging ${totalChunks} chunks for ${fileName}`);
 
   try {
-    // List all chunks
+    // List all chunks for this upload
     const { data: chunkFiles, error: listError } = await supabase.storage
-      .from('content')
-      .list('chunks', {
-        search: `${uploadId}_chunk_`
-      });
+      .from('temp-chunks')
+      .list(uploadId);
 
     if (listError) {
       throw new Error(`Failed to list chunks: ${listError.message}`);
@@ -148,41 +149,18 @@ async function finalizeUpload(supabase: any, body: ChunkUploadRequest) {
       throw new Error(`Chunk count mismatch. Expected ${totalChunks}, found ${chunkFiles?.length || 0}`);
     }
 
-    console.log(`📋 Found ${chunkFiles.length} chunks, starting streaming merge...`);
+    console.log(`📋 Found ${chunkFiles.length} chunks, starting merge...`);
 
     // Sort chunks by name to ensure correct order
-    const sortedChunks = chunkFiles.sort((a, b) => a.name.localeCompare(b.name));
+    const sortedChunks = chunkFiles
+      .filter(file => file.name.includes('chunk_'))
+      .sort((a, b) => {
+        const aIndex = parseInt(a.name.split('chunk_')[1]);
+        const bIndex = parseInt(b.name.split('chunk_')[1]);
+        return aIndex - bIndex;
+      });
 
-    // Detect MIME type from file extension if not provided
-    let finalMimeType = mimeType || 'application/octet-stream';
-    if (!mimeType) {
-      const extension = fileName.split('.').pop()?.toLowerCase();
-      const mimeTypeMap: Record<string, string> = {
-        // Video MIME types
-        'mp4': 'video/mp4',
-        'webm': 'video/webm',
-        'ogg': 'video/ogg',
-        'ogv': 'video/ogg',
-        'mov': 'video/quicktime',
-        'avi': 'video/x-msvideo',
-        'mkv': 'video/x-matroska',
-        'm4v': 'video/mp4',
-        // Audio MIME types
-        'mp3': 'audio/mpeg',
-        'aac': 'audio/aac',
-        'm4a': 'audio/mp4',
-        'wav': 'audio/wav',
-        'ogg': 'audio/ogg',
-        'oga': 'audio/ogg',
-        'webm': 'audio/webm',
-        'flac': 'audio/flac'
-      };
-      finalMimeType = mimeTypeMap[extension || ''] || 'application/octet-stream';
-    }
-
-    console.log(`🎯 Using MIME type: ${finalMimeType} for streaming file: ${fileName}`);
-
-    // Download and merge chunks using streaming approach
+    // Download and merge chunks
     const mergedChunks: Uint8Array[] = [];
     let totalSize = 0;
 
@@ -191,8 +169,8 @@ async function finalizeUpload(supabase: any, body: ChunkUploadRequest) {
       console.log(`📥 Downloading chunk ${i + 1}/${sortedChunks.length}: ${chunkFile.name}`);
       
       const { data: chunkData, error: downloadError } = await supabase.storage
-        .from('content')
-        .download(`chunks/${chunkFile.name}`);
+        .from('temp-chunks')
+        .download(`${uploadId}/${chunkFile.name}`);
 
       if (downloadError || !chunkData) {
         throw new Error(`Failed to download chunk ${chunkFile.name}: ${downloadError?.message}`);
@@ -206,8 +184,8 @@ async function finalizeUpload(supabase: any, body: ChunkUploadRequest) {
       console.log(`✅ Downloaded chunk ${i + 1}/${sortedChunks.length} (${uint8Array.length} bytes)`);
     }
 
-    // Create merged file with proper streaming structure
-    console.log(`🔧 Creating streamable merged file (${totalSize} bytes)`);
+    // Create merged file
+    console.log(`🔧 Creating merged file (${totalSize} bytes)`);
     const mergedData = new Uint8Array(totalSize);
     let offset = 0;
 
@@ -216,44 +194,39 @@ async function finalizeUpload(supabase: any, body: ChunkUploadRequest) {
       offset += chunk.length;
     }
 
-    console.log(`📝 Final merged file size: ${mergedData.length} bytes`);
-
-    // Prepare upload options with streaming metadata
-    const uploadOptions: any = {
-      contentType: finalMimeType,
-      duplex: 'half',
-      upsert: true
+    // Detect MIME type from file extension
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    const mimeTypeMap: Record<string, string> = {
+      // Image types
+      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+      // Video types
+      'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/quicktime', 'avi': 'video/x-msvideo',
+      // Audio types  
+      'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'm4a': 'audio/mp4', 'aac': 'audio/aac', 'flac': 'audio/flac'
     };
+    const contentType = mimeTypeMap[extension || ''] || 'application/octet-stream';
 
-    // Add streaming-specific headers if enabled
-    if (enableStreaming) {
-      uploadOptions.metadata = {
-        'streaming-enabled': 'true',
-        'accepts-ranges': acceptRanges ? 'bytes' : 'none',
-        'original-size': totalSize.toString(),
-        'mime-type': finalMimeType
-      };
-      console.log(`🌊 Streaming metadata added for ${fileName}`);
-    }
-
-    // Upload merged file with streaming support
+    // Upload merged file to the target bucket
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('content')
-      .upload(`uploads/${fileName}`, mergedData, uploadOptions);
+      .from(bucket || 'original-files')
+      .upload(basePath, mergedData, {
+        contentType,
+        upsert: true
+      });
 
     if (uploadError) {
-      throw new Error(`Failed to upload streaming file: ${uploadError.message}`);
+      throw new Error(`Failed to upload merged file: ${uploadError.message}`);
     }
 
-    console.log(`✅ Streaming file uploaded successfully: ${uploadData.path}`);
+    console.log(`✅ Merged file uploaded successfully: ${uploadData.path}`);
 
     // Clean up chunks
     console.log(`🧹 Cleaning up ${sortedChunks.length} temporary chunks...`);
     const cleanupPromises = sortedChunks.map(async (chunkFile) => {
       try {
         await supabase.storage
-          .from('content')
-          .remove([`chunks/${chunkFile.name}`]);
+          .from('temp-chunks')
+          .remove([`${uploadId}/${chunkFile.name}`]);
         console.log(`🗑️ Deleted chunk: ${chunkFile.name}`);
       } catch (error) {
         console.warn(`⚠️ Failed to delete chunk ${chunkFile.name}:`, error);
@@ -263,48 +236,35 @@ async function finalizeUpload(supabase: any, body: ChunkUploadRequest) {
     // Execute cleanup in parallel
     await Promise.allSettled(cleanupPromises);
 
-    // Get public URL with streaming headers
-    const { data: { publicUrl } } = supabase.storage
-      .from('content')
-      .getPublicUrl(`uploads/${fileName}`);
-
-    console.log(`🌐 Streaming-enabled public URL: ${publicUrl}`);
-
-    // Generate signed URL for better streaming support (24 hour expiry)
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('content')
-      .createSignedUrl(`uploads/${fileName}`, 24 * 60 * 60); // 24 hours
-
-    let streamingUrl = publicUrl;
-    if (!signedUrlError && signedUrlData?.signedUrl) {
-      streamingUrl = signedUrlData.signedUrl;
-      console.log(`🔒 Signed streaming URL generated with 24h expiry`);
+    // Also clean up the upload folder
+    try {
+      const { error: folderDeleteError } = await supabase.storage
+        .from('temp-chunks')
+        .remove([uploadId]);
+      if (folderDeleteError) {
+        console.warn('⚠️ Failed to delete upload folder:', folderDeleteError);
+      }
+    } catch (error) {
+      console.warn('⚠️ Exception deleting upload folder:', error);
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        fileUrl: streamingUrl,
-        publicUrl: publicUrl, // Fallback URL
+        path: uploadData.path,
         fileName: fileName,
         fileSize: totalSize,
-        mimeType: finalMimeType,
-        streamingEnabled: enableStreaming || false,
-        acceptsRanges: acceptRanges || false,
-        message: 'Streaming upload completed successfully' 
+        contentType: contentType,
+        message: 'File upload completed successfully' 
       }),
       { 
         status: 200, 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'Accept-Ranges': acceptRanges ? 'bytes' : 'none'
-        } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
 
   } catch (error) {
-    console.error('💥 Streaming finalization error:', error);
+    console.error('💥 Merge error:', error);
     throw error;
   }
 }
