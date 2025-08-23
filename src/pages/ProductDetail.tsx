@@ -25,6 +25,7 @@ import { useProductDetail } from "@/hooks/useProductDetail";
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
+import { useVideoPricing } from "@/hooks/useVideoPricing";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
@@ -38,6 +39,13 @@ const ProductDetail = () => {
   const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
     imageUrl: (product?.type === 'photo' || product?.type === 'illustration') ? product?.thumbnail : undefined,
     enabled: product?.type === 'photo' || product?.type === 'illustration'
+  });
+
+  // Use dynamic pricing for videos
+  const { resolution, basePrice, licensePrice, totalPrice, isVideo } = useVideoPricing({
+    type: product?.type || '',
+    files: product?.files || [],
+    selectedLicense
   });
 
   if (loading) {
@@ -116,6 +124,23 @@ const ProductDetail = () => {
       ]
     }
   ];
+
+  // Fonction pour calculer et formater le prix
+  const getPriceDisplay = (license: { id: string; price: number }) => {
+    if (product?.price === null || product?.price === 0) {
+      return 'Gratuit';
+    }
+    
+    if (isVideo) {
+      // Pour les vidéos, utiliser le nouveau système de tarification
+      const currentLicensePrice = license.id === selectedLicense ? licensePrice : license.price;
+      const currentTotal = basePrice + currentLicensePrice;
+      return `${currentTotal}$`;
+    } else {
+      // Pour les autres types, utiliser l'ancien système
+      return `${license.price}€`;
+    }
+  };
 
   // Get related products from marketplace with better filtering
   const relatedProducts = marketplaceContent
@@ -236,7 +261,7 @@ const ProductDetail = () => {
         {product.type === 'video' && (
           <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
             <FileVideo className="h-3 w-3" />
-            Vidéo HD
+            Vidéo {resolution || 'HD'}
           </div>
         )}
         
@@ -331,6 +356,23 @@ const ProductDetail = () => {
             {/* License Selection */}
             <div>
               <h3 className="font-semibold mb-4">Choisir une licence</h3>
+              {isVideo && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 text-blue-800 mb-2">
+                    <FileVideo className="h-4 w-4" />
+                    <span className="font-medium">Tarification vidéo {resolution}</span>
+                  </div>
+                  <div className="text-sm text-blue-700">
+                    Prix de base {resolution}: <span className="font-semibold">{basePrice}$</span>
+                    {licensePrice > 0 && (
+                      <>
+                        <br />Licence sélectionnée: <span className="font-semibold">+{licensePrice}€</span>
+                        <br />Prix total: <span className="font-semibold text-lg">{totalPrice}$</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="space-y-3">
                 {licenses.map((license) => (
                   <div
@@ -360,8 +402,15 @@ const ProductDetail = () => {
                           </div>
                         </div>
                       </div>
-                       <div className="text-2xl font-bold">
-                        {product.price === null || product.price === 0 ? 'Gratuit' : `${license.price}€`}
+                      <div className="text-right">
+                        <div className="text-2xl font-bold">
+                          {getPriceDisplay(license)}
+                        </div>
+                        {isVideo && selectedLicense === license.id && (
+                          <div className="text-xs text-muted-foreground">
+                            {basePrice}$ + {license.price}€
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
