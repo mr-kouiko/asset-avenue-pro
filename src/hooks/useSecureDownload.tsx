@@ -48,12 +48,13 @@ export const useSecureDownload = () => {
     setIsDownloading(true);
 
     try {
+      // Step 1: Get the signed download URL from the secure endpoint
       const response = await fetch(
         `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/secure-download?token=${downloadToken}`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Content-Type': 'application/json',
           }
         }
       );
@@ -63,19 +64,26 @@ export const useSecureDownload = () => {
         throw new Error(errorData.error || `Download failed with status ${response.status}`);
       }
 
-      // Get filename from response headers or use provided filename
-      const contentDisposition = response.headers.get('content-disposition');
-      const responseFilename = contentDisposition
-        ? contentDisposition.match(/filename="(.+)"/)?.[1]
-        : filename || 'download';
+      // Step 2: Parse the JSON response to get the signed URL
+      const data = await response.json();
+      
+      if (!data.downloadUrl) {
+        throw new Error('No download URL received');
+      }
 
-      // Create blob and download
-      const blob = await response.blob();
+      // Step 3: Use the signed URL to download the actual file
+      const fileResponse = await fetch(data.downloadUrl);
+      if (!fileResponse.ok) {
+        throw new Error('Failed to download file from signed URL');
+      }
+
+      // Step 4: Create blob and trigger download
+      const blob = await fileResponse.blob();
       const url = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = responseFilename;
+      link.download = data.fileName || filename || 'download';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
