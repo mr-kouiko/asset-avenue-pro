@@ -519,11 +519,13 @@ export const FileUpload = ({
   };
 
   const uploadFile = async (uploadFile: UploadFile) => {
+    console.log('🔄 Starting uploadFile for:', uploadFile.file.name);
     const maxRetries = 3;
     let retryCount = 0;
 
     while (retryCount <= maxRetries) {
       try {
+        console.log('📤 Attempt', retryCount + 1, 'for file:', uploadFile.file.name);
         // Update status to uploading
         setFiles(prev => prev.map(f => 
           f.id === uploadFile.id ? { 
@@ -537,6 +539,7 @@ export const FileUpload = ({
 
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('👤 User authenticated:', !!user, user?.id);
         if (!user) throw new Error('User not authenticated');
 
         // Compress file if needed
@@ -697,7 +700,9 @@ export const FileUpload = ({
   };
 
   const uploadAllFiles = async () => {
+    console.log('🚀 Starting uploadAllFiles');
     const pendingFiles = files.filter(f => f.status === 'pending');
+    console.log('📁 Pending files count:', pendingFiles.length);
     if (pendingFiles.length === 0) return;
     
     toast.info(`Début de l'upload de ${pendingFiles.length} fichier(s)...`);
