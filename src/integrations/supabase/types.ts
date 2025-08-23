@@ -409,6 +409,57 @@ export type Database = {
         }
         Relationships: []
       }
+      secure_downloads: {
+        Row: {
+          content_file_id: string
+          created_at: string
+          download_token: string
+          downloaded_at: string | null
+          expires_at: string
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          content_file_id: string
+          created_at?: string
+          download_token: string
+          downloaded_at?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          content_file_id?: string
+          created_at?: string
+          download_token?: string
+          downloaded_at?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secure_downloads_content_file_id_fkey"
+            columns: ["content_file_id"]
+            isOneToOne: false
+            referencedRelation: "content_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secure_downloads_content_file_id_fkey"
+            columns: ["content_file_id"]
+            isOneToOne: false
+            referencedRelation: "public_file_access"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_audit_log: {
         Row: {
           created_at: string | null
@@ -580,6 +631,13 @@ export type Database = {
       check_admin_access_patterns: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      create_secure_download_token: {
+        Args: { content_file_id_param: string; user_id_param?: string }
+        Returns: {
+          download_token: string
+          expires_at: string
+        }[]
       }
       generate_secure_download_url: {
         Args: { submission_id_param: string; user_id_param?: string }
