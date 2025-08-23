@@ -639,13 +639,6 @@ export type Database = {
           expires_at: string
         }[]
       }
-      generate_secure_download_url: {
-        Args: { submission_id_param: string; user_id_param?: string }
-        Returns: {
-          download_url: string
-          expires_at: string
-        }[]
-      }
       get_creator_public_info: {
         Args: { creator_ids: string[] }
         Returns: {
@@ -683,6 +676,14 @@ export type Database = {
       }
       log_admin_profile_access: {
         Args: { accessed_profile_user_id: string; admin_user_id: string }
+        Returns: boolean
+      }
+      log_security_event: {
+        Args: { details_param?: Json; event_type_param: string }
+        Returns: undefined
+      }
+      mark_download_token_used: {
+        Args: { token_param: string }
         Returns: boolean
       }
       user_can_access_profile: {
