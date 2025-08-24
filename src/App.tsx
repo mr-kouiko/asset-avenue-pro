@@ -8,6 +8,7 @@ import { CartProvider } from "./hooks/useCart";
 import { SearchProvider } from "./hooks/useSearch";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { LanguageRedirect } from "./components/LanguageRedirect";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import ProductDetail from "./pages/ProductDetail";
@@ -30,6 +31,7 @@ import Infinity from "./pages/Infinity";
 import PackagesPricing from "./pages/PackagesPricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import IndexEN from "./pages/en/IndexEN";
@@ -78,6 +80,11 @@ const App = () => (
                   <Route path="/fr/infinity" element={<Infinity />} />
                   <Route path="/fr/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/fr/about" element={<About />} />
+                  <Route path="/fr/admin" element={
+                    <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Seuls les administrateurs peuvent accéder à cette page.">
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* English Routes */}
                   <Route path="/en" element={<IndexEN />} />
@@ -102,6 +109,11 @@ const App = () => (
                   <Route path="/en/infinity" element={<InfinityEN />} />
                   <Route path="/en/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/en/about" element={<AboutEN />} />
+                  <Route path="/en/admin" element={
+                    <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Legacy redirects - any routes without language prefix redirect to FR */}
                   <Route path="/marketplace" element={<Marketplace />} />
@@ -127,6 +139,11 @@ const App = () => (
                   <Route path="/infinity" element={<Infinity />} />
                   <Route path="/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/admin" element={
+                    <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Seuls les administrateurs peuvent accéder à cette page.">
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

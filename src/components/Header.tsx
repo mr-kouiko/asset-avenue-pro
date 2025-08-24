@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ShoppingCart, User, Menu, Globe, LogOut } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, Globe, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -138,6 +138,14 @@ export const Header = () => {
             <DropdownMenuContent align="end" className="w-48">
               {user ? (
                 <>
+                  {userRole === 'admin' && (
+                    <DropdownMenuItem asChild>
+                      <Link to={`/${language}/admin`} className="flex items-center">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Administration
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {userRole === 'creator' || userRole === 'admin' ? (
                     <>
                       <DropdownMenuItem asChild>
