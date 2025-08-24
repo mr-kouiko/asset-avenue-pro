@@ -31,6 +31,7 @@ import Infinity from "./pages/Infinity";
 import PackagesPricing from "./pages/PackagesPricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
+import TestAccounts from "./pages/TestAccounts";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
@@ -139,7 +140,8 @@ const App = () => (
                   <Route path="/infinity" element={<Infinity />} />
                   <Route path="/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/about" element={<About />} />
-                  <Route path="/admin" element={
+          <Route path="/test-accounts" element={<TestAccounts />} />
+          <Route path="/admin" element={
                     <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Seuls les administrateurs peuvent accéder à cette page.">
                       <AdminDashboard />
                     </ProtectedRoute>

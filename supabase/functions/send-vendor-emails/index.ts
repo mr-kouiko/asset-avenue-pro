@@ -19,7 +19,7 @@ interface VendorEmailRequest {
   email: string;
   displayName: string;
   storeName?: string;
-  emailType: 'confirmation' | 'admin_notification';
+  emailType: 'confirmation' | 'admin_notification' | 'welcome';
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -34,13 +34,13 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Processing ${emailType} email for user:`, { userId, email, displayName, storeName });
 
     if (emailType === 'confirmation') {
-      // Send confirmation email to vendor
+      // Send confirmation email to vendor (sellers/creators)
       const confirmationHtml = `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Bienvenue sur VisuStock</title>
+          <title>Bienvenue sur VisuStock - Compte Vendeur</title>
           <style>
             body { 
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
@@ -127,8 +127,8 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <div style="text-align: center;">
-              <a href="https://visustock.com/upload" class="button">
-                🚀 Commencer à vendre
+              <a href="https://visustock.com/seller-dashboard" class="button">
+                🚀 Accéder au Dashboard Vendeur
               </a>
             </div>
             
@@ -159,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log("Confirmation email sent:", confirmationResult);
 
-      // Also send admin notification
+      // Also send admin notification for new sellers
       const adminHtml = `
         <!DOCTYPE html>
         <html>
@@ -219,12 +219,6 @@ const handler = async (req: Request): Promise<Response> => {
           
           <p>Un nouveau créateur vient de s'inscrire sur la plateforme VisuStock. Son compte a été automatiquement activé et il peut maintenant commencer à télécharger du contenu.</p>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${supabaseUrl.replace('https://kdgfpophpoqugtuvfxqx.supabase.co', 'https://supabase.com/dashboard/project/kdgfpophpoqugtuvfxqx')}/auth/users" class="button">
-              👥 Voir dans Supabase Admin
-            </a>
-          </div>
-          
           <p style="font-size: 14px; color: #666; border-top: 1px solid #ddd; padding-top: 20px;">
             Cette notification automatique vous aide à suivre la croissance de votre communauté de créateurs.
           </p>
@@ -246,6 +240,147 @@ const handler = async (req: Request): Promise<Response> => {
         success: true, 
         confirmationResult,
         adminResult 
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+
+    } else if (emailType === 'welcome') {
+      // Send welcome email to regular buyers/clients
+      const welcomeHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Bienvenue sur VisuStock</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+              line-height: 1.6; 
+              color: #333; 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+            }
+            .header { 
+              text-align: center; 
+              padding: 30px 0; 
+              border-bottom: 3px solid #FF6B35; 
+            }
+            .logo { 
+              font-size: 32px; 
+              font-weight: bold; 
+              color: #FF6B35; 
+              margin-bottom: 10px; 
+            }
+            .content { 
+              padding: 30px 0; 
+            }
+            .welcome-box { 
+              background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); 
+              color: white; 
+              padding: 25px; 
+              border-radius: 10px; 
+              text-align: center; 
+              margin: 20px 0; 
+            }
+            .button { 
+              display: inline-block; 
+              background: #FF6B35; 
+              color: white; 
+              padding: 12px 30px; 
+              text-decoration: none; 
+              border-radius: 5px; 
+              font-weight: bold; 
+              margin: 20px 0; 
+            }
+            .footer { 
+              border-top: 1px solid #ddd; 
+              padding: 20px 0; 
+              text-align: center; 
+              color: #666; 
+              font-size: 14px; 
+            }
+            .features { 
+              background: #f8f9fa; 
+              padding: 20px; 
+              border-radius: 8px; 
+              margin: 20px 0; 
+            }
+            .features li { 
+              margin: 8px 0; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">📸 VisuStock</div>
+            <p>Plateforme de contenus visuels premium</p>
+          </div>
+          
+          <div class="content">
+            <div class="welcome-box">
+              <h1>🎉 Bienvenue ${displayName}!</h1>
+              <p>Votre compte VisuStock est maintenant activé</p>
+            </div>
+            
+            <p>Merci de rejoindre la communauté VisuStock ! Vous pouvez maintenant explorer et acheter du contenu premium créé par nos talentueux créateurs.</p>
+            
+            <div class="features">
+              <h3>🌟 Découvrez nos fonctionnalités :</h3>
+              <ul>
+                <li>🔍 Explorez notre marketplace de contenus uniques</li>
+                <li>📥 Téléchargez vos achats immédiatement</li>
+                <li>📊 Suivez vos achats dans votre dashboard</li>
+                <li>🎨 Accédez à du contenu exclusif de qualité professionnelle</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="https://visustock.com/marketplace" class="button">
+                🛒 Découvrir le Marketplace
+              </a>
+            </div>
+            
+            <p><strong>Envie de devenir vendeur ?</strong><br>
+            Vous pouvez également devenir créateur sur notre plateforme et vendre vos propres créations !</p>
+            
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="https://visustock.com/auth/seller" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                🎨 Devenir Vendeur
+              </a>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p><strong>VisuStock Team</strong><br>
+            📧 support@visustock.com<br>
+            🌐 <a href="https://visustock.com">visustock.com</a></p>
+            
+            <p style="margin-top: 20px; font-size: 12px; color: #999;">
+              Cet email a été envoyé automatiquement. Si vous n'avez pas créé de compte VisuStock, vous pouvez ignorer ce message.
+            </p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const welcomeResult = await resend.emails.send({
+        from: "VisuStock <noreply@visustock.com>",
+        to: [email],
+        subject: "🎉 Bienvenue sur VisuStock - Découvrez notre marketplace !",
+        html: welcomeHtml,
+        reply_to: "support@visustock.com"
+      });
+
+      console.log("Welcome email sent:", welcomeResult);
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        welcomeResult 
       }), {
         status: 200,
         headers: {

@@ -145,9 +145,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           description: "Un email de confirmation a été envoyé. Après validation, vous pourrez accéder à votre dashboard vendeur."
         });
       } else {
+        // Send welcome email for regular buyers
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-vendor-emails', {
+            body: {
+              userId: data.user?.id,
+              email: email,
+              displayName: `${userData.firstName} ${userData.lastName}`,
+              emailType: 'welcome'
+            }
+          });
+          
+          if (emailError) {
+            console.error('Error sending welcome email:', emailError);
+          }
+        } catch (emailErr) {
+          console.error('Exception sending welcome email:', emailErr);
+        }
+
         toast({
           title: "Inscription réussie !",
-          description: "Un email de confirmation a été envoyé. Vérifiez votre boîte de réception."
+          description: "Bienvenue sur VisuStock ! Un email de confirmation a été envoyé."
         });
       }
 
