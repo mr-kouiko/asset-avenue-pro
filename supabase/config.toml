@@ -67,6 +67,3 @@ verify_jwt = true
 
 [functions.get-account-status]
 verify_jwt = true
-
-[functions.watermark-video]
-verify_jwt = true

@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
+import { addWatermarkToImage, shouldWatermark } from "@/utils/watermark";
 
 interface UploadFile {
   id: string;
@@ -41,7 +41,6 @@ export const SimpleFileUpload = ({
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { processFiles, isProcessing } = useAutomaticWatermark();
 
   const acceptedTypes = ['image/*', 'video/*', 'audio/*', 'model/*'];
 
@@ -84,17 +83,117 @@ export const SimpleFileUpload = ({
 
   const uploadFile = async (uploadFile: UploadFile): Promise<void> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Update status to uploading
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 10 } : f
       ));
 
-      // Process with automatic watermarking
-      const processedResults = await processFiles([uploadFile.file]);
-      const processedFile = processedResults[0];
+      // Create file path with user folder structure
+      const fileExtension = uploadFile.file.name.split('.').pop();
+      const fileName = `${uploadFile.id}.${fileExtension}`;
+      const filePath = `${user.id}/${fileName}`;
 
-      if (processedFile.status === 'error') {
-        throw new Error(processedFile.error || 'Processing failed');
+      // Upload to uploads bucket
+      const { data, error } = await supabase.storage
+        .from('uploads')
+        .upload(filePath, uploadFile.file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        // Try with a different name if file exists
+        if (error.message.includes('already exists')) {
+          const timestamp = Date.now();
+          const newFilePath = `${user.id}/${uploadFile.id}_${timestamp}.${fileExtension}`;
+          
+          const { data: retryData, error: retryError } = await supabase.storage
+            .from('uploads')
+            .upload(newFilePath, uploadFile.file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+          
+          if (retryError) throw retryError;
+          
+          // Get public URL for retry data
+          const { data: { publicUrl: retryPublicUrl } } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(retryData.path);
+
+          setFiles(prev => prev.map(f => 
+            f.id === uploadFile.id ? { 
+              ...f, 
+              status: 'processing', 
+              progress: 60, 
+              url: retryPublicUrl 
+            } : f
+          ));
+          
+          return; // Exit early since we handled the retry case
+        } else {
+          throw error;
+        }
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(data.path);
+
+      setFiles(prev => prev.map(f => 
+        f.id === uploadFile.id ? { 
+          ...f, 
+          status: 'processing', 
+          progress: 60, 
+          url: publicUrl 
+        } : f
+      ));
+
+      // Handle watermarking for images
+      let watermarkedUrl = publicUrl;
+      let isWatermarked = false;
+
+      if (shouldWatermark(uploadFile.file.type)) {
+        try {
+          setFiles(prev => prev.map(f => 
+            f.id === uploadFile.id ? { ...f, progress: 80 } : f
+          ));
+
+          const watermarkedBlob = await addWatermarkToImage(uploadFile.file, {
+            opacity: 0.7,
+            position: 'center'
+          });
+          const watermarkedFileName = `${uploadFile.id}_watermarked.${fileExtension}`;
+          const watermarkedPath = `${user.id}/watermarked/${watermarkedFileName}`;
+
+          const { data: watermarkData, error: watermarkError } = await supabase.storage
+            .from('uploads')
+            .upload(watermarkedPath, watermarkedBlob, {
+              cacheControl: '3600',
+              upsert: true
+            });
+
+          if (!watermarkError) {
+            const { data: { publicUrl: watermarkedPublicUrl } } = supabase.storage
+              .from('uploads')
+              .getPublicUrl(watermarkData.path);
+            
+            watermarkedUrl = watermarkedPublicUrl;
+            isWatermarked = true;
+          }
+        } catch (watermarkError) {
+          console.warn('Watermarking failed:', watermarkError);
+        }
+      }
+
+      // Generate preview URL for images
+      let previewUrl = watermarkedUrl;
+      if (uploadFile.file.type.startsWith('image/')) {
+        previewUrl = URL.createObjectURL(uploadFile.file);
       }
 
       // Update file as completed
@@ -103,9 +202,9 @@ export const SimpleFileUpload = ({
           ...f, 
           status: 'completed', 
           progress: 100,
-          url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
-          previewUrl: processedFile.previewUrl || processedFile.thumbnailUrl!,
-          isWatermarked: !!processedFile.watermarkedUrl
+          url: watermarkedUrl,
+          previewUrl,
+          isWatermarked
         } : f
       ));
 
@@ -113,12 +212,12 @@ export const SimpleFileUpload = ({
       if (onFilesUploaded) {
         onFilesUploaded([{
           id: uploadFile.id,
-          url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
+          url: watermarkedUrl,
           name: uploadFile.file.name,
           type: uploadFile.file.type,
           size: uploadFile.file.size,
-          previewUrl: processedFile.previewUrl || processedFile.thumbnailUrl!,
-          isWatermarked: !!processedFile.watermarkedUrl
+          previewUrl,
+          isWatermarked
         }]);
       }
 
@@ -233,7 +332,7 @@ export const SimpleFileUpload = ({
             Supported: Images, Videos, Audio, 3D Models (max {formatFileSize(maxFileSize * 1024 * 1024)} each)
           </p>
           <p className="text-xs text-muted-foreground">
-            Maximum {maxFiles} files • All files automatically watermarked & optimized
+            Maximum {maxFiles} files • Images will be automatically watermarked
           </p>
         </div>
         
