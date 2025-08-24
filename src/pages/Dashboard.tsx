@@ -44,12 +44,15 @@ import {
 import { FileUpload } from "@/components/FileUpload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { StripeConnectOnboarding } from "@/components/StripeConnectOnboarding";
+import { StripeSettingsPanel } from "@/components/StripeSettingsPanel";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const { 
     loading, 
     stats, 
@@ -657,6 +660,9 @@ const Dashboard = () => {
 
           {/* Stripe Tab */}
           <TabsContent value="stripe" className="space-y-6">
+            {isAdmin && (
+              <StripeSettingsPanel />
+            )}
             <StripeConnectOnboarding />
           </TabsContent>
           <TabsContent value="upload" className="space-y-6">

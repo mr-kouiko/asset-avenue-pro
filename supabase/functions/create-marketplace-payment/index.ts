@@ -47,8 +47,23 @@ serve(async (req) => {
       );
     }
 
+    // Get Stripe settings from database
+    const { data: settings } = await supabaseService
+      .from('platform_settings')
+      .select('stripe_secret_key')
+      .single();
+
+    const stripeSecretKey = settings?.stripe_secret_key || Deno.env.get("STRIPE_SECRET_KEY") || "";
+    
+    if (!stripeSecretKey) {
+      return new Response(
+        JSON.stringify({ error: "Stripe configuration missing" }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2023-10-16",
     });
 

@@ -20,13 +20,28 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Get Stripe settings from database
+    const { data: settings } = await supabase
+      .from('platform_settings')
+      .select('stripe_secret_key, stripe_webhook_secret')
+      .single();
+
+    const stripeSecretKey = settings?.stripe_secret_key || Deno.env.get("STRIPE_SECRET_KEY") || "";
+    const webhookSecret = settings?.stripe_webhook_secret || Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
+    
+    if (!stripeSecretKey) {
+      return new Response(
+        JSON.stringify({ error: "Stripe configuration missing" }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2023-10-16",
     });
 
     const signature = req.headers.get("stripe-signature");
-    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
     if (!signature || !webhookSecret) {
       console.error("Missing signature or webhook secret");
