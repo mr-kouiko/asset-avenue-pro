@@ -8,6 +8,7 @@ import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { UniversalVideoPlayer } from "./UniversalVideoPlayer";
 import { UniversalAudioPlayer } from "./UniversalAudioPlayer";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
+import { LazyImage } from "./LazyImage";
 
 interface ContentCardProps {
   id: string;
@@ -97,10 +98,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           />
         ) : type === "audio" ? (
           <div className="relative w-full h-full">
-            <img
+            <LazyImage
               src={thumbnail}
               alt={title}
-              className="w-full h-full object-cover"
+              className="w-full h-full"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
               <div className="w-full max-w-[90%] px-4">
@@ -115,10 +116,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         ) : (
           <div className="relative">
-            <img
+            <LazyImage
               src={watermarkedUrl || thumbnail}
               alt={title}
-              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+              className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${
                 isProcessing ? 'opacity-75' : ''
               }`}
             />

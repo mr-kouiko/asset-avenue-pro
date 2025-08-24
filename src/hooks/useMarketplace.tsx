@@ -63,7 +63,7 @@ export const useMarketplace = () => {
           const thumbnailFile = files?.find(f => f.thumbnail_path);
           const originalFile = files?.find(f => f.is_original);
           
-          let thumbnailUrl = '/placeholder.svg';
+          let thumbnailUrl = '';
           let contentType: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
           let videoUrl: string | undefined;
           
