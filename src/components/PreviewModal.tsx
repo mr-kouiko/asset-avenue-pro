@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, AlertTriangle, Loader2 } from "lucide-react";
+import { useFilePreview } from "@/hooks/useFilePreview";
 
 interface UploadedFileData {
   id: string;
@@ -18,15 +19,46 @@ interface PreviewModalProps {
 }
 
 export const PreviewModal = ({ file, isOpen, onClose }: PreviewModalProps) => {
+  const { previewUrl, error, loading } = useFilePreview({
+    fileUrl: file?.url || '',
+    fileName: file?.name || '',
+    fileType: file?.type || ''
+  });
+
   if (!file) return null;
 
   const renderPreview = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Chargement du fichier...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-destructive">Erreur de chargement</p>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+        </div>
+      );
+    }
+
+    const sourceUrl = previewUrl || file.previewUrl || file.url;
     if (file.type.startsWith('video/')) {
       return (
         <video 
           controls 
           className="w-full max-h-[70vh] rounded-lg"
-          src={file.previewUrl || file.url}
+          src={sourceUrl}
+          onError={() => console.error('Erreur de chargement vidéo:', sourceUrl)}
         >
           Votre navigateur ne supporte pas la lecture vidéo.
         </video>
@@ -44,7 +76,8 @@ export const PreviewModal = ({ file, isOpen, onClose }: PreviewModalProps) => {
           <audio 
             controls 
             className="w-full max-w-md"
-            src={file.previewUrl || file.url}
+            src={sourceUrl}
+            onError={() => console.error('Erreur de chargement audio:', sourceUrl)}
           >
             Votre navigateur ne supporte pas la lecture audio.
           </audio>
@@ -55,9 +88,10 @@ export const PreviewModal = ({ file, isOpen, onClose }: PreviewModalProps) => {
     if (file.type.startsWith('image/')) {
       return (
         <img 
-          src={file.previewUrl || file.url}
+          src={sourceUrl}
           alt={file.name}
           className="w-full max-h-[70vh] object-contain rounded-lg"
+          onError={() => console.error('Erreur de chargement image:', sourceUrl)}
         />
       );
     }
