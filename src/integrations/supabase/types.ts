@@ -821,6 +821,29 @@ export type Database = {
         Args: { business_justification: string; profile_user_id: string }
         Returns: string
       }
+      admin_get_platform_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          commission_rate: number
+          created_at: string
+          id: string
+          stripe_application_fee_rate: number
+          stripe_publishable_key: string | null
+          stripe_secret_key: string | null
+          stripe_webhook_secret: string | null
+          updated_at: string
+        }[]
+      }
+      admin_update_platform_settings: {
+        Args: {
+          new_commission_rate?: number
+          new_stripe_application_fee_rate?: number
+          new_stripe_publishable_key?: string
+          new_stripe_secret_key?: string
+          new_stripe_webhook_secret?: string
+        }
+        Returns: boolean
+      }
       check_admin_access_patterns: {
         Args: Record<PropertyKey, never>
         Returns: undefined

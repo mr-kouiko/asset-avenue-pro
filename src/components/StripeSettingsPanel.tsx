@@ -35,17 +35,9 @@ export const StripeSettingsPanel = () => {
     try {
       setLoading(true);
       
-      // SÉCURISÉ: Utilise la fonction admin sécurisée pour récupérer les paramètres
-      const { data, error } = await supabase.rpc('admin_get_platform_settings');
-
-      if (error) {
-        console.error('Error fetching platform settings:', error);
-        toast.error('Accès refusé - Permissions administrateur requises');
-        setSettings(null);
-        return;
-      }
-      
-      setSettings(data);
+      // SÉCURISÉ: Désactivé - Les paramètres Stripe sont maintenant gérés via les secrets Edge Functions
+      toast.error('Interface temporairement désactivée - Paramètres gérés via les secrets sécurisés');
+      setSettings(null);
     } catch (error) {
       console.error('Error fetching platform settings:', error);
       toast.error('Erreur lors du chargement des paramètres');
@@ -57,36 +49,7 @@ export const StripeSettingsPanel = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!settings) return;
-
-    try {
-      setSaving(true);
-      
-      // SÉCURISÉ: Utilise la fonction admin sécurisée pour mettre à jour
-      const { error } = await supabase.rpc('admin_update_platform_settings', {
-        new_stripe_publishable_key: settings.stripe_publishable_key,
-        new_stripe_secret_key: settings.stripe_secret_key,
-        new_stripe_webhook_secret: settings.stripe_webhook_secret,
-        new_commission_rate: settings.commission_rate,
-        new_stripe_application_fee_rate: settings.stripe_application_fee_rate
-      });
-
-      if (error) {
-        console.error('Error updating settings:', error);
-        toast.error('Accès refusé - Permissions administrateur requises');
-        return;
-      }
-      
-      toast.success('Paramètres Stripe mis à jour avec succès');
-      
-      // Recharger les paramètres pour vérifier la mise à jour
-      await fetchSettings();
-    } catch (error) {
-      console.error('Error updating settings:', error);
-      toast.error('Erreur lors de la mise à jour');
-    } finally {
-      setSaving(false);
-    }
+    toast.error('Interface désactivée - Configurez les paramètres via les secrets Edge Functions dans la console Supabase');
   };
 
   const maskKey = (key: string | null, showLength = 8) => {
@@ -96,148 +59,36 @@ export const StripeSettingsPanel = () => {
   };
 
   if (loading) {
-    return <div>Chargement des paramètres...</div>;
-  }
-
-  if (!settings) {
-    return <div>Aucun paramètre trouvé</div>;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Paramètres Stripe</CardTitle>
+        <CardTitle>Paramètres Stripe - Interface Sécurisée</CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="publishable_key">Clé Publishable Stripe</Label>
-              <Input
-                id="publishable_key"
-                placeholder="pk_live_..."
-                value={settings.stripe_publishable_key || ''}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    stripe_publishable_key: e.target.value
-                  })
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                Clé publique Stripe (commence par pk_)
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="secret_key">Clé Secrète Stripe</Label>
-              <div className="relative">
-                <Input
-                  id="secret_key"
-                  type={showSecretKey ? 'text' : 'password'}
-                  placeholder="sk_live_..."
-                  value={showSecretKey ? settings.stripe_secret_key || '' : maskKey(settings.stripe_secret_key)}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      stripe_secret_key: e.target.value
-                    })
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                >
-                  {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Clé secrète Stripe (commence par sk_)
-              </p>
-            </div>
+      <CardContent className="space-y-4">
+        <div className="p-6 border-2 border-warning rounded-lg bg-warning/10">
+          <h3 className="font-semibold text-warning-foreground mb-2">
+            🔒 Interface temporairement désactivée
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Pour des raisons de sécurité, les paramètres Stripe sont maintenant gérés via les secrets sécurisés des Edge Functions.
+          </p>
+          <div className="bg-muted p-4 rounded text-sm">
+            <p className="font-medium mb-2">Pour configurer Stripe :</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Allez dans la console Supabase</li>
+              <li>Section "Edge Functions" → "Settings"</li>
+              <li>Ajoutez les secrets : STRIPE_SECRET_KEY, COMMISSION_RATE</li>
+              <li>Les paramètres seront automatiquement utilisés</li>
+            </ol>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="webhook_secret">Secret du Webhook Stripe (Optionnel)</Label>
-            <div className="relative">
-              <Input
-                id="webhook_secret"
-                type={showWebhookSecret ? 'text' : 'password'}
-                placeholder="whsec_..."
-                value={showWebhookSecret ? settings.stripe_webhook_secret || '' : maskKey(settings.stripe_webhook_secret)}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    stripe_webhook_secret: e.target.value
-                  })
-                }
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-              >
-                {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Secret pour vérifier les webhooks Stripe
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="commission_rate">Taux de Commission (%)</Label>
-              <Input
-                id="commission_rate"
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
-                value={settings.commission_rate}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    commission_rate: parseFloat(e.target.value)
-                  })
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                Ex: 0.15 pour 15% de commission
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="stripe_fee_rate">Frais Stripe (%)</Label>
-              <Input
-                id="stripe_fee_rate"
-                type="number"
-                step="0.001"
-                min="0"
-                max="1"
-                value={settings.stripe_application_fee_rate}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    stripe_application_fee_rate: parseFloat(e.target.value)
-                  })
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                Ex: 0.029 pour 2.9% de frais Stripe
-              </p>
-            </div>
-          </div>
-
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Enregistrement...' : 'Enregistrer les paramètres'}
-          </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );
