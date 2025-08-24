@@ -16,7 +16,6 @@ interface ProductMetadata {
   title: string;
   description: string;
   category_id?: string;
-  price?: number;
   tags: string[];
 }
 
@@ -43,7 +42,6 @@ export const useProductManager = () => {
           title: submission.productData.title,
           description: submission.productData.description,
           category_id: submission.productData.category_id || null,
-          price: submission.productData.price || 0,
           tags: submission.productData.tags,
           status: 'draft'
         });
@@ -77,7 +75,6 @@ export const useProductManager = () => {
           title: submission.productData.title,
           description: submission.productData.description,
           category_id: submission.productData.category_id || null,
-          price: submission.productData.price || 0,
           tags: submission.productData.tags,
           status: 'approved' // Auto-approve for now
         })

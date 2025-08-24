@@ -31,7 +31,6 @@ interface ProductData {
   title: string;
   description: string;
   category: string;
-  price: string;
   tags: string[];
   currentTag: string;
   status: 'draft' | 'published' | 'pending';
@@ -67,7 +66,6 @@ const ProductManagement = () => {
           title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
           description: '',
           category: '',
-          price: '',
           tags: [],
           currentTag: '',
           status: 'draft'
@@ -132,7 +130,6 @@ const ProductManagement = () => {
         title: productData.title,
         description: productData.description,
         category_id: productData.category || undefined,
-        price: productData.price ? parseFloat(productData.price) : 0,
         tags: productData.tags
       }
     });
@@ -159,7 +156,6 @@ const ProductManagement = () => {
         title: productData.title,
         description: productData.description,
         category_id: productData.category || undefined,
-        price: productData.price ? parseFloat(productData.price) : 0,
         tags: productData.tags
       }
     });
@@ -189,7 +185,6 @@ const ProductManagement = () => {
             title: productData.title,
             description: productData.description,
             category_id: productData.category || undefined,
-            price: productData.price ? parseFloat(productData.price) : 0,
             tags: productData.tags
           }
         });
@@ -432,20 +427,7 @@ const ProductManagement = () => {
                       />
                     </div>
                     
-                    <div>
-                      <Label htmlFor="price">Prix (€)</Label>
-                      <Input 
-                        id="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={selectedProductData.price}
-                        onChange={(e) => updateProductData(selectedFileId!, { price: e.target.value })}
-                        placeholder="0 pour gratuit"
-                      />
-                    </div>
-                    
-                    <div>
+                    <div className="md:col-span-2">
                       <Label>Tags</Label>
                       <div className="flex space-x-2">
                         <Input 
