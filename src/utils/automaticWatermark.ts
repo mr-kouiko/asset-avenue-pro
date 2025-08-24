@@ -151,6 +151,56 @@ export const prepareVideoForWatermarking = async (
 };
 
 /**
+ * Generates a fallback thumbnail for unsupported file types
+ */
+export const generateFallbackThumbnail = async (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Canvas context not available'));
+      return;
+    }
+
+    canvas.width = 400;
+    canvas.height = 200;
+
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#1e40af');
+    gradient.addColorStop(1, '#3b82f6');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw file icon
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📄', canvas.width / 2, canvas.height / 2 - 20);
+
+    // Add file name
+    ctx.font = 'bold 16px Arial';
+    const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '...' : file.name;
+    ctx.fillText(fileName, canvas.width / 2, canvas.height / 2 + 40);
+
+    // Add watermark
+    ctx.globalAlpha = 0.4;
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('VISUSTOCK', canvas.width / 2, canvas.height - 20);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Failed to create fallback thumbnail'));
+      }
+    }, 'image/webp', 0.8);
+  });
+};
+
+/**
  * Generates audio waveform thumbnail
  */
 export const generateAudioThumbnail = async (
@@ -273,7 +323,12 @@ export const processFileWithWatermark = async (
       thumbnail: thumbnailBlob
     };
   } else {
-    throw new Error(`Unsupported file type: ${fileType}`);
+    // Fallback for unsupported file types (documents, 3D models, etc.)
+    const thumbnailBlob = await generateFallbackThumbnail(file);
+    return {
+      type: 'other' as any,
+      thumbnail: thumbnailBlob
+    };
   }
 };
 
