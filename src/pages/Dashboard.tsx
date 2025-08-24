@@ -4,10 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Upload,
   TrendingUp,
@@ -33,15 +29,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { FileUpload } from "@/components/FileUpload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -57,28 +44,13 @@ const Dashboard = () => {
     loading, 
     stats, 
     submissions, 
-    categories,
-    draftFiles,
-    createSubmission, 
     updateSubmission, 
     deleteSubmission,
-    addFilesToSubmission,
-    addDraftFiles,
-    clearDraftFiles,
     refreshData 
   } = useSellerDashboard();
   
   const [activeTab, setActiveTab] = useState("overview");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSubmission, setEditingSubmission] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category_id: '',
-    price: '',
-    tags: [] as string[],
-    currentTag: ''
-  });
 
   if (!user) {
     return (
@@ -97,76 +69,6 @@ const Dashboard = () => {
       </div>
     );
   }
-
-  const handleCreateSubmission = async () => {
-    console.log('handleCreateSubmission called with formData:', formData);
-    
-    if (!formData.title || !formData.description) {
-      console.log('Missing title or description');
-      toast.error('Titre et description requis');
-      return;
-    }
-
-    console.log('Calling createSubmission with data:', {
-      title: formData.title,
-      description: formData.description,
-      category_id: formData.category_id || undefined,
-      price: formData.price ? parseFloat(formData.price) : undefined,
-      tags: formData.tags
-    });
-
-    const submission = await createSubmission({
-      title: formData.title,
-      description: formData.description,
-      category_id: formData.category_id || undefined,
-      price: formData.price ? parseFloat(formData.price) : undefined,
-      tags: formData.tags
-    });
-
-    console.log('createSubmission result:', submission);
-
-    if (submission) {
-      console.log('Submission successful, clearing form and closing dialog');
-      setFormData({
-        title: '',
-        description: '',
-        category_id: '',
-        price: '',
-        tags: [],
-        currentTag: ''
-      });
-      setIsCreateDialogOpen(false);
-    } else {
-      console.log('Submission failed');
-    }
-  };
-
-  const handleCloseDialog = () => {
-    console.log('handleCloseDialog called');
-    clearDraftFiles();
-    setIsCreateDialogOpen(false);
-  };
-
-  const handleFilesUploaded = async (files: { url: string; name: string; type: string }[], submissionId: string) => {
-    await addFilesToSubmission(submissionId, files);
-  };
-
-  const handleAddTag = () => {
-    if (formData.currentTag && !formData.tags.includes(formData.currentTag)) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, prev.currentTag],
-        currentTag: ''
-      }));
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(t => t !== tag)
-    }));
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -206,159 +108,31 @@ const Dashboard = () => {
               Gérez votre contenu et suivez vos performances
             </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={handleCloseDialog}>
-            <DialogTrigger asChild>
-              <Button 
-                className="flex items-center gap-2"
-                onClick={() => {
-                  console.log('Ajouter du contenu button clicked');
-                  setIsCreateDialogOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Ajouter du contenu
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Créer un nouveau contenu</DialogTitle>
-                <DialogDescription>
-                  Ajoutez les informations et fichiers de votre nouveau contenu
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="title">Titre *</Label>
-                    <Input 
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Titre de votre création"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Catégorie</Label>
-                    <Select onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea 
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Décrivez votre création..."
-                    rows={3}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="price">Prix (€)</Label>
-                  <Input 
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="0 pour gratuit"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Tags</Label>
-                  <div className="flex space-x-2">
-                    <Input 
-                      value={formData.currentTag}
-                      onChange={(e) => setFormData(prev => ({ ...prev, currentTag: e.target.value }))}
-                      placeholder="Ajouter un tag"
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    />
-                    <Button type="button" variant="outline" onClick={handleAddTag}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {formData.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                          {tag}
-                          <X 
-                            className="h-3 w-3 cursor-pointer" 
-                            onClick={() => handleRemoveTag(tag)}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* File Upload Section */}
-                <div className="border-t pt-6">
-                  <Label className="text-base font-medium">Fichiers</Label>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Ajoutez vos fichiers à ce contenu. Ils seront automatiquement associés lors de la création.
-                  </p>
-                  <FileUpload
-                    onFilesUploaded={addDraftFiles}
-                    maxFiles={10}
-                    maxFileSize={100}
-                  />
-                  {draftFiles.length > 0 && (
-                    <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm font-medium text-green-600">
-                        {draftFiles.length} fichier(s) prêt(s) à être associé(s) à ce contenu
-                      </p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="outline" onClick={handleCloseDialog}>
-                    Annuler
-                  </Button>
-                  <Button onClick={handleCreateSubmission}>
-                    Créer le contenu
-                    {draftFiles.length > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        +{draftFiles.length} fichier(s)
-                      </Badge>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            className="flex items-center gap-2"
+            asChild
+          >
+            <Link to="/file-upload">
+              <Plus className="h-4 w-4" />
+              Ajouter du contenu
+            </Link>
+          </Button>
         </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-                <TabsTrigger value="content">Mon contenu</TabsTrigger>
-                <TabsTrigger value="analytics">Statistiques</TabsTrigger>
-                <TabsTrigger value="stripe">Paiements</TabsTrigger>
-                <TabsTrigger value="upload">Uploader</TabsTrigger>
-              </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+            <TabsTrigger value="content">Mon contenu</TabsTrigger>
+            <TabsTrigger value="analytics">Statistiques</TabsTrigger>
+            <TabsTrigger value="stripe">Paiements</TabsTrigger>
+            <TabsTrigger value="upload">Uploader</TabsTrigger>
+          </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Revenus estimés</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -428,7 +202,13 @@ const Dashboard = () => {
                 ) : submissions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun contenu uploadé pour le moment</p>
+                    <p className="mb-4">Aucun contenu uploadé pour le moment</p>
+                    <Button asChild>
+                      <Link to="/file-upload">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Uploader votre premier contenu
+                      </Link>
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -466,14 +246,22 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Content Management Tab */}
+          {/* Content Tab */}
           <TabsContent value="content" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Gestion de contenu</CardTitle>
-                <CardDescription>
-                  Gérez tous vos uploads et ajoutez des fichiers
-                </CardDescription>
+              <CardHeader className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Mon contenu</CardTitle>
+                  <CardDescription>
+                    Gérez vos créations et suivez leur statut
+                  </CardDescription>
+                </div>
+                <Button asChild>
+                  <Link to="/file-upload">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouveau contenu
+                  </Link>
+                </Button>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -486,9 +274,11 @@ const Dashboard = () => {
                     <Upload className="h-16 w-16 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium mb-2">Aucun contenu</h3>
                     <p className="mb-4">Commencez par créer votre premier contenu</p>
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Créer du contenu
+                    <Button asChild>
+                      <Link to="/file-upload">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Créer du contenu
+                      </Link>
                     </Button>
                   </div>
                 ) : (
@@ -525,19 +315,17 @@ const Dashboard = () => {
                               </div>
                             )}
                             {submission.rejection_reason && (
-                              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                                <strong>Raison du rejet:</strong> {submission.rejection_reason}
-                              </div>
-                            )}
-                            {submission.admin_notes && (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-                                <strong>Notes admin:</strong> {submission.admin_notes}
+                              <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                                <p className="text-sm text-destructive font-medium">Raison du rejet:</p>
+                                <p className="text-sm text-destructive">{submission.rejection_reason}</p>
                               </div>
                             )}
                           </div>
+                          
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Ouvrir le menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -546,90 +334,47 @@ const Dashboard = () => {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
-                              {submission.status === 'pending' && (
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => {
-                                    if (confirm('Êtes-vous sûr de vouloir supprimer ce contenu ?')) {
-                                      deleteSubmission(submission.id);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Supprimer
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem 
+                                onClick={() => deleteSubmission(submission.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-
-                        {/* Files list */}
+                        
+                        {/* Files Grid */}
                         {submission.content_files && submission.content_files.length > 0 && (
-                          <div className="mb-4">
-                            <h5 className="font-medium mb-2 flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              Fichiers ({submission.content_files.length})
-                            </h5>
-                            <div className="grid gap-2">
-                              {submission.content_files.map((file) => (
-                                <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                                  <div className="flex items-center gap-2">
-                                    {file.file_type.startsWith('image/') ? (
-                                      <Image className="h-4 w-4" />
-                                    ) : file.file_type.startsWith('video/') ? (
-                                      <Film className="h-4 w-4" />
-                                    ) : file.file_type.startsWith('audio/') ? (
-                                      <Music className="h-4 w-4" />
-                                    ) : (
-                                      <FileText className="h-4 w-4" />
-                                    )}
-                                    <div>
-                                      <p className="text-sm font-medium">{file.file_name}</p>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{(file.file_size / 1024 / 1024).toFixed(1)} MB</span>
-                                        {file.is_original && (
-                                          <Badge variant="outline" className="text-xs">Original</Badge>
-                                        )}
-                                        {file.preview_path && (
-                                          <Badge variant="secondary" className="text-xs">Watermarqué</Badge>
-                                        )}
-                                        {file.thumbnail_path && (
-                                          <Badge variant="outline" className="text-xs">Miniature</Badge>
-                                        )}
-                                      </div>
-                                    </div>
+                          <div className="border-t pt-4">
+                            <h5 className="font-medium mb-3">Fichiers associés ({submission.content_files.length})</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              {submission.content_files.slice(0, 4).map((file) => (
+                                <div key={file.id} className="relative bg-muted rounded-lg p-3">
+                                  <div className="flex items-center justify-center h-16 mb-2">
+                                    {file.file_type === 'image' && <Image className="h-8 w-8 text-muted-foreground" />}
+                                    {file.file_type === 'video' && <Film className="h-8 w-8 text-muted-foreground" />}
+                                    {file.file_type === 'audio' && <Music className="h-8 w-8 text-muted-foreground" />}
+                                    {!['image', 'video', 'audio'].includes(file.file_type) && <FileText className="h-8 w-8 text-muted-foreground" />}
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    {file.preview_path && (
-                                      <Badge variant="default" className="text-xs">
-                                        <Eye className="h-3 w-3 mr-1" />
-                                        Preview
-                                      </Badge>
-                                    )}
-                                    {submission.status === 'approved' && (
-                                      <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                        Publié
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  <p className="text-xs text-center truncate">{file.file_name}</p>
+                                  <Badge variant="secondary" className="text-xs mt-1 w-full justify-center">
+                                    {file.file_type}
+                                  </Badge>
                                 </div>
                               ))}
+                              {submission.content_files.length > 4 && (
+                                <div className="relative bg-muted/50 rounded-lg p-3 flex items-center justify-center">
+                                  <div className="text-center">
+                                    <Plus className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                                    <p className="text-xs text-muted-foreground">
+                                      +{submission.content_files.length - 4} autres
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
-
-                        {/* File upload for existing submission */}
-                        {submission.status === 'approved' && (
-                          <div className="border-t pt-4">
-                            <h5 className="font-medium mb-3">Ajouter des fichiers:</h5>
-                            <p className="text-sm text-muted-foreground mb-3">
-                              Les nouveaux fichiers seront automatiquement watermarqués et publiés.
-                            </p>
-                            <FileUpload
-                              onFilesUploaded={(files) => handleFilesUploaded(files, submission.id)}
-                              maxFiles={20}
-                              maxFileSize={500}
-                            />
                           </div>
                         )}
                       </Card>
@@ -641,57 +386,136 @@ const Dashboard = () => {
           </TabsContent>
 
           {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Statistiques détaillées</CardTitle>
-                <CardDescription>
-                  Analysez les performances de votre contenu
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Les statistiques détaillées seront bientôt disponibles</p>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="analytics">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <TrendingUp className="h-5 w-5 mr-2" />
+                    Performance générale
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Taux d'approbation</span>
+                    <span className="font-medium">
+                      {stats.totalSubmissions > 0 
+                        ? `${((stats.approvedSubmissions / stats.totalSubmissions) * 100).toFixed(1)}%`
+                        : '0%'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Revenus par contenu</span>
+                    <span className="font-medium">
+                      {stats.approvedSubmissions > 0 
+                        ? `${(stats.totalRevenue / stats.approvedSubmissions).toFixed(2)}€`
+                        : '0€'
+                      }
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Eye className="h-5 w-5 mr-2" />
+                    Popularité
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Téléchargements par contenu</span>
+                    <span className="font-medium">
+                      {stats.approvedSubmissions > 0 
+                        ? `${Math.round(stats.totalDownloads / stats.approvedSubmissions)}`
+                        : '0'
+                      }
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Stripe Tab */}
-          <TabsContent value="stripe" className="space-y-6">
-            {isAdmin && (
+          <TabsContent value="stripe">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configuration Stripe</CardTitle>
+                  <CardDescription>
+                    Configurez votre compte Stripe pour recevoir vos paiements
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StripeConnectOnboarding />
+                </CardContent>
+              </Card>
+
               <StripeSettingsPanel />
-            )}
-            <StripeConnectOnboarding />
+            </div>
           </TabsContent>
-          <TabsContent value="upload" className="space-y-6">
+
+          {/* Upload Tab */}
+          <TabsContent value="upload">
             <Card>
               <CardHeader>
-                <CardTitle>Upload rapide</CardTitle>
+                <CardTitle>Nouveau système d'upload</CardTitle>
                 <CardDescription>
-                  Uploadez directement des fichiers - créez d'abord un contenu pour une gestion complète
+                  Processus d'upload amélioré en deux étapes pour une meilleure organisation
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <FileUpload
-                  onFilesUploaded={(files) => {
-                    const watermarkedCount = files.filter(f => f.isWatermarked).length;
-                    toast.success(`${files.length} fichier(s) uploadé(s)${watermarkedCount > 0 ? ` (${watermarkedCount} avec watermarking)` : ''}. N'oubliez pas de les associer à un contenu.`);
-                  }}
-                  maxFiles={50}
-                  maxFileSize={500}
-                  autoUpload={true}
-                />
-                
-                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                  <h4 className="font-medium mb-2">Upload automatisé:</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Les images sont automatiquement watermarquées pour le marketplace</p>
-                    <p>• Les fichiers originaux restent protégés et disponibles après achat</p>
-                    <p>• Upload en lot supporté (glissez-déposez plusieurs fichiers à la fois)</p>
-                    <p>• Publication automatique - plus besoin d'attendre la validation</p>
+              <CardContent className="space-y-6">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <span className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">1</span>
+                      <div>
+                        <h3 className="font-semibold">Upload groupé</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Uploadez tous vos fichiers numériques en une seule fois avec aperçu et gestion de queue
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <span className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">2</span>
+                      <div>
+                        <h3 className="font-semibold">Configuration individuelle</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Configurez ensuite chaque produit avec ses propres métadonnées (titre, description, prix, catégorie, tags)
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                  
+                  <div className="mt-6 flex gap-4">
+                    <Button size="lg" asChild>
+                      <Link to="/file-upload">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Commencer l'upload
+                      </Link>
+                    </Button>
+                    
+                    <Button variant="outline" size="lg" asChild>
+                      <Link to="/upload">
+                        Ancien système (déprécié)
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-3 text-sm">
+                  <h4 className="font-medium">Avantages du nouveau système :</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• Upload plus rapide et fiable</li>
+                    <li>• Gestion individuelle de chaque produit</li>
+                    <li>• Possibilité de sauvegarder en brouillon</li>
+                    <li>• Interface plus claire et intuitive</li>
+                    <li>• Meilleur suivi de l'état d'upload</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

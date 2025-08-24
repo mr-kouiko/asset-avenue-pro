@@ -109,139 +109,54 @@ const Upload = () => {
         <Navigation />
         
         <div className="container py-8 max-w-4xl">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Uploader du contenu</h1>
-            <p className="text-muted-foreground">
-              Partagez vos créations avec la communauté VisuStock
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold mb-2">Nouveau système d'upload</h1>
+            <p className="text-muted-foreground mb-6">
+              Nous avons amélioré l'expérience d'upload avec un processus en deux étapes plus simple et efficace.
             </p>
-          </div>
-
-          <form onSubmit={handlePublish} className="space-y-8">
-            {/* File Upload */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Files</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Drag and drop multiple files at once. Images will be automatically watermarked for the marketplace.
-              </p>
-              <SimpleFileUpload 
-                onFilesUploaded={handleFilesUploaded} 
-                maxFiles={100} 
-                maxFileSize={1000} 
-              />
-            </Card>
-
-            {/* Content Details */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Content Details</h2>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="title">Title *</Label>
-                  <Input 
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Title of your creation"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Select onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea 
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe your creation..."
-                    rows={4}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="price">Price ($)</Label>
-                  <Input 
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="0 for free"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Tags</Label>
-                  <div className="flex space-x-2">
-                    <Input 
-                      value={formData.currentTag}
-                      onChange={(e) => setFormData(prev => ({ ...prev, currentTag: e.target.value }))}
-                      placeholder="Add a tag"
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    />
-                    <Button type="button" variant="outline" onClick={handleAddTag}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">🎉 Upload repensé pour plus d'efficacité</h2>
+              <div className="space-y-3 text-left max-w-2xl mx-auto">
+                <div className="flex items-start space-x-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-0.5">1</span>
+                  <div>
+                    <p className="font-medium">Upload groupé de fichiers</p>
+                    <p className="text-sm text-muted-foreground">Uploadez tous vos fichiers en une seule fois</p>
                   </div>
-                  
-                  {formData.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                          {tag}
-                          <X 
-                            className="h-3 w-3 cursor-pointer" 
-                            onClick={() => handleRemoveTag(tag)}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-0.5">2</span>
+                  <div>
+                    <p className="font-medium">Configuration individuelle</p>
+                    <p className="text-sm text-muted-foreground">Configurez chaque produit séparément avec ses propres métadonnées</p>
+                  </div>
                 </div>
               </div>
-            </Card>
+              <div className="mt-6">
+                <Button size="lg" asChild>
+                  <Link to="/file-upload">
+                    Commencer l'upload
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
 
-            {/* Submit */}
+          {/* Legacy Upload Notice */}
+          <Card className="p-6 bg-muted/50">
+            <h2 className="text-xl font-semibold mb-4">Ancien système (Déprécié)</h2>
+            <p className="text-muted-foreground mb-4">
+              Cette version de l'upload est conservée temporairement. Nous recommandons fortement d'utiliser le nouveau système ci-dessus.
+            </p>
             <div className="flex space-x-4">
-              <Button 
-                type="submit" 
-                size="lg" 
-                disabled={loading || uploadedFiles.length === 0 || !formData.title || !formData.description}
-              >
-                {loading ? 'Publishing...' : 'Publish Content'}
+              <Button variant="secondary" asChild>
+                <Link to="/file-upload">Utiliser le nouveau système</Link>
               </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="lg" 
-                onClick={handleSaveDraft}
-                disabled={loading || uploadedFiles.length === 0}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Draft
-              </Button>
-              <Button type="button" variant="outline" size="lg" asChild>
-                <Link to="/seller-dashboard">Cancel</Link>
+              <Button variant="outline" asChild>
+                <Link to="/seller-dashboard">Retour au tableau de bord</Link>
               </Button>
             </div>
-          </form>
+          </Card>
         </div>
       </div>
     </ProtectedRoute>

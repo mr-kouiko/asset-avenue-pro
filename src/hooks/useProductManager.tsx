@@ -1,0 +1,153 @@
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface ProductFile {
+  id: string;
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+  previewUrl?: string;
+  isWatermarked?: boolean;
+}
+
+interface ProductMetadata {
+  title: string;
+  description: string;
+  category_id?: string;
+  price?: number;
+  tags: string[];
+}
+
+interface ProductSubmission {
+  file: ProductFile;
+  productData: ProductMetadata;
+}
+
+export const useProductManager = () => {
+  const [loading, setLoading] = useState(false);
+
+  const saveProductDraft = async (submission: ProductSubmission): Promise<boolean> => {
+    setLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create content submission as draft
+      const { error } = await supabase
+        .from('content_submissions')
+        .insert({
+          creator_id: user.id,
+          title: submission.productData.title,
+          description: submission.productData.description,
+          category_id: submission.productData.category_id || null,
+          price: submission.productData.price || 0,
+          tags: submission.productData.tags,
+          status: 'draft'
+        });
+
+      if (error) throw error;
+
+      toast.success(`Brouillon sauvegardé: ${submission.productData.title}`);
+      return true;
+
+    } catch (error) {
+      console.error('Save draft error:', error);
+      toast.error(`Erreur lors de la sauvegarde: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const publishProduct = async (submission: ProductSubmission): Promise<boolean> => {
+    setLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create content submission
+      const { data: submissionData, error: submissionError } = await supabase
+        .from('content_submissions')
+        .insert({
+          creator_id: user.id,
+          title: submission.productData.title,
+          description: submission.productData.description,
+          category_id: submission.productData.category_id || null,
+          price: submission.productData.price || 0,
+          tags: submission.productData.tags,
+          status: 'approved' // Auto-approve for now
+        })
+        .select()
+        .single();
+
+      if (submissionError) throw submissionError;
+
+      // Create content file entry
+      const { error: fileError } = await supabase
+        .from('content_files')
+        .insert({
+          submission_id: submissionData.id,
+          file_name: submission.file.name,
+          file_path: submission.file.url,
+          file_type: submission.file.type.split('/')[0], // 'image', 'video', etc.
+          file_format: submission.file.type,
+          file_size: submission.file.size,
+          is_original: true,
+          preview_path: submission.file.previewUrl,
+          thumbnail_path: submission.file.previewUrl,
+          metadata: {
+            isWatermarked: submission.file.isWatermarked || false
+          }
+        });
+
+      if (fileError) throw fileError;
+
+      toast.success(`✅ Produit publié avec succès: ${submission.productData.title}`);
+      return true;
+
+    } catch (error) {
+      console.error('Publish error:', error);
+      toast.error(`Erreur lors de la publication: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const publishMultipleProducts = async (submissions: ProductSubmission[]): Promise<number> => {
+    setLoading(true);
+    let successCount = 0;
+    
+    try {
+      for (const submission of submissions) {
+        const success = await publishProduct(submission);
+        if (success) {
+          successCount++;
+        }
+      }
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} produit(s) publié(s) avec succès!`);
+      }
+      
+    } catch (error) {
+      console.error('Bulk publish error:', error);
+      toast.error('Erreur lors de la publication en lot');
+    } finally {
+      setLoading(false);
+    }
+    
+    return successCount;
+  };
+
+  return {
+    loading,
+    saveProductDraft,
+    publishProduct,
+    publishMultipleProducts
+  };
+};

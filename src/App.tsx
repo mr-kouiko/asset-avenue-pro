@@ -20,6 +20,8 @@ import Portfolio from "./pages/Portfolio";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Upload from "./pages/Upload";
+import FileUpload from "./pages/FileUpload";
+import ProductManagement from "./pages/ProductManagement";
 import Support from "./pages/Support";
 import Contact from "./pages/Contact";
 import Licenses from "./pages/Licenses";
@@ -72,6 +74,8 @@ const App = () => (
                   <Route path="/fr/cart" element={<Cart />} />
                   <Route path="/fr/checkout" element={<Checkout />} />
                   <Route path="/fr/upload" element={<Upload />} />
+                  <Route path="/fr/file-upload" element={<FileUpload />} />
+                  <Route path="/fr/product-management" element={<ProductManagement />} />
                   <Route path="/fr/support" element={<Support />} />
                   <Route path="/fr/contact" element={<Contact />} />
                   <Route path="/fr/licenses" element={<Licenses />} />
@@ -101,6 +105,8 @@ const App = () => (
                   <Route path="/en/cart" element={<Cart />} />
                   <Route path="/en/checkout" element={<Checkout />} />
                   <Route path="/en/upload" element={<Upload />} />
+                  <Route path="/en/file-upload" element={<FileUpload />} />
+                  <Route path="/en/product-management" element={<ProductManagement />} />
                   <Route path="/en/support" element={<Support />} />
                   <Route path="/en/contact" element={<ContactEN />} />
                   <Route path="/en/licenses" element={<Licenses />} />
@@ -131,6 +137,8 @@ const App = () => (
                   <Route path="/payment-success" element={<PaymentSuccess />} />
                   <Route path="/payment-cancelled" element={<PaymentCancelled />} />
                   <Route path="/upload" element={<Upload />} />
+                  <Route path="/file-upload" element={<FileUpload />} />
+                  <Route path="/product-management" element={<ProductManagement />} />
                   <Route path="/support" element={<Support />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/licenses" element={<Licenses />} />

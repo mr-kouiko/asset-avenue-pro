@@ -61,7 +61,7 @@ const Portfolio = () => {
               
               <div className="flex space-x-2">
                 <Button asChild>
-                  <Link to="/upload">
+                  <Link to="/file-upload">
                     <Plus className="h-4 w-4 mr-2" />
                     Nouveau contenu
                   </Link>
@@ -136,7 +136,7 @@ const Portfolio = () => {
                     Vous n'avez encore aucun contenu publié
                   </div>
                   <Button asChild>
-                    <Link to="/upload">
+                    <Link to="/file-upload">
                       <Plus className="h-4 w-4 mr-2" />
                       Uploader votre premier contenu
                     </Link>
@@ -177,7 +177,7 @@ const Portfolio = () => {
                     Vous n'avez encore créé aucun contenu
                   </div>
                   <Button asChild>
-                    <Link to="/upload">
+                    <Link to="/file-upload">
                       <Plus className="h-4 w-4 mr-2" />
                       Créer votre premier contenu
                     </Link>
