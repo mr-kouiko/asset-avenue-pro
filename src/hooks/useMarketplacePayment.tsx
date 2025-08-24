@@ -67,6 +67,7 @@ export const useMarketplacePayment = () => {
         // Clear cart after successful checkout creation
         setTimeout(() => {
           clearCart();
+          toast.success('Commande confirmée ! Redirection vers le paiement...');
         }, 1000);
       }
 
@@ -92,11 +93,20 @@ export const useMarketplacePayment = () => {
 
     // Check for items with invalid prices
     const invalidItems = cartItems.filter(item => 
-      typeof item.price !== 'number' || item.price < 0
+      typeof item.price !== 'number' || item.price <= 0
     );
 
     if (invalidItems.length > 0) {
       return { valid: false, error: 'Certains articles ont des prix invalides' };
+    }
+
+    // Check for missing required fields
+    const incompleteItems = cartItems.filter(item => 
+      !item.id || !item.title || !item.author
+    );
+
+    if (incompleteItems.length > 0) {
+      return { valid: false, error: 'Certains articles sont incomplets' };
     }
 
     return { valid: true };
