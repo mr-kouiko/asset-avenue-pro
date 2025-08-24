@@ -334,6 +334,75 @@ export type Database = {
         }
         Relationships: []
       }
+      payouts: {
+        Row: {
+          amount: number
+          arrival_date: string | null
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          method: string | null
+          seller_id: string
+          status: string
+          stripe_account_id: string
+          stripe_payout_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          arrival_date?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          method?: string | null
+          seller_id: string
+          status?: string
+          stripe_account_id: string
+          stripe_payout_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          arrival_date?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          method?: string | null
+          seller_id?: string
+          status?: string
+          stripe_account_id?: string
+          stripe_payout_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          id: string
+          stripe_application_fee_rate: number
+          updated_at: string
+        }
+        Insert: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          stripe_application_fee_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          stripe_application_fee_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -486,6 +555,121 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      stripe_accounts: {
+        Row: {
+          account_type: string
+          charges_enabled: boolean
+          created_at: string
+          id: string
+          onboarding_completed: boolean
+          payouts_enabled: boolean
+          requirements: Json | null
+          stripe_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_type: string
+          charges_enabled?: boolean
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean
+          payouts_enabled?: boolean
+          requirements?: Json | null
+          stripe_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_type?: string
+          charges_enabled?: boolean
+          created_at?: string
+          id?: string
+          onboarding_completed?: boolean
+          payouts_enabled?: boolean
+          requirements?: Json | null
+          stripe_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount_commission: number
+          amount_seller: number
+          amount_total: number
+          buyer_id: string
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          payment_method_types: string[]
+          seller_id: string
+          status: string
+          stripe_account_id: string
+          stripe_payment_intent_id: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_commission: number
+          amount_seller: number
+          amount_total: number
+          buyer_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          payment_method_types?: string[]
+          seller_id: string
+          status?: string
+          stripe_account_id: string
+          stripe_payment_intent_id: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_commission?: number
+          amount_seller?: number
+          amount_total?: number
+          buyer_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          payment_method_types?: string[]
+          seller_id?: string
+          status?: string
+          stripe_account_id?: string
+          stripe_payment_intent_id?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "public_file_access"
+            referencedColumns: ["content_id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

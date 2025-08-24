@@ -52,3 +52,15 @@ verify_jwt = false
 
 [functions.chunked-upload]
 verify_jwt = true
+
+[functions.create-connect-account]
+verify_jwt = true
+
+[functions.create-marketplace-payment]
+verify_jwt = true
+
+[functions.stripe-webhooks]
+verify_jwt = false
+
+[functions.get-account-status]
+verify_jwt = true

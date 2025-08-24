@@ -45,7 +45,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { StripeConnectOnboarding } from "@/components/StripeConnectOnboarding";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -341,13 +341,14 @@ const Dashboard = () => {
           </Dialog>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-            <TabsTrigger value="content">Mon contenu</TabsTrigger>
-            <TabsTrigger value="analytics">Statistiques</TabsTrigger>
-            <TabsTrigger value="upload">Uploader</TabsTrigger>
-          </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+                <TabsTrigger value="content">Mon contenu</TabsTrigger>
+                <TabsTrigger value="analytics">Statistiques</TabsTrigger>
+                <TabsTrigger value="stripe">Paiements</TabsTrigger>
+                <TabsTrigger value="upload">Uploader</TabsTrigger>
+              </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
@@ -653,7 +654,10 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Upload Tab */}
+          {/* Stripe Tab */}
+          <TabsContent value="stripe" className="space-y-6">
+            <StripeConnectOnboarding />
+          </TabsContent>
           <TabsContent value="upload" className="space-y-6">
             <Card>
               <CardHeader>
