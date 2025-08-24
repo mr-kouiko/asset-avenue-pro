@@ -9,7 +9,7 @@ interface ProcessedFile {
   watermarkedUrl?: string;
   thumbnailUrl?: string;
   previewUrl?: string;
-  type: 'image' | 'video' | 'audio';
+  type: 'image' | 'video' | 'audio' | 'other';
   status: 'processing' | 'completed' | 'error';
   error?: string;
 }
@@ -132,7 +132,8 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           id: fileId,
           originalFile: file,
           type: file.type.startsWith('image/') ? 'image' : 
-                file.type.startsWith('video/') ? 'video' : 'audio',
+                file.type.startsWith('video/') ? 'video' : 
+                file.type.startsWith('audio/') ? 'audio' : 'other',
           status: 'processing'
         };
 
