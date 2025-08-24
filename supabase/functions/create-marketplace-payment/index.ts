@@ -47,13 +47,8 @@ serve(async (req) => {
       );
     }
 
-    // Get Stripe settings from database
-    const { data: settings } = await supabaseService
-      .from('platform_settings')
-      .select('stripe_secret_key')
-      .single();
-
-    const stripeSecretKey = settings?.stripe_secret_key || Deno.env.get("STRIPE_SECRET_KEY") || "";
+    // SÉCURISÉ: Récupère les clés Stripe depuis les secrets Edge Functions
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
     
     if (!stripeSecretKey) {
       return new Response(
@@ -78,13 +73,8 @@ serve(async (req) => {
 
     console.log("Processing payment for", cart_items.length, "items");
 
-    // Get platform settings
-    const { data: settings } = await supabaseService
-      .from('platform_settings')
-      .select('commission_rate')
-      .single();
-
-    const commissionRate = settings?.commission_rate || 0.15; // 15% default
+    // SÉCURISÉ: Utilise un taux de commission par défaut (peut être configuré via les secrets)
+    const commissionRate = parseFloat(Deno.env.get("COMMISSION_RATE") || "0.15"); // 15% default
 
     // Get submission details and validate sellers have Stripe accounts
     const submissionIds = cart_items.map(item => item.submission_id);
@@ -157,7 +147,7 @@ serve(async (req) => {
       const account = accountMap.get(submission.creator_id)!;
       const sellerId = submission.creator_id;
 
-      if (!paymentsByeller.has(sellerId)) {
+      if (!paymentsBySeller.has(sellerId)) {
         paymentsBySeller.set(sellerId, {
           account_id: account.stripe_account_id,
           items: [],

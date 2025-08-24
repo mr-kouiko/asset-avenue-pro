@@ -34,16 +34,22 @@ export const StripeSettingsPanel = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('*')
-        .single();
+      
+      // SÉCURISÉ: Utilise la fonction admin sécurisée pour récupérer les paramètres
+      const { data, error } = await supabase.rpc('admin_get_platform_settings');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching platform settings:', error);
+        toast.error('Accès refusé - Permissions administrateur requises');
+        setSettings(null);
+        return;
+      }
+      
       setSettings(data);
     } catch (error) {
       console.error('Error fetching platform settings:', error);
       toast.error('Erreur lors du chargement des paramètres');
+      setSettings(null);
     } finally {
       setLoading(false);
     }
@@ -55,19 +61,26 @@ export const StripeSettingsPanel = () => {
 
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from('platform_settings')
-        .update({
-          stripe_publishable_key: settings.stripe_publishable_key,
-          stripe_secret_key: settings.stripe_secret_key,
-          stripe_webhook_secret: settings.stripe_webhook_secret,
-          commission_rate: settings.commission_rate,
-          stripe_application_fee_rate: settings.stripe_application_fee_rate
-        })
-        .eq('id', settings.id);
+      
+      // SÉCURISÉ: Utilise la fonction admin sécurisée pour mettre à jour
+      const { error } = await supabase.rpc('admin_update_platform_settings', {
+        new_stripe_publishable_key: settings.stripe_publishable_key,
+        new_stripe_secret_key: settings.stripe_secret_key,
+        new_stripe_webhook_secret: settings.stripe_webhook_secret,
+        new_commission_rate: settings.commission_rate,
+        new_stripe_application_fee_rate: settings.stripe_application_fee_rate
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating settings:', error);
+        toast.error('Accès refusé - Permissions administrateur requises');
+        return;
+      }
+      
       toast.success('Paramètres Stripe mis à jour avec succès');
+      
+      // Recharger les paramètres pour vérifier la mise à jour
+      await fetchSettings();
     } catch (error) {
       console.error('Error updating settings:', error);
       toast.error('Erreur lors de la mise à jour');
