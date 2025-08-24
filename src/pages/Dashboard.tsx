@@ -45,6 +45,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { StripeConnectOnboarding } from "@/components/StripeConnectOnboarding";
 
 const Dashboard = () => {
