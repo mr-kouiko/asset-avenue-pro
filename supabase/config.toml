@@ -62,5 +62,8 @@ verify_jwt = true
 [functions.stripe-webhooks]
 verify_jwt = false
 
+[functions.update-account-status]
+verify_jwt = true
+
 [functions.get-account-status]
 verify_jwt = true

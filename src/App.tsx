@@ -28,6 +28,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import LicenseAgreement from "./pages/LicenseAgreement";
 import Infinity from "./pages/Infinity";
 import PackagesPricing from "./pages/PackagesPricing";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancelled from "./pages/PaymentCancelled";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import IndexEN from "./pages/en/IndexEN";
@@ -112,6 +114,8 @@ const App = () => (
                   <Route path="/portfolio" element={<Portfolio />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/payment-cancelled" element={<PaymentCancelled />} />
                   <Route path="/upload" element={<Upload />} />
                   <Route path="/support" element={<Support />} />
                   <Route path="/contact" element={<Contact />} />

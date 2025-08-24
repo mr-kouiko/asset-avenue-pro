@@ -1,0 +1,121 @@
+import { useEffect, useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { Navigation } from '@/components/Navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle, Download, ArrowRight, Home } from 'lucide-react';
+
+const PaymentSuccess = () => {
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('session_id');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading time for payment confirmation
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        
+        <div className="container py-16">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-6"></div>
+            <h1 className="text-2xl font-bold mb-4">Confirmation du paiement...</h1>
+            <p className="text-muted-foreground">
+              Nous vérifions votre paiement. Veuillez patienter.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <Navigation />
+      
+      <div className="container py-16">
+        <div className="max-w-2xl mx-auto">
+          <Card className="text-center">
+            <CardHeader className="pb-6">
+              <div className="flex justify-center mb-6">
+                <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-12 w-12 text-green-600" />
+                </div>
+              </div>
+              <CardTitle className="text-3xl text-green-600 mb-2">
+                Paiement réussi !
+              </CardTitle>
+              <p className="text-muted-foreground text-lg">
+                Votre achat a été traité avec succès
+              </p>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="font-semibold text-green-800 mb-2">
+                  Votre contenu est maintenant disponible
+                </h3>
+                <p className="text-green-700 text-sm">
+                  Vous pouvez télécharger votre contenu depuis votre tableau de bord acheteur.
+                  Un email de confirmation a été envoyé à votre adresse.
+                </p>
+                {sessionId && (
+                  <p className="text-xs text-green-600 mt-2">
+                    ID de transaction : {sessionId.slice(-8)}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <Button size="lg" className="w-full" asChild>
+                  <Link to="/buyer-dashboard">
+                    <Download className="h-4 w-4 mr-2" />
+                    Accéder à mes téléchargements
+                  </Link>
+                </Button>
+                
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" asChild>
+                    <Link to="/marketplace">
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Continuer mes achats
+                    </Link>
+                  </Button>
+                  
+                  <Button variant="outline" className="flex-1" asChild>
+                    <Link to="/">
+                      <Home className="h-4 w-4 mr-2" />
+                      Retour à l'accueil
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground border-t pt-4">
+                <p>
+                  Une question sur votre commande ? 
+                  <Link to="/support" className="text-primary hover:underline ml-1">
+                    Contactez notre support
+                  </Link>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentSuccess;

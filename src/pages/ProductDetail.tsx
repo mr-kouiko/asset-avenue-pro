@@ -26,14 +26,20 @@ import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
+import { useDirectPurchase } from "@/hooks/useDirectPurchase";
+import { useCart } from "@/hooks/useCart";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { product, loading, error } = useProductDetail(id || '');
+  const { product, loading: productLoading, error } = useProductDetail(id || '');
   const { content: marketplaceContent } = useMarketplace();
   const [isLiked, setIsLiked] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState("standard");
+  
+  // Hooks for cart and direct purchase
+  const { addToCart } = useCart();
+  const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
 
   // Create watermarked preview for images
   const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
@@ -48,7 +54,7 @@ const ProductDetail = () => {
     selectedLicense
   });
 
-  if (loading) {
+  if (productLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -160,6 +166,43 @@ const ProductDetail = () => {
       return (bCategory + bAuthor) - (aCategory + aAuthor);
     })
     .slice(0, 6);
+
+  const handleAddToCart = () => {
+    try {
+      const finalPrice = isVideo ? totalPrice : (
+        selectedLicense === 'standard' ? 15 :
+        selectedLicense === 'extended' ? 45 : 299
+      );
+      
+      addToCart({
+        id: product.id,
+        title: product.title,
+        author: product.author,
+        price: finalPrice,
+        type: product.type,
+        thumbnail: product.thumbnail,
+        licenseId: selectedLicense
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
+  };
+
+  const handleDirectPurchase = async () => {
+    if (!product) return;
+    
+    const finalPrice = isVideo ? basePrice : product.price || 0;
+    
+    await createDirectPayment({
+      submission_id: product.id,
+      title: product.title,
+      author: product.author,
+      price: finalPrice,
+      license_id: selectedLicense,
+      type: product.type,
+      thumbnail: product.thumbnail
+    }, selectedLicense);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -420,13 +463,32 @@ const ProductDetail = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              <Button size="lg" className="flex-1">
+              <Button 
+                size="lg" 
+                className="flex-1"
+                onClick={handleAddToCart}
+                disabled={directPurchaseLoading}
+              >
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Ajouter au panier
               </Button>
-              <Button size="lg" variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Acheter maintenant
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={handleDirectPurchase}
+                disabled={directPurchaseLoading}
+              >
+                {directPurchaseLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Redirection...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Acheter maintenant
+                  </>
+                )}
               </Button>
             </div>
 

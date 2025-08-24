@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
+import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { UniversalVideoPlayer } from "./UniversalVideoPlayer";
 import { UniversalAudioPlayer } from "./UniversalAudioPlayer";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
@@ -36,6 +37,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   isLiked = false,
 }) => {
   const { addToCart } = useCart();
+  const { createDirectPayment } = useDirectPurchase();
   
   // Create watermarked preview for images
   const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
@@ -63,6 +65,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         videoUrl,
         audioUrl
       });
+  };
+
+  const handleDirectBuy = async () => {
+    await createDirectPayment({
+      submission_id: id,
+      title,
+      author,
+      price,
+      type,
+      thumbnail
+    }, 'standard');
   };
 
   // Debug logging for video content
@@ -147,6 +160,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </Button>
               <Button size="sm" variant="secondary" onClick={handleAddToCart}>
                 <ShoppingCart className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="default" onClick={handleDirectBuy}>
+                <Download className="h-4 w-4" />
               </Button>
             </div>
           </div>
