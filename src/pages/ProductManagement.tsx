@@ -96,11 +96,30 @@ const ProductManagement = () => {
 
   const handleAddTag = (fileId: string) => {
     const productData = productsData[fileId];
-    if (productData?.currentTag && !productData.tags.includes(productData.currentTag)) {
-      updateProductData(fileId, {
-        tags: [...productData.tags, productData.currentTag],
-        currentTag: ''
-      });
+    if (productData?.currentTag) {
+      // Split by comma, semicolon, or newline and clean up tags
+      const newTags = productData.currentTag
+        .split(/[,;;\n]/)
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0 && !productData.tags.includes(tag));
+      
+      if (newTags.length > 0) {
+        updateProductData(fileId, {
+          tags: [...productData.tags, ...newTags],
+          currentTag: ''
+        });
+      }
+    }
+  };
+
+  const handleTagInputChange = (fileId: string, value: string) => {
+    // Check if the user typed a separator (comma or semicolon)
+    if (value.includes(',') || value.includes(';')) {
+      const currentValue = value.replace(/[,;]$/, ''); // Remove trailing separator
+      updateProductData(fileId, { currentTag: currentValue });
+      handleAddTag(fileId);
+    } else {
+      updateProductData(fileId, { currentTag: value });
     }
   };
 
@@ -432,8 +451,8 @@ const ProductManagement = () => {
                       <div className="flex space-x-2">
                         <Input 
                           value={selectedProductData.currentTag}
-                          onChange={(e) => updateProductData(selectedFileId!, { currentTag: e.target.value })}
-                          placeholder="Ajouter un tag"
+                          onChange={(e) => handleTagInputChange(selectedFileId!, e.target.value)}
+                          placeholder="Séparez les tags par virgule, point-virgule ou Entrée"
                           onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(selectedFileId!))}
                         />
                         <Button 
