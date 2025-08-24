@@ -875,6 +875,10 @@ export type Database = {
         Args: { details_param?: Json; event_type_param: string }
         Returns: undefined
       }
+      log_sensitive_access: {
+        Args: { access_type: string; details?: Json; target_resource: string }
+        Returns: boolean
+      }
       mark_download_token_used: {
         Args: { token_param: string }
         Returns: boolean

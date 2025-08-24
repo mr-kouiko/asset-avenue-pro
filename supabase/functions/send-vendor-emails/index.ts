@@ -29,7 +29,45 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Security: Require authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization required' }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Verify the user is authenticated with Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const { userId, email, displayName, storeName, emailType }: VendorEmailRequest = await req.json();
+
+    // Security: Verify user can only send emails for themselves (except admins)
+    if (user.id !== userId) {
+      // Check if user is admin
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!roleData || roleData.role !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Can only send emails for yourself' }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
 
     console.log(`Processing ${emailType} email for user:`, { userId, email, displayName, storeName });
 
