@@ -140,7 +140,7 @@ export const Header = () => {
                 <>
                   {userRole === 'admin' && (
                     <DropdownMenuItem asChild>
-                      <Link to={`/${language}/admin`} className="flex items-center">
+                      <Link to="/admin" className="flex items-center">
                         <Shield className="mr-2 h-4 w-4" />
                         Administration
                       </Link>

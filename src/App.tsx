@@ -33,6 +33,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
 import TestAccounts from "./pages/TestAccounts";
 import AdminDashboard from "./pages/AdminDashboard";
+import { CreateTestAccounts } from "./pages/CreateTestAccounts";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import IndexEN from "./pages/en/IndexEN";
@@ -140,10 +141,19 @@ const App = () => (
                   <Route path="/infinity" element={<Infinity />} />
                   <Route path="/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/about" element={<About />} />
-          <Route path="/test-accounts" element={<TestAccounts />} />
-          <Route path="/admin" element={
+                  <Route path="/test-accounts" element={<TestAccounts />} />
+                  
+                  {/* Admin Routes - Sécurisées */}
+                  <Route path="/admin" element={
                     <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Seuls les administrateurs peuvent accéder à cette page.">
                       <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Test Accounts Creation - Admin only */}
+                  <Route path="/create-test-accounts" element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <CreateTestAccounts />
                     </ProtectedRoute>
                   } />
                   
