@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
+import { PreviewModal } from "@/components/PreviewModal";
 
 interface UploadedFileData {
   id: string;
@@ -48,6 +49,8 @@ const ProductManagement = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [productsData, setProductsData] = useState<Record<string, ProductData>>({});
+  const [previewFile, setPreviewFile] = useState<UploadedFileData | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   useEffect(() => {
     // Load files from session storage
@@ -222,6 +225,23 @@ const ProductManagement = () => {
     p.title.trim() && p.description.trim() && p.status === 'draft'
   ).length;
 
+  const openPreview = (file: UploadedFileData) => {
+    setPreviewFile(file);
+    setIsPreviewOpen(true);
+  };
+
+  const closePreview = () => {
+    setIsPreviewOpen(false);
+    setPreviewFile(null);
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('video/')) return Video;
+    if (type.startsWith('audio/')) return Music;
+    if (type.startsWith('image/')) return Image;
+    return Upload;
+  };
+
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
@@ -273,35 +293,70 @@ const ProductManagement = () => {
                         isSelected ? 'bg-primary/10 border border-primary' : 'bg-muted/50 hover:bg-muted'
                       }`}
                     >
-                      <div className="flex items-center space-x-3">
-                        {file.previewUrl && file.type.startsWith('image/') ? (
-                          <img 
-                            src={file.previewUrl} 
-                            alt={file.name}
-                            className="w-10 h-10 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
-                            <Upload className="h-4 w-4 text-primary" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {productData?.title || file.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(file.size)}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end space-y-1">
-                          {productData?.status === 'published' && (
-                            <Badge className="text-xs">Publié</Badge>
-                          )}
-                          {productData?.status === 'draft' && productData.title && (
-                            <Badge variant="outline" className="text-xs">Brouillon</Badge>
-                          )}
-                        </div>
-                      </div>
+                       <div className="flex items-center space-x-3">
+                         {/* Miniature améliorée */}
+                         <div className="relative">
+                           {file.previewUrl && file.type.startsWith('image/') ? (
+                             <img 
+                               src={file.previewUrl} 
+                               alt={file.name}
+                               className="w-12 h-12 object-cover rounded-lg"
+                             />
+                           ) : (
+                             <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center">
+                               {(() => {
+                                 const IconComponent = getFileIcon(file.type);
+                                 return <IconComponent className="h-5 w-5 text-primary" />;
+                               })()}
+                             </div>
+                           )}
+                           {/* Indicateur de type de fichier */}
+                           <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-background border border-border rounded-full flex items-center justify-center">
+                             {file.type.startsWith('video/') && <Play className="h-2.5 w-2.5 text-primary" />}
+                             {file.type.startsWith('audio/') && <Music className="h-2.5 w-2.5 text-primary" />}
+                             {file.type.startsWith('image/') && <Image className="h-2.5 w-2.5 text-primary" />}
+                           </div>
+                         </div>
+                         
+                         <div className="flex-1 min-w-0">
+                           <p className="text-sm font-medium truncate">
+                             {productData?.title || file.name}
+                           </p>
+                           <div className="flex items-center space-x-2">
+                             <p className="text-xs text-muted-foreground">
+                               {formatFileSize(file.size)}
+                             </p>
+                             <span className="text-xs text-muted-foreground">•</span>
+                             <p className="text-xs text-muted-foreground">
+                               {file.type.split('/')[0]}
+                             </p>
+                           </div>
+                         </div>
+                         
+                         <div className="flex items-center space-x-2">
+                           {/* Bouton prévisualiser */}
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               openPreview(file);
+                             }}
+                             className="h-8 w-8 p-0 hover:bg-primary/10"
+                           >
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                           
+                           <div className="flex flex-col items-end space-y-1">
+                             {productData?.status === 'published' && (
+                               <Badge className="text-xs">Publié</Badge>
+                             )}
+                             {productData?.status === 'draft' && productData.title && (
+                               <Badge variant="outline" className="text-xs">Brouillon</Badge>
+                             )}
+                           </div>
+                         </div>
+                       </div>
                     </div>
                   );
                 })}
@@ -489,6 +544,13 @@ const ProductManagement = () => {
             </div>
           </Card>
         </div>
+
+        {/* Modale de prévisualisation */}
+        <PreviewModal 
+          file={previewFile}
+          isOpen={isPreviewOpen}
+          onClose={closePreview}
+        />
       </div>
     </ProtectedRoute>
   );
