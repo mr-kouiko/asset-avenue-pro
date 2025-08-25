@@ -29,6 +29,8 @@ export class StreamingUploadHandler {
   private static detectMimeType(file: File): string {
     const extension = file.name.split('.').pop()?.toLowerCase();
     
+    console.log(`🔍 Frontend MIME detection - File: ${file.name}, Extension: ${extension}, Browser type: ${file.type}`);
+    
     // Image MIME types
     const imageTypes: Record<string, string> = {
       'jpg': 'image/jpeg',
@@ -60,35 +62,40 @@ export class StreamingUploadHandler {
       'm4a': 'audio/mp4',
       'wav': 'audio/wav',
       'ogg': 'audio/ogg',
-      'oga': 'audio/ogg',
+      'ога': 'audio/ogg',
       'webm': 'audio/webm',
       'flac': 'audio/flac'
     };
 
+    // Priority 1: Use extension-based detection first for reliability
     if (extension) {
       const detectedType = imageTypes[extension] || videoTypes[extension] || audioTypes[extension];
       if (detectedType) {
-        console.log(`📋 MIME type detected: ${detectedType} for extension: ${extension}`);
+        console.log(`✅ MIME type detected from extension: ${detectedType} for .${extension}`);
         return detectedType;
       }
     }
 
-    // Fallback to file.type or generic types
-    if (file.type) {
-      console.log(`📋 Using file.type: ${file.type}`);
+    // Priority 2: Use browser file.type if it's reliable and matches extension
+    if (file.type && file.type !== 'application/octet-stream') {
+      // Validate that browser type makes sense with extension
+      const browserType = file.type.toLowerCase();
+      if (extension) {
+        const expectedType = imageTypes[extension] || videoTypes[extension] || audioTypes[extension];
+        if (expectedType && browserType === expectedType) {
+          console.log(`✅ Validated browser MIME type: ${file.type}`);
+          return file.type;
+        } else if (expectedType) {
+          console.log(`⚠️ Browser type ${file.type} doesn't match extension ${extension}, using extension-based: ${expectedType}`);
+          return expectedType;
+        }
+      }
+      // Use browser type if no extension conflict
+      console.log(`📋 Using browser MIME type: ${file.type}`);
       return file.type;
     }
 
-    // Final fallback based on common patterns
-    if (file.name.includes('video') || extension && ['mp4', 'webm', 'ogg', 'mov'].includes(extension)) {
-      return 'video/mp4';
-    }
-    
-    if (file.name.includes('audio') || extension && ['mp3', 'aac', 'm4a', 'wav'].includes(extension)) {
-      return 'audio/mpeg';
-    }
-
-    console.warn(`⚠️ Could not detect MIME type for file: ${file.name}, using application/octet-stream`);
+    console.warn(`⚠️ Could not detect MIME type for file: ${file.name} (ext: ${extension}), using application/octet-stream`);
     return 'application/octet-stream';
   }
 

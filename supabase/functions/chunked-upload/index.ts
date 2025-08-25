@@ -25,23 +25,40 @@ async function ensureBucketExists(bucket: string) {
 function detectMimeType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
   const mimeTypes: Record<string, string> = {
+    // Images
     jpg: "image/jpeg",
     jpeg: "image/jpeg",
     png: "image/png",
     gif: "image/gif",
     webp: "image/webp",
+    bmp: "image/bmp",
+    tiff: "image/tiff",
+    svg: "image/svg+xml",
+    // Videos
     mp4: "video/mp4",
     webm: "video/webm",
+    ogg: "video/ogg",
+    ogv: "video/ogg",
     mov: "video/quicktime",
     avi: "video/x-msvideo",
     mkv: "video/x-matroska",
+    m4v: "video/mp4",
+    // Audio
+    mp3: "audio/mpeg",
+    aac: "audio/aac",
+    m4a: "audio/mp4",
+    wav: "audio/wav",
+    flac: "audio/flac",
+    // Documents
     pdf: "application/pdf",
     txt: "text/plain",
     json: "application/json",
-    mp3: "audio/mpeg",
-    wav: "audio/wav",
   };
-  return mimeTypes[ext || ""] || "application/octet-stream";
+  
+  const detectedType = mimeTypes[ext || ""];
+  console.log(`🔍 MIME detection - File: ${fileName}, Extension: ${ext}, Type: ${detectedType || "application/octet-stream"}`);
+  
+  return detectedType || "application/octet-stream";
 }
 
 // Vérification auth simple
