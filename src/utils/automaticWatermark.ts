@@ -1,352 +1,24 @@
 import watermarkLogo from '@/assets/visustock-watermark-logo.png';
 
-interface WatermarkResult {
-  type: 'image' | 'video' | 'audio' | 'other';
-  thumbnail: Blob;
-  watermarked?: Blob;
-  preview?: Blob;
-  videoMeta?: {
-    duration?: number;
-    width?: number;
-    height?: number;
-    watermarkSize?: number;
-  };
+interface AutoWatermarkOptions {
+  opacity?: number;
+  quality?: number;
 }
 
-// Load watermark image
-const loadWatermarkImage = (): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load watermark'));
-    img.src = watermarkLogo;
-  });
-};
-
-// Create canvas from image
-const createCanvasFromImage = (img: HTMLImageElement): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0);
-  return canvas;
-};
-
-// Apply watermark to image
-const applyWatermarkToImage = async (
-  originalCanvas: HTMLCanvasElement,
-  watermark: HTMLImageElement,
-  opacity: number = 0.7
-): Promise<HTMLCanvasElement> => {
-  const canvas = document.createElement('canvas');
-  canvas.width = originalCanvas.width;
-  canvas.height = originalCanvas.height;
-  const ctx = canvas.getContext('2d')!;
-
-  // Draw original image
-  ctx.drawImage(originalCanvas, 0, 0);
-
-  // Calculate watermark size (30-40% of image width)
-  const watermarkSize = Math.min(
-    originalCanvas.width * 0.35,
-    originalCanvas.height * 0.35,
-    300 // Max size
-  );
-
-  // Center the watermark
-  const x = (originalCanvas.width - watermarkSize) / 2;
-  const y = (originalCanvas.height - watermarkSize) / 2;
-
-  // Apply watermark with opacity
-  ctx.globalAlpha = opacity;
-  ctx.drawImage(watermark, x, y, watermarkSize, watermarkSize);
-  ctx.globalAlpha = 1;
-
-  return canvas;
-};
-
-// Create thumbnail from canvas
-const createThumbnail = (
-  sourceCanvas: HTMLCanvasElement,
-  maxSize: number = 300
-): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
-
-  // Calculate thumbnail dimensions
-  let { width, height } = sourceCanvas;
-  if (width > height) {
-    if (width > maxSize) {
-      height = (height * maxSize) / width;
-      width = maxSize;
-    }
-  } else {
-    if (height > maxSize) {
-      width = (width * maxSize) / height;
-      height = maxSize;
-    }
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-
-  // Draw thumbnail
-  ctx.drawImage(sourceCanvas, 0, 0, width, height);
-  return canvas;
-};
-
-// Create preview (smaller watermarked version)
-const createPreview = (
-  sourceCanvas: HTMLCanvasElement,
-  maxSize: number = 800
-): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
-
-  // Calculate preview dimensions
-  let { width, height } = sourceCanvas;
-  if (width > maxSize || height > maxSize) {
-    if (width > height) {
-      height = (height * maxSize) / width;
-      width = maxSize;
-    } else {
-      width = (width * maxSize) / height;
-      height = maxSize;
-    }
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-
-  // Draw preview
-  ctx.drawImage(sourceCanvas, 0, 0, width, height);
-  return canvas;
-};
-
-// Convert canvas to blob
-const canvasToBlob = (canvas: HTMLCanvasElement, quality: number = 0.9): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Failed to convert canvas to blob'));
-    }, 'image/webp', quality);
-  });
-};
-
-// Process image file
-const processImageFile = async (file: File): Promise<WatermarkResult> => {
-  const watermark = await loadWatermarkImage();
-
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    img.onload = async () => {
-      try {
-        // Create canvas from original image
-        const originalCanvas = createCanvasFromImage(img);
-        
-        // Apply watermark
-        const watermarkedCanvas = await applyWatermarkToImage(originalCanvas, watermark);
-        
-        // Create thumbnail from watermarked image
-        const thumbnailCanvas = createThumbnail(watermarkedCanvas);
-        
-        // Create preview (smaller watermarked version)
-        const previewCanvas = createPreview(watermarkedCanvas);
-        
-        // Convert to blobs
-        const [watermarked, thumbnail, preview] = await Promise.all([
-          canvasToBlob(watermarkedCanvas),
-          canvasToBlob(thumbnailCanvas),
-          canvasToBlob(previewCanvas)
-        ]);
-
-        resolve({
-          type: 'image',
-          watermarked,
-          thumbnail,
-          preview
-        });
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = URL.createObjectURL(file);
-  });
-};
-
-// Process video file (create thumbnail and metadata)
-const processVideoFile = async (file: File): Promise<WatermarkResult> => {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.muted = true;
-    
-    video.onloadedmetadata = async () => {
-      try {
-        // Seek to middle of video for thumbnail
-        video.currentTime = Math.min(video.duration / 2, 10);
-        
-        video.onseeked = async () => {
-          try {
-            // Create canvas for thumbnail
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d')!;
-            ctx.drawImage(video, 0, 0);
-            
-            // Create thumbnail
-            const thumbnailCanvas = createThumbnail(canvas);
-            const thumbnail = await canvasToBlob(thumbnailCanvas);
-            
-            // Calculate watermark size for video (25-35% of width)
-            const watermarkSize = Math.min(
-              video.videoWidth * 0.3,
-              video.videoHeight * 0.3,
-              250
-            );
-            
-            resolve({
-              type: 'video',
-              thumbnail,
-              videoMeta: {
-                duration: video.duration,
-                width: video.videoWidth,
-                height: video.videoHeight,
-                watermarkSize
-              }
-            });
-          } catch (error) {
-            reject(error);
-          }
-        };
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    video.onerror = () => reject(new Error('Failed to load video'));
-    video.src = URL.createObjectURL(file);
-  });
-};
-
-// Process audio file (create waveform thumbnail)
-const processAudioFile = async (file: File): Promise<WatermarkResult> => {
-  try {
-    // Create a simple audio thumbnail (waveform visualization)
-    const canvas = document.createElement('canvas');
-    canvas.width = 300;
-    canvas.height = 200;
-    const ctx = canvas.getContext('2d')!;
-    
-    // Create gradient background
-    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-    gradient.addColorStop(0, '#3b82f6');
-    gradient.addColorStop(1, '#1e40af');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 300, 200);
-    
-    // Draw audio icon/waveform placeholder
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('🎵 AUDIO', 150, 100);
-    ctx.font = '12px Arial';
-    ctx.fillText(file.name.split('.').pop()?.toUpperCase() || 'AUDIO', 150, 120);
-    
-    // Draw simple waveform pattern
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i = 0; i < 300; i += 10) {
-      const height = Math.random() * 60 + 20;
-      ctx.moveTo(i, 150);
-      ctx.lineTo(i, 150 - height);
-    }
-    ctx.stroke();
-    
-    const thumbnail = await canvasToBlob(canvas);
-    
-    return {
-      type: 'audio',
-      thumbnail
-    };
-  } catch (error) {
-    throw new Error(`Failed to process audio file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-};
-
-// Create fallback thumbnail for unsupported files
-const createFallbackThumbnail = async (file: File): Promise<Blob> => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 300;
-  canvas.height = 200;
-  const ctx = canvas.getContext('2d')!;
-  
-  // Background
-  ctx.fillStyle = '#f3f4f6';
-  ctx.fillRect(0, 0, 300, 200);
-  
-  // File icon
-  ctx.fillStyle = '#6b7280';
-  ctx.font = 'bold 24px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('📄', 150, 80);
-  
-  // File name and type
-  ctx.font = 'bold 14px Arial';
-  ctx.fillText('FILE', 150, 110);
-  ctx.font = '12px Arial';
-  const extension = file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN';
-  ctx.fillText(extension, 150, 130);
-  
-  return canvasToBlob(canvas);
-};
-
-// Main processing function
-export const processFileWithWatermark = async (file: File): Promise<WatermarkResult> => {
-  const fileType = file.type.toLowerCase();
-  
-  try {
-    if (fileType.startsWith('image/')) {
-      return await processImageFile(file);
-    } else if (fileType.startsWith('video/')) {
-      return await processVideoFile(file);
-    } else if (fileType.startsWith('audio/')) {
-      return await processAudioFile(file);
-    } else {
-      // Fallback for other file types
-      const thumbnail = await createFallbackThumbnail(file);
-      return {
-        type: 'other',
-        thumbnail
-      };
-    }
-  } catch (error) {
-    console.error('Error processing file:', error);
-    
-    // Fallback thumbnail on error
-    const thumbnail = await createFallbackThumbnail(file);
-    return {
-      type: 'other',
-      thumbnail
-    };
-  }
-};
+interface WatermarkResult {
+  watermarkedBlob: Blob;
+  thumbnailBlob?: Blob;
+  previewBlob?: Blob;
+}
 
 /**
- * Legacy function for backwards compatibility
+ * Automatically applies watermark to images with optimal sizing (30-40% of image width)
+ * Creates both watermarked version and thumbnail
  */
 export const createWatermarkedImage = async (
   imageFile: File,
-  options: { opacity?: number; quality?: number } = {}
-): Promise<{ watermarkedBlob: Blob; thumbnailBlob?: Blob; previewBlob?: Blob }> => {
+  options: AutoWatermarkOptions = {}
+): Promise<WatermarkResult> => {
   const { opacity = 0.6, quality = 0.9 } = options;
 
   return new Promise((resolve, reject) => {
@@ -425,6 +97,239 @@ export const createWatermarkedImage = async (
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(imageFile);
   });
+};
+
+/**
+ * Generates video thumbnail and prepares for server-side watermarking
+ */
+export const prepareVideoForWatermarking = async (
+  videoFile: File
+): Promise<{ thumbnailBlob: Blob; videoMeta: any }> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Canvas context not available'));
+      return;
+    }
+
+    video.onloadeddata = () => {
+      // Set canvas size maintaining aspect ratio with max width 800px
+      const maxWidth = 800;
+      const scale = Math.min(maxWidth / video.videoWidth, maxWidth / video.videoHeight);
+      canvas.width = video.videoWidth * scale;
+      canvas.height = video.videoHeight * scale;
+      
+      // Draw first frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Generate thumbnail
+      canvas.toBlob((thumbnailBlob) => {
+        if (thumbnailBlob) {
+          resolve({
+            thumbnailBlob,
+            videoMeta: {
+              width: video.videoWidth,
+              height: video.videoHeight,
+              duration: video.duration,
+              // Calculate watermark size for server-side processing (30% of width)
+              watermarkSize: Math.round(video.videoWidth * 0.30)
+            }
+          });
+        } else {
+          reject(new Error('Failed to generate video thumbnail'));
+        }
+      }, 'image/webp', 0.8);
+    };
+    
+    video.onerror = () => reject(new Error('Failed to load video'));
+    video.src = URL.createObjectURL(videoFile);
+    video.currentTime = 0;
+  });
+};
+
+/**
+ * Generates a fallback thumbnail for unsupported file types
+ */
+export const generateFallbackThumbnail = async (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Canvas context not available'));
+      return;
+    }
+
+    canvas.width = 400;
+    canvas.height = 200;
+
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#1e40af');
+    gradient.addColorStop(1, '#3b82f6');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw file icon
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📄', canvas.width / 2, canvas.height / 2 - 20);
+
+    // Add file name
+    ctx.font = 'bold 16px Arial';
+    const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '...' : file.name;
+    ctx.fillText(fileName, canvas.width / 2, canvas.height / 2 + 40);
+
+    // Add watermark
+    ctx.globalAlpha = 0.4;
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('VISUSTOCK', canvas.width / 2, canvas.height - 20);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Failed to create fallback thumbnail'));
+      }
+    }, 'image/webp', 0.8);
+  });
+};
+
+/**
+ * Generates audio waveform thumbnail
+ */
+export const generateAudioThumbnail = async (
+  audioFile: File
+): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Canvas context not available'));
+      return;
+    }
+
+    // Set canvas dimensions
+    canvas.width = 400;
+    canvas.height = 200;
+
+    const drawWaveform = async () => {
+      try {
+        // Create audio context for waveform analysis
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Get audio data
+        const channelData = audioBuffer.getChannelData(0);
+        const samples = canvas.width;
+        const blockSize = Math.floor(channelData.length / samples);
+        
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#1e40af');
+        gradient.addColorStop(1, '#3b82f6');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw waveform
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.9;
+        
+        for (let i = 0; i < samples; i++) {
+          let blockStart = blockSize * i;
+          let sum = 0;
+          for (let j = 0; j < blockSize; j++) {
+            sum += Math.abs(channelData[blockStart + j]);
+          }
+          let blockAvg = sum / blockSize;
+          let yOffset = blockAvg * canvas.height * 0.8;
+          
+          ctx.fillRect(i, (canvas.height - yOffset) / 2, 1, yOffset);
+        }
+        
+        // Add watermark text
+        ctx.globalAlpha = 0.3;
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('VISUSTOCK AUDIO', canvas.width / 2, canvas.height / 2);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create audio thumbnail'));
+          }
+        }, 'image/webp', 0.8);
+        
+        audioContext.close();
+      } catch (error) {
+        // Fallback: create simple audio icon
+        createAudioIcon(ctx, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create audio icon'));
+          }
+        }, 'image/webp', 0.8);
+      }
+    };
+
+    drawWaveform();
+  });
+};
+
+/**
+ * Automatically processes any file type and applies appropriate watermarking/thumbnail generation
+ */
+export const processFileWithWatermark = async (
+  file: File
+): Promise<{
+  type: 'image' | 'video' | 'audio';
+  watermarked?: Blob;
+  thumbnail: Blob;
+  preview?: Blob;
+  videoMeta?: any;
+}> => {
+  const fileType = file.type;
+  
+  if (fileType.startsWith('image/')) {
+    const result = await createWatermarkedImage(file);
+    return {
+      type: 'image',
+      watermarked: result.watermarkedBlob,
+      thumbnail: result.thumbnailBlob!,
+      preview: result.previewBlob
+    };
+  } else if (fileType.startsWith('video/')) {
+    const result = await prepareVideoForWatermarking(file);
+    return {
+      type: 'video',
+      thumbnail: result.thumbnailBlob,
+      videoMeta: result.videoMeta
+    };
+  } else if (fileType.startsWith('audio/')) {
+    const thumbnailBlob = await generateAudioThumbnail(file);
+    return {
+      type: 'audio',
+      thumbnail: thumbnailBlob
+    };
+  } else {
+    // Fallback for unsupported file types (documents, 3D models, etc.)
+    const thumbnailBlob = await generateFallbackThumbnail(file);
+    return {
+      type: 'other' as any,
+      thumbnail: thumbnailBlob
+    };
+  }
 };
 
 /**
