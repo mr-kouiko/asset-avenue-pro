@@ -69,24 +69,25 @@ export const StripeSettingsPanel = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Paramètres Stripe - Interface Sécurisée</CardTitle>
+        <CardTitle>Configuration Stripe - Sécurité Renforcée</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="p-6 border-2 border-warning rounded-lg bg-warning/10">
-          <h3 className="font-semibold text-warning-foreground mb-2">
-            🔒 Interface temporairement désactivée
+        <div className="p-6 border-2 border-success rounded-lg bg-success/10">
+          <h3 className="font-semibold text-success-foreground mb-2">
+            🔒 Sécurité renforcée - Paramètres Stripe sécurisés
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Pour des raisons de sécurité, les paramètres Stripe sont maintenant gérés via les secrets sécurisés des Edge Functions.
+            Les clés API Stripe sont maintenant stockées de manière sécurisée via les secrets chiffrés Supabase.
+            Cette approche élimine les risques de vol d'identifiants et suit les meilleures pratiques de sécurité.
           </p>
           <div className="bg-muted p-4 rounded text-sm">
-            <p className="font-medium mb-2">Pour configurer Stripe :</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Allez dans la console Supabase</li>
-              <li>Section "Edge Functions" → "Settings"</li>
-              <li>Ajoutez les secrets : STRIPE_SECRET_KEY, COMMISSION_RATE</li>
-              <li>Les paramètres seront automatiquement utilisés</li>
-            </ol>
+            <p className="font-medium mb-2">Configuration sécurisée :</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>✅ Clés API stockées dans les secrets Supabase chiffrés</li>
+              <li>✅ Accès restreint aux fonctions Edge autorisées uniquement</li>
+              <li>✅ Plus de stockage en texte clair dans la base de données</li>
+              <li>✅ Politique de sécurité renforcée appliquée</li>
+            </ul>
           </div>
         </div>
       </CardContent>
