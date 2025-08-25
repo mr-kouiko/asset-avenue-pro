@@ -25,28 +25,49 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
   const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Detect MIME type automatically
-  const detectMimeType = (blob: Blob, originalFile?: File): string => {
-    if (blob.type) return blob.type;
-    if (originalFile?.type) return originalFile.type;
+  // Detect MIME type automatically with proper video support
+  const detectMimeType = (blob: Blob, originalFile?: File, forceType?: string): string => {
+    // If force type is provided (e.g., for thumbnails), use it
+    if (forceType) return forceType;
+    
+    // For original files, always use the file's MIME type first
+    if (originalFile?.type && blob === originalFile) {
+      return originalFile.type;
+    }
+    
+    // For generated blobs (thumbnails, previews), check blob type
+    if (blob.type && blob.type !== 'application/octet-stream') {
+      return blob.type;
+    }
     
     // Fallback detection based on file extension
     if (originalFile?.name) {
       const ext = originalFile.name.toLowerCase().split('.').pop();
       const mimeMap: { [key: string]: string } = {
+        // Images
         'jpg': 'image/jpeg',
         'jpeg': 'image/jpeg',
         'png': 'image/png',
         'webp': 'image/webp',
         'gif': 'image/gif',
+        'bmp': 'image/bmp',
+        'tiff': 'image/tiff',
+        // Videos  
         'mp4': 'video/mp4',
         'mov': 'video/quicktime',
         'avi': 'video/x-msvideo',
         'webm': 'video/webm',
+        'mkv': 'video/x-matroska',
+        'wmv': 'video/x-ms-wmv',
+        'flv': 'video/x-flv',
+        '3gp': 'video/3gpp',
+        // Audio
         'mp3': 'audio/mpeg',
         'wav': 'audio/wav',
         'ogg': 'audio/ogg',
-        'm4a': 'audio/mp4'
+        'm4a': 'audio/mp4',
+        'aac': 'audio/aac',
+        'flac': 'audio/flac'
       };
       return mimeMap[ext || ''] || 'application/octet-stream';
     }
@@ -58,10 +79,13 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
     blob: Blob,
     path: string,
     bucket: string = 'uploads',
-    originalFile?: File
+    originalFile?: File,
+    forceContentType?: string
   ): Promise<string> => {
-    // Auto-detect MIME type
-    const contentType = detectMimeType(blob, originalFile);
+    // Auto-detect MIME type with proper handling
+    const contentType = detectMimeType(blob, originalFile, forceContentType);
+    
+    console.log(`Uploading to ${bucket}/${path} with MIME type: ${contentType}`);
     
     const { data, error } = await supabase.storage
       .from(bucket)
@@ -72,6 +96,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
       });
 
     if (error) {
+      console.error(`Upload failed for ${path}:`, error);
       throw new Error(`Upload failed: ${error.message}`);
     }
 
@@ -88,31 +113,47 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
     userId: string,
     fileId: string
   ): Promise<string> => {
-    // Upload original video first
-    const videoPath = `${userId}/videos/${fileId}_original.${file.name.split('.').pop()}`;
-    const originalUrl = await uploadToSupabase(file, videoPath);
-
-    // Call edge function for server-side video watermarking
-    const outputPath = `${userId}/videos/${fileId}_watermarked.${file.name.split('.').pop()}`;
+    console.log(`Processing video: ${file.name}, MIME type: ${file.type}`);
     
-    const { data, error } = await supabase.functions.invoke('watermark-video', {
-      body: {
-        videoPath,
-        watermarkSize: videoMeta.watermarkSize,
-        outputPath
-      }
-    });
-
-    if (error) {
-      console.warn('Video watermarking service not yet fully implemented:', error);
-      // For now, return the original video URL as fallback
-      return originalUrl;
+    // Ensure we support the video format
+    const supportedVideoFormats = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const videoMimeType = file.type || detectMimeType(file, file);
+    
+    if (!supportedVideoFormats.includes(videoMimeType)) {
+      console.warn(`Unsupported video format: ${videoMimeType}, uploading as original`);
     }
 
-    console.log('Video watermark processing result:', data);
+    // Upload original video with correct MIME type
+    const videoExtension = file.name.split('.').pop()?.toLowerCase();
+    const videoPath = `${userId}/videos/${fileId}_original.${videoExtension}`;
     
-    // For now, return original URL until full FFmpeg implementation
-    return originalUrl;
+    // Force the correct video MIME type
+    const originalUrl = await uploadToSupabase(file, videoPath, 'uploads', file, videoMimeType);
+
+    // Call edge function for server-side video watermarking
+    const outputPath = `${userId}/videos/${fileId}_watermarked.${videoExtension}`;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('watermark-video', {
+        body: {
+          videoPath: videoPath,
+          watermarkSize: videoMeta.watermarkSize,
+          outputPath,
+          mimeType: videoMimeType
+        }
+      });
+
+      if (error) {
+        console.warn('Video watermarking service not yet fully implemented:', error);
+        return originalUrl;
+      }
+
+      console.log('Video watermark processing result:', data);
+      return originalUrl; // Return original until full implementation
+    } catch (error) {
+      console.error('Error calling video watermark service:', error);
+      return originalUrl;
+    }
   };
 
   const processFiles = useCallback(async (files: File[]): Promise<ProcessedFile[]> => {
@@ -147,31 +188,35 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           let thumbnailUrl: string;
           let previewUrl: string | undefined;
 
-          // Upload thumbnail (always generated)
+          // Upload thumbnail (always generated as webp)
           const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.webp`;
-          thumbnailUrl = await uploadToSupabase(processed.thumbnail, thumbnailPath, 'thumbnails');
+          thumbnailUrl = await uploadToSupabase(processed.thumbnail, thumbnailPath, 'thumbnails', file, 'image/webp');
 
           if (processed.type === 'image' && processed.watermarked) {
-            // Upload watermarked image
+            // Upload watermarked image as webp
             const watermarkedPath = `${user.id}/watermarked/${fileId}_watermarked.webp`;
-            watermarkedUrl = await uploadToSupabase(processed.watermarked, watermarkedPath, 'uploads');
+            watermarkedUrl = await uploadToSupabase(processed.watermarked, watermarkedPath, 'uploads', file, 'image/webp');
 
             // Upload preview if available
             if (processed.preview) {
               const previewPath = `${user.id}/previews/${fileId}_preview.webp`;
-              previewUrl = await uploadToSupabase(processed.preview, previewPath, 'previews');
+              previewUrl = await uploadToSupabase(processed.preview, previewPath, 'previews', file, 'image/webp');
             }
           } else if (processed.type === 'video') {
-            // Process video watermarking (server-side)
+            // Process video watermarking (server-side) with proper MIME handling
             watermarkedUrl = await processVideoWatermark(file, processed.videoMeta, user.id, fileId);
           } else if (processed.type === 'audio') {
-            // For audio, upload original file as the main content with proper MIME type
-            const audioPath = `${user.id}/audio/${fileId}_original.${file.name.split('.').pop()}`;
-            watermarkedUrl = await uploadToSupabase(file, audioPath, 'Audio VisuStock', file);
+            // For audio, upload original file with proper MIME type detection
+            const audioExtension = file.name.split('.').pop()?.toLowerCase();
+            const audioPath = `${user.id}/audio/${fileId}_original.${audioExtension}`;
+            const audioMimeType = file.type || detectMimeType(file, file);
+            watermarkedUrl = await uploadToSupabase(file, audioPath, 'Audio VisuStock', file, audioMimeType);
           } else {
-            // Fallback for unsupported file types - upload original with thumbnail
-            const fallbackPath = `${user.id}/fallback/${fileId}_original.${file.name.split('.').pop()}`;
-            watermarkedUrl = await uploadToSupabase(file, fallbackPath, 'uploads', file);
+            // Fallback for unsupported file types - upload original with correct MIME
+            const fallbackExtension = file.name.split('.').pop()?.toLowerCase();
+            const fallbackPath = `${user.id}/fallback/${fileId}_original.${fallbackExtension}`;
+            const fallbackMimeType = file.type || detectMimeType(file, file);
+            watermarkedUrl = await uploadToSupabase(file, fallbackPath, 'uploads', file, fallbackMimeType);
           }
 
           // Update processed file with results

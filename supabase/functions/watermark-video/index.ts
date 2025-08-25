@@ -18,7 +18,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { videoPath, watermarkSize, outputPath } = await req.json();
+    const { videoPath, watermarkSize, outputPath, mimeType } = await req.json();
 
     if (!videoPath || !watermarkSize || !outputPath) {
       return new Response(
@@ -27,7 +27,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing video watermark: ${videoPath}`);
+    console.log(`Processing video watermark: ${videoPath}, MIME: ${mimeType || 'unknown'}`);
+
+    // Validate video MIME type
+    const supportedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    if (mimeType && !supportedVideoTypes.includes(mimeType)) {
+      console.warn(`Unsupported video MIME type: ${mimeType}`);
+    }
 
     // Get the video file from Supabase Storage
     const { data: videoData, error: downloadError } = await supabase.storage
@@ -37,7 +43,7 @@ serve(async (req) => {
     if (downloadError) {
       console.error('Failed to download video:', downloadError);
       return new Response(
-        JSON.stringify({ error: 'Failed to download video' }),
+        JSON.stringify({ error: 'Failed to download video', details: downloadError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
@@ -50,7 +56,7 @@ serve(async (req) => {
     if (logoError) {
       console.error('Failed to download watermark logo:', logoError);
       return new Response(
-        JSON.stringify({ error: 'Failed to download watermark logo' }),
+        JSON.stringify({ error: 'Failed to download watermark logo', details: logoError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
@@ -60,20 +66,27 @@ serve(async (req) => {
     // This requires server-side video processing capabilities
     
     console.log('Video watermarking process initiated');
+    console.log(`Video size: ${videoData.size} bytes`);
+    console.log(`Logo size: ${logoData.size} bytes`);
+    console.log(`Watermark size: ${watermarkSize}px`);
     
     // Placeholder: Return success with information about the process
     // In real implementation, you would:
     // 1. Use FFmpeg to overlay the logo on the video
-    // 2. Position the logo at center with the specified size
+    // 2. Position the logo at center with the specified size (25-35% of video width)
     // 3. Apply appropriate opacity (0.6)
-    // 4. Upload the watermarked video back to storage
+    // 4. Upload the watermarked video back to storage with correct MIME type
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Video watermarking initiated. Server-side processing required for full implementation.',
+        message: 'Video watermarking initiated. Server-side FFmpeg processing required for full implementation.',
+        videoPath,
         outputPath,
         watermarkSize,
+        mimeType: mimeType || 'unknown',
+        videoSizeBytes: videoData.size,
+        logoSizeBytes: logoData.size,
         note: 'This is a placeholder. Implement FFmpeg processing for production use.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
