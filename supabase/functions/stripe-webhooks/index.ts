@@ -20,14 +20,9 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get Stripe settings from database
-    const { data: settings } = await supabase
-      .from('platform_settings')
-      .select('stripe_secret_key, stripe_webhook_secret')
-      .single();
-
-    const stripeSecretKey = settings?.stripe_secret_key || Deno.env.get("STRIPE_SECRET_KEY") || "";
-    const webhookSecret = settings?.stripe_webhook_secret || Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
+    // Use secure environment variables from Supabase secrets
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
     
     if (!stripeSecretKey) {
       return new Response(
