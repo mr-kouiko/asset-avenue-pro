@@ -213,25 +213,85 @@ export const FileUpload = ({
     }, `upload chunk ${chunkIndex + 1}/${totalChunks}`)
   }
 
+  // Enhanced MIME type detection function
+  const detectMimeType = (file: File): string => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    // Image MIME types
+    const imageTypes: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'tiff': 'image/tiff',
+      'svg': 'image/svg+xml'
+    };
+
+    // Video MIME types
+    const videoTypes: Record<string, string> = {
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'ogg': 'video/ogg',
+      'ogv': 'video/ogg',
+      'mov': 'video/quicktime',
+      'avi': 'video/x-msvideo',
+      'mkv': 'video/x-matroska',
+      'm4v': 'video/mp4'
+    };
+
+    // Audio MIME types
+    const audioTypes: Record<string, string> = {
+      'mp3': 'audio/mpeg',
+      'aac': 'audio/aac',
+      'm4a': 'audio/mp4',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'webm': 'audio/webm',
+      'flac': 'audio/flac'
+    };
+
+    // Priority 1: Use extension-based detection first for reliability
+    if (extension) {
+      const detectedType = imageTypes[extension] || videoTypes[extension] || audioTypes[extension];
+      if (detectedType) {
+        return detectedType;
+      }
+    }
+
+    // Priority 2: Use browser file.type if reliable
+    if (file.type && file.type !== 'application/octet-stream') {
+      return file.type;
+    }
+
+    return 'application/octet-stream';
+  };
+
   const validateFile = (file: File): string | null => {
     // Check file size
     if (file.size > maxFileSize * 1024 * 1024) {
       return `Le fichier dépasse ${maxFileSize}MB`;
     }
 
-    // Check file type
+    // Get reliable MIME type using extension-based detection
+    const detectedMimeType = detectMimeType(file);
+    
+    // Check file type using detected MIME type
     const isValidType = acceptedTypes.some(type => {
       if (type.includes('*')) {
         const baseType = type.split('/')[0];
-        return file.type.startsWith(baseType);
+        return detectedMimeType.startsWith(baseType);
       }
-      return file.type === type;
+      return detectedMimeType === type;
     });
 
     if (!isValidType) {
+      console.log(`🚫 File validation failed - File: ${file.name}, Detected type: ${detectedMimeType}, Browser type: ${file.type}, Accepted types: ${acceptedTypes.join(', ')}`);
       return 'Type de fichier non supporté';
     }
 
+    console.log(`✅ File validation passed - File: ${file.name}, Detected type: ${detectedMimeType}`);
     return null;
   };
 
