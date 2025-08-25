@@ -126,23 +126,24 @@ export class StreamingUploadHandler {
     try {
       console.log(`📤 Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${fileName}`);
       
-      const { data, error } = await supabase.functions.invoke('chunked-upload', {
-        body: {
-          chunk: Array.from(new Uint8Array(await chunk.arrayBuffer())),
-          chunkIndex,
-          totalChunks,
-          fileName,
-          uploadId,
-          mimeType,
-          enableStreaming: true, // Enable streaming support
-          acceptRanges: true // Enable range requests
-        }
+      // Convert chunk to array buffer for the edge function
+      const chunkBuffer = await chunk.arrayBuffer();
+      
+      const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=upload-chunk&uploadId=${uploadId}&chunkIndex=${chunkIndex}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`,
+          'Content-Type': 'application/octet-stream'
+        },
+        body: chunkBuffer
       });
 
-      if (error) {
-        throw new Error(`Chunk upload failed: ${error.message}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      const data = await response.json();
+      
       if (!data.success) {
         throw new Error(`Chunk upload failed: ${data.error}`);
       }
@@ -176,6 +177,26 @@ export class StreamingUploadHandler {
       
       // Generate unique upload ID
       const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Initialize upload first
+      console.log(`🔄 Initializing upload for: ${file.name}`);
+      const initResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=init-upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ uploadId })
+      });
+      
+      if (!initResponse.ok) {
+        throw new Error(`Initialization failed: HTTP ${initResponse.status}`);
+      }
+      
+      const initData = await initResponse.json();
+      if (!initData.success) {
+        throw new Error(`Initialization failed: ${initData.error}`);
+      }
       
       // Create chunks
       const chunks = this.createChunks(file);
@@ -217,30 +238,39 @@ export class StreamingUploadHandler {
         throw new Error(`Upload incomplete: ${uploadedChunks}/${totalChunks} chunks uploaded`);
       }
       
-      // Finalize upload with streaming metadata
-      console.log(`🔄 Finalizing streaming upload for: ${file.name}`);
-      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke('chunked-upload', {
-        body: {
-          action: 'finalize',
+      // Finalize upload by merging chunks
+      console.log(`🔄 Finalizing upload for: ${file.name}`);
+      const finalizeResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=merge-chunks`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           uploadId,
-          fileName: file.name,
-          totalChunks,
-          mimeType,
-          enableStreaming: true,
-          acceptRanges: true,
-          fileSize: file.size
-        }
+          fileName: file.name
+        })
       });
       
-      if (finalizeError || !finalizeData.success) {
-        throw new Error(`Finalization failed: ${finalizeError?.message || finalizeData.error}`);
+      if (!finalizeResponse.ok) {
+        throw new Error(`Finalization failed: HTTP ${finalizeResponse.status}`);
       }
       
-      console.log(`✅ Streaming upload completed successfully: ${finalizeData.fileUrl}`);
+      const finalizeData = await finalizeResponse.json();
+      if (!finalizeData.success) {
+        throw new Error(`Finalization failed: ${finalizeData.error}`);
+      }
+      
+      console.log(`✅ Upload completed successfully: ${finalizeData.path}`);
+      
+      // Get the public URL from the final path
+      const { data: urlData } = supabase.storage
+        .from('original-files')
+        .getPublicUrl(finalizeData.path);
       
       return {
         success: true,
-        fileUrl: finalizeData.fileUrl,
+        fileUrl: urlData.publicUrl,
         mimeType: mimeType
       };
     } catch (error) {
