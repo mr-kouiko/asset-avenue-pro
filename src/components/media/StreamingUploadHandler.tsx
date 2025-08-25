@@ -29,6 +29,18 @@ export class StreamingUploadHandler {
   private static detectMimeType(file: File): string {
     const extension = file.name.split('.').pop()?.toLowerCase();
     
+    // Image MIME types
+    const imageTypes: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'tiff': 'image/tiff',
+      'svg': 'image/svg+xml'
+    };
+
     // Video MIME types
     const videoTypes: Record<string, string> = {
       'mp4': 'video/mp4',
@@ -54,7 +66,7 @@ export class StreamingUploadHandler {
     };
 
     if (extension) {
-      const detectedType = videoTypes[extension] || audioTypes[extension];
+      const detectedType = imageTypes[extension] || videoTypes[extension] || audioTypes[extension];
       if (detectedType) {
         console.log(`📋 MIME type detected: ${detectedType} for extension: ${extension}`);
         return detectedType;
@@ -246,9 +258,19 @@ export class StreamingUploadHandler {
   public static isSupportedForStreaming(file: File): boolean {
     const mimeType = this.detectMimeType(file);
     const supportedTypes = [
+      // Images
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'image/bmp',
+      'image/tiff',
+      'image/svg+xml',
+      // Videos
       'video/mp4',
       'video/webm',
       'video/ogg',
+      // Audio
       'audio/mpeg',
       'audio/mp4',
       'audio/aac',
