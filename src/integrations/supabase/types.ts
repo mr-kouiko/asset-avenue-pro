@@ -822,6 +822,31 @@ export type Database = {
           updated_at: string
         }[]
       }
+      admin_get_profile_email_emergency: {
+        Args: {
+          business_justification: string
+          emergency_reason: string
+          profile_user_id: string
+        }
+        Returns: string
+      }
+      admin_get_profile_safe: {
+        Args: { profile_user_id: string }
+        Returns: {
+          avatar_url: string
+          country: string
+          created_at: string
+          display_name: string
+          email_masked: string
+          id: string
+          store_name: string
+          subscribed: boolean
+          subscription_end: string
+          subscription_tier: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       admin_update_platform_settings: {
         Args: {
           new_commission_rate?: number
