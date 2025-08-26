@@ -843,6 +843,24 @@ export type Database = {
           expires_at: string
         }[]
       }
+      get_admin_profiles_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          country: string
+          created_at: string
+          display_name: string
+          email_masked: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          store_name: string
+          subscribed: boolean
+          subscription_end: string
+          subscription_tier: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_creator_public_info: {
         Args: { creator_ids: string[] }
         Returns: {
