@@ -60,23 +60,72 @@ export const SimpleFileUpload = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Enhanced MIME type detection with WebP priority
+  const detectMimeType = (file: File): string => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    // ✅ Forcer le bon type MIME pour WebP
+    if (extension === 'webp') {
+      return 'image/webp';
+    }
+    
+    // Standard MIME types mapping
+    const mimeMap: { [key: string]: string } = {
+      // Images
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'tiff': 'image/tiff',
+      'svg': 'image/svg+xml',
+      // Videos
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'mov': 'video/quicktime',
+      'avi': 'video/x-msvideo',
+      // Audio
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'm4a': 'audio/mp4',
+      'aac': 'audio/aac'
+    };
+    
+    // Priority 1: Extension-based detection
+    if (extension && mimeMap[extension]) {
+      return mimeMap[extension];
+    }
+    
+    // Priority 2: Browser file.type if reliable
+    if (file.type && file.type !== 'application/octet-stream') {
+      return file.type;
+    }
+    
+    return 'application/octet-stream';
+  };
+
   const validateFile = (file: File): string | null => {
     // Check file size
     if (file.size > maxFileSize * 1024 * 1024) {
       return `File exceeds ${maxFileSize}MB limit`;
     }
 
-    // Check file type
+    // Use enhanced MIME type detection
+    const detectedMimeType = detectMimeType(file);
+    
+    // Check file type with enhanced detection
     const isValidType = acceptedTypes.some(type => {
       if (type.includes('*')) {
         const baseType = type.split('/')[0];
-        return file.type.startsWith(baseType);
+        return detectedMimeType.startsWith(baseType);
       }
-      return file.type === type;
+      return detectedMimeType === type;
     });
 
     if (!isValidType) {
-      return 'File type not supported';
+      return `File type not supported (detected: ${detectedMimeType})`;
     }
 
     return null;
