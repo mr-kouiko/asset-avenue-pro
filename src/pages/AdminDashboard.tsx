@@ -25,45 +25,22 @@ import { toast } from "sonner";
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Fetch admin stats
+  // Fetch admin stats using secure RPC
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('content_submissions')
-        .select('id, status, price');
-        
-      if (submissionsError) throw submissionsError;
-
-      const { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('id');
-        
-      if (usersError) throw usersError;
-
-      const { data: transactions, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('amount_total, status');
-        
-      if (transactionsError) throw transactionsError;
-
-      const totalUsers = users.length;
-      const totalSubmissions = submissions.length;
-      const pendingSubmissions = submissions.filter(s => s.status === 'pending').length;
-      const approvedSubmissions = submissions.filter(s => s.status === 'approved').length;
-      const rejectedSubmissions = submissions.filter(s => s.status === 'rejected').length;
+      const { data, error } = await supabase.rpc('admin_get_dashboard_stats');
       
-      const totalRevenue = transactions
-        .filter(t => t.status === 'completed')
-        .reduce((sum, t) => sum + (t.amount_total / 100), 0);
-
+      if (error) throw error;
+      
+      // Convert to expected format
       return {
-        totalUsers,
-        totalSubmissions,
-        pendingSubmissions,
-        approvedSubmissions,
-        rejectedSubmissions,
-        totalRevenue
+        totalUsers: Number(data[0]?.total_users || 0),
+        totalSubmissions: Number(data[0]?.total_submissions || 0),
+        pendingSubmissions: Number(data[0]?.pending_submissions || 0),
+        approvedSubmissions: Number(data[0]?.approved_submissions || 0),
+        rejectedSubmissions: Number(data[0]?.rejected_submissions || 0),
+        totalRevenue: Number(data[0]?.total_revenue || 0)
       };
     }
   });

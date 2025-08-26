@@ -102,12 +102,19 @@ function validateMimeType(fileName: string): boolean {
   return isAllowed;
 }
 
-// Vérification auth simple
+// Strict authentication check
 function checkAuth(req: Request): boolean {
   const authHeader = req.headers.get("authorization");
-  // Exemple : Authorization: Bearer SECRET123
   const expected = Deno.env.get("UPLOAD_API_KEY");
-  return expected ? authHeader === `Bearer ${expected}` : true;
+  
+  // SECURITY: Fail closed if no API key is configured
+  if (!expected) {
+    console.error("UPLOAD_API_KEY not configured - blocking all requests");
+    return false;
+  }
+  
+  // SECURITY: Require exact match
+  return authHeader === `Bearer ${expected}`;
 }
 
 // Merge en streaming
@@ -171,21 +178,24 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
 
 // Serveur
 serve(async (req) => {
-  // CORS
+  // SECURITY: Restrict CORS to known origins
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "https://kdgfpophpoqugtuvfxqx.supabase.co", // Replace with your actual domain
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, content-type",
+  };
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "authorization, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   if (!checkAuth(req)) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    return new Response(JSON.stringify({ error: "Unauthorized - Invalid or missing API key" }), {
       status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...corsHeaders 
+      },
     });
   }
 
@@ -201,7 +211,7 @@ serve(async (req) => {
       const { uploadId } = await req.json();
       return new Response(
         JSON.stringify({ success: true, uploadId }),
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -228,7 +238,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, chunkIndex }),
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -259,16 +269,19 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, path: finalPath }),
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "Invalid action" }), { 
+      status: 400,
+      headers: { "Content-Type": "application/json", ...corsHeaders }
+    });
   } catch (err) {
     console.error("Upload error:", err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 });
