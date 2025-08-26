@@ -21,9 +21,15 @@ async function ensureBucketExists(bucket: string) {
   }
 }
 
-// Détection MIME
+// Détection MIME améliorée avec priorité extension
 function detectMimeType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
+  
+  // ✅ Forcer le bon type MIME pour WebP
+  if (ext === 'webp') {
+    return 'image/webp';
+  }
+  
   const mimeTypes: Record<string, string> = {
     // Images
     jpg: "image/jpeg",

@@ -24,10 +24,16 @@ export class StreamingUploadHandler {
   private static readonly MAX_RETRIES = 3;
 
   /**
-   * Detect MIME type from file extension and content
+   * Detect MIME type from file extension with WebP priority
    */
   private static detectMimeType(file: File): string {
     const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    // ✅ Forcer le bon type MIME pour WebP
+    if (extension === 'webp') {
+      console.log(`🎯 Forced MIME type for WebP: image/webp`);
+      return 'image/webp';
+    }
     
     console.log(`🔍 Frontend MIME detection - File: ${file.name}, Extension: ${extension}, Browser type: ${file.type}`);
     

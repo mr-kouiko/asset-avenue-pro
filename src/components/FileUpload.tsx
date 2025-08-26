@@ -213,9 +213,14 @@ export const FileUpload = ({
     }, `upload chunk ${chunkIndex + 1}/${totalChunks}`)
   }
 
-  // Enhanced MIME type detection function
+  // Enhanced MIME type detection with WebP priority
   const detectMimeType = (file: File): string => {
     const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    // ✅ Forcer le bon type MIME pour WebP
+    if (extension === 'webp') {
+      return 'image/webp';
+    }
     
     // Image MIME types
     const imageTypes: Record<string, string> = {
