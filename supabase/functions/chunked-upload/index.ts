@@ -61,6 +61,41 @@ function detectMimeType(fileName: string): string {
   return detectedType || "application/octet-stream";
 }
 
+// Validation des types MIME autorisés
+function validateMimeType(fileName: string): boolean {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',  // ✅ Ajouté comme demandé
+    'image/gif',
+    'image/bmp',
+    'image/tiff',
+    'image/svg+xml',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/x-matroska',
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/aac',
+    'audio/wav',
+    'audio/webm',
+    'audio/flac',
+    'application/pdf',
+    'text/plain',
+    'application/json'
+  ];
+  
+  const detectedMimeType = detectMimeType(fileName);
+  const isAllowed = allowedMimeTypes.includes(detectedMimeType);
+  
+  console.log(`🔒 MIME validation - File: ${fileName}, Type: ${detectedMimeType}, Allowed: ${isAllowed}`);
+  
+  return isAllowed;
+}
+
 // Vérification auth simple
 function checkAuth(req: Request): boolean {
   const authHeader = req.headers.get("authorization");
@@ -196,6 +231,22 @@ serve(async (req) => {
       const { uploadId, fileName } = await req.json();
       if (!uploadId || !fileName) {
         return new Response(JSON.stringify({ error: "Missing uploadId or fileName" }), { status: 400 });
+      }
+
+      // Validation du type MIME avant merge
+      if (!validateMimeType(fileName)) {
+        const detectedType = detectMimeType(fileName);
+        return new Response(
+          JSON.stringify({ 
+            error: `Unsupported MIME type: ${detectedType}`,
+            fileName: fileName,
+            mimeType: detectedType
+          }), 
+          { 
+            status: 400,
+            headers: { "Content-Type": "application/json" }
+          }
+        );
       }
 
       const finalPath = await mergeChunks(uploadId, fileName);
