@@ -99,13 +99,6 @@ export type Database = {
             referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "content_files_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "public_file_access"
-            referencedColumns: ["content_id"]
-          },
         ]
       }
       content_submissions: {
@@ -297,13 +290,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "downloads_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "public_file_access"
-            referencedColumns: ["content_id"]
           },
         ]
       }
@@ -662,13 +648,6 @@ export type Database = {
             referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "transactions_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "public_file_access"
-            referencedColumns: ["content_id"]
-          },
         ]
       }
       user_roles: {
@@ -743,20 +722,6 @@ export type Database = {
           store_name: string | null
           user_id: string | null
         }
-        Insert: {
-          avatar_url?: string | null
-          creator_hash?: never
-          display_name?: string | null
-          store_name?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          creator_hash?: never
-          display_name?: string | null
-          store_name?: string | null
-          user_id?: string | null
-        }
         Relationships: []
       }
       public_file_access: {
@@ -772,7 +737,22 @@ export type Database = {
           metadata: Json | null
           public_file_url: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "content_files_submission_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_files_submission_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_content"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_audit_summary: {
         Row: {
@@ -806,6 +786,17 @@ export type Database = {
           subscription_tier: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      admin_get_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          approved_submissions: number
+          pending_submissions: number
+          rejected_submissions: number
+          total_revenue: number
+          total_submissions: number
+          total_users: number
         }[]
       }
       admin_get_full_email: {
@@ -908,6 +899,17 @@ export type Database = {
           price: number
           tags: string[]
           title: string
+        }[]
+      }
+      get_security_audit_summary_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_count: number
+          event_type: string
+          first_occurrence: string
+          last_occurrence: string
+          target_table: string
+          unique_users: number
         }[]
       }
       has_role: {
