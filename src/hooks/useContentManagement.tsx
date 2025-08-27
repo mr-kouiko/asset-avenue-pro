@@ -44,30 +44,48 @@ export const useContentManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Create content entries for each uploaded file
+      // Create content submissions for each uploaded file
       const contentPromises = uploadedFiles.map(async (file) => {
-        const { data, error } = await supabase
-          .from('contents')
+        // First create the content submission
+        const { data: submissionData, error: submissionError } = await supabase
+          .from('content_submissions')
           .insert({
-            user_id: user.id,
+            creator_id: user.id,
             title: contentData.title,
             description: contentData.description,
             category_id: contentData.category_id || null,
             price: contentData.price || 0,
             tags: contentData.tags,
-            file_url: file.url,
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            preview_url: file.previewUrl || null,
-            is_watermarked: file.isWatermarked || false,
-            status: 'published'
+            status: 'approved' // Auto-approve for now
           })
           .select()
           .single();
 
-        if (error) throw error;
-        return data;
+        if (submissionError) throw submissionError;
+
+        // Then create the associated file entry
+        const { data: fileData, error: fileError } = await supabase
+          .from('content_files')
+          .insert({
+            submission_id: submissionData.id,
+            file_name: file.name,
+            file_path: file.url,
+            file_type: file.type.split('/')[0], // 'image', 'video', etc.
+            file_format: file.type,
+            file_size: file.size,
+            is_original: true,
+            preview_path: file.previewUrl,
+            thumbnail_path: file.previewUrl,
+            metadata: {
+              isWatermarked: file.isWatermarked || false
+            }
+          })
+          .select()
+          .single();
+
+        if (fileError) throw fileError;
+        
+        return { submission: submissionData, file: fileData };
       });
 
       const results = await Promise.all(contentPromises);
@@ -97,30 +115,48 @@ export const useContentManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Create content entries as drafts
+      // Create content submissions as drafts
       const contentPromises = uploadedFiles.map(async (file) => {
-        const { data, error } = await supabase
-          .from('contents')
+        // First create the content submission as draft
+        const { data: submissionData, error: submissionError } = await supabase
+          .from('content_submissions')
           .insert({
-            user_id: user.id,
+            creator_id: user.id,
             title: contentData.title,
             description: contentData.description,
             category_id: contentData.category_id || null,
             price: contentData.price || 0,
             tags: contentData.tags,
-            file_url: file.url,
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            preview_url: file.previewUrl || null,
-            is_watermarked: file.isWatermarked || false,
             status: 'draft'
           })
           .select()
           .single();
 
-        if (error) throw error;
-        return data;
+        if (submissionError) throw submissionError;
+
+        // Then create the associated file entry
+        const { data: fileData, error: fileError } = await supabase
+          .from('content_files')
+          .insert({
+            submission_id: submissionData.id,
+            file_name: file.name,
+            file_path: file.url,
+            file_type: file.type.split('/')[0], // 'image', 'video', etc.
+            file_format: file.type,
+            file_size: file.size,
+            is_original: true,
+            preview_path: file.previewUrl,
+            thumbnail_path: file.previewUrl,
+            metadata: {
+              isWatermarked: file.isWatermarked || false
+            }
+          })
+          .select()
+          .single();
+
+        if (fileError) throw fileError;
+        
+        return { submission: submissionData, file: fileData };
       });
 
       const results = await Promise.all(contentPromises);

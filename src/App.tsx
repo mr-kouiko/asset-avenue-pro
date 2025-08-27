@@ -61,6 +61,9 @@ const App = () => (
               <SearchProvider>
                 <LanguageRedirect />
                 <Routes>
+                  {/* Root Route */}
+                  <Route path="/" element={<Index />} />
+                  
                   {/* French Routes */}
                   <Route path="/fr" element={<Index />} />
                   <Route path="/fr/marketplace" element={<Marketplace />} />
