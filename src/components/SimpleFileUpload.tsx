@@ -44,6 +44,12 @@ export const SimpleFileUpload = ({
   const { processFiles, isProcessing } = useAutomaticWatermark();
 
   const acceptedTypes = ['image/*', 'video/*', 'audio/*', 'model/*'];
+  
+  // Explicitly support WebP files
+  const isWebPSupported = (file: File): boolean => {
+    const extension = file.name.toLowerCase().split('.').pop();
+    return extension === 'webp' || file.type === 'image/webp';
+  };
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image className="h-4 w-4" />;
@@ -115,8 +121,8 @@ export const SimpleFileUpload = ({
     // Use enhanced MIME type detection
     const detectedMimeType = detectMimeType(file);
     
-    // Check file type with enhanced detection
-    const isValidType = acceptedTypes.some(type => {
+    // Check file type with enhanced detection and explicit WebP support
+    const isValidType = isWebPSupported(file) || acceptedTypes.some(type => {
       if (type.includes('*')) {
         const baseType = type.split('/')[0];
         return detectedMimeType.startsWith(baseType);
