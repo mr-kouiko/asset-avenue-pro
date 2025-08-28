@@ -21,7 +21,7 @@ async function ensureBucketExists(bucket: string) {
   }
 }
 
-// Enhanced MIME type detection with proper video support
+// Pure extension-based MIME type detection - no forced conversions for videos
 function detectMimeType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
   
@@ -35,7 +35,7 @@ function detectMimeType(fileName: string): string {
     bmp: "image/bmp",
     tiff: "image/tiff",
     svg: "image/svg+xml",
-    // Videos - comprehensive support
+    // Videos - extension-based only, no fallbacks to image types
     mp4: "video/mp4",
     webm: "video/webm",
     ogg: "video/ogg",
@@ -57,8 +57,15 @@ function detectMimeType(fileName: string): string {
     json: "application/json",
   };
   
+  // For video extensions: ONLY return video MIME types
+  if (ext && ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', 'ogv', 'qt', 'ogg'].includes(ext)) {
+    const videoType = mimeTypes[ext];
+    console.log(`🎥 Video MIME detection - File: ${fileName}, Extension: ${ext}, Type: ${videoType}`);
+    return videoType;
+  }
+  
   const detectedType = mimeTypes[ext || ""];
-  console.log(`🔍 MIME detection - File: ${fileName}, Extension: ${ext}, Type: ${detectedType || "application/octet-stream"}`);
+  console.log(`📄 MIME detection - File: ${fileName}, Extension: ${ext}, Type: ${detectedType || "application/octet-stream"}`);
   
   return detectedType || "application/octet-stream";
 }

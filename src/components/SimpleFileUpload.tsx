@@ -67,11 +67,11 @@ export const SimpleFileUpload = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Enhanced MIME type detection prioritizing file extension
+  // Pure extension-based MIME type detection - no forced conversions
   const detectMimeType = (file: File): string => {
     const extension = file.name.split('.').pop()?.toLowerCase();
     
-    // Standard MIME types mapping
+    // Comprehensive MIME type mapping based on file extension only
     const mimeMap: { [key: string]: string } = {
       // Images
       'jpg': 'image/jpeg',
@@ -82,7 +82,7 @@ export const SimpleFileUpload = ({
       'bmp': 'image/bmp',
       'tiff': 'image/tiff',
       'svg': 'image/svg+xml',
-      // Videos - comprehensive support
+      // Videos - extension-based detection only
       'mp4': 'video/mp4',
       'webm': 'video/webm',
       'mov': 'video/quicktime',
@@ -90,6 +90,7 @@ export const SimpleFileUpload = ({
       'mkv': 'video/x-matroska',
       'm4v': 'video/mp4',
       'ogv': 'video/ogg',
+      'qt': 'video/quicktime',
       // Audio
       'mp3': 'audio/mpeg',
       'wav': 'audio/wav',
@@ -99,20 +100,22 @@ export const SimpleFileUpload = ({
       'flac': 'audio/flac'
     };
     
-    // Priority 1: Extension-based detection (most reliable)
+    // For videos: ONLY use extension mapping, never browser type
+    if (extension && ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', 'ogv', 'qt'].includes(extension)) {
+      const videoType = mimeMap[extension];
+      console.log(`🎥 Video MIME detection - File: ${file.name}, Extension: ${extension}, Type: ${videoType}`);
+      return videoType;
+    }
+    
+    // For other files: Use extension mapping if available
     if (extension && mimeMap[extension]) {
-      console.log(`🔍 MIME detection - File: ${file.name}, Extension: ${extension}, Detected: ${mimeMap[extension]}`);
+      console.log(`📄 File MIME detection - File: ${file.name}, Extension: ${extension}, Type: ${mimeMap[extension]}`);
       return mimeMap[extension];
     }
     
-    // Priority 2: Browser file.type if reliable and not generic
-    if (file.type && file.type !== 'application/octet-stream' && !file.type.startsWith('video/') || extension) {
-      console.log(`🔍 MIME detection - File: ${file.name}, Browser type: ${file.type}`);
-      return file.type;
-    }
-    
-    console.log(`⚠️ MIME detection - File: ${file.name}, Fallback to octet-stream`);
-    return 'application/octet-stream';
+    // Fallback only for non-videos
+    console.log(`⚠️ MIME detection fallback - File: ${file.name}, Browser type: ${file.type}`);
+    return file.type || 'application/octet-stream';
   };
 
   const validateFile = (file: File): string | null => {
@@ -121,10 +124,16 @@ export const SimpleFileUpload = ({
       return `File exceeds ${maxFileSize}MB limit`;
     }
 
-    // Use enhanced MIME type detection
+    // Validate file type - videos skip image processing entirely
     const detectedMimeType = detectMimeType(file);
     
-    // Check if file type is supported
+    // Videos are validated separately and bypass image pipelines
+    if (detectedMimeType.startsWith('video/')) {
+      console.log(`✅ Video file validated - File: ${file.name}, Type: ${detectedMimeType}`);
+      return null;
+    }
+    
+    // Non-video files follow standard validation
     const isValidType = acceptedTypes.some(type => {
       if (type.includes('*')) {
         const baseType = type.split('/')[0];
@@ -138,6 +147,7 @@ export const SimpleFileUpload = ({
       return `File type not supported (detected: ${detectedMimeType})`;
     }
 
+    console.log(`✅ File type validation passed - File: ${file.name}, Type: ${detectedMimeType}`);
     return null;
   };
 
