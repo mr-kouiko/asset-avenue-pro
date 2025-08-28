@@ -43,13 +43,14 @@ export const SimpleFileUpload = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
 
-  const acceptedTypes = ['image/*', 'video/*', 'audio/*', 'model/*'];
-  
-  // Explicitly support WebP files
-  const isWebPSupported = (file: File): boolean => {
-    const extension = file.name.toLowerCase().split('.').pop();
-    return extension === 'webp' || file.type === 'image/webp';
-  };
+  const acceptedTypes = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/ogg',
+    'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac',
+    'model/*'
+  ];
+
+  const acceptAttribute = 'image/*,video/*,audio/*';
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image className="h-4 w-4" />;
@@ -66,14 +67,9 @@ export const SimpleFileUpload = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Enhanced MIME type detection with WebP priority
+  // Enhanced MIME type detection prioritizing file extension
   const detectMimeType = (file: File): string => {
     const extension = file.name.split('.').pop()?.toLowerCase();
-    
-    // ✅ Forcer le bon type MIME pour WebP
-    if (extension === 'webp') {
-      return 'image/webp';
-    }
     
     // Standard MIME types mapping
     const mimeMap: { [key: string]: string } = {
@@ -86,29 +82,36 @@ export const SimpleFileUpload = ({
       'bmp': 'image/bmp',
       'tiff': 'image/tiff',
       'svg': 'image/svg+xml',
-      // Videos
+      // Videos - comprehensive support
       'mp4': 'video/mp4',
       'webm': 'video/webm',
       'mov': 'video/quicktime',
       'avi': 'video/x-msvideo',
+      'mkv': 'video/x-matroska',
+      'm4v': 'video/mp4',
+      'ogv': 'video/ogg',
       // Audio
       'mp3': 'audio/mpeg',
       'wav': 'audio/wav',
       'ogg': 'audio/ogg',
       'm4a': 'audio/mp4',
-      'aac': 'audio/aac'
+      'aac': 'audio/aac',
+      'flac': 'audio/flac'
     };
     
-    // Priority 1: Extension-based detection
+    // Priority 1: Extension-based detection (most reliable)
     if (extension && mimeMap[extension]) {
+      console.log(`🔍 MIME detection - File: ${file.name}, Extension: ${extension}, Detected: ${mimeMap[extension]}`);
       return mimeMap[extension];
     }
     
-    // Priority 2: Browser file.type if reliable
-    if (file.type && file.type !== 'application/octet-stream') {
+    // Priority 2: Browser file.type if reliable and not generic
+    if (file.type && file.type !== 'application/octet-stream' && !file.type.startsWith('video/') || extension) {
+      console.log(`🔍 MIME detection - File: ${file.name}, Browser type: ${file.type}`);
       return file.type;
     }
     
+    console.log(`⚠️ MIME detection - File: ${file.name}, Fallback to octet-stream`);
     return 'application/octet-stream';
   };
 
@@ -121,8 +124,8 @@ export const SimpleFileUpload = ({
     // Use enhanced MIME type detection
     const detectedMimeType = detectMimeType(file);
     
-    // Check file type with enhanced detection and explicit WebP support
-    const isValidType = isWebPSupported(file) || acceptedTypes.some(type => {
+    // Check if file type is supported
+    const isValidType = acceptedTypes.some(type => {
       if (type.includes('*')) {
         const baseType = type.split('/')[0];
         return detectedMimeType.startsWith(baseType);
@@ -131,6 +134,7 @@ export const SimpleFileUpload = ({
     });
 
     if (!isValidType) {
+      console.error(`❌ File type validation failed - File: ${file.name}, Detected: ${detectedMimeType}, Browser: ${file.type}`);
       return `File type not supported (detected: ${detectedMimeType})`;
     }
 
@@ -296,7 +300,7 @@ export const SimpleFileUpload = ({
           ref={fileInputRef}
           type="file"
           multiple
-          accept={acceptedTypes.join(',')}
+          accept={acceptAttribute}
           onChange={handleFileInputChange}
           className="hidden"
         />

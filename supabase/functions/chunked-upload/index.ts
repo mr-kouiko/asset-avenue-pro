@@ -21,14 +21,9 @@ async function ensureBucketExists(bucket: string) {
   }
 }
 
-// Détection MIME améliorée avec priorité extension
+// Enhanced MIME type detection with proper video support
 function detectMimeType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
-  
-  // ✅ Forcer le bon type MIME pour WebP
-  if (ext === 'webp') {
-    return 'image/webp';
-  }
   
   const mimeTypes: Record<string, string> = {
     // Images
@@ -40,7 +35,7 @@ function detectMimeType(fileName: string): string {
     bmp: "image/bmp",
     tiff: "image/tiff",
     svg: "image/svg+xml",
-    // Videos
+    // Videos - comprehensive support
     mp4: "video/mp4",
     webm: "video/webm",
     ogg: "video/ogg",
@@ -49,6 +44,7 @@ function detectMimeType(fileName: string): string {
     avi: "video/x-msvideo",
     mkv: "video/x-matroska",
     m4v: "video/mp4",
+    qt: "video/quicktime",
     // Audio
     mp3: "audio/mpeg",
     aac: "audio/aac",
@@ -67,28 +63,33 @@ function detectMimeType(fileName: string): string {
   return detectedType || "application/octet-stream";
 }
 
-// Validation des types MIME autorisés
+// MIME type validation with comprehensive video support
 function validateMimeType(fileName: string): boolean {
   const allowedMimeTypes = [
+    // Images
     'image/jpeg',
     'image/png',
-    'image/webp',  // ✅ Ajouté comme demandé
+    'image/webp',
     'image/gif',
     'image/bmp',
     'image/tiff',
     'image/svg+xml',
+    // Videos - all requested formats
     'video/mp4',
     'video/webm',
-    'video/ogg',
     'video/quicktime',
     'video/x-msvideo',
+    'video/ogg',
     'video/x-matroska',
+    // Audio
     'audio/mpeg',
     'audio/mp4',
     'audio/aac',
     'audio/wav',
     'audio/webm',
     'audio/flac',
+    'audio/ogg',
+    // Documents
     'application/pdf',
     'text/plain',
     'application/json'
