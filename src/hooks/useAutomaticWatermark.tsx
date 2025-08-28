@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { processFileWithWatermark } from '@/utils/automaticWatermark';
+import { processFileWithWatermark, prepareVideoForWatermarking } from '@/utils/automaticWatermark';
 import { toast } from 'sonner';
 
 interface ProcessedFile {
@@ -181,42 +181,59 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
         setProcessedFiles(prev => [...prev, processedFile]);
 
         try {
-          // Process file with automatic watermarking
-          const processed = await processFileWithWatermark(file);
-
           let watermarkedUrl: string | undefined;
           let thumbnailUrl: string;
           let previewUrl: string | undefined;
 
-          // Upload thumbnail (always generated as webp)
-          const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.webp`;
-          thumbnailUrl = await uploadToSupabase(processed.thumbnail, thumbnailPath, 'thumbnails', file, 'image/webp');
-
-          if (processed.type === 'image' && processed.watermarked) {
-            // Upload watermarked image as webp
-            const watermarkedPath = `${user.id}/watermarked/${fileId}_watermarked.webp`;
-            watermarkedUrl = await uploadToSupabase(processed.watermarked, watermarkedPath, 'uploads', file, 'image/webp');
-
-            // Upload preview if available
-            if (processed.preview) {
-              const previewPath = `${user.id}/previews/${fileId}_preview.webp`;
-              previewUrl = await uploadToSupabase(processed.preview, previewPath, 'previews', file, 'image/webp');
-            }
-          } else if (processed.type === 'video') {
-            // Process video watermarking (server-side) with proper MIME handling
-            watermarkedUrl = await processVideoWatermark(file, processed.videoMeta, user.id, fileId);
-          } else if (processed.type === 'audio') {
-            // For audio, upload original file with proper MIME type detection
-            const audioExtension = file.name.split('.').pop()?.toLowerCase();
-            const audioPath = `${user.id}/audio/${fileId}_original.${audioExtension}`;
-            const audioMimeType = file.type || detectMimeType(file, file);
-            watermarkedUrl = await uploadToSupabase(file, audioPath, 'Audio VisuStock', file, audioMimeType);
+          // SEPARATE PIPELINES FOR DIFFERENT FILE TYPES
+          if (file.type.startsWith('video/')) {
+            console.log(`🎥 Processing video: ${file.name} with MIME type: ${file.type}`);
+            
+            // Videos: Direct upload without any image processing
+            const videoExtension = file.name.split('.').pop()?.toLowerCase();
+            const videoPath = `${user.id}/videos/${fileId}_original.${videoExtension}`;
+            
+            // Upload original video with its native MIME type (NO webp conversion)
+            watermarkedUrl = await uploadToSupabase(file, videoPath, 'uploads', file, file.type);
+            
+            // Generate thumbnail ONLY (not watermarked video)
+            const videoResult = await prepareVideoForWatermarking(file);
+            const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.webp`;
+            thumbnailUrl = await uploadToSupabase(videoResult.thumbnailBlob, thumbnailPath, 'thumbnails', file, 'image/webp');
+            
+            console.log(`✅ Video processed - Original: ${watermarkedUrl}, Thumbnail: ${thumbnailUrl}`);
+            
           } else {
-            // Fallback for unsupported file types - upload original with correct MIME
-            const fallbackExtension = file.name.split('.').pop()?.toLowerCase();
-            const fallbackPath = `${user.id}/fallback/${fileId}_original.${fallbackExtension}`;
-            const fallbackMimeType = file.type || detectMimeType(file, file);
-            watermarkedUrl = await uploadToSupabase(file, fallbackPath, 'uploads', file, fallbackMimeType);
+            // Images and other files: Use existing processing
+            const processed = await processFileWithWatermark(file);
+
+            // Upload thumbnail (always generated as webp)
+            const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.webp`;
+            thumbnailUrl = await uploadToSupabase(processed.thumbnail, thumbnailPath, 'thumbnails', file, 'image/webp');
+
+            if (processed.type === 'image' && processed.watermarked) {
+              // Upload watermarked image as webp
+              const watermarkedPath = `${user.id}/watermarked/${fileId}_watermarked.webp`;
+              watermarkedUrl = await uploadToSupabase(processed.watermarked, watermarkedPath, 'uploads', file, 'image/webp');
+
+              // Upload preview if available
+              if (processed.preview) {
+                const previewPath = `${user.id}/previews/${fileId}_preview.webp`;
+                previewUrl = await uploadToSupabase(processed.preview, previewPath, 'previews', file, 'image/webp');
+              }
+            } else if (processed.type === 'audio') {
+              // For audio, upload original file with proper MIME type detection
+              const audioExtension = file.name.split('.').pop()?.toLowerCase();
+              const audioPath = `${user.id}/audio/${fileId}_original.${audioExtension}`;
+              const audioMimeType = file.type || detectMimeType(file, file);
+              watermarkedUrl = await uploadToSupabase(file, audioPath, 'Audio VisuStock', file, audioMimeType);
+            } else {
+              // Fallback for unsupported file types - upload original with correct MIME
+              const fallbackExtension = file.name.split('.').pop()?.toLowerCase();
+              const fallbackPath = `${user.id}/fallback/${fileId}_original.${fallbackExtension}`;
+              const fallbackMimeType = file.type || detectMimeType(file, file);
+              watermarkedUrl = await uploadToSupabase(file, fallbackPath, 'uploads', file, fallbackMimeType);
+            }
           }
 
           // Update processed file with results
@@ -265,7 +282,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
       const errorCount = results.filter(f => f.status === 'error').length;
 
       if (successCount > 0) {
-        toast.success(`Successfully processed ${successCount} file(s) with watermarks and thumbnails`);
+        toast.success(`Successfully processed ${successCount} file(s)`);
       }
 
       if (errorCount > 0) {
