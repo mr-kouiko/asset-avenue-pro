@@ -67,6 +67,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Sign out during signup failed (expected):', err);
       }
 
+      // Check if user already exists first
+      const { data: existingUser } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (existingUser?.user) {
+        toast({
+          title: "Compte existant trouvé !",
+          description: "Vous êtes maintenant connecté."
+        });
+        return { error: null };
+      }
+
       const redirectUrl = `${window.location.origin}/`;
       console.log('Using redirect URL:', redirectUrl);
       
@@ -100,8 +114,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         let errorMessage = "Une erreur est survenue lors de l'inscription.";
         
-        if (error.message.includes('User already registered')) {
-          errorMessage = "Cet email est déjà utilisé. Essayez de vous connecter.";
+        if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+          // Try to sign in instead
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (!signInError) {
+            toast({
+              title: "Connexion réussie !",
+              description: "Votre compte existe déjà. Vous êtes maintenant connecté."
+            });
+            return { error: null };
+          } else {
+            errorMessage = "Ce compte existe déjà. Vérifiez votre mot de passe ou utilisez 'Mot de passe oublié'.";
+          }
         } else if (error.message.includes('Password')) {
           errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
         } else if (error.message.includes('Email')) {
