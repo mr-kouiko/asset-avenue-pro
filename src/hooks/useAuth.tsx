@@ -120,54 +120,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('SignUp successful');
       
-      // For sellers, call the vendor email function
-      if (userData.role === 'creator') {
-        try {
-          const { error: emailError } = await supabase.functions.invoke('send-vendor-emails', {
-            body: {
-              userId: data.user?.id,
-              email: email,
-              displayName: `${userData.firstName} ${userData.lastName}`,
-              storeName: userData.storeName,
-              emailType: 'confirmation'
-            }
-          });
-          
-          if (emailError) {
-            console.error('Error sending vendor email:', emailError);
-          }
-        } catch (emailErr) {
-          console.error('Exception sending vendor email:', emailErr);
-        }
-        
-        toast({
-          title: "Demande de vendeur envoyée !",
-          description: "Un email de confirmation a été envoyé. Après validation, vous pourrez accéder à votre dashboard vendeur."
-        });
-      } else {
-        // Send welcome email for regular buyers
-        try {
-          const { error: emailError } = await supabase.functions.invoke('send-vendor-emails', {
-            body: {
-              userId: data.user?.id,
-              email: email,
-              displayName: `${userData.firstName} ${userData.lastName}`,
-              emailType: 'welcome'
-            }
-          });
-          
-          if (emailError) {
-            console.error('Error sending welcome email:', emailError);
-          }
-        } catch (emailErr) {
-          console.error('Exception sending welcome email:', emailErr);
-        }
-
-        toast({
-          title: "Inscription réussie !",
-          description: "Bienvenue sur VisuStock ! Un email de confirmation a été envoyé."
-        });
-      }
+      toast({
+        title: userData.role === 'creator' ? "Demande de vendeur envoyée !" : "Inscription réussie !",
+        description: userData.role === 'creator' 
+          ? "Votre compte vendeur a été créé. Vous pouvez maintenant vous connecter et accéder à votre dashboard."
+          : "Bienvenue sur VisuStock ! Vous pouvez maintenant vous connecter et explorer notre marketplace."
+      });
 
       return { error: null };
     } catch (error: any) {
