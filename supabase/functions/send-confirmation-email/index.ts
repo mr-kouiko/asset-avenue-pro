@@ -103,13 +103,22 @@ Deno.serve(async (req) => {
       })
     )
 
-    // Send the email using Resend
+    // Send the email using Resend with improved deliverability
     const { data, error } = await resend.emails.send({
       from: 'VisuStock <noreply@visustock.com>',
       to: [user.email],
       subject: '📸 Confirmez votre inscription sur VisuStock',
       html,
       reply_to: 'support@visustock.com',
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'High',
+      },
+      tags: [
+        { name: 'category', value: 'auth' },
+        { name: 'email_type', value: 'confirmation' }
+      ]
     })
 
     if (error) {
