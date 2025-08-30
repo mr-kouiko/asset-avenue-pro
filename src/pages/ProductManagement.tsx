@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
+import { UniversalVideoPlayer } from "@/components/UniversalVideoPlayer";
+import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
 
 interface UploadedFileData {
   id: string;
@@ -571,13 +573,14 @@ const ProductManagement = () => {
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
-                  <video 
-                    src={previewFile.url} 
-                    controls
-                    className="max-w-full max-h-[60vh] rounded-lg"
-                  >
-                    Votre navigateur ne supporte pas la lecture vidéo.
-                  </video>
+                  <div className="max-w-full max-h-[60vh]">
+                    <UniversalVideoPlayer 
+                      src={previewFile.url}
+                      controls={true}
+                      autoPlay={false}
+                      className="max-w-full max-h-[60vh] rounded-lg"
+                    />
+                  </div>
                 )}
                 
                 {previewFile.type.startsWith('audio/') && (
@@ -585,13 +588,11 @@ const ProductManagement = () => {
                     <div className="w-48 h-48 bg-primary/10 rounded-lg flex items-center justify-center">
                       <Music className="h-16 w-16 text-primary" />
                     </div>
-                    <audio 
-                      src={previewFile.url} 
-                      controls
+                    <UniversalAudioPlayer 
+                      src={previewFile.url}
+                      title={previewFile.name}
                       className="w-full max-w-md"
-                    >
-                      Votre navigateur ne supporte pas la lecture audio.
-                    </audio>
+                    />
                   </div>
                 )}
               </div>
