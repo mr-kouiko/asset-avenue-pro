@@ -67,28 +67,53 @@ export const useMarketplace = () => {
           let contentType: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
           let videoUrl: string | undefined;
           
-          // Use the stored thumbnail_path directly (already contains full URL)
+          // Handle thumbnail_path - construct full URL if relative path
           if (thumbnailFile?.thumbnail_path) {
-            console.log('Using stored thumbnail URL:', thumbnailFile.thumbnail_path);
-            thumbnailUrl = thumbnailFile.thumbnail_path;
+            console.log('Processing thumbnail:', thumbnailFile.thumbnail_path);
+            if (thumbnailFile.thumbnail_path.startsWith('http')) {
+              thumbnailUrl = thumbnailFile.thumbnail_path;
+            } else {
+              // Construct full URL for relative paths
+              const { data } = supabase.storage
+                .from('original-files')
+                .getPublicUrl(thumbnailFile.thumbnail_path);
+              thumbnailUrl = data.publicUrl;
+            }
+            console.log('Final thumbnail URL:', thumbnailUrl);
           }
 
           if (originalFile?.file_type) {
             if (originalFile.file_type.startsWith('video/')) {
               contentType = 'video';
-              // Use the stored file_path directly (already contains full URL)
+              // Handle file_path - construct full URL if relative path
               if (originalFile.file_path) {
-                console.log('Using stored video URL:', originalFile.file_name, 'Path:', originalFile.file_path);
-                videoUrl = originalFile.file_path;
-                console.log('📺 Video URL:', videoUrl);
+                console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
+                if (originalFile.file_path.startsWith('http')) {
+                  videoUrl = originalFile.file_path;
+                } else {
+                  // Construct full URL for relative paths
+                  const { data } = supabase.storage
+                    .from('original-files')
+                    .getPublicUrl(originalFile.file_path);
+                  videoUrl = data.publicUrl;
+                }
+                console.log('📺 Final video URL:', videoUrl);
               }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
-              // Use the stored file_path directly (already contains full URL)
+              // Handle file_path - construct full URL if relative path
               if (originalFile.file_path) {
-                console.log('Using stored audio URL:', originalFile.file_name, 'Path:', originalFile.file_path);
-                videoUrl = originalFile.file_path; // Using videoUrl field for audio too
-                console.log('🎵 Audio URL:', videoUrl);
+                console.log('Processing audio file:', originalFile.file_name, 'Path:', originalFile.file_path);
+                if (originalFile.file_path.startsWith('http')) {
+                  videoUrl = originalFile.file_path;
+                } else {
+                  // Construct full URL for relative paths
+                  const { data } = supabase.storage
+                    .from('original-files')
+                    .getPublicUrl(originalFile.file_path);
+                  videoUrl = data.publicUrl;
+                }
+                console.log('🎵 Final audio URL:', videoUrl);
               }
             } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
               contentType = 'illustration';
