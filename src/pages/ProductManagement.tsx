@@ -573,13 +573,29 @@ const ProductManagement = () => {
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
-                  <div className="max-w-full max-h-[60vh]">
-                    <UniversalVideoPlayer 
-                      src={previewFile.url}
-                      controls={true}
-                      autoPlay={false}
-                      className="max-w-full max-h-[60vh] rounded-lg"
-                    />
+                  <div className="max-w-full max-h-[60vh] bg-black rounded-lg overflow-hidden">
+                    <video 
+                      src={previewFile.url} 
+                      controls
+                      preload="metadata"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        console.error('Video preview error:', e);
+                        (e.target as HTMLVideoElement).style.display = 'none';
+                        const errorDiv = document.createElement('div');
+                        errorDiv.innerHTML = `
+                          <div class="flex items-center justify-center h-64 text-white">
+                            <div class="text-center">
+                              <p>Impossible de lire cette vidéo</p>
+                              <p class="text-sm text-gray-300 mt-2">Format non supporté ou fichier corrompu</p>
+                            </div>
+                          </div>
+                        `;
+                        (e.target as HTMLVideoElement).parentNode?.appendChild(errorDiv);
+                      }}
+                    >
+                      <p className="text-white p-4">Votre navigateur ne supporte pas cette vidéo.</p>
+                    </video>
                   </div>
                 )}
                 
