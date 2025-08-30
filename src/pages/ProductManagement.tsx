@@ -544,7 +544,66 @@ const ProductManagement = () => {
           </Card>
         </div>
 
-        {/* Preview modal functionality removed */}
+        {/* Preview Modal */}
+        {isPreviewOpen && previewFile && (
+          <div 
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            onClick={closePreview}
+          >
+            <div 
+              className="bg-background rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Aperçu - {previewFile.name}</h3>
+                <Button variant="ghost" size="sm" onClick={closePreview}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex justify-center">
+                {previewFile.type.startsWith('image/') && (
+                  <img 
+                    src={previewFile.url} 
+                    alt={previewFile.name}
+                    className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                  />
+                )}
+                
+                {previewFile.type.startsWith('video/') && (
+                  <video 
+                    src={previewFile.url} 
+                    controls
+                    className="max-w-full max-h-[60vh] rounded-lg"
+                  >
+                    Votre navigateur ne supporte pas la lecture vidéo.
+                  </video>
+                )}
+                
+                {previewFile.type.startsWith('audio/') && (
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="w-48 h-48 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Music className="h-16 w-16 text-primary" />
+                    </div>
+                    <audio 
+                      src={previewFile.url} 
+                      controls
+                      className="w-full max-w-md"
+                    >
+                      Votre navigateur ne supporte pas la lecture audio.
+                    </audio>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Taille: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );
