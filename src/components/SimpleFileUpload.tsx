@@ -14,7 +14,6 @@ interface UploadFile {
   progress: number;
   status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
   url?: string;
-  previewUrl?: string;
   error?: string;
   isWatermarked?: boolean;
 }
@@ -26,7 +25,6 @@ interface SimpleFileUploadProps {
     name: string;
     type: string;
     size: number;
-    previewUrl?: string;
     isWatermarked?: boolean;
   }[]) => void;
   maxFiles?: number;
@@ -173,7 +171,6 @@ export const SimpleFileUpload = ({
           status: 'completed', 
           progress: 100,
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
-          previewUrl: processedFile.previewUrl || processedFile.thumbnailUrl!,
           isWatermarked: !!processedFile.watermarkedUrl
         } : f
       ));
@@ -186,7 +183,6 @@ export const SimpleFileUpload = ({
           name: uploadFile.file.name,
           type: uploadFile.file.type,
           size: uploadFile.file.size,
-          previewUrl: processedFile.previewUrl || processedFile.thumbnailUrl!,
           isWatermarked: !!processedFile.watermarkedUrl
         }]);
       }
@@ -222,10 +218,7 @@ export const SimpleFileUpload = ({
 
       newFiles.push(uploadFile);
 
-      // Generate preview for images
-      if (file.type.startsWith('image/') && !error) {
-        uploadFile.previewUrl = URL.createObjectURL(file);
-      }
+      // Preview generation disabled - upload files without preview URLs
     }
 
     if (fileList.length + currentFileCount > maxFiles) {
@@ -245,9 +238,7 @@ export const SimpleFileUpload = ({
   const handleRemoveFile = (fileId: string) => {
     setFiles(prev => {
       const fileToRemove = prev.find(f => f.id === fileId);
-      if (fileToRemove?.previewUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(fileToRemove.previewUrl);
-      }
+      // Preview URL cleanup is no longer needed as previews are disabled
       return prev.filter(f => f.id !== fileId);
     });
   };
@@ -334,9 +325,9 @@ export const SimpleFileUpload = ({
             {files.map((file) => (
               <div key={file.id} className="flex items-center space-x-4 p-3 border rounded-lg">
                 <div className="flex-shrink-0">
-                  {file.previewUrl && file.file.type.startsWith('image/') ? (
-                    <img 
-                      src={file.previewUrl} 
+                  {file.file.type.startsWith('image/') ? (
+                    <img
+                      src={URL.createObjectURL(file.file)} 
                       alt={file.file.name}
                       className="w-12 h-12 object-cover rounded"
                     />

@@ -16,7 +16,6 @@ interface UploadedFile {
   name: string;
   type: string;
   size: number;
-  previewUrl?: string;
   isWatermarked?: boolean;
 }
 
@@ -74,8 +73,8 @@ export const useContentManagement = () => {
             file_format: file.type,
             file_size: file.size,
             is_original: true,
-            preview_path: file.previewUrl,
-            thumbnail_path: file.previewUrl,
+            preview_path: file.url,
+            thumbnail_path: file.url,
             metadata: {
               isWatermarked: file.isWatermarked || false
             }
@@ -145,8 +144,8 @@ export const useContentManagement = () => {
             file_format: file.type,
             file_size: file.size,
             is_original: true,
-            preview_path: file.previewUrl,
-            thumbnail_path: file.previewUrl,
+            preview_path: file.url,
+            thumbnail_path: file.url,
             metadata: {
               isWatermarked: file.isWatermarked || false
             }

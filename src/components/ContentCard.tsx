@@ -7,7 +7,6 @@ import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { UniversalVideoPlayer } from "./UniversalVideoPlayer";
 import { UniversalAudioPlayer } from "./UniversalAudioPlayer";
-import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { LazyImage } from "./LazyImage";
 
 interface ContentCardProps {
@@ -39,12 +38,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 }) => {
   const { addToCart } = useCart();
   const { createDirectPayment } = useDirectPurchase();
-  
-  // Create watermarked preview for images
-  const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
-    imageUrl: type === 'photo' || type === 'illustration' ? thumbnail : undefined,
-    enabled: type === 'photo' || type === 'illustration'
-  });
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -117,17 +110,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         ) : (
           <div className="relative">
             <LazyImage
-              src={watermarkedUrl || thumbnail}
+              src={thumbnail}
               alt={title}
-              className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${
-                isProcessing ? 'opacity-75' : ''
-              }`}
+              className="w-full h-full group-hover:scale-105 transition-transform duration-300"
             />
-            {isProcessing && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
           </div>
         )}
         

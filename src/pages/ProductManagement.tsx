@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
-import { PreviewModal } from "@/components/PreviewModal";
 
 interface UploadedFileData {
   id: string;
@@ -22,7 +21,6 @@ interface UploadedFileData {
   name: string;
   type: string;
   size: number;
-  previewUrl?: string;
   isWatermarked?: boolean;
 }
 
@@ -309,14 +307,14 @@ const ProductManagement = () => {
                     >
                        <div className="flex items-center space-x-3">
                          {/* Miniature améliorée */}
-                         <div className="relative">
-                           {file.previewUrl && file.type.startsWith('image/') ? (
-                             <img 
-                               src={file.previewUrl} 
-                               alt={file.name}
-                               className="w-12 h-12 object-cover rounded-lg"
-                             />
-                           ) : (
+                           <div className="relative">
+                            {file.type.startsWith('image/') ? (
+                              <img 
+                                src={file.url} 
+                                alt={file.name}
+                                className="w-12 h-12 object-cover rounded-lg"
+                              />
+                            ) : (
                              <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center">
                                {(() => {
                                  const IconComponent = getFileIcon(file.type);
@@ -381,10 +379,10 @@ const ProductManagement = () => {
             <Card className="lg:col-span-2 p-6">
               {selectedFile && selectedProductData ? (
                 <div className="space-y-6">
-                  <div className="flex items-center space-x-4 pb-4 border-b">
-                    {selectedFile.previewUrl && selectedFile.type.startsWith('image/') ? (
+                   <div className="flex items-center space-x-4 pb-4 border-b">
+                    {selectedFile.type.startsWith('image/') ? (
                       <img 
-                        src={selectedFile.previewUrl} 
+                        src={selectedFile.url} 
                         alt={selectedFile.name}
                         className="w-20 h-20 object-cover rounded-lg"
                       />
@@ -546,12 +544,7 @@ const ProductManagement = () => {
           </Card>
         </div>
 
-        {/* Modale de prévisualisation */}
-        <PreviewModal 
-          file={previewFile}
-          isOpen={isPreviewOpen}
-          onClose={closePreview}
-        />
+        {/* Preview modal functionality removed */}
       </div>
     </ProtectedRoute>
   );
