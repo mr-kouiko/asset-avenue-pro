@@ -673,24 +673,6 @@ export type Database = {
       }
     }
     Views: {
-      admin_profiles_safe: {
-        Row: {
-          avatar_url: string | null
-          country: string | null
-          created_at: string | null
-          display_name: string | null
-          email_masked: string | null
-          id: string | null
-          role: Database["public"]["Enums"]["app_role"] | null
-          store_name: string | null
-          subscribed: boolean | null
-          subscription_end: string | null
-          subscription_tier: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
       marketplace_content: {
         Row: {
           category_id: string | null
@@ -713,16 +695,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      public_creator_profiles: {
-        Row: {
-          avatar_url: string | null
-          creator_hash: string | null
-          display_name: string | null
-          store_name: string | null
-          user_id: string | null
-        }
-        Relationships: []
       }
       public_file_access: {
         Row: {
@@ -899,6 +871,16 @@ export type Database = {
           price: number
           tags: string[]
           title: string
+        }[]
+      }
+      get_public_creator_profiles: {
+        Args: { creator_ids: string[] }
+        Returns: {
+          avatar_url: string
+          creator_hash: string
+          display_name: string
+          store_name: string
+          user_id: string
         }[]
       }
       get_security_audit_summary_admin: {

@@ -39,11 +39,9 @@ export const useMarketplace = () => {
       // Get unique creator IDs
       const creatorIds = [...new Set(submissions?.map(s => s.creator_id) || [])];
       
-      // Fetch public creator profiles (no RLS restrictions)
+      // Fetch creator profiles using secure function (requires authentication)
       const { data: creatorProfiles } = await supabase
-        .from('public_creator_profiles')
-        .select('user_id, display_name, store_name')
-        .in('user_id', creatorIds);
+        .rpc('get_public_creator_profiles', { creator_ids: creatorIds });
 
       // Create a map of creator profiles for quick lookup
       const profileMap = new Map(creatorProfiles?.map(p => [p.user_id, p]) || []);
