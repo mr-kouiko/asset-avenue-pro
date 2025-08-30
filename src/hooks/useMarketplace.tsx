@@ -67,37 +67,28 @@ export const useMarketplace = () => {
           let contentType: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
           let videoUrl: string | undefined;
           
+          // Use the stored thumbnail_path directly (already contains full URL)
           if (thumbnailFile?.thumbnail_path) {
-            console.log('Processing thumbnail:', thumbnailFile.thumbnail_path);
-            const { data } = supabase.storage
-              .from('thumbnails')
-              .getPublicUrl(thumbnailFile.thumbnail_path);
-            thumbnailUrl = data.publicUrl;
-            console.log('Generated thumbnail URL:', thumbnailUrl);
+            console.log('Using stored thumbnail URL:', thumbnailFile.thumbnail_path);
+            thumbnailUrl = thumbnailFile.thumbnail_path;
           }
 
           if (originalFile?.file_type) {
             if (originalFile.file_type.startsWith('video/')) {
               contentType = 'video';
-              // Get video URL for video content from original-files bucket
+              // Use the stored file_path directly (already contains full URL)
               if (originalFile.file_path) {
-                console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                const { data: publicData } = supabase.storage
-                  .from('original-files')
-                  .getPublicUrl(originalFile.file_path);
-                videoUrl = publicData.publicUrl;
-                console.log('📺 Generated video URL:', videoUrl);
+                console.log('Using stored video URL:', originalFile.file_name, 'Path:', originalFile.file_path);
+                videoUrl = originalFile.file_path;
+                console.log('📺 Video URL:', videoUrl);
               }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
-              // Get audio URL for audio content from original-files bucket
+              // Use the stored file_path directly (already contains full URL)
               if (originalFile.file_path) {
-                console.log('Processing audio file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                const { data: publicData } = supabase.storage
-                  .from('original-files')
-                  .getPublicUrl(originalFile.file_path);
-                videoUrl = publicData.publicUrl; // Using videoUrl field for audio too
-                console.log('🎵 Generated audio URL:', videoUrl);
+                console.log('Using stored audio URL:', originalFile.file_name, 'Path:', originalFile.file_path);
+                videoUrl = originalFile.file_path; // Using videoUrl field for audio too
+                console.log('🎵 Audio URL:', videoUrl);
               }
             } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
               contentType = 'illustration';
