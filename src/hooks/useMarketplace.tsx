@@ -71,9 +71,11 @@ export const useMarketplace = () => {
             if (thumbnailFile.thumbnail_path.startsWith('http')) {
               thumbnailUrl = thumbnailFile.thumbnail_path;
             } else {
-              // Construct full URL for relative paths
+              // Determine correct bucket from metadata or default to uploads
+              const metadata = thumbnailFile.metadata as any;
+              const bucketName = metadata?.bucket || 'uploads';
               const { data } = supabase.storage
-                .from('original-files')
+                .from(bucketName)
                 .getPublicUrl(thumbnailFile.thumbnail_path);
               thumbnailUrl = data.publicUrl;
             }
@@ -83,20 +85,22 @@ export const useMarketplace = () => {
           if (originalFile?.file_type) {
             if (originalFile.file_type.startsWith('video/')) {
               contentType = 'video';
-              // Handle file_path - construct full URL if relative path
-              if (originalFile.file_path) {
-                console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                if (originalFile.file_path.startsWith('http')) {
-                  videoUrl = originalFile.file_path;
-                } else {
-                  // Construct full URL for relative paths
-                  const { data } = supabase.storage
-                    .from('original-files')
-                    .getPublicUrl(originalFile.file_path);
-                  videoUrl = data.publicUrl;
-                }
-                console.log('📺 Final video URL:', videoUrl);
-              }
+          // Handle file_path - construct full URL if relative path
+          if (originalFile.file_path) {
+            console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
+            if (originalFile.file_path.startsWith('http')) {
+              videoUrl = originalFile.file_path;
+            } else {
+              // Determine correct bucket from metadata or default to uploads
+              const metadata = originalFile.metadata as any;
+              const bucketName = metadata?.bucket || 'uploads';
+              const { data } = supabase.storage
+                .from(bucketName)
+                .getPublicUrl(originalFile.file_path);
+              videoUrl = data.publicUrl;
+            }
+            console.log('📺 Final video URL:', videoUrl);
+          }
             } else if (originalFile.file_type.startsWith('audio/')) {
               contentType = 'audio';
               // Handle file_path - construct full URL if relative path
@@ -105,9 +109,11 @@ export const useMarketplace = () => {
                 if (originalFile.file_path.startsWith('http')) {
                   videoUrl = originalFile.file_path;
                 } else {
-                  // Construct full URL for relative paths
+                  // Determine correct bucket from metadata or default to uploads
+                  const metadata = originalFile.metadata as any;
+                  const bucketName = metadata?.bucket || 'uploads';
                   const { data } = supabase.storage
-                    .from('original-files')
+                    .from(bucketName)
                     .getPublicUrl(originalFile.file_path);
                   videoUrl = data.publicUrl;
                 }
