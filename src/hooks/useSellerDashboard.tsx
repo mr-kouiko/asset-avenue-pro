@@ -285,7 +285,6 @@ export const useSellerDashboard = () => {
     }
   };
 
-  // Delete submission
   const deleteSubmission = async (id: string) => {
     try {
       // Optimistically remove from UI
@@ -317,6 +316,15 @@ export const useSellerDashboard = () => {
 
       toast.success('Contenu supprimé avec succès');
       await fetchStats(); // Update stats after successful deletion
+      
+      // Refresh marketplace content to ensure deletion is propagated
+      try {
+        const marketplaceRefreshEvent = new CustomEvent('refreshMarketplace');
+        window.dispatchEvent(marketplaceRefreshEvent);
+      } catch (e) {
+        console.log('Could not refresh marketplace - continuing with normal flow');
+      }
+      
       return true;
     } catch (error) {
       console.error('Error deleting submission:', error);

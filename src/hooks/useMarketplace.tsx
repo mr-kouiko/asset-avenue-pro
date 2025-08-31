@@ -24,11 +24,10 @@ export const useMarketplace = () => {
     try {
       setLoading(true);
       
-      // Get approved submissions
-      const { data: submissions, error } = await supabase
-        .from('content_submissions')
+      // Use the new marketplace_content view for automatic content type detection and filtering
+      const { data: marketplaceData, error } = await supabase
+        .from('marketplace_content')
         .select('*')
-        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -36,127 +35,62 @@ export const useMarketplace = () => {
         return;
       }
 
-      // Get unique creator IDs
-      const creatorIds = [...new Set(submissions?.map(s => s.creator_id) || [])];
-      
-      // Fetch creator profiles using secure function (requires authentication)
-      const { data: creatorProfiles } = await supabase
-        .rpc('get_public_creator_profiles', { creator_ids: creatorIds });
-
-      // Create a map of creator profiles for quick lookup
-      const profileMap = new Map(creatorProfiles?.map(p => [p.user_id, p]) || []);
-
-      console.log('Creator profiles fetched:', creatorProfiles);
-      console.log('Profile map created:', profileMap);
-
-      // Fetch content files separately for each submission
+      // Fetch content files for each submission to get URLs
       const contentWithFiles = await Promise.all(
-        (submissions || []).map(async (submission: any) => {
+        (marketplaceData || []).map(async (item: any) => {
           const { data: files } = await supabase
             .from('content_files')
             .select('*')
-            .eq('submission_id', submission.id);
+            .eq('submission_id', item.id);
 
-          // Determine thumbnail URL and content type
+          // Determine thumbnail URL and video/audio URL
           const thumbnailFile = files?.find(f => f.thumbnail_path);
           const originalFile = files?.find(f => f.is_original);
           
           let thumbnailUrl = '';
-          let contentType: 'photo' | 'video' | 'audio' | 'illustration' = 'photo';
-          let videoUrl: string | undefined;
+          let mediaUrl: string | undefined;
           
           // Handle thumbnail_path - construct full URL if relative path
           if (thumbnailFile?.thumbnail_path) {
-            console.log('Processing thumbnail:', thumbnailFile.thumbnail_path);
             if (thumbnailFile.thumbnail_path.startsWith('http')) {
               thumbnailUrl = thumbnailFile.thumbnail_path;
             } else {
-              // Determine correct bucket from metadata or default to uploads
-              const metadata = thumbnailFile.metadata as any;
-              const bucketName = metadata?.bucket || 'uploads';
+              // Use original-files bucket for consistency
               const { data } = supabase.storage
-                .from(bucketName)
+                .from('original-files')
                 .getPublicUrl(thumbnailFile.thumbnail_path);
               thumbnailUrl = data.publicUrl;
             }
-            console.log('Final thumbnail URL:', thumbnailUrl);
           }
 
-          if (originalFile?.file_type) {
-            if (originalFile.file_type.startsWith('video/')) {
-              contentType = 'video';
-          // Handle file_path - construct full URL if relative path
-          if (originalFile.file_path) {
-            console.log('Processing video file:', originalFile.file_name, 'Path:', originalFile.file_path);
+          // Handle original file URL for videos and audio
+          if (originalFile?.file_path && (item.content_type === 'video' || item.content_type === 'audio')) {
             if (originalFile.file_path.startsWith('http')) {
-              videoUrl = originalFile.file_path;
+              mediaUrl = originalFile.file_path;
             } else {
-              // Determine correct bucket from metadata or default to uploads
-              const metadata = originalFile.metadata as any;
-              const bucketName = metadata?.bucket || 'uploads';
+              // Use original-files bucket for consistency
               const { data } = supabase.storage
-                .from(bucketName)
+                .from('original-files')
                 .getPublicUrl(originalFile.file_path);
-              videoUrl = data.publicUrl;
-            }
-            console.log('📺 Final video URL:', videoUrl);
-          }
-            } else if (originalFile.file_type.startsWith('audio/')) {
-              contentType = 'audio';
-              // Handle file_path - construct full URL if relative path
-              if (originalFile.file_path) {
-                console.log('Processing audio file:', originalFile.file_name, 'Path:', originalFile.file_path);
-                if (originalFile.file_path.startsWith('http')) {
-                  videoUrl = originalFile.file_path;
-                } else {
-                  // Determine correct bucket from metadata or default to uploads
-                  const metadata = originalFile.metadata as any;
-                  const bucketName = metadata?.bucket || 'uploads';
-                  const { data } = supabase.storage
-                    .from(bucketName)
-                    .getPublicUrl(originalFile.file_path);
-                  videoUrl = data.publicUrl;
-                }
-                console.log('🎵 Final audio URL:', videoUrl);
-              }
-            } else if (originalFile.file_type.includes('vector') || originalFile.file_type === 'application/pdf') {
-              contentType = 'illustration';
-            } else {
-              contentType = 'photo';
+              mediaUrl = data.publicUrl;
             }
           }
 
-          // Get creator profile from the map
-          const creatorProfile = profileMap.get(submission.creator_id);
-          
-          // STRICT: Only use store_name, no fallback to display_name
-          let authorName = 'Boutique anonyme';
-          
-          if (!creatorProfile) {
-            console.error(`ERROR: No creator profile found for submission "${submission.title}" (creator_id: ${submission.creator_id})`);
-          } else if (!creatorProfile.store_name) {
-            console.error(`ERROR: Missing store_name for submission "${submission.title}" (creator_id: ${submission.creator_id}). Profile:`, creatorProfile);
-          } else {
-            authorName = creatorProfile.store_name;
-            console.log(`SUCCESS: Using store_name "${creatorProfile.store_name}" for submission "${submission.title}"`);
-          }
-
-          const contentItem = {
-            id: submission.id,
-            title: submission.title || 'Untitled',
-            author: authorName, // ONLY store_name, no fallbacks
-            price: submission.price || 0,
-            type: contentType,
+          const contentItem: MarketplaceContent = {
+            id: item.id,
+            title: item.title || 'Untitled',
+            author: item.creator_store_name || 'Boutique anonyme',
+            price: item.price || 0,
+            type: item.content_type as 'photo' | 'video' | 'audio' | 'illustration',
             thumbnail: thumbnailUrl,
-            videoUrl: videoUrl, // This will contain audio URL for audio files
-            audioUrl: contentType === 'audio' ? videoUrl : undefined,
+            videoUrl: mediaUrl, // For both video and audio
             likes: Math.floor(Math.random() * 2000), // Would need to implement likes system
             downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
-            category_id: submission.category_id,
-            tags: submission.tags || [],
+            category_id: item.category_id,
+            tags: item.tags || [],
           };
 
-          console.log('Final content item:', contentItem.title, 'Type:', contentType, 'Video URL:', videoUrl, 'Thumbnail:', thumbnailUrl);
+          console.log(`Content: ${item.title}, Type: ${item.content_type}, Thumbnail: ${thumbnailUrl}, Media: ${mediaUrl}`);
           return contentItem;
         })
       );
@@ -171,6 +105,18 @@ export const useMarketplace = () => {
 
   useEffect(() => {
     fetchMarketplaceContent();
+    
+    // Listen for marketplace refresh events
+    const handleRefresh = () => {
+      console.log('Refreshing marketplace content after deletion');
+      fetchMarketplaceContent();
+    };
+    
+    window.addEventListener('refreshMarketplace', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshMarketplace', handleRefresh);
+    };
   }, []);
 
   return {
