@@ -676,13 +676,15 @@ export type Database = {
       marketplace_content: {
         Row: {
           category_id: string | null
+          category_name: string | null
+          content_type: string | null
           created_at: string | null
           creator_display_name: string | null
           creator_hash: string | null
           creator_store_name: string | null
           description: string | null
           id: string | null
-          price_range: string | null
+          price: number | null
           tags: string[] | null
           title: string | null
         }
