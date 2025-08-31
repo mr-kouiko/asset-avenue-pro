@@ -288,13 +288,20 @@ export const useSellerDashboard = () => {
   // Delete submission
   const deleteSubmission = async (id: string) => {
     try {
+      // Optimistically remove from UI
+      setSubmissions(prev => prev.filter(sub => sub.id !== id));
+      
       // First delete associated files
       const { error: filesError } = await supabase
         .from('content_files')
         .delete()
         .eq('submission_id', id);
 
-      if (filesError) throw filesError;
+      if (filesError) {
+        // Revert optimistic update on error
+        await fetchSubmissions();
+        throw filesError;
+      }
 
       // Then delete the submission
       const { error } = await supabase
@@ -302,15 +309,18 @@ export const useSellerDashboard = () => {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        // Revert optimistic update on error
+        await fetchSubmissions();
+        throw error;
+      }
 
-      toast.success('Contenu supprimé');
-      await fetchSubmissions();
-      await fetchStats();
+      toast.success('Contenu supprimé avec succès');
+      await fetchStats(); // Update stats after successful deletion
       return true;
     } catch (error) {
       console.error('Error deleting submission:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error('Erreur lors de la suppression du contenu');
       return false;
     }
   };

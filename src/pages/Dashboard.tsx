@@ -335,7 +335,11 @@ const Dashboard = () => {
                                 Modifier
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => deleteSubmission(submission.id)}
+                                onClick={() => {
+                                  if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contenu ? Cette action est irréversible.')) {
+                                    deleteSubmission(submission.id);
+                                  }
+                                }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
