@@ -153,11 +153,18 @@ export const SimpleFileUpload = ({
     try {
       // Update status to uploading
       setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 10 } : f
+        f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
       ));
 
-      // Process with automatic watermarking
-      const processedResults = await processFiles([uploadFile.file]);
+      // Progress callback to update real-time progress
+      const onProgress = (fileId: string, progress: number) => {
+        setFiles(prev => prev.map(f => 
+          f.id === uploadFile.id ? { ...f, progress } : f
+        ));
+      };
+
+      // Process with automatic watermarking and real-time progress
+      const processedResults = await processFiles([uploadFile.file], onProgress);
       const processedFile = processedResults[0];
 
       if (processedFile.status === 'error') {
