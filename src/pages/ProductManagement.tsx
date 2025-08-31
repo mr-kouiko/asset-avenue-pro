@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
-import { UniversalVideoPlayer } from "@/components/UniversalVideoPlayer";
+import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
 
 interface UploadedFileData {
@@ -574,9 +574,11 @@ const ProductManagement = () => {
                 
                 {previewFile.type.startsWith('video/') && (
                   <div className="max-w-full max-h-[60vh] bg-black rounded-lg overflow-hidden">
-                    <UniversalVideoPlayer 
+                    <MediaPlayer 
                       src={previewFile.url}
-                      className="w-full h-full"
+                      type="video"
+                      title={previewFile.name}
+                      controls={true}
                     />
                     <div className="p-2 text-xs text-gray-400 break-all">
                       URL: {previewFile.url}
