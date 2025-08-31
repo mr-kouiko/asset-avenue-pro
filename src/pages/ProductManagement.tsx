@@ -574,29 +574,10 @@ const ProductManagement = () => {
                 
                 {previewFile.type.startsWith('video/') && (
                   <div className="max-w-full max-h-[60vh] bg-black rounded-lg overflow-hidden">
-                    <video 
-                      src={previewFile.url} 
-                      controls
-                      preload="metadata"
-                      className="w-full h-full object-contain"
-                      onLoadStart={() => {
-                        console.log('Video loading started:', previewFile.url);
-                      }}
-                      onCanPlay={() => {
-                        console.log('Video can play:', previewFile.url);
-                      }}
-                      onError={(e) => {
-                        console.error('Video preview error:', {
-                          src: previewFile.url,
-                          fileName: previewFile.name,
-                          fileType: previewFile.type,
-                          error: e,
-                          videoElement: e.target
-                        });
-                      }}
-                    >
-                      <p className="text-white p-4">Votre navigateur ne supporte pas cette vidéo.</p>
-                    </video>
+                    <UniversalVideoPlayer 
+                      src={previewFile.url}
+                      className="w-full h-full"
+                    />
                     <div className="p-2 text-xs text-gray-400 break-all">
                       URL: {previewFile.url}
                     </div>

@@ -278,7 +278,7 @@ export class StreamingUploadHandler {
       
       // Get the public URL from the final path
       const { data: urlData } = supabase.storage
-        .from('original-files')
+        .from('uploads')
         .getPublicUrl(finalizeData.path);
       
       return {
