@@ -5,8 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
-import { UniversalVideoPlayer } from "./UniversalVideoPlayer";
-import { UniversalAudioPlayer } from "./UniversalAudioPlayer";
+import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 
 interface ContentCardProps {
@@ -81,11 +80,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
       <div className="relative aspect-[4/3] overflow-hidden">
         {type === "video" ? (
-          <UniversalVideoPlayer 
+          <MediaPlayer 
             src={videoUrl}
-            thumbnail={thumbnail}
-            className="w-full h-full object-cover"
-            showThumbnailFirst={true}
+            type="video"
+            title={title}
+            poster={thumbnail}
+            className="w-full h-full"
             controls={true}
             autoPlay={false}
           />
@@ -98,8 +98,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
               <div className="w-full max-w-[90%] px-4">
-                <UniversalAudioPlayer 
+                <MediaPlayer 
                   src={audioUrl || ''}
+                  type="audio"
                   title={title}
                   compact={true}
                   className="bg-white/90 backdrop-blur-sm"
