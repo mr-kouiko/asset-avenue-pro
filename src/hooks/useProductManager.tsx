@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAIMetadata } from './useAIMetadata';
 
 interface ProductFile {
   id: string;
@@ -26,6 +27,7 @@ interface ProductSubmission {
 
 export const useProductManager = () => {
   const [loading, setLoading] = useState(false);
+  const { generateMetadata, loading: aiLoading } = useAIMetadata();
 
   const saveProductDraft = async (submission: ProductSubmission): Promise<boolean> => {
     setLoading(true);
@@ -141,10 +143,22 @@ export const useProductManager = () => {
     return successCount;
   };
 
+  const generateProductMetadata = async (file: ProductFile, sellerDescription?: string) => {
+    const metadata = await generateMetadata({
+      fileName: file.name,
+      fileType: file.type,
+      sellerDescription,
+      language: 'fr' // Default to French, could be made dynamic
+    });
+
+    return metadata;
+  };
+
   return {
-    loading,
+    loading: loading || aiLoading,
     saveProductDraft,
     publishProduct,
-    publishMultipleProducts
+    publishMultipleProducts,
+    generateProductMetadata
   };
 };

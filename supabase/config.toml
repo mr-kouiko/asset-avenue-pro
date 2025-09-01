@@ -70,3 +70,6 @@ verify_jwt = true
 
 [functions.watermark-video]
 verify_jwt = true
+
+[functions.generate-metadata]
+verify_jwt = true
