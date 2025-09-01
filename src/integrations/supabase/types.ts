@@ -367,6 +367,9 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          ai_auto_generate_enabled: boolean
+          ai_model: string
+          ai_provider: string
           commission_rate: number
           created_at: string
           id: string
@@ -374,6 +377,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_auto_generate_enabled?: boolean
+          ai_model?: string
+          ai_provider?: string
           commission_rate?: number
           created_at?: string
           id?: string
@@ -381,6 +387,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_auto_generate_enabled?: boolean
+          ai_model?: string
+          ai_provider?: string
           commission_rate?: number
           created_at?: string
           id?: string
@@ -808,6 +817,9 @@ export type Database = {
       admin_get_platform_settings: {
         Args: Record<PropertyKey, never>
         Returns: {
+          ai_auto_generate_enabled: boolean
+          ai_model: string
+          ai_provider: string
           commission_rate: number
           created_at: string
           id: string

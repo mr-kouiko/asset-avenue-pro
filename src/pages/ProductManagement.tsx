@@ -15,6 +15,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
 import { useAIMetadata } from "@/hooks/useAIMetadata";
+import { supabase } from '@/integrations/supabase/client';
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
 
@@ -79,29 +80,41 @@ const ProductManagement = () => {
       
       // Auto-generate AI metadata if enabled
       if (aiAutoGenerate && files.length > 0) {
+        // Check if AI auto-generation is enabled globally
         setTimeout(async () => {
-          const requests = files.map((file: UploadedFileData) => ({
-            fileName: file.name,
-            fileType: file.type,
-            language: 'fr' as const
-          }));
+          try {
+            const { data: platformSettings } = await supabase
+              .from('platform_settings')
+              .select('ai_auto_generate_enabled')
+              .single();
 
-          const results = await generateBatchMetadata(requests);
-          
-          results.forEach((metadata, index) => {
-            if (metadata) {
-              const file = files[index];
-              setProductsData(prev => ({
-                ...prev,
-                [file.id]: {
-                  ...prev[file.id],
-                  title: metadata.title,
-                  description: metadata.description,
-                  tags: metadata.tags
-                }
+            if (platformSettings?.ai_auto_generate_enabled) {
+              const requests = files.map((file: UploadedFileData) => ({
+                fileName: file.name,
+                fileType: file.type,
+                language: 'fr' as const
               }));
+
+              const results = await generateBatchMetadata(requests);
+              
+              results.forEach((metadata, index) => {
+                if (metadata) {
+                  const file = files[index];
+                  setProductsData(prev => ({
+                    ...prev,
+                    [file.id]: {
+                      ...prev[file.id],
+                      title: metadata.title,
+                      description: metadata.description,
+                      tags: metadata.tags
+                    }
+                  }));
+                }
+              });
             }
-          });
+          } catch (error) {
+            console.error('Error checking AI settings:', error);
+          }
         }, 1000); // Small delay to let UI render first
       }
       
