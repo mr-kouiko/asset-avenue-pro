@@ -106,7 +106,18 @@ Formato de respuesta JSON únicamente:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('DeepSeek API error:', response.status, errorText);
-      throw new Error(`DeepSeek API error: ${response.status}`);
+      
+      let errorMessage = `DeepSeek API error: ${response.status}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.error?.message) {
+          errorMessage = errorData.error.message;
+        }
+      } catch (e) {
+        // Keep default error message if parsing fails
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();

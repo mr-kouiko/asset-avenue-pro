@@ -51,7 +51,20 @@ export const useAIMetadata = () => {
 
     } catch (error) {
       console.error('Error generating AI metadata:', error);
-      toast.error(`Erreur IA: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      
+      // Show user-friendly error messages based on the error type
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      
+      if (errorMessage.includes('Insufficient Balance')) {
+        toast.error('Le compte DeepSeek n\'a pas assez de crédits. Contactez l\'administrateur.');
+      } else if (errorMessage.includes('API key not configured')) {
+        toast.error('Clé API DeepSeek non configurée. Contactez l\'administrateur.');
+      } else if (errorMessage.includes('DeepSeek API error')) {
+        toast.error(`Erreur de l'API DeepSeek: ${errorMessage.replace('DeepSeek API error: ', '')}`);
+      } else {
+        toast.error(`Erreur IA: ${errorMessage}`);
+      }
+      
       return null;
     } finally {
       setLoading(false);
