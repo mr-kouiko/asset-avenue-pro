@@ -186,9 +186,9 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
 
 // Serveur
 serve(async (req) => {
-  // SECURITY: Restrict CORS to known origins
+  // CORS headers to allow requests from the frontend
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://kdgfpophpoqugtuvfxqx.supabase.co", // Replace with your actual domain
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "authorization, content-type",
   };
