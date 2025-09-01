@@ -691,6 +691,16 @@ export type Database = {
         }
         Relationships: []
       }
+      creator_profiles_public: {
+        Row: {
+          avatar_url: string | null
+          creator_hash: string | null
+          display_name: string | null
+          store_name: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       marketplace_content: {
         Row: {
           category_id: string | null
@@ -869,6 +879,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_creator_profiles_public: {
+        Args: { creator_ids: string[] }
+        Returns: {
+          avatar_url: string
+          creator_hash: string
+          display_name: string
+          store_name: string
+          user_id: string
+        }[]
+      }
       get_creator_public_info: {
         Args: { creator_ids: string[] }
         Returns: {
@@ -891,16 +911,6 @@ export type Database = {
           price: number
           tags: string[]
           title: string
-        }[]
-      }
-      get_public_creator_profiles: {
-        Args: { creator_ids: string[] }
-        Returns: {
-          avatar_url: string
-          creator_hash: string
-          display_name: string
-          store_name: string
-          user_id: string
         }[]
       }
       get_security_audit_summary_admin: {
