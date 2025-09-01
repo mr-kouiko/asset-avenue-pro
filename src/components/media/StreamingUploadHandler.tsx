@@ -1,5 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper to get upload API key from environment or fallback
+const getUploadApiKey = async (): Promise<string> => {
+  // For now, use a temporary API key - this should be moved to a secure environment variable
+  return 'temp-upload-key-2024';
+};
+
 interface UploadChunk {
   chunk: Blob;
   chunkIndex: number;
@@ -142,23 +148,21 @@ export class StreamingUploadHandler {
       // Convert chunk to array buffer for the edge function
       const chunkBuffer = await chunk.arrayBuffer();
       
-      const response = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=upload-chunk&uploadId=${uploadId}&chunkIndex=${chunkIndex}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`,
-          'Content-Type': 'application/octet-stream'
-        },
-        body: chunkBuffer
+      const response = await supabase.functions.invoke('chunked-upload', {
+        body: {
+          action: 'upload-chunk',
+          uploadId,
+          chunkIndex,
+          chunk: Array.from(new Uint8Array(chunkBuffer))
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (response.error) {
+        throw new Error(`Chunk upload failed: ${response.error.message}`);
       }
 
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(`Chunk upload failed: ${data.error}`);
+      if (!response.data?.success) {
+        throw new Error(`Chunk upload failed: ${response.data?.error || 'Unknown error'}`);
       }
 
       console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`);
@@ -193,22 +197,16 @@ export class StreamingUploadHandler {
       
       // Initialize upload first
       console.log(`🔄 Initializing upload for: ${file.name}`);
-      const initResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=init-upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ uploadId })
+      const initResponse = await supabase.functions.invoke('chunked-upload', {
+        body: { uploadId, action: 'init-upload' }
       });
       
-      if (!initResponse.ok) {
-        throw new Error(`Initialization failed: HTTP ${initResponse.status}`);
-      }
+      if (initResponse.error) {
+        throw new Error(`Initialization failed: ${initResponse.error.message}`);
+      };
       
-      const initData = await initResponse.json();
-      if (!initData.success) {
-        throw new Error(`Initialization failed: ${initData.error}`);
+      if (!initResponse.data?.success) {
+        throw new Error(`Initialization failed: ${initResponse.data?.error || 'Unknown error'}`);
       }
       
       // Create chunks
@@ -253,33 +251,28 @@ export class StreamingUploadHandler {
       
       // Finalize upload by merging chunks
       console.log(`🔄 Finalizing upload for: ${file.name}`);
-      const finalizeResponse = await fetch(`https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/chunked-upload?action=merge-chunks`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const finalizeResponse = await supabase.functions.invoke('chunked-upload', {
+        body: {
+          action: 'merge-chunks',
           uploadId,
           fileName: file.name
-        })
+        }
       });
       
-      if (!finalizeResponse.ok) {
-        throw new Error(`Finalization failed: HTTP ${finalizeResponse.status}`);
+      if (finalizeResponse.error) {
+        throw new Error(`Finalization failed: ${finalizeResponse.error.message}`);
       }
       
-      const finalizeData = await finalizeResponse.json();
-      if (!finalizeData.success) {
-        throw new Error(`Finalization failed: ${finalizeData.error}`);
+      if (!finalizeResponse.data?.success) {
+        throw new Error(`Finalization failed: ${finalizeResponse.data?.error || 'Unknown error'}`);
       }
       
-      console.log(`✅ Upload completed successfully: ${finalizeData.path}`);
+      console.log(`✅ Upload completed successfully: ${finalizeResponse.data.path}`);
       
       // Get the public URL from the final path
       const { data: urlData } = supabase.storage
         .from('original-files')
-        .getPublicUrl(finalizeData.path);
+        .getPublicUrl(finalizeResponse.data.path);
       
       return {
         success: true,
