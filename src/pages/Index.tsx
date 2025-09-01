@@ -163,6 +163,16 @@ const Index = () => {
       <footer className="bg-gray-100 text-gray-800 py-12">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+            <div className="flex flex-col">
+              <Link to="/" className="mb-6">
+                <img 
+                  src="/lovable-uploads/visustock-logo-no-bg.png" 
+                  alt="VisuStock" 
+                  className="h-10 w-auto"
+                />
+              </Link>
+            </div>
+
             <div>
               <h4 className="font-semibold mb-4 text-gray-900">Produits</h4>
               <ul className="space-y-3 text-sm">
@@ -171,16 +181,6 @@ const Index = () => {
                 <li><Link to="/marketplace?category=illustration" className="text-gray-600 hover:text-gray-900 transition-colors">Illustrations</Link></li>
                 <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio</Link></li>
                 <li><Link to="/api" className="text-gray-600 hover:text-gray-900 transition-colors">Accès API</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4 text-gray-900">Ressources</h4>
-              <ul className="space-y-3 text-sm">
-                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Centre d'aide</Link></li>
-                <li><Link to="/tutorials" className="text-gray-600 hover:text-gray-900 transition-colors">Tutoriels</Link></li>
-                <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
-                <li><Link to="/community" className="text-gray-600 hover:text-gray-900 transition-colors">Communauté</Link></li>
               </ul>
             </div>
 

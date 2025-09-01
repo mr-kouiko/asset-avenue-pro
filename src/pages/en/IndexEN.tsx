@@ -171,15 +171,17 @@ const IndexEN = () => {
         {/* Footer */}
         <footer className="bg-muted py-12">
           <div className="container">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-              <div className="md:col-span-2">
-                <img 
-                  src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
-                  alt="VisuStock" 
-                  className="h-8 w-auto mb-4"
-                />
-                <p className="text-sm text-muted-foreground mb-4">
-                  The leading marketplace for creative digital content. Discover, license, and download high-quality media for your projects.
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div>
+                <Link to="/en" className="block mb-4">
+                  <img 
+                    src="/lovable-uploads/visustock-logo-no-bg.png" 
+                    alt="VisuStock" 
+                    className="h-10 w-auto"
+                  />
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                  The leading marketplace for creative digital content.
                 </p>
               </div>
               <div>
@@ -191,11 +193,11 @@ const IndexEN = () => {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold mb-4">Resources</h4>
+                <h4 className="font-semibold mb-4">Company</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><Link to="/en/support" className="text-muted-foreground hover:text-foreground">Support</Link></li>
-                  <li><Link to="/en/licenses" className="text-muted-foreground hover:text-foreground">Licenses</Link></li>
                   <li><Link to="/en/about" className="text-muted-foreground hover:text-foreground">About</Link></li>
+                  <li><Link to="/en/support" className="text-muted-foreground hover:text-foreground">Support</Link></li>
+                  <li><Link to="/en/contact" className="text-muted-foreground hover:text-foreground">Contact</Link></li>
                 </ul>
               </div>
               <div>
@@ -203,7 +205,7 @@ const IndexEN = () => {
                 <ul className="space-y-2 text-sm">
                   <li><Link to="/en/terms" className="text-muted-foreground hover:text-foreground">Terms</Link></li>
                   <li><Link to="/en/privacy-policy" className="text-muted-foreground hover:text-foreground">Privacy</Link></li>
-                  <li><Link to="/en/contact" className="text-muted-foreground hover:text-foreground">Contact</Link></li>
+                  <li><Link to="/en/licenses" className="text-muted-foreground hover:text-foreground">Licenses</Link></li>
                 </ul>
               </div>
             </div>
