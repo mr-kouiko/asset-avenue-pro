@@ -175,7 +175,7 @@ const IndexEN = () => {
               <div className="flex items-start">
                 <Link to="/en" className="mr-5 flex-shrink-0">
                   <img 
-                    src="/lovable-uploads/visustock-logo-no-bg.png" 
+                    src="/visustock-logo-watermark.png" 
                     alt="VisuStock" 
                     className="h-8 w-auto hover:opacity-80 transition-opacity"
                   />
