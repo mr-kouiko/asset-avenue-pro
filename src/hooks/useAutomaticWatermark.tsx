@@ -84,77 +84,31 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
     
     console.log(`Uploading to ${bucket}/${path} with MIME type: ${contentType}`);
     
-    // For small files, use direct upload with progress simulation  
-    if (blob.size < 5 * 1024 * 1024) {
-      onProgress?.(15);
-      
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(path, blob, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType
-        });
-
-      onProgress?.(85);
-
-      if (error) {
-        console.error(`Upload failed for ${path}:`, error);
-        throw new Error(`Upload failed: ${error.message}`);
-      }
-
-      onProgress?.(100);
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(data.path);
-
-      return publicUrl;
-    } else {
-      // For larger files, use fetch with real progress tracking
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            onProgress?.(progress);
-          }
-        });
-        
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              const { data: { publicUrl } } = supabase.storage
-                .from(bucket)
-                .getPublicUrl(response.path || path);
-              resolve(publicUrl);
-            } catch {
-              const { data: { publicUrl } } = supabase.storage
-                .from(bucket)
-                .getPublicUrl(path);
-              resolve(publicUrl);
-            }
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        });
-        
-        xhr.addEventListener('error', () => {
-          reject(new Error('Network error during upload'));
-        });
-        
-        const formData = new FormData();
-        formData.append('file', blob);
-        
-        xhr.open('POST', `https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/${bucket}/${path}`);
-        xhr.setRequestHeader('Authorization', `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8`);
-        xhr.setRequestHeader('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8');
-        
-        xhr.send(formData);
+    // Always use Supabase client for uploads - no manual HTTP requests
+    onProgress?.(10);
+    
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, blob, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType
       });
+
+    onProgress?.(90);
+
+    if (error) {
+      console.error(`Upload failed for ${path}:`, error);
+      throw new Error(`Upload failed: ${error.message}`);
     }
+
+    onProgress?.(100);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return publicUrl;
   };
 
   const processVideoWatermark = async (
