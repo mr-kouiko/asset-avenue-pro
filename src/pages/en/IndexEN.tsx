@@ -172,17 +172,14 @@ const IndexEN = () => {
         <footer className="bg-muted py-12">
           <div className="container">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div>
-                <Link to="/en" className="block mb-4">
+              <div className="flex items-start">
+                <Link to="/en" className="mr-5 flex-shrink-0">
                   <img 
                     src="/lovable-uploads/visustock-logo-no-bg.png" 
                     alt="VisuStock" 
-                    className="h-10 w-auto"
+                    className="h-8 w-auto hover:opacity-80 transition-opacity"
                   />
                 </Link>
-                <p className="text-sm text-muted-foreground">
-                  The leading marketplace for creative digital content.
-                </p>
               </div>
               <div>
                 <h4 className="font-semibold mb-4">Products</h4>

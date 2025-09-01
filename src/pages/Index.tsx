@@ -163,12 +163,12 @@ const Index = () => {
       <footer className="bg-gray-100 text-gray-800 py-12">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-            <div className="flex flex-col">
-              <Link to="/" className="mb-6">
+            <div className="flex items-start">
+              <Link to="/" className="mr-5 flex-shrink-0">
                 <img 
                   src="/lovable-uploads/visustock-logo-no-bg.png" 
                   alt="VisuStock" 
-                  className="h-10 w-auto"
+                  className="h-8 w-auto hover:opacity-80 transition-opacity"
                 />
               </Link>
             </div>
