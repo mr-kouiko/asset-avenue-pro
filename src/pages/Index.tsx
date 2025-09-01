@@ -180,7 +180,7 @@ const Index = () => {
                 <li><Link to="/marketplace?category=video" className="text-gray-600 hover:text-gray-900 transition-colors">Vidéos</Link></li>
                 <li><Link to="/marketplace?category=illustration" className="text-gray-600 hover:text-gray-900 transition-colors">Illustrations</Link></li>
                 <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio</Link></li>
-                <li><Link to="/api" className="text-gray-600 hover:text-gray-900 transition-colors">Accès API</Link></li>
+                
               </ul>
             </div>
 
