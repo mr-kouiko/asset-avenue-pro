@@ -286,49 +286,127 @@ export const useSellerDashboard = () => {
   };
 
   const deleteSubmission = async (id: string) => {
+    if (!user || !id) {
+      toast.error('Erreur: utilisateur non connecté ou ID manquant');
+      return false;
+    }
+
     try {
-      // Optimistically remove from UI
-      setSubmissions(prev => prev.filter(sub => sub.id !== id));
+      console.log('Starting deletion for submission:', id);
       
-      // First delete associated files
+      // Verify ownership before deletion
+      const { data: submission, error: checkError } = await supabase
+        .from('content_submissions')
+        .select('id, creator_id, title')
+        .eq('id', id)
+        .eq('creator_id', user.id)
+        .single();
+
+      if (checkError || !submission) {
+        console.error('Submission not found or access denied:', checkError);
+        toast.error('Contenu non trouvé ou accès refusé');
+        return false;
+      }
+
+      console.log('Verified ownership, proceeding with deletion');
+
+      // Step 1: Delete all related data in correct order
+      // First get content file IDs for secure downloads cleanup
+      const { data: contentFiles } = await supabase
+        .from('content_files')
+        .select('id')
+        .eq('submission_id', id);
+
+      // Delete secure downloads if any content files exist
+      if (contentFiles && contentFiles.length > 0) {
+        const fileIds = contentFiles.map(f => f.id);
+        const { error: secureDownloadsError } = await supabase
+          .from('secure_downloads')
+          .delete()
+          .in('content_file_id', fileIds);
+
+        if (secureDownloadsError) {
+          console.error('Error deleting secure downloads:', secureDownloadsError);
+          // Continue anyway as this is not critical
+        }
+      }
+
+      // Delete downloads
+      const { error: downloadsError } = await supabase
+        .from('downloads')
+        .delete()
+        .eq('submission_id', id);
+
+      if (downloadsError) {
+        console.error('Error deleting downloads:', downloadsError);
+        // Continue anyway as this is not critical
+      }
+
+      // Delete content files
       const { error: filesError } = await supabase
         .from('content_files')
         .delete()
         .eq('submission_id', id);
 
       if (filesError) {
-        // Revert optimistic update on error
-        await fetchSubmissions();
-        throw filesError;
+        console.error('Error deleting content files:', filesError);
+        toast.error('Erreur lors de la suppression des fichiers associés');
+        return false;
       }
 
-      // Then delete the submission
-      const { error } = await supabase
+      console.log('Files deleted successfully');
+
+      // Step 2: Delete the main submission
+      const { error: submissionError } = await supabase
         .from('content_submissions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('creator_id', user.id); // Double-check ownership
 
-      if (error) {
-        // Revert optimistic update on error
-        await fetchSubmissions();
-        throw error;
+      if (submissionError) {
+        console.error('Error deleting submission:', submissionError);
+        toast.error('Erreur lors de la suppression du contenu principal');
+        return false;
       }
 
-      toast.success('Contenu supprimé avec succès');
-      await fetchStats(); // Update stats after successful deletion
+      console.log('Submission deleted successfully');
+
+      // Step 3: Force refresh all data to ensure UI consistency
+      toast.success(`Contenu "${submission.title}" supprimé définitivement`);
       
-      // Refresh marketplace content to ensure deletion is propagated
+      // Immediately refresh all data
+      await Promise.all([
+        fetchSubmissions(),
+        fetchStats()
+      ]);
+
+      // Trigger global refresh events for other components
       try {
+        // Refresh marketplace
         const marketplaceRefreshEvent = new CustomEvent('refreshMarketplace');
         window.dispatchEvent(marketplaceRefreshEvent);
+        
+        // Refresh content stats
+        const statsRefreshEvent = new CustomEvent('refreshContentStats');
+        window.dispatchEvent(statsRefreshEvent);
+        
+        // Force page refresh for Portfolio and other views
+        const globalRefreshEvent = new CustomEvent('globalContentRefresh');
+        window.dispatchEvent(globalRefreshEvent);
       } catch (e) {
-        console.log('Could not refresh marketplace - continuing with normal flow');
+        console.log('Could not dispatch refresh events - continuing with normal flow');
       }
-      
+
+      console.log('Deletion completed successfully');
       return true;
     } catch (error) {
-      console.error('Error deleting submission:', error);
-      toast.error('Erreur lors de la suppression du contenu');
+      console.error('Unexpected error during deletion:', error);
+      toast.error('Erreur inattendue lors de la suppression');
+      
+      // Force refresh to ensure UI is in sync with database
+      await fetchSubmissions();
+      await fetchStats();
+      
       return false;
     }
   };

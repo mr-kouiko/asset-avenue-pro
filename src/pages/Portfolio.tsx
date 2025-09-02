@@ -15,10 +15,24 @@ import { Plus, Upload, TrendingUp, Heart, Download } from "lucide-react";
 
 const Portfolio = () => {
   const { user } = useAuth();
-  const { submissions, stats, loading } = useSellerDashboard();
+  const { submissions, stats, loading, refreshData } = useSellerDashboard();
 
   // Filtrer seulement les submissions approuvées pour le portfolio public
   const approvedSubmissions = submissions.filter(submission => submission.status === 'approved');
+
+  // Listen for global refresh events to update portfolio when content is deleted
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      console.log('Portfolio: Handling global refresh event');
+      refreshData();
+    };
+
+    window.addEventListener('globalContentRefresh', handleGlobalRefresh);
+
+    return () => {
+      window.removeEventListener('globalContentRefresh', handleGlobalRefresh);
+    };
+  }, [refreshData]);
 
   return (
     <ProtectedRoute 

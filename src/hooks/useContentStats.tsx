@@ -117,8 +117,22 @@ export const useContentStats = () => {
       )
       .subscribe();
 
+    // Listen for global refresh events
+    const handleGlobalRefresh = () => {
+      fetchStats();
+    };
+
+    const handleContentStatsRefresh = () => {
+      fetchStats();
+    };
+
+    window.addEventListener('globalContentRefresh', handleGlobalRefresh);
+    window.addEventListener('refreshContentStats', handleContentStatsRefresh);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener('globalContentRefresh', handleGlobalRefresh);
+      window.removeEventListener('refreshContentStats', handleContentStatsRefresh);
     };
   }, []);
 
