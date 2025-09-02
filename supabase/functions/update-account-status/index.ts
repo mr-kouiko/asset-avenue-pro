@@ -37,13 +37,8 @@ serve(async (req) => {
       );
     }
 
-    // Get Stripe settings from database
-    const { data: settings } = await supabaseService
-      .from('platform_settings')
-      .select('stripe_secret_key')
-      .single();
-
-    const stripeSecretKey = settings?.stripe_secret_key || Deno.env.get("STRIPE_SECRET_KEY") || "";
+    // Use Stripe secret key from environment variables  
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
     
     if (!stripeSecretKey) {
       return new Response(
