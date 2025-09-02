@@ -91,12 +91,13 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {[
               { name: "Photos", count: statsLoading ? "..." : stats.photos.toString(), color: "bg-blue-500", category: "photo" },
               { name: "Vidéos", count: statsLoading ? "..." : stats.videos.toString(), color: "bg-red-500", category: "video" },
               { name: "Audio", count: statsLoading ? "..." : stats.audios.toString(), color: "bg-green-500", category: "audio" },
               { name: "Illustrations", count: statsLoading ? "..." : stats.illustrations.toString(), color: "bg-purple-500", category: "illustration" },
+              { name: "Ebooks", count: statsLoading ? "..." : stats.ebooks.toString(), color: "bg-orange-500", category: "ebook" },
             ].map((category) => (
               <Link
                 key={category.name}
@@ -180,6 +181,7 @@ const Index = () => {
                 <li><Link to="/marketplace?category=video" className="text-gray-600 hover:text-gray-900 transition-colors">Vidéos</Link></li>
                 <li><Link to="/marketplace?category=illustration" className="text-gray-600 hover:text-gray-900 transition-colors">Illustrations</Link></li>
                 <li><Link to="/marketplace?category=audio" className="text-gray-600 hover:text-gray-900 transition-colors">Audio</Link></li>
+                <li><Link to="/marketplace?category=ebook" className="text-gray-600 hover:text-gray-900 transition-colors">Ebooks</Link></li>
                 
               </ul>
             </div>

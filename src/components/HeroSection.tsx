@@ -24,7 +24,8 @@ export const HeroSection = () => {
         photos: "Photos",
         videos: "Vidéos", 
         illustrations: "Illustrations",
-        audio: "Audio"
+        audio: "Audio",
+        ebooks: "Ebooks"
       }
     },
     en: {
@@ -37,7 +38,8 @@ export const HeroSection = () => {
         photos: "Photos",
         videos: "Videos",
         illustrations: "Illustrations", 
-        audio: "Audio"
+        audio: "Audio",
+        ebooks: "Ebooks"
       }
     }
   };
@@ -130,6 +132,12 @@ export const HeroSection = () => {
                   {loading ? "..." : stats.audios.toLocaleString()}
                 </div>
                 <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.audio}</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white drop-shadow-md">
+                  {loading ? "..." : stats.ebooks.toLocaleString()}
+                </div>
+                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.ebooks}</div>
               </div>
             </div>
           </div>
