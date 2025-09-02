@@ -135,6 +135,11 @@ export const useContentStats = () => {
     window.addEventListener('globalContentRefresh', handleGlobalRefresh);
     window.addEventListener('refreshContentStats', handleContentStatsRefresh);
 
+    // Force immediate refresh after component mount
+    setTimeout(() => {
+      fetchStats();
+    }, 100);
+
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener('globalContentRefresh', handleGlobalRefresh);
