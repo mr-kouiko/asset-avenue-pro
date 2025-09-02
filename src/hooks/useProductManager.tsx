@@ -69,6 +69,9 @@ export const useProductManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Automatically set price to $3.99 USD for eBooks (PDF files)
+      const productPrice = submission.file.type === 'application/pdf' ? 3.99 : null;
+
       // Create content submission
       const { data: submissionData, error: submissionError } = await supabase
         .from('content_submissions')
@@ -78,6 +81,7 @@ export const useProductManager = () => {
           description: submission.productData.description,
           category_id: submission.productData.category_id || null,
           tags: submission.productData.tags,
+          price: productPrice,
           status: 'approved' // Auto-approve for now
         })
         .select()
