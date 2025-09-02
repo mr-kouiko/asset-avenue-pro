@@ -310,6 +310,9 @@ export const useSellerDashboard = () => {
 
       console.log('Verified ownership, proceeding with deletion');
 
+      // Remove from UI immediately for better UX
+      setSubmissions(prev => prev.filter(sub => sub.id !== id));
+      
       // Step 1: Delete all related data in correct order
       // First get content file IDs for secure downloads cleanup
       const { data: contentFiles } = await supabase
@@ -351,6 +354,8 @@ export const useSellerDashboard = () => {
       if (filesError) {
         console.error('Error deleting content files:', filesError);
         toast.error('Erreur lors de la suppression des fichiers associés');
+        // Restore UI if deletion failed
+        await fetchSubmissions();
         return false;
       }
 
@@ -366,19 +371,18 @@ export const useSellerDashboard = () => {
       if (submissionError) {
         console.error('Error deleting submission:', submissionError);
         toast.error('Erreur lors de la suppression du contenu principal');
+        // Restore UI if deletion failed
+        await fetchSubmissions();
         return false;
       }
 
       console.log('Submission deleted successfully');
 
-      // Step 3: Force refresh all data to ensure UI consistency
+      // Step 3: Update stats and trigger refresh events
       toast.success(`Contenu "${submission.title}" supprimé définitivement`);
       
-      // Immediately refresh all data
-      await Promise.all([
-        fetchSubmissions(),
-        fetchStats()
-      ]);
+      // Update stats immediately
+      await fetchStats();
 
       // Trigger global refresh events for other components
       try {
