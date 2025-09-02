@@ -52,9 +52,11 @@ export const useContentStats = () => {
       let illustrations = 0;
       let ebooks = 0;
 
-        submissions?.forEach((submission: any) => {
+      submissions?.forEach((submission: any) => {
         const fileType = submission.content_files[0]?.file_type;
         const fileName = submission.content_files[0]?.file_name || '';
+        
+        console.log('Processing submission:', submission.id, 'fileType:', fileType, 'fileName:', fileName);
         
         if (fileType?.startsWith('video/')) {
           videos++;
@@ -64,13 +66,16 @@ export const useContentStats = () => {
           fileType === 'application/pdf' || 
           fileType === 'application/epub+zip' || 
           fileType?.includes('ebook') ||
-          (fileType === 'document' && (fileName.endsWith('.pdf') || fileName.endsWith('.epub')))
+          fileType === 'document' // Simplified: any document file_type counts as ebook
         ) {
           ebooks++;
+          console.log('Found ebook:', fileName, 'fileType:', fileType);
         } else if (fileType?.includes('vector')) {
           illustrations++;
         } else if (fileType?.startsWith('image/')) {
           photos++;
+        } else {
+          console.log('Unclassified content:', fileType, fileName);
         }
       });
 
