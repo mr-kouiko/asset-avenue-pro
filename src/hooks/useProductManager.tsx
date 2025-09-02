@@ -85,6 +85,12 @@ export const useProductManager = () => {
 
       if (submissionError) throw submissionError;
 
+      // Determine file type for database
+      let fileType = submission.file.type.split('/')[0]; // 'image', 'video', etc.
+      if (submission.file.type === 'application/pdf') {
+        fileType = 'document'; // Store PDFs as 'document' type
+      }
+
       // Create content file entry
       const { error: fileError } = await supabase
         .from('content_files')
@@ -92,7 +98,7 @@ export const useProductManager = () => {
           submission_id: submissionData.id,
           file_name: submission.file.name,
           file_path: submission.file.url,
-          file_type: submission.file.type.split('/')[0], // 'image', 'video', etc.
+          file_type: fileType,
           file_format: submission.file.type,
           file_size: submission.file.size,
           is_original: true,

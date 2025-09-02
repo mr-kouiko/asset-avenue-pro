@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, Sparkles, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, Sparkles, Zap, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -18,6 +18,7 @@ import { useAIMetadata } from "@/hooks/useAIMetadata";
 import { supabase } from '@/integrations/supabase/client';
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
+import { EbookForm } from "@/components/EbookForm";
 
 interface UploadedFileData {
   id: string;
@@ -337,6 +338,7 @@ const ProductManagement = () => {
     if (type.startsWith('video/')) return Video;
     if (type.startsWith('audio/')) return Music;
     if (type.startsWith('image/')) return Image;
+    if (type === 'application/pdf') return FileText;
     return Upload;
   };
 
@@ -410,9 +412,10 @@ const ProductManagement = () => {
                            )}
                            {/* Indicateur de type de fichier */}
                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-background border border-border rounded-full flex items-center justify-center">
-                             {file.type.startsWith('video/') && <Play className="h-2.5 w-2.5 text-primary" />}
-                             {file.type.startsWith('audio/') && <Music className="h-2.5 w-2.5 text-primary" />}
-                             {file.type.startsWith('image/') && <Image className="h-2.5 w-2.5 text-primary" />}
+                            {file.type.startsWith('video/') && <Play className="h-2.5 w-2.5 text-primary" />}
+                              {file.type.startsWith('audio/') && <Music className="h-2.5 w-2.5 text-primary" />}
+                              {file.type.startsWith('image/') && <Image className="h-2.5 w-2.5 text-primary" />}
+                              {file.type === 'application/pdf' && <FileText className="h-2.5 w-2.5 text-red-600" />}
                            </div>
                          </div>
                          
@@ -464,141 +467,161 @@ const ProductManagement = () => {
             {/* Right Panel - Product Form */}
             <Card className="lg:col-span-2 p-6">
               {selectedFile && selectedProductData ? (
-                <div className="space-y-6">
-                   <div className="flex items-center space-x-4 pb-4 border-b">
-                    {selectedFile.type.startsWith('image/') ? (
-                      <img 
-                        src={selectedFile.url} 
-                        alt={selectedFile.name}
-                        className="w-20 h-20 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Upload className="h-8 w-8 text-primary" />
+                <>
+                  {/* Formulaire spécifique pour les PDFs/Ebooks */}
+                  {selectedFile.type === 'application/pdf' ? (
+                    <EbookForm
+                      fileData={selectedFile}
+                      productData={selectedProductData}
+                      categories={categories}
+                      onUpdateProductData={(updates) => updateProductData(selectedFileId!, updates)}
+                      onGenerateAI={() => handleGenerateAIMetadata(selectedFileId!)}
+                      onSaveDraft={() => handleSaveDraft(selectedFileId!)}
+                      onPublish={() => handlePublish(selectedFileId!)}
+                      loading={loading || batchAILoading}
+                    />
+                  ) : (
+                    /* Formulaire standard pour les autres types de fichiers */
+                    <div className="space-y-6">
+                      <div className="flex items-center space-x-4 pb-4 border-b">
+                        {selectedFile.type.startsWith('image/') ? (
+                          <img 
+                            src={selectedFile.url} 
+                            alt={selectedFile.name}
+                            className="w-20 h-20 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center">
+                            {(() => {
+                              const IconComponent = getFileIcon(selectedFile.type);
+                              return <IconComponent className="h-8 w-8 text-primary" />;
+                            })()}
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-xl font-semibold">
+                            Configuration du produit
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedFile.name} • {formatFileSize(selectedFile.size)}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <h3 className="text-xl font-semibold">
-                        Configuration du produit
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedFile.name} • {formatFileSize(selectedFile.size)}
-                      </p>
-                    </div>
-                  </div>
 
-                   <div className="grid md:grid-cols-2 gap-6">
-                     <div className="space-y-2">
-                       <div className="flex items-center space-x-2">
-                         <Label htmlFor="title">Titre *</Label>
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => handleGenerateAIMetadata(selectedFileId!)}
-                           disabled={loading || batchAILoading}
-                           className="h-6 px-2 text-xs"
-                         >
-                           <Sparkles className="h-3 w-3 mr-1" />
-                           IA
-                         </Button>
-                       </div>
-                       <Input 
-                         id="title"
-                         value={selectedProductData.title}
-                         onChange={(e) => updateProductData(selectedFileId!, { title: e.target.value })}
-                         placeholder="Titre de votre création"
-                         required
-                       />
-                     </div>
-                    
-                    <div>
-                      <Label htmlFor="category">Catégorie</Label>
-                      <Select 
-                        value={selectedProductData.category}
-                        onValueChange={(value) => updateProductData(selectedFileId!, { category: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                     <div className="md:col-span-2 space-y-2">
-                       <Label htmlFor="description">Description *</Label>
-                       <Textarea 
-                         id="description"
-                         value={selectedProductData.description}
-                         onChange={(e) => updateProductData(selectedFileId!, { description: e.target.value })}
-                         placeholder="Décrivez votre création..."
-                         rows={4}
-                         required
-                       />
-                       <p className="text-xs text-muted-foreground">
-                         💡 Conseil: Une description détaillée améliore la génération IA des métadonnées
-                       </p>
-                     </div>
-                    
-                    <div className="md:col-span-2">
-                      <Label>Tags</Label>
-                      <div className="flex space-x-2">
-                        <Input 
-                          value={selectedProductData.currentTag}
-                          onChange={(e) => handleTagInputChange(selectedFileId!, e.target.value)}
-                          placeholder="Séparez les tags par virgule, point-virgule ou Entrée"
-                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(selectedFileId!))}
-                        />
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Label htmlFor="title">Titre *</Label>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleGenerateAIMetadata(selectedFileId!)}
+                              disabled={loading || batchAILoading}
+                              className="h-6 px-2 text-xs"
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              IA
+                            </Button>
+                          </div>
+                          <Input 
+                            id="title"
+                            value={selectedProductData.title}
+                            onChange={(e) => updateProductData(selectedFileId!, { title: e.target.value })}
+                            placeholder="Titre de votre création"
+                            required
+                          />
+                        </div>
+                       
+                        <div>
+                          <Label htmlFor="category">Catégorie</Label>
+                          <Select 
+                            value={selectedProductData.category}
+                            onValueChange={(value) => updateProductData(selectedFileId!, { category: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner une catégorie" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="md:col-span-2 space-y-2">
+                          <Label htmlFor="description">Description *</Label>
+                          <Textarea 
+                            id="description"
+                            value={selectedProductData.description}
+                            onChange={(e) => updateProductData(selectedFileId!, { description: e.target.value })}
+                            placeholder="Décrivez votre création..."
+                            rows={4}
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            💡 Conseil: Une description détaillée améliore la génération IA des métadonnées
+                          </p>
+                        </div>
+                       
+                        <div className="md:col-span-2">
+                          <Label>Tags</Label>
+                          <div className="flex space-x-2">
+                            <Input 
+                              value={selectedProductData.currentTag}
+                              onChange={(e) => handleTagInputChange(selectedFileId!, e.target.value)}
+                              placeholder="Séparez les tags par virgule, point-virgule ou Entrée"
+                              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(selectedFileId!))}
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={() => handleAddTag(selectedFileId!)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          {selectedProductData.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {selectedProductData.tags.map((tag) => (
+                                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                  {tag}
+                                  <X 
+                                    className="h-3 w-3 cursor-pointer" 
+                                    onClick={() => handleRemoveTag(selectedFileId!, tag)}
+                                  />
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Product Actions */}
+                      <div className="flex space-x-3 pt-4 border-t">
                         <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => handleAddTag(selectedFileId!)}
+                          onClick={() => handleSaveDraft(selectedFileId!)}
+                          variant="outline"
+                          disabled={loading}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Save className="h-4 w-4 mr-2" />
+                          Sauvegarder brouillon
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handlePublish(selectedFileId!)}
+                          disabled={loading || !selectedProductData.title.trim() || !selectedProductData.description.trim()}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Publier ce produit
                         </Button>
                       </div>
-                      
-                      {selectedProductData.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {selectedProductData.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                              {tag}
-                              <X 
-                                className="h-3 w-3 cursor-pointer" 
-                                onClick={() => handleRemoveTag(selectedFileId!, tag)}
-                              />
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                  </div>
-
-                  {/* Product Actions */}
-                  <div className="flex space-x-3 pt-4 border-t">
-                    <Button 
-                      onClick={() => handleSaveDraft(selectedFileId!)}
-                      variant="outline"
-                      disabled={loading}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Sauvegarder brouillon
-                    </Button>
-                    
-                    <Button 
-                      onClick={() => handlePublish(selectedFileId!)}
-                      disabled={loading || !selectedProductData.title.trim() || !selectedProductData.description.trim()}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Publier ce produit
-                    </Button>
-                  </div>
-                </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12">
                   <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

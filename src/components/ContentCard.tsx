@@ -1,4 +1,4 @@
-import { Heart, Download, ShoppingCart, Eye } from "lucide-react";
+import { Heart, Download, ShoppingCart, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -13,10 +13,11 @@ interface ContentCardProps {
   title: string;
   author: string;
   price: number;
-  type: "photo" | "video" | "audio" | "illustration";
+  type: "photo" | "video" | "audio" | "illustration" | "pdf" | "ebook";
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
+  coverUrl?: string; // Pour les ebooks/PDF
   likes: number;
   downloads: number;
   isLiked?: boolean;
@@ -31,6 +32,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   thumbnail,
   videoUrl,
   audioUrl,
+  coverUrl,
   likes,
   downloads,
   isLiked = false,
@@ -43,6 +45,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       case "video": return "bg-red-100 text-red-800";
       case "audio": return "bg-green-100 text-green-800";
       case "illustration": return "bg-purple-100 text-purple-800";
+      case "pdf":
+      case "ebook": return "bg-orange-100 text-orange-800";
       default: return "bg-blue-100 text-blue-800";
     }
   };
@@ -56,7 +60,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         type,
         thumbnail,
         videoUrl,
-        audioUrl
+        audioUrl,
+        coverUrl
       });
   };
 
@@ -108,6 +113,20 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               </div>
             </div>
           </div>
+        ) : type === "pdf" || type === "ebook" ? (
+          <div className="relative w-full h-full">
+            <LazyImage
+              src={coverUrl || thumbnail}
+              alt={`Couverture de ${title}`}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-black/50 backdrop-blur-sm rounded-lg p-3">
+                <FileText className="h-8 w-8 text-white mx-auto mb-1" />
+                <span className="text-xs text-white font-medium">PDF</span>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="relative">
             <LazyImage
@@ -122,7 +141,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300">
           <div className="absolute top-2 left-2">
             <Badge className={getTypeColor(type)}>
-              {type}
+              {type === "pdf" || type === "ebook" ? "ebook" : type}
             </Badge>
           </div>
           

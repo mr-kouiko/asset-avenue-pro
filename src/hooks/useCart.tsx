@@ -10,6 +10,7 @@ interface CartItem {
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
+  coverUrl?: string;
   licenseId?: string;
 }
 
