@@ -105,7 +105,7 @@ export const useMarketplace = () => {
           if (item.content_type === 'video') contentType = 'video';
           else if (item.content_type === 'audio') contentType = 'audio';
           else if (item.content_type === 'illustration') contentType = 'illustration';
-          else if (item.content_type === 'document' || item.content_type === 'pdf') contentType = 'ebook';
+          else if (item.content_type === 'document') contentType = 'ebook';
 
           const contentItem: MarketplaceContent = {
             id: item.id,
