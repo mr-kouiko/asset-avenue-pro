@@ -63,8 +63,8 @@ export const EbookForm = ({
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB max
-      toast.error("L'image de couverture ne peut pas dépasser 10MB");
+    if (file.size > 2 * 1024 * 1024) { // 2MB max
+      toast.error("L'image de couverture ne peut pas dépasser 2MB");
       return;
     }
 
@@ -219,7 +219,7 @@ export const EbookForm = ({
             <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm font-medium">Cliquez pour uploader la couverture</p>
             <p className="text-xs text-muted-foreground">
-              Format recommandé: 600x800px, max 10MB
+              Toutes dimensions acceptées, max 2MB
             </p>
           </div>
         )}
