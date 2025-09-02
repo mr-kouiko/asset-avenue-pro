@@ -105,7 +105,7 @@ export const useMarketplace = () => {
           if (item.content_type === 'video') contentType = 'video';
           else if (item.content_type === 'audio') contentType = 'audio';
           else if (item.content_type === 'illustration') contentType = 'illustration';
-          else if (item.content_type === 'document' || item.content_type === 'pdf') contentType = 'pdf';
+          else if (item.content_type === 'document' || item.content_type === 'pdf') contentType = 'ebook';
 
           const contentItem: MarketplaceContent = {
             id: item.id,
@@ -116,7 +116,7 @@ export const useMarketplace = () => {
             thumbnail: thumbnailUrl,
             videoUrl: item.content_type === 'video' ? mediaUrl : undefined,
             audioUrl: item.content_type === 'audio' ? mediaUrl : undefined,
-            coverUrl: coverUrl || (contentType === 'pdf' ? thumbnailUrl : undefined),
+            coverUrl: coverUrl || (contentType === 'ebook' ? thumbnailUrl : undefined),
             likes: Math.floor(Math.random() * 2000), // Would need to implement likes system
             downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
             category_id: item.category_id,
