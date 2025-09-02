@@ -52,14 +52,20 @@ export const useContentStats = () => {
       let illustrations = 0;
       let ebooks = 0;
 
-      submissions?.forEach((submission: any) => {
+        submissions?.forEach((submission: any) => {
         const fileType = submission.content_files[0]?.file_type;
+        const fileName = submission.content_files[0]?.file_name || '';
         
         if (fileType?.startsWith('video/')) {
           videos++;
         } else if (fileType?.startsWith('audio/')) {
           audios++;
-        } else if (fileType === 'application/pdf' || fileType === 'application/epub+zip' || fileType?.includes('ebook')) {
+        } else if (
+          fileType === 'application/pdf' || 
+          fileType === 'application/epub+zip' || 
+          fileType?.includes('ebook') ||
+          (fileType === 'document' && (fileName.endsWith('.pdf') || fileName.endsWith('.epub')))
+        ) {
           ebooks++;
         } else if (fileType?.includes('vector')) {
           illustrations++;
