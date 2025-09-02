@@ -12,11 +12,42 @@ export const useWatermarkedPreview = ({ imageUrl, enabled = false }: UseWatermar
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Watermarked preview generation is disabled
-    // Always return the original image URL
-    setWatermarkedUrl(imageUrl);
-    setIsProcessing(false);
-    setError(null);
+    if (!imageUrl || !enabled) {
+      setWatermarkedUrl(imageUrl);
+      setIsProcessing(false);
+      setError(null);
+      return;
+    }
+
+    const generateWatermarkedPreview = async () => {
+      try {
+        setIsProcessing(true);
+        setError(null);
+        
+        // Fetch the image file
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'preview.jpg', { type: blob.type });
+        
+        // Generate watermarked preview
+        const watermarkedBlob = await createWebPreviewWithWatermark(file, {
+          opacity: 0.3,
+          spacing: 150,
+          logoPath: 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png'
+        });
+        
+        const watermarkedUrl = URL.createObjectURL(watermarkedBlob);
+        setWatermarkedUrl(watermarkedUrl);
+      } catch (err) {
+        console.error('Failed to generate watermarked preview:', err);
+        setError(err instanceof Error ? err.message : 'Failed to generate preview');
+        setWatermarkedUrl(imageUrl); // Fallback to original
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    generateWatermarkedPreview();
   }, [imageUrl, enabled]);
 
   // Cleanup object URL when component unmounts

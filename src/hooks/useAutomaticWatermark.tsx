@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateThumbnail, addWatermarkToImage, createWebPreviewWithWatermark } from '@/utils/watermark';
 
 interface ProcessedFile {
   id: string;
@@ -189,11 +190,11 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           let thumbnailUrl: string;
           let previewUrl: string | undefined;
 
-          // Upload original files directly without thumbnail/preview generation
           const fileExtension = file.name.split('.').pop()?.toLowerCase();
           let filePath: string;
           let bucketName = 'uploads';
           
+          // Determine file path and bucket based on type
           if (file.type.startsWith('video/')) {
             filePath = `${user.id}/videos/${fileId}_original.${fileExtension}`;
           } else if (file.type.startsWith('audio/')) {
@@ -205,13 +206,57 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
             filePath = `${user.id}/files/${fileId}_original.${fileExtension}`;
           }
           
-          // Upload original file only - no thumbnails or previews
-          watermarkedUrl = await uploadToSupabase(file, filePath, bucketName, file, file.type, (progress) => {
-            onProgress?.(fileId, progress);
-          });
-          thumbnailUrl = watermarkedUrl; // Use original file as thumbnail
+          onProgress?.(fileId, 10);
           
-          console.log(`✅ File uploaded directly without thumbnails/previews: ${watermarkedUrl}`);
+          // Upload original file
+          watermarkedUrl = await uploadToSupabase(file, filePath, bucketName, file, file.type, (progress) => {
+            onProgress?.(fileId, Math.min(50, 10 + progress * 0.4));
+          });
+          
+          onProgress?.(fileId, 60);
+          
+          // Generate and upload thumbnail with watermark
+          try {
+            const thumbnailBlob = await generateThumbnail(file, {
+              maxSize: 400,
+              quality: 0.8,
+              format: 'image/jpeg'
+            });
+            
+            const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.jpg`;
+            thumbnailUrl = await uploadToSupabase(thumbnailBlob, thumbnailPath, 'thumbnails', undefined, 'image/jpeg', (progress) => {
+              onProgress?.(fileId, 60 + progress * 0.2);
+            });
+            
+            console.log(`✅ Thumbnail generated and uploaded: ${thumbnailUrl}`);
+          } catch (thumbError) {
+            console.warn('Thumbnail generation failed, using original:', thumbError);
+            thumbnailUrl = watermarkedUrl; // Fallback to original
+          }
+          
+          onProgress?.(fileId, 85);
+          
+          // Generate and upload preview for images
+          if (file.type.startsWith('image/')) {
+            try {
+              const previewBlob = await createWebPreviewWithWatermark(file, {
+                opacity: 0.3,
+                spacing: 150,
+                logoPath: 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png'
+              });
+              
+              const previewPath = `${user.id}/previews/${fileId}_preview.jpg`;
+              previewUrl = await uploadToSupabase(previewBlob, previewPath, 'previews', undefined, 'image/jpeg', (progress) => {
+                onProgress?.(fileId, 85 + progress * 0.15);
+              });
+              
+              console.log(`✅ Preview generated and uploaded: ${previewUrl}`);
+            } catch (previewError) {
+              console.warn('Preview generation failed:', previewError);
+            }
+          }
+          
+          console.log(`✅ File processed with watermarked thumbnail: ${watermarkedUrl}`);
 
           // Update processed file with results
           const updatedFile = {

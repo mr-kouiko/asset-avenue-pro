@@ -349,29 +349,372 @@ export const createWebPreviewWithWatermark = async (
   });
 };
 
-// Generate audio waveform as thumbnail
-export const generateAudioThumbnail = async (
-  audioFile: File,
-  options: ThumbnailOptions = {}
-): Promise<Blob> => {
-  // Audio thumbnail generation is disabled - return original file as blob
-  return audioFile;
-};
+// Default watermark logo from Supabase storage
+const DEFAULT_LOGO_URL = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
 
-export const generateThumbnail = async (
-  file: File, 
-  options: ThumbnailOptions = {}
-): Promise<Blob> => {
-  // Thumbnail generation is disabled - return original file as blob
-  return file;
-};
-
+// Generate video thumbnail by extracting frame at 1 second
 export const generateVideoThumbnail = async (
   videoFile: File,
   options: ThumbnailOptions = {}
 ): Promise<Blob> => {
-  // Video thumbnail generation is disabled - return original file as blob
-  return videoFile;
+  const { maxSize = 400, quality = 0.8, format = 'image/jpeg' } = options;
+  
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Could not get canvas context'));
+      return;
+    }
+    
+    video.onloadedmetadata = () => {
+      // Set canvas dimensions maintaining aspect ratio
+      const aspectRatio = video.videoWidth / video.videoHeight;
+      if (video.videoWidth > video.videoHeight) {
+        canvas.width = Math.min(maxSize, video.videoWidth);
+        canvas.height = canvas.width / aspectRatio;
+      } else {
+        canvas.height = Math.min(maxSize, video.videoHeight);
+        canvas.width = canvas.height * aspectRatio;
+      }
+      
+      // Seek to 1 second for thumbnail
+      video.currentTime = 1;
+    };
+    
+    video.onseeked = () => {
+      // Draw video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Add watermark
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      
+      logoImg.onload = () => {
+        // Calculate watermark size (15% of canvas width)
+        const watermarkSize = Math.min(80, canvas.width * 0.15);
+        const x = canvas.width - watermarkSize - 10;
+        const y = canvas.height - watermarkSize - 10;
+        
+        // Add semi-transparent background for logo
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(x - 5, y - 5, watermarkSize + 10, watermarkSize + 10);
+        
+        // Draw watermark logo
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(logoImg, x, y, watermarkSize, watermarkSize);
+        ctx.globalAlpha = 1;
+        
+        canvas.toBlob(resolve, format, quality);
+      };
+      
+      logoImg.onerror = () => {
+        // Fallback to text watermark
+        const fontSize = Math.max(12, canvas.width * 0.04);
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        
+        const x = canvas.width - 10;
+        const y = canvas.height - 10;
+        
+        ctx.strokeText('VisuStock', x, y);
+        ctx.fillText('VisuStock', x, y);
+        
+        canvas.toBlob(resolve, format, quality);
+      };
+      
+      logoImg.src = DEFAULT_LOGO_URL;
+    };
+    
+    video.onerror = () => reject(new Error('Failed to load video'));
+    video.src = URL.createObjectURL(videoFile);
+  });
+};
+
+// Generate image thumbnail with watermark
+export const generateImageThumbnail = async (
+  imageFile: File,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  const { maxSize = 400, quality = 0.8, format = 'image/jpeg' } = options;
+  
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      // Calculate thumbnail dimensions maintaining aspect ratio
+      const aspectRatio = img.width / img.height;
+      if (img.width > img.height) {
+        canvas.width = Math.min(maxSize, img.width);
+        canvas.height = canvas.width / aspectRatio;
+      } else {
+        canvas.height = Math.min(maxSize, img.height);
+        canvas.width = canvas.height * aspectRatio;
+      }
+      
+      // Draw image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // Add watermark
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      
+      logoImg.onload = () => {
+        // Calculate watermark size (15% of canvas width)
+        const watermarkSize = Math.min(80, canvas.width * 0.15);
+        const x = canvas.width - watermarkSize - 10;
+        const y = canvas.height - watermarkSize - 10;
+        
+        // Add semi-transparent background for logo
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(x - 5, y - 5, watermarkSize + 10, watermarkSize + 10);
+        
+        // Draw watermark logo
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(logoImg, x, y, watermarkSize, watermarkSize);
+        ctx.globalAlpha = 1;
+        
+        canvas.toBlob(resolve, format, quality);
+      };
+      
+      logoImg.onerror = () => {
+        // Fallback to text watermark
+        const fontSize = Math.max(12, canvas.width * 0.04);
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        
+        const x = canvas.width - 10;
+        const y = canvas.height - 10;
+        
+        ctx.strokeText('VisuStock', x, y);
+        ctx.fillText('VisuStock', x, y);
+        
+        canvas.toBlob(resolve, format, quality);
+      };
+      
+      logoImg.src = DEFAULT_LOGO_URL;
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(imageFile);
+  });
+};
+
+// Generate PDF thumbnail (fallback with watermark)
+export const generatePDFThumbnail = async (
+  pdfFile: File,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  // For PDF files, generate a styled fallback thumbnail with watermark
+  // This avoids external dependencies while still providing branded visuals
+  console.log('Generating fallback thumbnail for PDF file:', pdfFile.name);
+  return generateFallbackThumbnail('PDF', options);
+};
+
+// Generate audio waveform thumbnail
+export const generateAudioThumbnail = async (
+  audioFile: File,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  const { maxSize = 400, quality = 0.8, format = 'image/jpeg' } = options;
+  
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('Could not get canvas context'));
+      return;
+    }
+    
+    canvas.width = maxSize;
+    canvas.height = maxSize * 0.6; // 5:3 aspect ratio for audio
+    
+    // Create a simple waveform visualization
+    ctx.fillStyle = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw waveform pattern
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    const centerY = canvas.height / 2;
+    const barWidth = 3;
+    const barSpacing = 2;
+    const numBars = Math.floor(canvas.width / (barWidth + barSpacing));
+    
+    for (let i = 0; i < numBars; i++) {
+      const x = i * (barWidth + barSpacing);
+      const height = Math.random() * (canvas.height * 0.3) + 10;
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(x, centerY - height / 2, barWidth, height);
+    }
+    
+    // Add audio icon
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('♪', canvas.width / 2, canvas.height / 2);
+    
+    // Add watermark
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    
+    logoImg.onload = () => {
+      const watermarkSize = Math.min(60, canvas.width * 0.12);
+      const x = canvas.width - watermarkSize - 10;
+      const y = canvas.height - watermarkSize - 10;
+      
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(x - 5, y - 5, watermarkSize + 10, watermarkSize + 10);
+      
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(logoImg, x, y, watermarkSize, watermarkSize);
+      ctx.globalAlpha = 1;
+      
+      canvas.toBlob(resolve, format, quality);
+    };
+    
+    logoImg.onerror = () => {
+      const fontSize = Math.max(10, canvas.width * 0.03);
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      
+      const x = canvas.width - 8;
+      const y = canvas.height - 8;
+      
+      ctx.fillText('VisuStock', x, y);
+      canvas.toBlob(resolve, format, quality);
+    };
+    
+    logoImg.src = DEFAULT_LOGO_URL;
+  });
+};
+
+// Generate fallback thumbnail for unsupported file types
+export const generateFallbackThumbnail = async (
+  fileType: string,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  const { maxSize = 400, quality = 0.8, format = 'image/jpeg' } = options;
+  
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    
+    canvas.width = maxSize;
+    canvas.height = maxSize;
+    
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#4f46e5');
+    gradient.addColorStop(1, '#7c3aed');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add file type text
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = `bold ${canvas.width * 0.1}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fileType, canvas.width / 2, canvas.height / 2);
+    
+    // Add watermark
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    
+    logoImg.onload = () => {
+      const watermarkSize = Math.min(60, canvas.width * 0.12);
+      const x = canvas.width - watermarkSize - 10;
+      const y = canvas.height - watermarkSize - 10;
+      
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(x - 5, y - 5, watermarkSize + 10, watermarkSize + 10);
+      
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(logoImg, x, y, watermarkSize, watermarkSize);
+      ctx.globalAlpha = 1;
+      
+      canvas.toBlob(resolve, format, quality);
+    };
+    
+    logoImg.onerror = () => {
+      const fontSize = Math.max(10, canvas.width * 0.03);
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      
+      const x = canvas.width - 8;
+      const y = canvas.height - 8;
+      
+      ctx.fillText('VisuStock', x, y);
+      canvas.toBlob(resolve, format, quality);
+    };
+    
+    logoImg.src = DEFAULT_LOGO_URL;
+  });
+};
+
+// Main thumbnail generation function
+export const generateThumbnail = async (
+  file: File,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  const fileType = file.type.toLowerCase();
+  const fileName = file.name.toLowerCase();
+  
+  try {
+    if (fileType.startsWith('video/')) {
+      return await generateVideoThumbnail(file, options);
+    } else if (fileType.startsWith('image/')) {
+      return await generateImageThumbnail(file, options);
+    } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      return await generatePDFThumbnail(file, options);
+    } else if (fileType.startsWith('audio/')) {
+      return await generateAudioThumbnail(file, options);
+    } else {
+      // Fallback for unknown file types
+      const typeLabel = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+      return await generateFallbackThumbnail(typeLabel, options);
+    }
+  } catch (error) {
+    console.error('Thumbnail generation failed:', error);
+    const typeLabel = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+    return await generateFallbackThumbnail(typeLabel, options);
+  }
 };
 
 // Enhanced function for generating multiple thumbnail options for short videos
@@ -379,6 +722,7 @@ export const generateMultipleVideoThumbnails = async (
   videoFile: File,
   options: ThumbnailOptions = {}
 ): Promise<Blob[]> => {
-  // Multiple video thumbnails generation is disabled - return original file as single item array
-  return [videoFile];
+  // For now, return single thumbnail - can be enhanced later for multiple frames
+  const thumbnail = await generateVideoThumbnail(videoFile, options);
+  return [thumbnail];
 };
