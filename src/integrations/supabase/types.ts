@@ -892,7 +892,7 @@ export type Database = {
         }[]
       }
       get_creator_profiles_public: {
-        Args: { creator_ids: string[] }
+        Args: Record<PropertyKey, never> | { creator_ids: string[] }
         Returns: {
           avatar_url: string
           creator_hash: string
@@ -910,6 +910,23 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_marketplace_content: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category_id: string
+          category_name: string
+          content_type: string
+          created_at: string
+          creator_display_name: string
+          creator_hash: string
+          creator_store_name: string
+          description: string
+          id: string
+          price: number
+          tags: string[]
+          title: string
+        }[]
+      }
       get_product_detail: {
         Args: { product_id: string }
         Returns: {
@@ -923,6 +940,32 @@ export type Database = {
           price: number
           tags: string[]
           title: string
+        }[]
+      }
+      get_public_file_access: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          content_id: string
+          file_format: string
+          file_name: string
+          file_size: number
+          file_type: string
+          has_thumbnail: boolean
+          id: string
+          is_preview: boolean
+          metadata: Json
+          public_file_url: string
+        }[]
+      }
+      get_security_audit_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_count: number
+          event_type: string
+          first_occurrence: string
+          last_occurrence: string
+          target_table: string
+          unique_users: number
         }[]
       }
       get_security_audit_summary_admin: {
