@@ -92,13 +92,6 @@ export type Database = {
             referencedRelation: "content_submissions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "content_files_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_content"
-            referencedColumns: ["id"]
-          },
         ]
       }
       content_submissions: {
@@ -282,13 +275,6 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "content_submissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "downloads_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_content"
             referencedColumns: ["id"]
           },
         ]
@@ -515,13 +501,6 @@ export type Database = {
             referencedRelation: "content_files"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "secure_downloads_content_file_id_fkey"
-            columns: ["content_file_id"]
-            isOneToOne: false
-            referencedRelation: "public_file_access"
-            referencedColumns: ["id"]
-          },
         ]
       }
       security_audit_log: {
@@ -650,13 +629,6 @@ export type Database = {
             referencedRelation: "content_submissions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "transactions_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_content"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -682,100 +654,7 @@ export type Database = {
       }
     }
     Views: {
-      admin_profiles_safe: {
-        Row: {
-          avatar_url: string | null
-          country: string | null
-          created_at: string | null
-          display_name: string | null
-          email_masked: string | null
-          id: string | null
-          role: Database["public"]["Enums"]["app_role"] | null
-          store_name: string | null
-          subscribed: boolean | null
-          subscription_end: string | null
-          subscription_tier: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
-      creator_profiles_public: {
-        Row: {
-          avatar_url: string | null
-          creator_hash: string | null
-          display_name: string | null
-          store_name: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
-      marketplace_content: {
-        Row: {
-          category_id: string | null
-          category_name: string | null
-          content_type: string | null
-          created_at: string | null
-          creator_display_name: string | null
-          creator_hash: string | null
-          creator_store_name: string | null
-          description: string | null
-          id: string | null
-          price: number | null
-          tags: string[] | null
-          title: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "content_submissions_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      public_file_access: {
-        Row: {
-          content_id: string | null
-          file_format: string | null
-          file_name: string | null
-          file_size: number | null
-          file_type: string | null
-          has_thumbnail: boolean | null
-          id: string | null
-          is_preview: boolean | null
-          metadata: Json | null
-          public_file_url: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "content_files_submission_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: false
-            referencedRelation: "content_submissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "content_files_submission_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_content"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      security_audit_summary: {
-        Row: {
-          event_count: number | null
-          event_type: string | null
-          first_occurrence: string | null
-          last_occurrence: string | null
-          target_table: string | null
-          unique_users: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       admin_access_profile_secure: {

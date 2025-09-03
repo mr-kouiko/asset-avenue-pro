@@ -26,11 +26,9 @@ export const useMarketplace = () => {
     try {
       setLoading(true);
       
-      // Use the new marketplace_content view for automatic content type detection and filtering
+      // Use the new get_marketplace_content function for automatic content type detection and filtering
       const { data: marketplaceData, error } = await supabase
-        .from('marketplace_content')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_marketplace_content');
 
       if (error) {
         console.error('Error fetching marketplace content:', error);
