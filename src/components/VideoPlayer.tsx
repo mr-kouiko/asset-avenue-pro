@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { VideoWatermark } from '@/components/VideoWatermark';
 
 interface MediaPlayerProps {
   src?: string;
@@ -399,6 +400,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         >
           <source src={src} type={mimeType} />
         </audio>
+      )}
+
+      {/* Video Watermark - only for videos */}
+      {type === 'video' && canPlay && !isLoading && !hasError && (
+        <VideoWatermark />
       )}
 
       {/* Loading overlay */}

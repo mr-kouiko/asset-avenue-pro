@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { detectDevice, getMediaPlayerConfig, getOptimalMediaFormats } from '@/utils/deviceDetection';
+import { VideoWatermark } from '@/components/VideoWatermark';
 
 
 interface UniversalVideoPlayerProps {
@@ -501,6 +502,11 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
         ))}
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
+
+      {/* Video Watermark */}
+      {canPlay && !isLoading && !videoError && (
+        <VideoWatermark />
+      )}
 
 
       {/* Loading indicator */}
