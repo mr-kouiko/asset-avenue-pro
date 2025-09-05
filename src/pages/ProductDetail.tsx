@@ -226,6 +226,7 @@ const ProductDetail = () => {
                 autoPlay={false}
                 controls={true}
                 muted={false}
+                watermarkSize="normal"
               />
             ) : (
               /* Video not available - show loading/waiting message */
@@ -255,6 +256,7 @@ const ProductDetail = () => {
                 autoPlay={false}
                 controls={true}
                 muted={false}
+                watermarkSize="normal"
               />
             </div>
           </div>

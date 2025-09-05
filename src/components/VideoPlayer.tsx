@@ -14,6 +14,7 @@ interface MediaPlayerProps {
   controls?: boolean;
   muted?: boolean;
   compact?: boolean;
+  watermarkSize?: 'normal' | 'large' | 'thumbnail';
 }
 
 /** Helper: deduce MIME from src extension */
@@ -47,7 +48,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   autoPlay = false,
   controls = true,
   muted = false,
-  compact = false
+  compact = false,
+  watermarkSize = 'normal'
 }) => {
   const deviceInfo = useDeviceDetection();
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
@@ -408,9 +410,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         </audio>
       )}
 
-      {/* Video Watermark - only for videos */}
-      {type === 'video' && canPlay && !isLoading && !hasError && (
-        <VideoWatermark />
+      {/* Video Watermark - ALWAYS show for videos, even when loading */}
+      {type === 'video' && !hasError && (
+        <VideoWatermark size={watermarkSize} />
       )}
 
       {/* Loading overlay */}

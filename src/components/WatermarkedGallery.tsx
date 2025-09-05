@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { VideoWatermark } from './VideoWatermark';
 
 interface WatermarkedGalleryProps {
   items: Array<{
@@ -33,12 +34,16 @@ export const WatermarkedGallery: React.FC<WatermarkedGalleryProps> = ({ items })
                 className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow"
               />
             ) : (
-              <video
-                src={item.previewUrl}
-                className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                muted
-                preload="metadata"
-              />
+              <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+                <video
+                  src={item.previewUrl}
+                  className="w-full h-full object-cover"
+                  muted
+                  preload="metadata"
+                />
+                {/* Always show large watermark on video thumbnails */}
+                <VideoWatermark size="thumbnail" />
+              </div>
             )}
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity rounded-lg flex items-center justify-center">
               <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -67,13 +72,17 @@ export const WatermarkedGallery: React.FC<WatermarkedGalleryProps> = ({ items })
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <video
-                src={item.fullscreenUrl}
-                controls
-                className="max-w-full max-h-full"
-                onClick={(e) => e.stopPropagation()}
-                autoPlay
-              />
+              <div className="relative max-w-full max-h-full">
+                <video
+                  src={item.fullscreenUrl}
+                  controls
+                  className="max-w-full max-h-full"
+                  onClick={(e) => e.stopPropagation()}
+                  autoPlay
+                />
+                {/* Always show normal watermark in fullscreen */}
+                <VideoWatermark size="normal" />
+              </div>
             );
           })()}
           

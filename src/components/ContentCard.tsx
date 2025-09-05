@@ -7,6 +7,7 @@ import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
+import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
 
 interface ContentCardProps {
   id: string;
@@ -85,14 +86,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
       <div className="relative aspect-[4/3] overflow-hidden">
         {type === "video" ? (
-          <MediaPlayer 
-            src={videoUrl}
-            type="video"
+          <WatermarkedVideoThumbnail
+            thumbnail={thumbnail}
             title={title}
-            poster={thumbnail}
             className="w-full h-full"
-            controls={true}
-            autoPlay={false}
           />
         ) : type === "audio" ? (
           <div className="relative w-full h-full">

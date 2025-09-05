@@ -14,6 +14,7 @@ interface UniversalVideoPlayerProps {
   autoPlay?: boolean;
   controls?: boolean;
   muted?: boolean;
+  watermarkSize?: 'normal' | 'large' | 'thumbnail';
 }
 
 /**
@@ -28,7 +29,8 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   showThumbnailFirst = false,
   autoPlay = false,
   controls = true,
-  muted = false
+  muted = false,
+  watermarkSize = 'normal'
 }) => {
   // Device detection
   const deviceInfo = detectDevice();
@@ -504,9 +506,9 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
 
-      {/* Video Watermark */}
-      {canPlay && !isLoading && !videoError && (
-        <VideoWatermark />
+      {/* Video Watermark - ALWAYS show for videos, even when loading */}
+      {!videoError && (
+        <VideoWatermark size={watermarkSize} />
       )}
 
 
