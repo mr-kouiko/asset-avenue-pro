@@ -292,18 +292,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setCurrentTime(newTime);
   }, [duration, canPlay]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const toggleFullscreen = useCallback(async () => {
     if (type !== 'video') return;
-    const media = mediaRef.current as HTMLVideoElement | null;
-    if (!media) return;
+    const container = containerRef.current;
+    if (!container) return;
     try {
       if (!isFullscreen) {
-        if (media.requestFullscreen) await media.requestFullscreen();
-        else if ((media as any).webkitRequestFullscreen) await (media as any).webkitRequestFullscreen();
+        if (container.requestFullscreen) await container.requestFullscreen();
+        else if ((container as any).webkitRequestFullscreen) await (container as any).webkitRequestFullscreen();
+        else if ((container as any).mozRequestFullScreen) await (container as any).mozRequestFullScreen();
+        else if ((container as any).msRequestFullscreen) await (container as any).msRequestFullscreen();
         setIsFullscreen(true);
       } else {
         if (document.exitFullscreen) await document.exitFullscreen();
         else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
+        else if ((document as any).mozCancelFullScreen) await (document as any).mozCancelFullScreen();
+        else if ((document as any).msExitFullscreen) await (document as any).msExitFullscreen();
         setIsFullscreen(false);
       }
     } catch (err) {
@@ -369,7 +375,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   }
 
   return (
-    <div className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'}`}>
+    <div ref={containerRef} className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'}`}>
       {/* Media element with typed <source> (helps mobile) */}
       {type === 'video' ? (
         <video

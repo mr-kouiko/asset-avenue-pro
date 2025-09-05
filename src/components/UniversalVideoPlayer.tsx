@@ -309,10 +309,8 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
         const element = containerRef.current as any;
         const video = videoRef.current as any;
         
-        // iOS Safari specific - use video element fullscreen
-        if (deviceInfo.isIOS && video?.webkitEnterFullscreen) {
-          await video.webkitEnterFullscreen();
-        } else if (element?.requestFullscreen) {
+        // Prioritize container fullscreen for better watermark support
+        if (element?.requestFullscreen) {
           await element.requestFullscreen();
         } else if (element?.webkitRequestFullscreen) {
           await element.webkitRequestFullscreen();
@@ -320,6 +318,9 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           await element.mozRequestFullScreen();
         } else if (element?.msRequestFullscreen) {
           await element.msRequestFullscreen();
+        } else if (deviceInfo.isIOS && video?.webkitEnterFullscreen) {
+          // Fallback to native iOS fullscreen (watermark won't be visible)
+          await video.webkitEnterFullscreen();
         }
       } else {
         if (document.exitFullscreen) {

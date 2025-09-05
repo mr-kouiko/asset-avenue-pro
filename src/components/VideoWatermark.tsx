@@ -5,7 +5,7 @@ interface VideoWatermarkProps {
 }
 
 export const VideoWatermark: React.FC<VideoWatermarkProps> = ({ 
-  className = "absolute inset-0 z-[9999] pointer-events-none flex items-center justify-center"
+  className = "absolute inset-0 z-20 pointer-events-none flex items-center justify-center"
 }) => {
   return (
     <div className={className}>
@@ -14,8 +14,8 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
         alt=""
         className="w-auto h-auto opacity-80"
         style={{ 
-          width: '20vmin',
-          height: '20vmin',
+          width: '20%',
+          height: 'auto',
           maxWidth: '40%',
           maxHeight: '40%',
           objectFit: 'contain',

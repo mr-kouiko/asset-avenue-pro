@@ -157,7 +157,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </Button>
           </div>
 
-          <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-40">
             <div className="flex space-x-2">
               <Button size="sm" className="flex-1" asChild>
                 <Link to={`/product/${id}`}>

@@ -299,18 +299,24 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     [canPlay, duration]
   );
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const toggleFullscreen = useCallback(async () => {
     if (type !== 'video') return;
-    const media = mediaRef.current as HTMLVideoElement | null;
-    if (!media) return;
+    const container = containerRef.current;
+    if (!container) return;
     try {
       if (!isFullscreen) {
-        if (media.requestFullscreen) await media.requestFullscreen();
-        else if ((media as any).webkitRequestFullscreen) await (media as any).webkitRequestFullscreen();
+        if (container.requestFullscreen) await container.requestFullscreen();
+        else if ((container as any).webkitRequestFullscreen) await (container as any).webkitRequestFullscreen();
+        else if ((container as any).mozRequestFullScreen) await (container as any).mozRequestFullScreen();
+        else if ((container as any).msRequestFullscreen) await (container as any).msRequestFullscreen();
         setIsFullscreen(true);
       } else {
         if (document.exitFullscreen) await document.exitFullscreen();
         else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
+        else if ((document as any).mozCancelFullScreen) await (document as any).mozCancelFullScreen();
+        else if ((document as any).msExitFullscreen) await (document as any).msExitFullscreen();
         setIsFullscreen(false);
       }
     } catch (err) {
@@ -371,6 +377,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${
         compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'
       }`}
@@ -416,7 +423,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
           <div className="text-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
             <p className="text-primary text-sm">Loading...</p>
@@ -426,7 +433,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
       {/* Controls */}
       {canPlay && controls && (
-        <div className="absolute inset-0 z-10">
+        <div className="absolute inset-0 z-25">
           {compact ? (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
               <div className="flex items-center gap-2">
