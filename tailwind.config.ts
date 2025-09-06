@@ -57,6 +57,10 @@ export default {
 					DEFAULT: 'hsl(var(--surface))',
 					foreground: 'hsl(var(--surface-foreground))'
 				},
+				'stock-blue': 'hsl(var(--stock-blue))',
+				'stock-dark': 'hsl(var(--stock-dark))',
+				'stock-gray': 'hsl(var(--stock-gray))',
+				'stock-border': 'hsl(var(--stock-border))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

@@ -210,10 +210,10 @@ const ProductDetail = () => {
       <Navigation />
 
       <div className="container py-8">
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Video/Image Display */}
-        <div className="space-y-4">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted border border-border shadow-lg">
+        <div className="lg:col-span-2 space-y-6">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
         {product.type === 'video' ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
@@ -312,64 +312,66 @@ const ProductDetail = () => {
         
       </div>
 
-            {/* Image Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <div className="text-muted-foreground">Dimensions</div>
-                <div className="font-medium">{dimensions}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Format</div>
-                <div className="font-medium">{fileFormat}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Taille</div>
-                <div className="font-medium">{fileSize}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Type</div>
-                <Badge variant="secondary" className="capitalize">
-                  {product.type}
-                </Badge>
+            {/* Technical Details - Adobe Stock Style */}
+            <div className="bg-stock-gray/50 rounded-lg p-4 border border-stock-border/50">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-stock-dark/60 text-xs font-medium mb-1">DIMENSIONS</div>
+                  <div className="font-medium text-stock-dark">{dimensions}</div>
+                </div>
+                <div>
+                  <div className="text-stock-dark/60 text-xs font-medium mb-1">FORMAT</div>
+                  <div className="font-medium text-stock-dark">{fileFormat}</div>
+                </div>
+                <div>
+                  <div className="text-stock-dark/60 text-xs font-medium mb-1">TAILLE</div>
+                  <div className="font-medium text-stock-dark">{fileSize}</div>
+                </div>
+                <div>
+                  <div className="text-stock-dark/60 text-xs font-medium mb-1">TYPE</div>
+                  <Badge variant="secondary" className="capitalize bg-stock-blue/10 text-stock-blue border-stock-blue/20">
+                    {product.type}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Details */}
+          {/* Right Column - Metadata & Purchase - Adobe Stock Style */}
           <div className="space-y-6">
             {/* Title and Author */}
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{product.title}</h1>
+            <div className="pb-4 border-b border-stock-border">
+              <h1 className="text-2xl font-bold mb-3 text-stock-dark leading-tight">{product.title}</h1>
+              
+              {/* Author Info */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="font-medium">{product.author}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-muted-foreground text-sm">
-                    {new Date(product.uploadDate).toLocaleDateString('fr-FR')}
-                  </span>
+                  <div className="w-8 h-8 bg-stock-blue/10 rounded-full flex items-center justify-center">
+                    <User className="h-4 w-4 text-stock-blue" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-stock-dark">{product.author}</div>
+                    <div className="text-xs text-stock-dark/60">Créateur</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
+              {/* Stats Row */}
+              <div className="flex items-center gap-6 text-sm text-stock-dark/60">
+                <div className="flex items-center gap-1.5">
                   <Heart className="h-4 w-4" />
-                  <span>{product.likes}</span>
+                  <span className="font-medium">{product.likes}</span>
+                  <span className="text-xs">j'aime</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <Download className="h-4 w-4" />
-                  <span>{product.downloads}</span>
+                  <span className="font-medium">{product.downloads}</span>
+                  <span className="text-xs">téléchargements</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <Eye className="h-4 w-4" />
-                  <span>{product.views}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{new Date(product.uploadDate).toLocaleDateString('fr-FR')}</span>
+                  <span className="font-medium">{product.views}</span>
+                  <span className="text-xs">vues</span>
                 </div>
               </div>
             </div>
@@ -384,12 +386,16 @@ const ProductDetail = () => {
               </p>
             </div>
 
-            {/* Tags */}
+            {/* Tags - Adobe Stock Style */}
             <div>
-              <h3 className="font-semibold mb-2">Mots-clés</h3>
+              <h3 className="font-medium mb-3 text-stock-dark text-sm">MOTS-CLÉS</h3>
               <div className="flex flex-wrap gap-2">
                 {product.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="cursor-pointer hover:bg-primary hover:text-primary-foreground">
+                  <Badge 
+                    key={tag} 
+                    variant="outline" 
+                    className="cursor-pointer text-xs px-2 py-1 border-stock-border bg-stock-gray/50 text-stock-dark/70 hover:border-stock-blue hover:bg-stock-blue/5 hover:text-stock-blue transition-colors"
+                  >
                     {tag}
                   </Badge>
                 ))}

@@ -177,21 +177,28 @@ const Marketplace = () => {
           </div>
         </div>
 
-        {/* Content Grid */}
+        {/* Content Grid - Adobe Stock Style */}
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="text-muted-foreground">Chargement des contenus...</div>
+          <div className="flex justify-center items-center py-16">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-stock-blue/30 border-t-stock-blue rounded-full animate-spin mx-auto mb-4" />
+              <div className="text-stock-dark/60 font-medium">Chargement des contenus...</div>
+            </div>
           </div>
         ) : filteredContent.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-muted-foreground">Aucun contenu trouvé</div>
+          <div className="text-center py-16">
+            <div className="text-stock-dark/60 text-lg">Aucun contenu trouvé</div>
+            <p className="text-stock-dark/40 mt-2">Essayez d'ajuster vos filtres de recherche</p>
           </div>
         ) : (
-          <div className={`grid gap-6 ${
-            viewMode === "grid" 
-              ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-              : "grid-cols-1"
-          }`}>
+          <div 
+            className={`grid ${
+              viewMode === "grid" 
+                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6" 
+                : "grid-cols-1 max-w-4xl mx-auto"
+            }`}
+            style={{ gap: 'var(--grid-gap)' }}
+          >
             {filteredContent.map((content) => (
               <ContentCard key={content.id} {...content} />
             ))}
