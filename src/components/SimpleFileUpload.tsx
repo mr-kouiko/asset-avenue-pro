@@ -67,12 +67,25 @@ export const SimpleFileUpload = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Pure extension-based MIME type detection - no forced conversions
+  // Enhanced extension-based MIME type detection - prioritizes video files
   const detectMimeType = (file: File): string => {
     const extension = file.name.split('.').pop()?.toLowerCase();
     
-    // Comprehensive MIME type mapping based on file extension only
+    // Comprehensive MIME type mapping with video priority
     const mimeMap: { [key: string]: string } = {
+      // Videos - ALWAYS use extension-based detection for videos
+      'mp4': 'video/mp4',
+      'm4v': 'video/mp4',
+      'mov': 'video/quicktime',
+      'qt': 'video/quicktime',
+      'avi': 'video/x-msvideo',
+      'webm': 'video/webm',
+      'mkv': 'video/x-matroska',
+      'ogv': 'video/ogg',
+      'wmv': 'video/x-ms-wmv',
+      'flv': 'video/x-flv',
+      '3gp': 'video/3gpp',
+      'asf': 'video/x-ms-asf',
       // Images
       'jpg': 'image/jpeg',
       'jpeg': 'image/jpeg',
@@ -82,15 +95,6 @@ export const SimpleFileUpload = ({
       'bmp': 'image/bmp',
       'tiff': 'image/tiff',
       'svg': 'image/svg+xml',
-      // Videos - extension-based detection only
-      'mp4': 'video/mp4',
-      'webm': 'video/webm',
-      'mov': 'video/quicktime',
-      'avi': 'video/x-msvideo',
-      'mkv': 'video/x-matroska',
-      'm4v': 'video/mp4',
-      'ogv': 'video/ogg',
-      'qt': 'video/quicktime',
       // Audio
       'mp3': 'audio/mpeg',
       'wav': 'audio/wav',
@@ -98,12 +102,14 @@ export const SimpleFileUpload = ({
       'm4a': 'audio/mp4',
       'aac': 'audio/aac',
       'flac': 'audio/flac',
+      'wma': 'audio/x-ms-wma',
       // Documents
       'pdf': 'application/pdf'
     };
     
-    // For videos: ONLY use extension mapping, never browser type
-    if (extension && ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', 'ogv', 'qt'].includes(extension)) {
+    // For ALL video extensions: ONLY use extension mapping, never browser type
+    const videoExtensions = ['mp4', 'm4v', 'mov', 'qt', 'avi', 'webm', 'mkv', 'ogv', 'wmv', 'flv', '3gp', 'asf'];
+    if (extension && videoExtensions.includes(extension)) {
       const videoType = mimeMap[extension];
       console.log(`🎥 Video MIME detection - File: ${file.name}, Extension: ${extension}, Type: ${videoType}`);
       return videoType;
@@ -111,12 +117,13 @@ export const SimpleFileUpload = ({
     
     // For other files: Use extension mapping if available
     if (extension && mimeMap[extension]) {
-      console.log(`📄 File MIME detection - File: ${file.name}, Extension: ${extension}, Type: ${mimeMap[extension]}`);
-      return mimeMap[extension];
+      const detectedType = mimeMap[extension];
+      console.log(`📄 File MIME detection - File: ${file.name}, Extension: ${extension}, Type: ${detectedType}`);
+      return detectedType;
     }
     
-    // Fallback only for non-videos
-    console.log(`⚠️ MIME detection fallback - File: ${file.name}, Browser type: ${file.type}`);
+    // Fallback only for non-videos (and log for debugging)
+    console.log(`⚠️ MIME detection fallback - File: ${file.name}, Extension: ${extension}, Browser type: ${file.type}`);
     return file.type || 'application/octet-stream';
   };
 
@@ -186,13 +193,14 @@ export const SimpleFileUpload = ({
         } : f
       ));
 
-      // Notify parent component
+      // Notify parent component with correct file type  
       if (onFilesUploaded) {
+        const detectedMimeType = detectMimeType(uploadFile.file);
         onFilesUploaded([{
           id: uploadFile.id,
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
           name: uploadFile.file.name,
-          type: uploadFile.file.type,
+          type: detectedMimeType, // Use detected MIME type instead of browser file.type
           size: uploadFile.file.size,
           isWatermarked: !!processedFile.watermarkedUrl
         }]);

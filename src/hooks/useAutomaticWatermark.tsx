@@ -25,19 +25,44 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
   const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Detect MIME type automatically
+  // Enhanced MIME type detection with priority for video files
   const detectMimeType = (blob: Blob, originalFile?: File, forceType?: string): string => {
     if (forceType) return forceType;
     
-    if (originalFile?.type && blob === originalFile) {
+    // For video files, prioritize extension-based detection over browser MIME type
+    if (originalFile?.name) {
+      const ext = originalFile.name.toLowerCase().split('.').pop();
+      const videoExtensions = ['mp4', 'mov', 'avi', 'webm', 'mkv', 'wmv', 'flv', '3gp', 'm4v'];
+      
+      if (ext && videoExtensions.includes(ext)) {
+        const videoMimeMap: { [key: string]: string } = {
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+          'avi': 'video/x-msvideo',
+          'webm': 'video/webm',
+          'mkv': 'video/x-matroska',
+          'wmv': 'video/x-ms-wmv',
+          'flv': 'video/x-flv',
+          '3gp': 'video/3gpp',
+          'm4v': 'video/mp4'
+        };
+        const mimeType = videoMimeMap[ext];
+        console.log(`🎥 Video MIME type detection - File: ${originalFile.name}, Extension: ${ext}, Type: ${mimeType}`);
+        return mimeType;
+      }
+    }
+    
+    // Use original file MIME type for non-video files
+    if (originalFile?.type && blob === originalFile && !originalFile.type.includes('octet-stream')) {
       return originalFile.type;
     }
     
+    // Use blob MIME type if reliable
     if (blob.type && blob.type !== 'application/octet-stream') {
       return blob.type;
     }
     
-    // Fallback detection based on file extension
+    // Extended fallback detection based on file extension
     if (originalFile?.name) {
       const ext = originalFile.name.toLowerCase().split('.').pop();
       const mimeMap: { [key: string]: string } = {
@@ -49,7 +74,8 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
         'gif': 'image/gif',
         'bmp': 'image/bmp',
         'tiff': 'image/tiff',
-        // Videos  
+        'svg': 'image/svg+xml',
+        // Videos (redundant but safe)
         'mp4': 'video/mp4',
         'mov': 'video/quicktime',
         'avi': 'video/x-msvideo',
@@ -58,15 +84,21 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
         'wmv': 'video/x-ms-wmv',
         'flv': 'video/x-flv',
         '3gp': 'video/3gpp',
+        'm4v': 'video/mp4',
         // Audio
         'mp3': 'audio/mpeg',
         'wav': 'audio/wav',
         'ogg': 'audio/ogg',
         'm4a': 'audio/mp4',
         'aac': 'audio/aac',
-        'flac': 'audio/flac'
+        'flac': 'audio/flac',
+        // Documents
+        'pdf': 'application/pdf'
       };
-      return mimeMap[ext || ''] || 'application/octet-stream';
+      
+      const detectedType = mimeMap[ext || ''] || 'application/octet-stream';
+      console.log(`📄 File MIME type detection - File: ${originalFile.name}, Extension: ${ext}, Type: ${detectedType}`);
+      return detectedType;
     }
     
     return 'application/octet-stream';

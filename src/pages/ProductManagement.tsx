@@ -64,14 +64,73 @@ const ProductManagement = () => {
       const files = JSON.parse(storedFiles);
       setUploadedFiles(files);
       
-      // Initialize products data
+      // Initialize products data with auto-category detection
       const initialData: Record<string, ProductData> = {};
       files.forEach((file: UploadedFileData) => {
+        // Auto-detect category based on file type
+        let autoCategory = '';
+        const fileType = file.type?.toLowerCase() || '';
+        const fileName = file.name?.toLowerCase() || '';
+        
+        console.log(`🔍 Auto-detecting category for ${file.name}:`, { fileType, fileName });
+        
+        if (fileType.startsWith('video/') || 
+            fileName.includes('.mp4') || 
+            fileName.includes('.mov') || 
+            fileName.includes('.avi') || 
+            fileName.includes('.webm') || 
+            fileName.includes('.mkv')) {
+          // Find video category ID from available categories
+          const videoCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('video') || 
+            cat.name.toLowerCase().includes('vidéo')
+          );
+          autoCategory = videoCategory?.id || '';
+          console.log('✅ Video category detected:', autoCategory);
+        }
+        else if (fileType.startsWith('image/')) {
+          // Find photo category ID from available categories
+          const photoCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('photo') ||
+            cat.name.toLowerCase().includes('image')
+          );
+          autoCategory = photoCategory?.id || '';
+          console.log('✅ Photo category detected:', autoCategory);
+        }
+        else if (fileType.startsWith('audio/')) {
+          // Find audio category ID from available categories
+          const audioCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('audio') ||
+            cat.name.toLowerCase().includes('son') ||
+            cat.name.toLowerCase().includes('musique')
+          );
+          autoCategory = audioCategory?.id || '';
+          console.log('✅ Audio category detected:', autoCategory);
+        }
+        else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
+          // Find ebook/document category ID from available categories
+          const ebookCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('ebook') ||
+            cat.name.toLowerCase().includes('document') ||
+            cat.name.toLowerCase().includes('pdf')
+          );
+          autoCategory = ebookCategory?.id || '';
+          console.log('✅ Ebook category detected:', autoCategory);
+        }
+        else {
+          // Find illustration category for other files
+          const illustrationCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('illustration')
+          );
+          autoCategory = illustrationCategory?.id || '';
+          console.log('✅ Illustration category detected (fallback):', autoCategory);
+        }
+        
         initialData[file.id] = {
           fileId: file.id,
           title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
           description: '',
-          category: '',
+          category: autoCategory, // Auto-detected category
           tags: [],
           currentTag: '',
           status: 'draft'

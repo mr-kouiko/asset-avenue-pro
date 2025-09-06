@@ -108,14 +108,55 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // Determine content type based on files
+        // Determine content type based on files with improved video detection
         let contentType = 'unknown';
         if (filesList.length > 0) {
           const firstFile = filesList[0];
-          if (firstFile.file_type.startsWith('image/')) contentType = 'photo';
-          else if (firstFile.file_type.startsWith('video/')) contentType = 'video';
-          else if (firstFile.file_type.startsWith('audio/')) contentType = 'audio';
-          else contentType = 'illustration';
+          const fileType = firstFile.file_type?.toLowerCase() || '';
+          const fileName = firstFile.file_path?.toLowerCase() || '';
+          
+          // Enhanced video detection - check both MIME type and file extension
+          if (fileType.startsWith('video/') || 
+              fileName.includes('.mp4') || 
+              fileName.includes('.mov') || 
+              fileName.includes('.avi') || 
+              fileName.includes('.webm') || 
+              fileName.includes('.mkv') ||
+              fileName.includes('.wmv') ||
+              fileName.includes('.flv')) {
+            contentType = 'video';
+            console.log('✅ Video content detected:', { fileType, fileName, contentType });
+          }
+          else if (fileType.startsWith('image/') || 
+                   fileName.includes('.jpg') || 
+                   fileName.includes('.jpeg') || 
+                   fileName.includes('.png') || 
+                   fileName.includes('.gif') || 
+                   fileName.includes('.webp')) {
+            contentType = 'photo';
+          }
+          else if (fileType.startsWith('audio/') || 
+                   fileName.includes('.mp3') || 
+                   fileName.includes('.wav') || 
+                   fileName.includes('.ogg') || 
+                   fileName.includes('.m4a')) {
+            contentType = 'audio';
+          }
+          else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
+            contentType = 'ebook';
+          }
+          // Only fallback to illustration for actual illustration files
+          else if (fileType.includes('svg') || 
+                   fileName.includes('.svg') || 
+                   fileName.includes('.ai') || 
+                   fileName.includes('.eps')) {
+            contentType = 'illustration';
+          }
+          else {
+            // Log unrecognized files for debugging
+            console.warn('⚠️ Unrecognized file type, defaulting to photo:', { fileType, fileName });
+            contentType = 'photo'; // Default to photo instead of illustration
+          }
         }
 
         // For audio files, use public URL from original-files bucket
