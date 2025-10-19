@@ -199,6 +199,7 @@ export const SimpleFileUpload = ({
       if (onFilesUploaded) {
         const detectedMimeType = detectMimeType(uploadFile.file);
         const isVideo = detectedMimeType.startsWith('video/');
+        const isPDF = detectedMimeType === 'application/pdf';
         
         onFilesUploaded([{
           id: uploadFile.id,
@@ -207,8 +208,8 @@ export const SimpleFileUpload = ({
           type: detectedMimeType,
           size: uploadFile.file.size,
           isWatermarked: !!processedFile.watermarkedUrl,
-          // For videos: store thumbnail separately, for images: use preview as thumbnail
-          thumbnailUrl: isVideo ? processedFile.thumbnailUrl : processedFile.previewUrl,
+          // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
+          thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
           previewUrl: processedFile.previewUrl
         }]);
       }
