@@ -17,23 +17,36 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
   title,
   className = "w-full h-full"
 }) => {
+  // Check if thumbnail is missing or is placeholder
+  const hasValidThumbnail = thumbnail && 
+    thumbnail !== '/placeholder.svg' && 
+    !thumbnail.includes('placeholder');
+
   return (
     <div className={`relative ${className}`}>
-      {/* Thumbnail image or fallback */}
-      {thumbnail ? (
+      {/* Thumbnail image or video icon fallback */}
+      {hasValidThumbnail ? (
         <img
           src={thumbnail}
           alt={title}
           className="w-full h-full object-cover"
           onError={(e) => {
-            e.currentTarget.src = '/placeholder.svg';
+            // Replace with video icon on error
+            const parent = e.currentTarget.parentElement;
+            if (parent) {
+              e.currentTarget.style.display = 'none';
+              const fallback = document.createElement('div');
+              fallback.className = 'w-full h-full bg-gradient-to-br from-stock-blue/10 to-stock-blue/20 flex items-center justify-center';
+              fallback.innerHTML = '<div class="text-center"><svg class="h-12 w-12 mx-auto mb-2 text-stock-blue/60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg><span class="text-xs text-stock-dark/70 font-medium">Vidéo</span></div>';
+              parent.insertBefore(fallback, e.currentTarget);
+            }
           }}
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-stock-blue/10 to-stock-blue/20 flex items-center justify-center">
           <div className="text-center">
             <Film className="h-12 w-12 mx-auto mb-2 text-stock-blue/60" />
-            <span className="text-xs text-stock-dark/70 font-medium">Vidéo</span>
+            <span className="text-xs text-stock-dark/70 font-medium">Aperçu vidéo</span>
           </div>
         </div>
       )}
