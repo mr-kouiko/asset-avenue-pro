@@ -43,61 +43,54 @@ export const useMarketplace = () => {
             .select('*')
             .eq('submission_id', item.id);
 
-          // Determine thumbnail URL and video/audio URL
-          const thumbnailFile = files?.find(f => f.thumbnail_path);
+          // Determine thumbnail URL and video/audio URL with robust fallbacks
           const originalFile = files?.find(f => f.is_original);
-          
+
+          const isImagePath = (p?: string) => !!p && /\.(jpg|jpeg|png|webp|gif)$/i.test(p);
+          const buildPublicUrl = (bucket: string, path: string) => supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+
+          // Prefer an actual image thumbnail
           let thumbnailUrl = '';
-          let mediaUrl: string | undefined;
-          
-          // Handle thumbnail_path - construct full URL if relative path
-          if (thumbnailFile?.thumbnail_path) {
-            if (thumbnailFile.thumbnail_path.startsWith('http')) {
-              thumbnailUrl = thumbnailFile.thumbnail_path;
-            } else {
-              // Thumbnails are stored in 'thumbnails' bucket for videos, might be in other buckets for images
-              // Check if path includes bucket info or default to thumbnails bucket
-              const bucketName = thumbnailFile.thumbnail_path.includes('/thumbnails/') ? 'thumbnails' : 'original-files';
-              const { data } = supabase.storage
-                .from(bucketName)
-                .getPublicUrl(thumbnailFile.thumbnail_path);
-              thumbnailUrl = data.publicUrl;
-              console.log(`📸 Thumbnail for ${item.title}: ${thumbnailUrl} (bucket: ${bucketName})`);
+          const imageThumb = files?.find(f => isImagePath(f.thumbnail_path));
+          if (imageThumb?.thumbnail_path) {
+            thumbnailUrl = imageThumb.thumbnail_path.startsWith('http')
+              ? imageThumb.thumbnail_path
+              : buildPublicUrl('thumbnails', imageThumb.thumbnail_path);
+          }
+          // Fallback to image preview
+          if (!thumbnailUrl) {
+            const imagePreview = files?.find(f => isImagePath(f.preview_path));
+            if (imagePreview?.preview_path) {
+              thumbnailUrl = imagePreview.preview_path.startsWith('http')
+                ? imagePreview.preview_path
+                : buildPublicUrl('previews', imagePreview.preview_path);
             }
           }
+          // Last resort: use a default thumbnail asset
+          if (!thumbnailUrl) {
+            thumbnailUrl = '/placeholder.svg';
+          }
 
-          // Handle original file URL for videos, audio, and PDFs
+          // Determine media (video/audio) URL
+          let mediaUrl: string | undefined;
           if (originalFile?.file_path && (item.content_type === 'video' || item.content_type === 'audio')) {
-            if (originalFile.file_path.startsWith('http')) {
-              mediaUrl = originalFile.file_path;
-            } else {
-              // Use original-files bucket for consistency
-              const { data } = supabase.storage
-                .from('original-files')
-                .getPublicUrl(originalFile.file_path);
-              mediaUrl = data.publicUrl;
-            }
+            mediaUrl = originalFile.file_path.startsWith('http')
+              ? originalFile.file_path
+              : buildPublicUrl('original-files', originalFile.file_path);
           }
 
           // For PDFs/ebooks, check if there's a cover image
           let coverUrl: string | undefined;
           if (item.content_type === 'document' || item.content_type === 'pdf') {
-            // Look for cover file in content_files
             const coverFile = files?.find(f => 
-              f.file_name?.includes('cover') || 
+              f.file_name?.toLowerCase().includes('cover') || 
               (f.metadata && typeof f.metadata === 'object' && 'isCover' in f.metadata) || 
-              f.file_type === 'image'
+              f.file_type?.startsWith('image/')
             );
-            
             if (coverFile?.file_path) {
-              if (coverFile.file_path.startsWith('http')) {
-                coverUrl = coverFile.file_path;
-              } else {
-                const { data } = supabase.storage
-                  .from('uploads')
-                  .getPublicUrl(coverFile.file_path);
-                coverUrl = data.publicUrl;
-              }
+              coverUrl = coverFile.file_path.startsWith('http')
+                ? coverFile.file_path
+                : buildPublicUrl('uploads', coverFile.file_path);
             }
           }
 

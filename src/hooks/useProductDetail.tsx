@@ -85,18 +85,26 @@ export const useProductDetail = (productId: string) => {
         if (filesList.length > 0) {
           const thumbnailFile = filesList.find((f: any) => f.thumbnail_path);
           if (thumbnailFile?.thumbnail_path) {
-            const { data } = supabase.storage
-              .from('thumbnails')
-              .getPublicUrl(thumbnailFile.thumbnail_path);
-            thumbnail = data.publicUrl;
+            if (thumbnailFile.thumbnail_path.startsWith('http')) {
+              thumbnail = thumbnailFile.thumbnail_path;
+            } else {
+              const { data } = supabase.storage
+                .from('thumbnails')
+                .getPublicUrl(thumbnailFile.thumbnail_path);
+              thumbnail = data.publicUrl;
+            }
           }
 
           const previewFile = filesList.find((f: any) => f.preview_path);
           if (previewFile?.preview_path) {
-            const { data } = supabase.storage
-              .from('previews')
-              .getPublicUrl(previewFile.preview_path);
-            previewUrl = data.publicUrl;
+            if (previewFile.preview_path.startsWith('http')) {
+              previewUrl = previewFile.preview_path;
+            } else {
+              const { data } = supabase.storage
+                .from('previews')
+                .getPublicUrl(previewFile.preview_path);
+              previewUrl = data.publicUrl;
+            }
           } else if (!thumbnailFile) {
             // Fallback to preview if no dedicated thumbnail
             if (previewFile?.preview_path) {

@@ -17,6 +17,8 @@ interface UploadedFile {
   type: string;
   size: number;
   isWatermarked?: boolean;
+  thumbnailUrl?: string;
+  previewUrl?: string;
 }
 
 export const useContentManagement = () => {
@@ -63,6 +65,7 @@ export const useContentManagement = () => {
         if (submissionError) throw submissionError;
 
         // Then create the associated file entry
+        const isVideo = file.type.startsWith('video/');
         const { data: fileData, error: fileError } = await supabase
           .from('content_files')
           .insert({
@@ -73,8 +76,8 @@ export const useContentManagement = () => {
             file_format: file.type,
             file_size: file.size,
             is_original: true,
-            preview_path: file.url,
-            thumbnail_path: file.url,
+            preview_path: file.previewUrl || null,
+            thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
             metadata: {
               isWatermarked: file.isWatermarked || false
             }
@@ -134,6 +137,7 @@ export const useContentManagement = () => {
         if (submissionError) throw submissionError;
 
         // Then create the associated file entry
+        const isVideo = file.type.startsWith('video/');
         const { data: fileData, error: fileError } = await supabase
           .from('content_files')
           .insert({
@@ -144,8 +148,8 @@ export const useContentManagement = () => {
             file_format: file.type,
             file_size: file.size,
             is_original: true,
-            preview_path: file.url,
-            thumbnail_path: file.url,
+            preview_path: file.previewUrl || null,
+            thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
             metadata: {
               isWatermarked: file.isWatermarked || false
             }
