@@ -292,7 +292,7 @@ const ProductDetail = () => {
                 autoPlay={false}
                 controls={true}
                 muted={false}
-                watermarkSize="normal"
+                watermarkSize="thumbnail"
               />
             ) : (
               /* Video not available - show loading/waiting message */
