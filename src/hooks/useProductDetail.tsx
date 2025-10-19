@@ -169,26 +169,46 @@ export const useProductDetail = (productId: string) => {
 
         // For audio files, use public URL from original-files bucket
         if (contentType === 'audio' && filesList.length > 0) {
-          const audioFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('audio/'));
+          const audioFile = filesList.find((f: any) =>
+            f.is_original && (
+              f.file_type?.toLowerCase().startsWith('audio') ||
+              f.file_format?.toLowerCase().startsWith('audio/') ||
+              /\.(mp3|wav|ogg|m4a)$/.test((f.file_path || '').toLowerCase())
+            )
+          );
           if (audioFile?.file_path) {
             console.log('🎵 Creating public URL for audio:', audioFile.file_path);
-            const { data: publicData } = supabase.storage
-              .from('uploads')
-              .getPublicUrl(audioFile.file_path);
-            previewUrl = publicData.publicUrl;
+            if (audioFile.file_path.startsWith('http')) {
+              previewUrl = audioFile.file_path;
+            } else {
+              const { data: publicData } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(audioFile.file_path);
+              previewUrl = publicData.publicUrl;
+            }
             console.log('🔊 Audio URL created:', previewUrl);
           }
         }
 
         // For video files, use public URL from original-files bucket  
         if (contentType === 'video' && filesList.length > 0) {
-          const videoFile = filesList.find((f: any) => f.is_original && f.file_type.startsWith('video/'));
+          const videoFile = filesList.find((f: any) =>
+            f.is_original && (
+              f.file_type?.toLowerCase().startsWith('video') ||
+              f.file_format?.toLowerCase().startsWith('video/') ||
+              /\.(mp4|mov|avi|webm|mkv|wmv|flv)$/.test((f.file_path || '').toLowerCase())
+            )
+          );
           if (videoFile?.file_path) {
             console.log('🎬 Creating public URL for video:', videoFile.file_path);
-            const { data: publicData } = supabase.storage
-              .from('uploads')
-              .getPublicUrl(videoFile.file_path);
-            previewUrl = publicData.publicUrl;
+            if (videoFile.file_path.startsWith('http')) {
+              previewUrl = videoFile.file_path;
+            } else {
+              const { data: publicData } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(videoFile.file_path);
+              previewUrl = publicData.publicUrl;
+            }
             console.log('📺 Video URL created:', previewUrl);
           }
         }
