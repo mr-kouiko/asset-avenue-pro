@@ -24,6 +24,7 @@ interface EbookFormProps {
     category: string;
     tags: string[];
     currentTag: string;
+    coverUrl?: string;
   };
   categories: Array<{ id: string; name: string; }>;
   onUpdateProductData: (updates: any) => void;
@@ -43,7 +44,9 @@ export const EbookForm = ({
   onPublish,
   loading = false
 }: EbookFormProps) => {
-  const [coverImage, setCoverImage] = useState<{ url: string; file?: File } | null>(null);
+  const [coverImage, setCoverImage] = useState<{ url: string; file?: File } | null>(
+    productData.coverUrl ? { url: productData.coverUrl } : null
+  );
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,6 +94,8 @@ export const EbookForm = ({
         .getPublicUrl(filePath);
 
       setCoverImage({ url: publicUrl, file });
+      // Update parent component with cover URL
+      onUpdateProductData({ coverUrl: publicUrl });
       toast.success("Couverture uploadée avec succès");
       
     } catch (error) {
@@ -206,7 +211,10 @@ export const EbookForm = ({
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => setCoverImage(null)}
+              onClick={() => {
+                setCoverImage(null);
+                onUpdateProductData({ coverUrl: undefined });
+              }}
             >
               <X className="h-4 w-4" />
             </Button>

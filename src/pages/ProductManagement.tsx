@@ -39,6 +39,7 @@ interface ProductData {
   tags: string[];
   currentTag: string;
   status: 'draft' | 'published' | 'pending';
+  coverUrl?: string;
 }
 
 const ProductManagement = () => {
@@ -315,8 +316,19 @@ const ProductManagement = () => {
       return;
     }
 
+    // For ebooks, check if cover is present
+    const isPDF = file.type === 'application/pdf';
+    if (isPDF && !productData.coverUrl) {
+      toast.error("Une image de couverture est obligatoire pour publier un ebook");
+      return;
+    }
+
     const success = await publishProduct({
-      file,
+      file: {
+        ...file,
+        // For ebooks, use cover as thumbnail
+        thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl
+      },
       productData: {
         title: productData.title,
         description: productData.description,
@@ -344,8 +356,20 @@ const ProductManagement = () => {
     for (const productData of validProducts) {
       const file = uploadedFiles.find(f => f.id === productData.fileId);
       if (file) {
+        const isPDF = file.type === 'application/pdf';
+        
+        // Skip ebooks without cover
+        if (isPDF && !productData.coverUrl) {
+          console.log(`Skipping ebook ${file.name} - no cover image`);
+          continue;
+        }
+        
         const success = await publishProduct({
-          file,
+          file: {
+            ...file,
+            // For ebooks, use cover as thumbnail
+            thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl
+          },
           productData: {
             title: productData.title,
             description: productData.description,
@@ -353,7 +377,7 @@ const ProductManagement = () => {
             tags: productData.tags
           }
         });
-        
+
         if (success) {
           successCount++;
           updateProductData(productData.fileId, { status: 'published' });
@@ -362,15 +386,10 @@ const ProductManagement = () => {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} produit(s) publié(s) avec succès!`);
-      
-      // Clear session storage and redirect after a short delay
-      setTimeout(() => {
-        sessionStorage.removeItem('pendingUploadedFiles');
-        navigate('/seller-dashboard');
-      }, 2000);
+      toast.success(`${successCount} produit(s) publié(s) avec succès !`);
     }
   };
+
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';

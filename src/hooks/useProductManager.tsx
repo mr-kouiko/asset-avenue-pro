@@ -98,6 +98,8 @@ export const useProductManager = () => {
 
       // Create content file entry with proper thumbnail handling
       const isVideo = fileType === 'video';
+      const isPDF = submission.file.type === 'application/pdf';
+      
       const { error: fileError } = await supabase
         .from('content_files')
         .insert({
@@ -109,8 +111,8 @@ export const useProductManager = () => {
           file_size: submission.file.size,
           is_original: true,
           preview_path: submission.file.previewUrl,
-          // For videos: use thumbnailUrl, for images: use previewUrl
-          thumbnail_path: isVideo ? submission.file.thumbnailUrl : submission.file.previewUrl,
+          // For videos: use thumbnailUrl, for PDFs: use thumbnailUrl (cover), for images: use previewUrl
+          thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
           metadata: {
             isWatermarked: submission.file.isWatermarked || false
           }

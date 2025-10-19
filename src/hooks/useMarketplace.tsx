@@ -79,18 +79,30 @@ export const useMarketplace = () => {
               : buildPublicUrl('original-files', originalFile.file_path);
           }
 
-          // For PDFs/ebooks, check if there's a cover image
+          // For PDFs/ebooks, use thumbnail as cover if available
           let coverUrl: string | undefined;
           if (item.content_type === 'document' || item.content_type === 'pdf') {
-            const coverFile = files?.find(f => 
-              f.file_name?.toLowerCase().includes('cover') || 
-              (f.metadata && typeof f.metadata === 'object' && 'isCover' in f.metadata) || 
-              f.file_type?.startsWith('image/')
-            );
-            if (coverFile?.file_path) {
-              coverUrl = coverFile.file_path.startsWith('http')
-                ? coverFile.file_path
-                : buildPublicUrl('uploads', coverFile.file_path);
+            console.log(`📚 Ebook detected: ${item.title}, thumbnailUrl: ${thumbnailUrl}`);
+            // First priority: use the thumbnail_path (this is the uploaded cover)
+            if (thumbnailUrl && thumbnailUrl !== '/placeholder.svg') {
+              coverUrl = thumbnailUrl;
+              console.log(`✅ Using thumbnail as cover: ${coverUrl}`);
+            }
+            // Fallback: look for a separate cover file
+            if (!coverUrl) {
+              const coverFile = files?.find(f => 
+                f.file_name?.toLowerCase().includes('cover') || 
+                (f.metadata && typeof f.metadata === 'object' && 'isCover' in f.metadata) || 
+                (f.file_type?.startsWith('image/') && f.id !== originalFile?.id)
+              );
+              if (coverFile?.file_path) {
+                coverUrl = coverFile.file_path.startsWith('http')
+                  ? coverFile.file_path
+                  : buildPublicUrl('uploads', coverFile.file_path);
+                console.log(`✅ Using separate cover file: ${coverUrl}`);
+              } else {
+                console.warn(`⚠️ No cover found for ebook: ${item.title}`);
+              }
             }
           }
 
