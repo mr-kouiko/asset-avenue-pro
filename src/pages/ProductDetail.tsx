@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -53,6 +53,72 @@ const ProductDetail = () => {
     files: product?.files || [],
     selectedLicense
   });
+
+  // Protection contre le téléchargement et l'inspection
+  useEffect(() => {
+    // Empêcher le clic droit
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Empêcher le drag & drop d'images/vidéos
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Empêcher les raccourcis clavier dangereux
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // F12 - DevTools
+      if (e.key === 'F12') {
+        e.preventDefault();
+        return false;
+      }
+      
+      // Ctrl+Shift+I - DevTools
+      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+        return false;
+      }
+      
+      // Ctrl+Shift+J - Console
+      if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+        e.preventDefault();
+        return false;
+      }
+      
+      // Ctrl+U - Voir le code source
+      if (e.ctrlKey && e.key === 'u') {
+        e.preventDefault();
+        return false;
+      }
+      
+      // Ctrl+S - Enregistrer la page
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        return false;
+      }
+      
+      // Ctrl+Shift+C - Inspect element
+      if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    // Ajouter les event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Nettoyer à la sortie
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   if (productLoading) {
     return (
@@ -209,7 +275,7 @@ const ProductDetail = () => {
       <Header />
       <Navigation />
 
-      <div className="container py-8">
+      <div className="container py-8 select-none">
         <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Video/Image Display */}
         <div className="lg:col-span-2 space-y-6">
@@ -266,6 +332,7 @@ const ProductDetail = () => {
               src={watermarkedUrl || product.thumbnail}
               alt={product.title}
               className={`w-full h-full object-cover ${isProcessing ? 'opacity-75' : ''}`}
+              draggable="false"
               onError={(e) => {
                 e.currentTarget.src = '/placeholder.svg';
               }}
