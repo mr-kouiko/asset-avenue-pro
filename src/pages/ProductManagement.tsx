@@ -27,6 +27,8 @@ interface UploadedFileData {
   type: string;
   size: number;
   isWatermarked?: boolean;
+  thumbnailUrl?: string;
+  previewUrl?: string;
 }
 
 interface ProductData {

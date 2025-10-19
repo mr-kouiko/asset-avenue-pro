@@ -353,6 +353,7 @@ export const createWebPreviewWithWatermark = async (
 const DEFAULT_LOGO_URL = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
 
 // Generate video thumbnail by extracting frame at 1 second
+// Returns clean thumbnail WITHOUT watermark - watermark is added by VideoWatermark component
 export const generateVideoThumbnail = async (
   videoFile: File,
   options: ThumbnailOptions = {}
@@ -384,65 +385,39 @@ export const generateVideoThumbnail = async (
         canvas.width = canvas.height * aspectRatio;
       }
       
-      // Seek to 1 second for thumbnail
-      video.currentTime = 1;
+      // Seek to 1 second for thumbnail (or start if video is shorter)
+      video.currentTime = Math.min(1, video.duration * 0.1);
     };
     
     video.onseeked = () => {
-      // Draw video frame to canvas
+      // Draw video frame to canvas - NO watermark, will be added by VideoWatermark component
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      // Add watermark
-      const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      
-      logoImg.onload = () => {
-        // Calculate watermark size (15% of canvas width)
-        const watermarkSize = Math.min(80, canvas.width * 0.15);
-        const x = canvas.width - watermarkSize - 10;
-        const y = canvas.height - watermarkSize - 10;
-        
-        // Add semi-transparent background for logo
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(x - 5, y - 5, watermarkSize + 10, watermarkSize + 10);
-        
-        // Draw watermark logo
-        ctx.globalAlpha = 0.6;
-        ctx.drawImage(logoImg, x, y, watermarkSize, watermarkSize);
-        ctx.globalAlpha = 1;
-        
-        canvas.toBlob(resolve, format, quality);
-      };
-      
-      logoImg.onerror = () => {
-        // Fallback to text watermark
-        const fontSize = Math.max(12, canvas.width * 0.04);
-        ctx.font = `bold ${fontSize}px Arial`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        
-        const x = canvas.width - 10;
-        const y = canvas.height - 10;
-        
-        ctx.strokeText('VisuStock', x, y);
-        ctx.fillText('VisuStock', x, y);
-        
-        canvas.toBlob(resolve, format, quality);
-      };
-      
-      logoImg.src = DEFAULT_LOGO_URL;
+      // Convert to blob immediately without watermark
+      canvas.toBlob((blob) => {
+        if (blob) {
+          // Clean up video element
+          URL.revokeObjectURL(video.src);
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to create video thumbnail'));
+        }
+      }, format, quality);
     };
     
-    video.onerror = () => reject(new Error('Failed to load video'));
+    video.onerror = (e) => {
+      console.error('Video thumbnail generation error:', e);
+      URL.revokeObjectURL(video.src);
+      reject(new Error('Failed to load video for thumbnail'));
+    };
+    
+    // Create object URL and load video
     video.src = URL.createObjectURL(videoFile);
+    video.load();
   });
 };
 
-// Generate image thumbnail with watermark
+// Generate image thumbnail - clean without watermark for display
 export const generateImageThumbnail = async (
   imageFile: File,
   options: ThumbnailOptions = {}
@@ -470,55 +445,25 @@ export const generateImageThumbnail = async (
         canvas.width = canvas.height * aspectRatio;
       }
       
-      // Draw image
+      // Draw image - clean thumbnail without watermark
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // Add watermark
-      const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      
-      logoImg.onload = () => {
-        // Calculate watermark size (15% of canvas width)
-        const watermarkSize = Math.min(80, canvas.width * 0.15);
-        const x = canvas.width - watermarkSize - 10;
-        const y = canvas.height - watermarkSize - 10;
-        
-        // Add semi-transparent background for logo
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(x - 5, y - 5, watermarkSize + 10, watermarkSize + 10);
-        
-        // Draw watermark logo
-        ctx.globalAlpha = 0.6;
-        ctx.drawImage(logoImg, x, y, watermarkSize, watermarkSize);
-        ctx.globalAlpha = 1;
-        
-        canvas.toBlob(resolve, format, quality);
-      };
-      
-      logoImg.onerror = () => {
-        // Fallback to text watermark
-        const fontSize = Math.max(12, canvas.width * 0.04);
-        ctx.font = `bold ${fontSize}px Arial`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        
-        const x = canvas.width - 10;
-        const y = canvas.height - 10;
-        
-        ctx.strokeText('VisuStock', x, y);
-        ctx.fillText('VisuStock', x, y);
-        
-        canvas.toBlob(resolve, format, quality);
-      };
-      
-      logoImg.src = DEFAULT_LOGO_URL;
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          URL.revokeObjectURL(img.src);
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to create image thumbnail'));
+        }
+      }, format, quality);
     };
     
-    img.onerror = () => reject(new Error('Failed to load image'));
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Failed to load image'));
+    };
+    
     img.src = URL.createObjectURL(imageFile);
   });
 };

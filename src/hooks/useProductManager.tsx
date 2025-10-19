@@ -10,6 +10,7 @@ interface ProductFile {
   type: string;
   size: number;
   previewUrl?: string;
+  thumbnailUrl?: string;
   isWatermarked?: boolean;
 }
 
@@ -95,7 +96,8 @@ export const useProductManager = () => {
         fileType = 'document'; // Store PDFs as 'document' type
       }
 
-      // Create content file entry
+      // Create content file entry with proper thumbnail handling
+      const isVideo = fileType === 'video';
       const { error: fileError } = await supabase
         .from('content_files')
         .insert({
@@ -107,7 +109,8 @@ export const useProductManager = () => {
           file_size: submission.file.size,
           is_original: true,
           preview_path: submission.file.previewUrl,
-          thumbnail_path: submission.file.previewUrl,
+          // For videos: use thumbnailUrl, for images: use previewUrl
+          thumbnail_path: isVideo ? submission.file.thumbnailUrl : submission.file.previewUrl,
           metadata: {
             isWatermarked: submission.file.isWatermarked || false
           }

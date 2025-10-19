@@ -55,11 +55,14 @@ export const useMarketplace = () => {
             if (thumbnailFile.thumbnail_path.startsWith('http')) {
               thumbnailUrl = thumbnailFile.thumbnail_path;
             } else {
-              // Use original-files bucket for consistency
+              // Thumbnails are stored in 'thumbnails' bucket for videos, might be in other buckets for images
+              // Check if path includes bucket info or default to thumbnails bucket
+              const bucketName = thumbnailFile.thumbnail_path.includes('/thumbnails/') ? 'thumbnails' : 'original-files';
               const { data } = supabase.storage
-                .from('original-files')
+                .from(bucketName)
                 .getPublicUrl(thumbnailFile.thumbnail_path);
               thumbnailUrl = data.publicUrl;
+              console.log(`📸 Thumbnail for ${item.title}: ${thumbnailUrl} (bucket: ${bucketName})`);
             }
           }
 

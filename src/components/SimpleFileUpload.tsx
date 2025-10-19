@@ -26,6 +26,8 @@ interface SimpleFileUploadProps {
     type: string;
     size: number;
     isWatermarked?: boolean;
+    thumbnailUrl?: string;
+    previewUrl?: string;
   }[]) => void;
   maxFiles?: number;
   maxFileSize?: number; // in MB
@@ -193,16 +195,21 @@ export const SimpleFileUpload = ({
         } : f
       ));
 
-      // Notify parent component with correct file type  
+      // Notify parent component with correct file type and separate thumbnail URL
       if (onFilesUploaded) {
         const detectedMimeType = detectMimeType(uploadFile.file);
+        const isVideo = detectedMimeType.startsWith('video/');
+        
         onFilesUploaded([{
           id: uploadFile.id,
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
           name: uploadFile.file.name,
-          type: detectedMimeType, // Use detected MIME type instead of browser file.type
+          type: detectedMimeType,
           size: uploadFile.file.size,
-          isWatermarked: !!processedFile.watermarkedUrl
+          isWatermarked: !!processedFile.watermarkedUrl,
+          // For videos: store thumbnail separately, for images: use preview as thumbnail
+          thumbnailUrl: isVideo ? processedFile.thumbnailUrl : processedFile.previewUrl,
+          previewUrl: processedFile.previewUrl
         }]);
       }
 
