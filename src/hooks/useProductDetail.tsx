@@ -173,7 +173,7 @@ export const useProductDetail = (productId: string) => {
           if (audioFile?.file_path) {
             console.log('🎵 Creating public URL for audio:', audioFile.file_path);
             const { data: publicData } = supabase.storage
-              .from('original-files')
+              .from('uploads')
               .getPublicUrl(audioFile.file_path);
             previewUrl = publicData.publicUrl;
             console.log('🔊 Audio URL created:', previewUrl);
@@ -186,7 +186,7 @@ export const useProductDetail = (productId: string) => {
           if (videoFile?.file_path) {
             console.log('🎬 Creating public URL for video:', videoFile.file_path);
             const { data: publicData } = supabase.storage
-              .from('original-files')
+              .from('uploads')
               .getPublicUrl(videoFile.file_path);
             previewUrl = publicData.publicUrl;
             console.log('📺 Video URL created:', previewUrl);

@@ -76,7 +76,7 @@ export const useMarketplace = () => {
           if (originalFile?.file_path && (item.content_type === 'video' || item.content_type === 'audio')) {
             mediaUrl = originalFile.file_path.startsWith('http')
               ? originalFile.file_path
-              : buildPublicUrl('original-files', originalFile.file_path);
+              : buildPublicUrl('uploads', originalFile.file_path);
           }
 
           // For PDFs/ebooks, use thumbnail as cover if available
