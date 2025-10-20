@@ -6,7 +6,7 @@ interface VideoWatermarkProps {
 }
 
 export const VideoWatermark: React.FC<VideoWatermarkProps> = ({ 
-  className = "absolute inset-0 z-20 pointer-events-none flex items-center justify-center",
+  className = "absolute inset-0 z-20 pointer-events-none flex items-start justify-center pt-4",
   size = 'normal'
 }) => {
   // Define sizes for different contexts
