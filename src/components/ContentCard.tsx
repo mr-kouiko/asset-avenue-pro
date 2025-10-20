@@ -55,18 +55,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   };
 
   const handleAddToCart = () => {
+      // Ensure price is set - use 0 if null/undefined, will be replaced with license pricing
+      const itemPrice = price ?? 0;
+      
       addToCart({
         id, // Keep for backward compatibility
         submissionId: id, // Explicit submission_id
         title,
         author,
-        price,
+        price: itemPrice,
         type,
         thumbnail,
         videoUrl,
         audioUrl,
-        coverUrl
+        coverUrl,
+        licenseId: 'standard' // Default license
       });
+      
+      console.log('Added to cart:', { id, title, price: itemPrice, type });
   };
 
   const handleDirectPurchase = async () => {

@@ -32,13 +32,31 @@ export const useMarketplacePayment = () => {
     try {
       setLoading(true);
       console.log('Creating marketplace payment for', cartItems.length, 'items');
+      console.log('Cart items with prices:', cartItems.map(i => ({ id: i.id, price: i.price, license: i.licenseId })));
 
-      // Convert cart items to the expected format
-      const cart_items: CartItem[] = cartItems.map(item => ({
-        submission_id: item.submissionId || item.id, // Use explicit submissionId or fallback to id
-        price: item.price,
-        license_id: item.licenseId
-      }));
+      // Convert cart items to the expected format with proper price handling
+      const cart_items: CartItem[] = cartItems.map(item => {
+        // Ensure we have a valid price (minimum based on license)
+        let finalPrice = item.price || 0;
+        
+        // If price is 0 or null, apply license-based pricing
+        if (!finalPrice || finalPrice === 0) {
+          const licensePrices: Record<string, number> = {
+            'standard': 15,
+            'extended': 45,
+            'exclusive': 299
+          };
+          finalPrice = licensePrices[item.licenseId || 'standard'] || 15;
+        }
+
+        console.log(`Item ${item.title}: original price ${item.price}, final price ${finalPrice}, license ${item.licenseId}`);
+
+        return {
+          submission_id: item.submissionId || item.id,
+          price: finalPrice,
+          license_id: item.licenseId || 'standard'
+        };
+      });
 
       const { data, error } = await supabase.functions.invoke('create-marketplace-payment', {
         body: {
@@ -88,12 +106,15 @@ export const useMarketplacePayment = () => {
       return { valid: false, error: 'Votre panier est vide' };
     }
 
-    // Check for items with invalid prices (allow free items with price 0)
+    // Check for items with problematic prices
+    // Note: null/undefined prices will be replaced with license-based pricing
     const invalidItems = cartItems.filter(item => 
-      typeof item.price !== 'number' || item.price < 0
+      (item.price !== null && item.price !== undefined && typeof item.price !== 'number') ||
+      (typeof item.price === 'number' && item.price < 0)
     );
 
     if (invalidItems.length > 0) {
+      console.error('Invalid items found:', invalidItems);
       return { valid: false, error: 'Certains articles ont des prix invalides' };
     }
 

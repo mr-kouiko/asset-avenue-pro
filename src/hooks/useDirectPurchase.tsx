@@ -29,6 +29,7 @@ export const useDirectPurchase = () => {
     try {
       setLoading(true);
       console.log('Creating direct payment for item:', item);
+      console.log('Selected license:', selectedLicense);
 
       // License price mapping
       const licensePrices = {
@@ -38,7 +39,12 @@ export const useDirectPurchase = () => {
       };
 
       const licensePrice = licensePrices[selectedLicense as keyof typeof licensePrices] || 15;
-      const totalPrice = Math.max(item.price, 0) + licensePrice;
+      
+      // Handle null/undefined prices - use license price as base
+      const basePrice = item.price ?? 0;
+      const totalPrice = basePrice > 0 ? basePrice + licensePrice : licensePrice;
+      
+      console.log('Price calculation:', { basePrice, licensePrice, totalPrice });
 
       // Convert to expected format for marketplace payment
       const cart_items = [{
@@ -92,7 +98,9 @@ export const useDirectPurchase = () => {
       return { valid: false, error: 'ID de produit manquant' };
     }
 
-    if (typeof item.price !== 'number' || item.price < 0) {
+    // Allow null/undefined prices (will use license-based pricing)
+    if (item.price !== null && item.price !== undefined && 
+        (typeof item.price !== 'number' || item.price < 0)) {
       return { valid: false, error: 'Prix invalide' };
     }
 
@@ -107,7 +115,8 @@ export const useDirectPurchase = () => {
     };
 
     const licensePrice = licensePrices[selectedLicense as keyof typeof licensePrices] || 15;
-    return Math.max(item.price, 0) + licensePrice;
+    const basePrice = item.price ?? 0;
+    return basePrice > 0 ? basePrice + licensePrice : licensePrice;
   };
 
   return {
