@@ -35,7 +35,7 @@ export const useMarketplacePayment = () => {
 
       // Convert cart items to the expected format
       const cart_items: CartItem[] = cartItems.map(item => ({
-        submission_id: item.id,
+        submission_id: item.submissionId || item.id, // Use explicit submissionId or fallback to id
         price: item.price,
         license_id: item.licenseId
       }));
@@ -60,15 +60,12 @@ export const useMarketplacePayment = () => {
       console.log('Payment created:', data);
 
       if (data.checkout_url) {
-        // Redirect to Stripe Checkout
-        window.open(data.checkout_url, '_blank');
+        // Clear cart before redirect
+        clearCart();
         toast.success('Redirection vers le paiement...');
         
-        // Clear cart after successful checkout creation
-        setTimeout(() => {
-          clearCart();
-          toast.success('Commande confirmée ! Redirection vers le paiement...');
-        }, 1000);
+        // Redirect to Stripe Checkout in same window
+        window.location.href = data.checkout_url;
       }
 
       return data;
@@ -91,9 +88,9 @@ export const useMarketplacePayment = () => {
       return { valid: false, error: 'Votre panier est vide' };
     }
 
-    // Check for items with invalid prices
+    // Check for items with invalid prices (allow free items with price 0)
     const invalidItems = cartItems.filter(item => 
-      typeof item.price !== 'number' || item.price <= 0
+      typeof item.price !== 'number' || item.price < 0
     );
 
     if (invalidItems.length > 0) {

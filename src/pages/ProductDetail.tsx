@@ -241,7 +241,8 @@ const ProductDetail = () => {
       );
       
       addToCart({
-        id: product.id,
+        id: product.id, // Keep for backward compatibility
+        submissionId: product.id, // Explicit submission_id
         title: product.title,
         author: product.author,
         price: finalPrice,

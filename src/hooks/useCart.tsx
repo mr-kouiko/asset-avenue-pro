@@ -2,7 +2,7 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import { toast } from 'sonner';
 
 interface CartItem {
-  id: string;
+  id: string; // This is the submission_id
   title: string;
   author: string;
   price: number;
@@ -12,6 +12,7 @@ interface CartItem {
   audioUrl?: string;
   coverUrl?: string;
   licenseId?: string;
+  submissionId?: string; // Explicit submission_id field for clarity
 }
 
 interface CartContextType {

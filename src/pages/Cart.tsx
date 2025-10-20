@@ -89,16 +89,16 @@ const Cart = () => {
               <div className="space-y-2 mb-6">
                 <div className="flex justify-between">
                   <span>Sous-total</span>
-                  <span>{getTotalPrice()}€</span>
+                  <span>{getTotalPrice().toFixed(2)}€</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>TVA (20%)</span>
-                  <span>{(getTotalPrice() * 0.2).toFixed(2)}€</span>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>TVA incluse</span>
+                  <span>Incluse</span>
                 </div>
                 <div className="border-t pt-2">
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>{(getTotalPrice() * 1.2).toFixed(2)}€</span>
+                    <span className="text-primary">{getTotalPrice().toFixed(2)}€</span>
                   </div>
                 </div>
               </div>

@@ -56,7 +56,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   const handleAddToCart = () => {
       addToCart({
-        id,
+        id, // Keep for backward compatibility
+        submissionId: id, // Explicit submission_id
         title,
         author,
         price,

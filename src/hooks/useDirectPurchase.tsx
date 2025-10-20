@@ -67,9 +67,9 @@ export const useDirectPurchase = () => {
       console.log('Direct payment created:', data);
 
       if (data.checkout_url) {
-        // Redirect to Stripe Checkout in same tab for immediate purchase flow
-        window.location.href = data.checkout_url;
+        // Redirect to Stripe Checkout in same window
         toast.success('Redirection vers le paiement...');
+        window.location.href = data.checkout_url;
       }
 
       return data;
