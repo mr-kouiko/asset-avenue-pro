@@ -9,6 +9,7 @@ import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ContentCardProps {
   id: string;
@@ -41,6 +42,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 }) => {
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
+  const { language } = useLanguage();
   const [isHovered, setIsHovered] = useState(false);
 
   const getTypeColor = (type: string) => {
@@ -141,17 +143,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           isHovered ? 'opacity-100 bg-stock-dark/10' : 'opacity-0'
         } z-30`}>
           <div className="flex gap-1.5">
-            <Button 
-              size="sm" 
-              variant="secondary"
-              className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(`/fr/product/${id}`, '_blank');
-              }}
-            >
-              Aperçu
-            </Button>
+            <Link to={`/${language}/product/${id}`} target="_blank">
+              <Button 
+                size="sm" 
+                variant="secondary"
+                className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                Aperçu
+              </Button>
+            </Link>
             <Button 
               size="sm"
               className="bg-stock-blue hover:bg-stock-blue/90 text-white border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
