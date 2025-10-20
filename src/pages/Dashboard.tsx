@@ -36,6 +36,8 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { StripeConnectOnboarding } from "@/components/StripeConnectOnboarding";
 import { StripeSettingsPanel } from "@/components/StripeSettingsPanel";
+import { useStripeConnect } from "@/hooks/useStripeConnect";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -49,8 +51,32 @@ const Dashboard = () => {
     refreshData 
   } = useSellerDashboard();
   
+  const { accountStatus, isAccountReady } = useStripeConnect();
   const [activeTab, setActiveTab] = useState("overview");
   const [editingSubmission, setEditingSubmission] = useState<string | null>(null);
+
+  const StripeConnectWarning = () => {
+    if (!accountStatus || isAccountReady()) return null;
+
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Configuration Stripe requise</AlertTitle>
+        <AlertDescription className="flex items-center justify-between">
+          <span>
+            Vous devez configurer votre compte Stripe Connect pour recevoir des paiements.
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setActiveTab("stripe")}
+          >
+            Configurer maintenant
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  };
 
   if (!user) {
     return (
@@ -130,6 +156,9 @@ const Dashboard = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Stripe Connect Warning */}
+            <StripeConnectWarning />
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>

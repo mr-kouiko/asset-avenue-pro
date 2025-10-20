@@ -116,10 +116,20 @@ serve(async (req) => {
     
     for (const submission of submissions) {
       const account = accountMap.get(submission.creator_id);
-      if (!account || !account.charges_enabled) {
+      if (!account) {
+        console.error(`No Stripe account found for seller ${submission.creator_id} (product: ${submission.title})`);
         return new Response(
           JSON.stringify({ 
-            error: `Seller for "${submission.title}" doesn't have a valid payment setup` 
+            error: `Le vendeur de "${submission.title}" n'a pas configuré son compte de paiement. Veuillez contacter le vendeur.` 
+          }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      if (!account.charges_enabled) {
+        console.error(`Stripe account not enabled for seller ${submission.creator_id} (product: ${submission.title})`);
+        return new Response(
+          JSON.stringify({ 
+            error: `Le compte de paiement du vendeur de "${submission.title}" n'est pas encore activé. Veuillez réessayer plus tard.` 
           }),
           { status: 400, headers: corsHeaders }
         );
