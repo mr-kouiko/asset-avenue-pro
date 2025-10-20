@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useContentTranslation } from './useContentTranslation';
 
 export interface MarketplaceContent {
   id: string;
@@ -21,6 +22,7 @@ export interface MarketplaceContent {
 export const useMarketplace = () => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
+  const { translateBatch, currentLanguage } = useContentTranslation();
 
   const fetchMarketplaceContent = async () => {
     try {
@@ -134,7 +136,24 @@ export const useMarketplace = () => {
         })
       );
 
-      setContent(contentWithFiles);
+      // Translate content to visitor's language
+      const itemsToTranslate = contentWithFiles.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: '', // No description in current interface
+        tags: item.tags || []
+      }));
+
+      const translations = await translateBatch(itemsToTranslate);
+
+      // Apply translations
+      const translatedContent = contentWithFiles.map((item, index) => ({
+        ...item,
+        title: translations[index].title,
+        tags: translations[index].tags
+      }));
+
+      setContent(translatedContent);
     } catch (error) {
       console.error('Error in fetchMarketplaceContent:', error);
     } finally {
@@ -156,7 +175,7 @@ export const useMarketplace = () => {
     return () => {
       window.removeEventListener('refreshMarketplace', handleRefresh);
     };
-  }, []);
+  }, [currentLanguage]);
 
   return {
     content,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useContentTranslation } from './useContentTranslation';
 
 interface ProductDetailData {
   id: string;
@@ -37,6 +38,7 @@ export const useProductDetail = (productId: string) => {
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { translateContent, currentLanguage } = useContentTranslation();
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -244,7 +246,22 @@ export const useProductDetail = (productId: string) => {
           } : undefined
         };
 
-        setProduct(productData);
+        // Translate product details to visitor's language
+        const translation = await translateContent(
+          productData.id,
+          productData.title,
+          productData.description,
+          productData.tags
+        );
+
+        const translatedProduct = {
+          ...productData,
+          title: translation.title,
+          description: translation.description,
+          tags: translation.tags
+        };
+
+        setProduct(translatedProduct);
       } catch (err) {
         console.error('Error loading product:', err);
         setError('Erreur lors du chargement du produit');
@@ -255,7 +272,7 @@ export const useProductDetail = (productId: string) => {
     };
 
     fetchProductDetail();
-  }, [productId]);
+  }, [productId, currentLanguage]);
 
   return {
     product,
