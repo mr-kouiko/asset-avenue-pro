@@ -22,6 +22,8 @@ import {
   Film,
   Music,
   FileText,
+  ArrowRight,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,13 +35,15 @@ import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { StripeConnectOnboarding } from "@/components/StripeConnectOnboarding";
 import { StripeSettingsPanel } from "@/components/StripeSettingsPanel";
 import { useStripeConnect } from "@/hooks/useStripeConnect";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SimpleFileUpload } from "@/components/SimpleFileUpload";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { 
@@ -54,6 +58,16 @@ const Dashboard = () => {
   const { accountStatus, isAccountReady } = useStripeConnect();
   const [activeTab, setActiveTab] = useState("overview");
   const [editingSubmission, setEditingSubmission] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{
+    id: string;
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+    isWatermarked?: boolean;
+    thumbnailUrl?: string;
+    previewUrl?: string;
+  }>>([]);
 
   const StripeConnectWarning = () => {
     if (!accountStatus || isAccountReady()) return null;
@@ -120,6 +134,38 @@ const Dashboard = () => {
       default:
         return 'Inconnu';
     }
+  };
+
+  const handleFilesUploaded = (files: Array<{
+    id: string;
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+    isWatermarked?: boolean;
+    thumbnailUrl?: string;
+    previewUrl?: string;
+  }>) => {
+    setUploadedFiles(prev => [...prev, ...files]);
+    toast.success(`${files.length} fichier(s) uploadé(s) avec succès`);
+  };
+
+  const handleContinueToProducts = () => {
+    if (uploadedFiles.length === 0) {
+      toast.error("Veuillez uploader au moins un fichier avant de continuer");
+      return;
+    }
+
+    sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(uploadedFiles));
+    navigate('/product-management');
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -492,65 +538,113 @@ const Dashboard = () => {
           </TabsContent>
 
           {/* Upload Tab */}
-          <TabsContent value="upload">
-            <Card>
-              <CardHeader>
-                <CardTitle>Nouveau système d'upload</CardTitle>
-                <CardDescription>
-                  Processus d'upload amélioré en deux étapes pour une meilleure organisation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <span className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">1</span>
-                      <div>
-                        <h3 className="font-semibold">Upload groupé</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Uploadez tous vos fichiers numériques en une seule fois avec aperçu et gestion de queue
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-3">
-                      <span className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">2</span>
-                      <div>
-                        <h3 className="font-semibold">Configuration individuelle</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Configurez ensuite chaque produit avec ses propres métadonnées (titre, description, prix, catégorie, tags)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 flex gap-4">
-                    <Button size="lg" asChild>
-                      <Link to="/file-upload">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Commencer l'upload
-                      </Link>
-                    </Button>
-                    
-                    <Button variant="outline" size="lg" asChild>
-                      <Link to="/upload">
-                        Ancien système (déprécié)
-                      </Link>
-                    </Button>
-                  </div>
+          <TabsContent value="upload" className="space-y-6">
+            <div className="mb-6">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
+                <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
+                <span>Upload des fichiers</span>
+                <ArrowRight className="h-4 w-4" />
+                <span className="px-3 py-1 rounded-full bg-muted">2</span>
+                <span>Gestion des produits</span>
+              </div>
+              
+              <h2 className="text-2xl font-bold mb-2">Uploader vos fichiers</h2>
+              <p className="text-muted-foreground">
+                Commencez par uploader tous vos fichiers numériques. Vous pourrez ensuite configurer chaque produit individuellement.
+              </p>
+            </div>
+
+            {/* File Upload Section */}
+            <Card className="p-6">
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Upload className="h-5 w-5 text-primary" />
+                  <h3 className="text-xl font-semibold">Zone d'upload</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Déposez ou sélectionnez vos fichiers. Les images seront automatiquement filigranées pour la marketplace.
+                </p>
+              </div>
+              
+              <SimpleFileUpload 
+                onFilesUploaded={handleFilesUploaded} 
+                maxFiles={100} 
+                maxFileSize={1000} 
+              />
+            </Card>
+
+            {/* Uploaded Files Summary */}
+            {uploadedFiles.length > 0 && (
+              <Card className="p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Check className="h-5 w-5 text-green-500" />
+                  <h3 className="text-lg font-semibold">
+                    Fichiers uploadés ({uploadedFiles.length})
+                  </h3>
                 </div>
                 
-                <div className="space-y-3 text-sm">
-                  <h4 className="font-medium">Avantages du nouveau système :</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• Upload plus rapide et fiable</li>
-                    <li>• Gestion individuelle de chaque produit</li>
-                    <li>• Possibilité de sauvegarder en brouillon</li>
-                    <li>• Interface plus claire et intuitive</li>
-                    <li>• Meilleur suivi de l'état d'upload</li>
-                  </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {uploadedFiles.slice(0, 6).map((file) => (
+                    <div key={file.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+                      {file.previewUrl && file.type.startsWith('image/') ? (
+                        <img 
+                          src={file.previewUrl} 
+                          alt={file.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center">
+                          <Upload className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(file.size)} • {file.type.split('/')[0]}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {uploadedFiles.length > 6 && (
+                    <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        +{uploadedFiles.length - 6} autres fichiers
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
+
+                <div className="flex space-x-4">
+                  <Button 
+                    onClick={handleContinueToProducts}
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Continuer vers la gestion des produits
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => setUploadedFiles([])}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Instructions */}
+            <Card className="p-6 bg-muted/50">
+              <h3 className="font-semibold mb-2">Prochaines étapes</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Uploadez tous vos fichiers en une fois</li>
+                <li>• Passez ensuite à l'étape de configuration des produits</li>
+                <li>• Chaque fichier aura son propre formulaire de métadonnées</li>
+                <li>• Vous pourrez sauvegarder en brouillon ou publier directement</li>
+              </ul>
             </Card>
           </TabsContent>
         </Tabs>
