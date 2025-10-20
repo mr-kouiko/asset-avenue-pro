@@ -152,7 +152,7 @@ export const Header = () => {
                         <Link to={`/${language}/seller-dashboard`}>{t('header.seller.dashboard')}</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to={`/${language}/upload`}>{t('header.upload')}</Link>
+                        <Link to={`/${language}/file-upload`}>{t('header.upload')}</Link>
                       </DropdownMenuItem>
                     </>
                   ) : (
