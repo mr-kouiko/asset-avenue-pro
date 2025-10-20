@@ -57,6 +57,15 @@ serve(async (req) => {
       );
     }
 
+    // Guard against misconfigured publishable key
+    if (stripeSecretKey.startsWith("pk_")) {
+      console.error("Stripe misconfiguration: publishable key set in STRIPE_SECRET_KEY");
+      return new Response(
+        JSON.stringify({ error: "Configuration Stripe invalide: STRIPE_SECRET_KEY contient une clé publishable (pk_...). Remplacez-la par votre clé secrète (sk_...)." }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2023-10-16",

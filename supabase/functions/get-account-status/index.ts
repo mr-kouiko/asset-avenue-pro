@@ -37,20 +37,29 @@ serve(async (req) => {
       );
     }
 
-    // Use Stripe secret key from environment variables
-    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
-    
-    if (!stripeSecretKey) {
-      return new Response(
-        JSON.stringify({ error: "Stripe configuration missing" }),
-        { status: 500, headers: corsHeaders }
-      );
-    }
+  // Use Stripe secret key from environment variables
+  const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+  
+  if (!stripeSecretKey) {
+    return new Response(
+      JSON.stringify({ error: "Stripe configuration missing" }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
 
-    // Initialize Stripe
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16",
-    });
+  // Guard against misconfigured publishable key
+  if (stripeSecretKey.startsWith("pk_")) {
+    console.error("Stripe misconfiguration: publishable key set in STRIPE_SECRET_KEY");
+    return new Response(
+      JSON.stringify({ error: "Configuration Stripe invalide: STRIPE_SECRET_KEY contient une clé publishable (pk_...). Remplacez-la par votre clé secrète (sk_...)." }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  // Initialize Stripe
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: "2023-10-16",
+  });
 
     // Get user's Stripe account from database
     const { data: stripeAccount, error: dbError } = await supabaseService
