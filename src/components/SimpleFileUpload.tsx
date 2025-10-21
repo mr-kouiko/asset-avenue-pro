@@ -16,6 +16,7 @@ interface UploadFile {
   url?: string;
   error?: string;
   isWatermarked?: boolean;
+  estimatedTimeRemaining?: number; // in seconds
 }
 
 interface SimpleFileUploadProps {
@@ -163,16 +164,26 @@ export const SimpleFileUpload = ({
   };
 
   const uploadFile = async (uploadFile: UploadFile): Promise<void> => {
+    const startTime = Date.now();
+    
     try {
       // Update status to uploading
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
       ));
 
-      // Progress callback to update real-time progress
+      // Enhanced progress callback with estimated time
       const onProgress = (fileId: string, progress: number) => {
+        const elapsed = Date.now() - startTime;
+        const estimatedTotal = progress > 0 ? (elapsed / progress) * 100 : 0;
+        const estimatedRemaining = estimatedTotal - elapsed;
+        
         setFiles(prev => prev.map(f => 
-          f.id === uploadFile.id ? { ...f, progress } : f
+          f.id === uploadFile.id ? { 
+            ...f, 
+            progress,
+            estimatedTimeRemaining: Math.round(estimatedRemaining / 1000) // in seconds
+          } : f
         ));
       };
 
@@ -372,10 +383,22 @@ export const SimpleFileUpload = ({
                   </p>
                   
                   {file.status === 'uploading' || file.status === 'processing' ? (
-                    <div className="mt-2">
+                    <div className="mt-2 space-y-1">
                       <Progress value={file.progress} className="h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {file.status === 'uploading' ? 'Uploading...' : 'Processing...'}
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-muted-foreground">
+                          {file.status === 'uploading' ? 'Uploading...' : 'Processing...'}
+                        </p>
+                        {file.estimatedTimeRemaining && file.estimatedTimeRemaining > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            ~{file.estimatedTimeRemaining > 60 
+                              ? `${Math.round(file.estimatedTimeRemaining / 60)} min` 
+                              : `${file.estimatedTimeRemaining} sec`} restant
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {Math.round(file.progress)}% • {formatFileSize((file.file.size * file.progress) / 100)} / {formatFileSize(file.file.size)}
                       </p>
                     </div>
                   ) : null}

@@ -322,10 +322,15 @@ export class StreamingUploadHandler {
    */
   public static getOptimalChunkSize(file: File): number {
     const mimeType = this.detectMimeType(file);
+    const fileSizeMB = file.size / (1024 * 1024);
     
-    // Larger chunks for video files
+    // Larger chunks for video files to speed up upload
     if (mimeType.startsWith('video/')) {
-      return file.size > 50 * 1024 * 1024 ? 2 * 1024 * 1024 : this.CHUNK_SIZE; // 2MB for large videos
+      if (fileSizeMB < 10) return this.CHUNK_SIZE; // 1MB for small videos
+      if (fileSizeMB < 50) return this.CHUNK_SIZE * 3; // 3MB for medium videos
+      if (fileSizeMB < 200) return this.CHUNK_SIZE * 5; // 5MB for large videos
+      if (fileSizeMB < 500) return this.CHUNK_SIZE * 7; // 7MB for very large videos
+      return this.CHUNK_SIZE * 10; // 10MB for huge video files (500MB+)
     }
     
     // Standard chunk size for audio and other files
