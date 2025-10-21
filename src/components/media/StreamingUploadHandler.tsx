@@ -129,10 +129,21 @@ export class StreamingUploadHandler {
     }
     
     return chunks;
-  }
+   }
 
-  /**
-   * Upload single chunk with retry logic
+   // Convert ArrayBuffer to base64 to avoid huge JSON payloads
+   private static async arrayBufferToBase64(buffer: ArrayBuffer): Promise<string> {
+     let binary = '';
+     const bytes = new Uint8Array(buffer);
+     const chunkSize = 0x8000; // process in chunks to avoid call stack limits
+     for (let i = 0; i < bytes.length; i += chunkSize) {
+       binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+     }
+     return btoa(binary);
+   }
+
+   /**
+    * Upload single chunk with retry logic
    */
   private static async uploadChunk(
     chunk: Blob, 
@@ -146,15 +157,16 @@ export class StreamingUploadHandler {
     try {
       console.log(`📤 Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${fileName}`);
       
-      // Convert chunk to array buffer for the edge function
+      // Convert chunk to base64 to keep payload small and reliable
       const chunkBuffer = await chunk.arrayBuffer();
+      const chunkBase64 = await this.arrayBufferToBase64(chunkBuffer);
       
       const response = await supabase.functions.invoke('chunked-upload', {
         body: {
           action: 'upload-chunk',
           uploadId,
           chunkIndex,
-          chunk: Array.from(new Uint8Array(chunkBuffer))
+          chunkBase64
         }
       });
 
@@ -330,8 +342,8 @@ export class StreamingUploadHandler {
     if (mimeType.startsWith('video/')) {
       if (fileSizeMB < 10) return this.CHUNK_SIZE; // 1MB for small videos
       if (fileSizeMB < 50) return this.CHUNK_SIZE * 3; // 3MB for medium videos
-      if (fileSizeMB < 200) return this.CHUNK_SIZE * 5; // 5MB for large videos
-      if (fileSizeMB < 500) return this.CHUNK_SIZE * 7; // 7MB for very large videos
+      if (fileSizeMB < 200) return this.CHUNK_SIZE * 3; // 3MB for ~150MB videos to keep requests light
+      if (fileSizeMB < 500) return this.CHUNK_SIZE * 5; // 5MB for very large videos
       return this.CHUNK_SIZE * 10; // 10MB for huge video files (500MB+)
     }
     

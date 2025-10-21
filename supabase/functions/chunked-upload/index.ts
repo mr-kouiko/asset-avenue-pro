@@ -266,16 +266,26 @@ serve(async (req) => {
       
       // Upload chunk
       if (body.action === "upload-chunk") {
-        const { uploadId, chunkIndex, chunk } = body;
+        const { uploadId, chunkIndex, chunk, chunkBase64 } = body;
         
-        if (!uploadId || chunkIndex === undefined || !chunk) {
+        if (!uploadId || chunkIndex === undefined || (!chunk && !chunkBase64)) {
           return new Response(JSON.stringify({ error: "Missing upload parameters" }), { 
             status: 400,
             headers: { "Content-Type": "application/json", ...corsHeaders }
           });
         }
 
-        const chunkData = new Uint8Array(chunk);
+        let chunkData: Uint8Array;
+        if (chunkBase64) {
+          // Decode base64 to Uint8Array
+          const binary = atob(chunkBase64);
+          const len = binary.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+          chunkData = bytes;
+        } else {
+          chunkData = new Uint8Array(chunk);
+        }
         const padded = chunkIndex.toString().padStart(6, "0");
         const filePath = `${uploadId}/chunk_${padded}`;
 
