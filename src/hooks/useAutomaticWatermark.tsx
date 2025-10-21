@@ -198,6 +198,12 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
     const results: ProcessedFile[] = [];
 
     try {
+      // Refresh session to ensure valid token for uploads
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        throw new Error('Session refresh failed. Please login again.');
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
