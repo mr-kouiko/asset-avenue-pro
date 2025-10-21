@@ -204,43 +204,32 @@ export class StreamingUploadHandler {
 
     console.log(`🚀 [Multipart] Starting parallel upload: ${totalChunks} chunks, max ${MAX_PARALLEL} concurrent`);
 
-    // Upload chunks with concurrency control
-    const uploadPromises: Promise<boolean>[] = [];
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const chunkPath = `${basePath}/chunk_${String(i).padStart(4, '0')}`;
-      
-      const uploadPromise = this.uploadChunkViaSigned(
-        chunk,
-        i,
-        totalChunks,
-        chunkPath,
-        mimeType
-      ).then(success => {
-        if (success) {
+    const results: boolean[] = new Array(totalChunks).fill(false);
+    let nextIndex = 0;
+
+    const worker = async (workerId: number) => {
+      while (true) {
+        const i = nextIndex++;
+        if (i >= totalChunks) break;
+        const chunk = chunks[i];
+        const chunkPath = `${basePath}/chunk_${String(i).padStart(4, '0')}`;
+        const ok = await this.uploadChunkViaSigned(chunk, i, totalChunks, chunkPath, mimeType);
+        results[i] = ok;
+        if (ok) {
           completed++;
-          const progress = 10 + Math.floor((completed / totalChunks) * 85); // 10-95%
-          console.log(`📊 Progress: ${completed}/${totalChunks} chunks (${progress}%)`);
+          const progress = 10 + Math.floor((completed / totalChunks) * 85);
+          console.log(`📊 [Worker ${workerId}] Progress: ${completed}/${totalChunks} (${progress}%)`);
           onProgress?.(progress);
         } else {
           failed++;
+          console.warn(`⚠️ [Worker ${workerId}] Chunk ${i} failed`);
         }
-        return success;
-      });
-
-      uploadPromises.push(uploadPromise);
-
-      // Control concurrency
-      if (uploadPromises.length >= MAX_PARALLEL) {
-        await Promise.race(uploadPromises.filter(p => p));
-        uploadPromises.splice(0, uploadPromises.findIndex(p => p) + 1);
       }
-    }
+    };
 
-    // Wait for remaining uploads
-    const results = await Promise.all(uploadPromises);
-    
+    const workers = Array.from({ length: Math.min(MAX_PARALLEL, totalChunks) }, (_, idx) => worker(idx + 1));
+    await Promise.all(workers);
+
     if (failed > 0) {
       console.error(`💥 [Multipart] Upload failed: ${failed}/${totalChunks} chunks failed`);
       return false;
@@ -448,7 +437,7 @@ export class StreamingUploadHandler {
     
     // Use 5MB chunks for videos (good balance between parallelism and efficiency)
     if (mimeType.startsWith('video/')) {
-      return 5 * 1024 * 1024; // 5MB chunks for videos
+      return 8 * 1024 * 1024; // 8MB chunks for videos (fewer requests, faster)
     }
     
     // Standard 1MB chunks for other files
