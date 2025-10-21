@@ -228,7 +228,7 @@ export class StreamingUploadHandler {
       const totalChunks = chunks.length;
       
       // Upload chunks in parallel with limited concurrency
-      const CONCURRENT_UPLOADS = 3;
+      const CONCURRENT_UPLOADS = 2;
       let uploadedChunks = 0;
       let hasErrors = false;
       
@@ -340,11 +340,8 @@ export class StreamingUploadHandler {
     
     // Larger chunks for video files to speed up upload
     if (mimeType.startsWith('video/')) {
-      if (fileSizeMB < 10) return this.CHUNK_SIZE; // 1MB for small videos
-      if (fileSizeMB < 50) return this.CHUNK_SIZE * 3; // 3MB for medium videos
-      if (fileSizeMB < 200) return this.CHUNK_SIZE * 3; // 3MB for ~150MB videos to keep requests light
-      if (fileSizeMB < 500) return this.CHUNK_SIZE * 5; // 5MB for very large videos
-      return this.CHUNK_SIZE * 10; // 10MB for huge video files (500MB+)
+      // Use small chunks (1MB) for reliability across edge function payload limits
+      return this.CHUNK_SIZE; // 1MB for all video sizes to avoid 413 and timeouts
     }
     
     // Standard chunk size for audio and other files

@@ -156,7 +156,7 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
   // Liste des morceaux
   const { data: chunkList, error } = await supabase.storage
     .from(BUCKET_TEMP)
-    .list(uploadId);
+    .list(uploadId, { limit: 10000, offset: 0, sortBy: { column: 'name', order: 'asc' } });
 
   if (error) throw error;
   if (!chunkList || chunkList.length === 0) {
