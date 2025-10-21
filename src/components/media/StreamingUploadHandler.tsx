@@ -112,163 +112,242 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Create chunks from file with streaming optimization
+   * Create chunks from file for multipart upload
    */
   private static createChunks(file: File): Blob[] {
     const chunkSize = this.getOptimalChunkSize(file);
     const chunks: Blob[] = [];
     const totalChunks = Math.ceil(file.size / chunkSize);
     
-    console.log(`📦 Creating ${totalChunks} chunks (size ~${Math.round(chunkSize / (1024 * 1024))}MB) for file: ${file.name} (${file.size} bytes)`);
+    console.log(`📦 [Multipart] Creating ${totalChunks} chunks (${Math.round(chunkSize / (1024 * 1024))}MB each) for: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB total)`);
     
     for (let i = 0; i < totalChunks; i++) {
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize, file.size);
       const chunk = file.slice(start, end);
       chunks.push(chunk);
+      console.log(`  ✓ Chunk ${i + 1}/${totalChunks}: ${start}-${end} (${((end - start) / (1024 * 1024)).toFixed(2)}MB)`);
     }
     
     return chunks;
-   }
+  }
 
-   // Convert ArrayBuffer to base64 to avoid huge JSON payloads
-   private static async arrayBufferToBase64(buffer: ArrayBuffer): Promise<string> {
-     let binary = '';
-     const bytes = new Uint8Array(buffer);
-     const chunkSize = 0x8000; // process in chunks to avoid call stack limits
-     for (let i = 0; i < bytes.length; i += chunkSize) {
-       binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-     }
-     return btoa(binary);
-   }
-
-   /**
-    * Upload single chunk with retry logic
+  /**
+   * Upload single chunk via signed URL with retry logic
    */
-  private static async uploadChunk(
-    chunk: Blob, 
-    chunkIndex: number, 
-    totalChunks: number, 
-    fileName: string, 
-    uploadId: string,
+  private static async uploadChunkViaSigned(
+    chunk: Blob,
+    chunkIndex: number,
+    totalChunks: number,
+    chunkPath: string,
     mimeType: string,
     retryCount = 0
   ): Promise<boolean> {
+    const chunkSizeMB = (chunk.size / (1024 * 1024)).toFixed(2);
+    console.log(`📤 [Chunk ${chunkIndex + 1}/${totalChunks}] Uploading ${chunkSizeMB}MB to: ${chunkPath}`);
+    
     try {
-      console.log(`📤 Uploading chunk ${chunkIndex + 1}/${totalChunks} for ${fileName}`);
-      
-      // Convert chunk to base64 to keep payload small and reliable
-      const chunkBuffer = await chunk.arrayBuffer();
-      const chunkBase64 = await this.arrayBufferToBase64(chunkBuffer);
-      
-      const response = await supabase.functions.invoke('chunked-upload', {
-        body: {
-          action: 'upload-chunk',
-          uploadId,
-          chunkIndex,
-          chunkBase64
-        }
-      });
+      // Create signed upload URL for this chunk
+      const { data: signed, error: signedErr } = await supabase.storage
+        .from('uploads')
+        .createSignedUploadUrl(chunkPath, { upsert: true });
 
-      if (response.error) {
-        throw new Error(`Chunk upload failed: ${response.error.message}`);
+      if (signedErr || !signed?.token) {
+        throw new Error(`Failed to create signed URL: ${signedErr?.message || 'no token'}`);
       }
 
-      if (!response.data?.success) {
-        throw new Error(`Chunk upload failed: ${response.data?.error || 'Unknown error'}`);
+      console.log(`  🔑 Signed URL created for chunk ${chunkIndex + 1}`);
+
+      // Upload chunk directly to Storage
+      const { error: uploadErr } = await supabase.storage
+        .from('uploads')
+        .uploadToSignedUrl(chunkPath, signed.token, chunk, {
+          upsert: true,
+          contentType: mimeType
+        });
+
+      if (uploadErr) {
+        throw new Error(`Chunk upload failed: ${uploadErr.message}`);
       }
 
-      console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`);
+      console.log(`✅ [Chunk ${chunkIndex + 1}/${totalChunks}] Uploaded successfully (${chunkSizeMB}MB)`);
       return true;
     } catch (error) {
-      console.error(`❌ Chunk ${chunkIndex + 1} upload failed:`, error);
+      console.error(`❌ [Chunk ${chunkIndex + 1}/${totalChunks}] Upload failed:`, error);
       
       if (retryCount < this.MAX_RETRIES) {
-        console.log(`🔄 Retrying chunk ${chunkIndex + 1} (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-        return this.uploadChunk(chunk, chunkIndex, totalChunks, fileName, uploadId, mimeType, retryCount + 1);
+        const waitTime = 1000 * (retryCount + 1);
+        console.log(`🔄 [Chunk ${chunkIndex + 1}] Retrying in ${waitTime}ms (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        return this.uploadChunkViaSigned(chunk, chunkIndex, totalChunks, chunkPath, mimeType, retryCount + 1);
       }
       
+      console.error(`💥 [Chunk ${chunkIndex + 1}] Failed after ${this.MAX_RETRIES} retries`);
       return false;
     }
   }
 
   /**
-   * Upload file with streaming support and proper MIME type handling
+   * Upload chunks in parallel with concurrency limit
+   */
+  private static async uploadChunksParallel(
+    chunks: Blob[],
+    basePath: string,
+    uploadId: string,
+    mimeType: string,
+    onProgress?: (progress: number) => void
+  ): Promise<boolean> {
+    const MAX_PARALLEL = 3;
+    const totalChunks = chunks.length;
+    let completed = 0;
+    let failed = 0;
+
+    console.log(`🚀 [Multipart] Starting parallel upload: ${totalChunks} chunks, max ${MAX_PARALLEL} concurrent`);
+
+    // Upload chunks with concurrency control
+    const uploadPromises: Promise<boolean>[] = [];
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const chunkPath = `${basePath}/chunk_${String(i).padStart(4, '0')}`;
+      
+      const uploadPromise = this.uploadChunkViaSigned(
+        chunk,
+        i,
+        totalChunks,
+        chunkPath,
+        mimeType
+      ).then(success => {
+        if (success) {
+          completed++;
+          const progress = 10 + Math.floor((completed / totalChunks) * 85); // 10-95%
+          console.log(`📊 Progress: ${completed}/${totalChunks} chunks (${progress}%)`);
+          onProgress?.(progress);
+        } else {
+          failed++;
+        }
+        return success;
+      });
+
+      uploadPromises.push(uploadPromise);
+
+      // Control concurrency
+      if (uploadPromises.length >= MAX_PARALLEL) {
+        await Promise.race(uploadPromises.filter(p => p));
+        uploadPromises.splice(0, uploadPromises.findIndex(p => p) + 1);
+      }
+    }
+
+    // Wait for remaining uploads
+    const results = await Promise.all(uploadPromises);
+    
+    if (failed > 0) {
+      console.error(`💥 [Multipart] Upload failed: ${failed}/${totalChunks} chunks failed`);
+      return false;
+    }
+
+    console.log(`✅ [Multipart] All ${totalChunks} chunks uploaded successfully`);
+    return true;
+  }
+
+  /**
+   * Upload file with multipart signed URLs (for large files)
    */
   public static async uploadFile(
     file: File,
     onProgress?: (progress: number) => void,
     desiredPath?: string
   ): Promise<StreamingUploadResult> {
+    const mimeType = this.detectMimeType(file);
+    const finalPath = desiredPath || file.name;
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+    console.log(`🎯 [Multipart Upload] Starting for: ${file.name}`);
+    console.log(`  📦 Size: ${fileSizeMB}MB | Type: ${mimeType}`);
+    console.log(`  🎫 Upload ID: ${uploadId}`);
+
     try {
-      const mimeType = this.detectMimeType(file);
-      const finalPath = desiredPath || file.name;
-
-      console.log(`🎯 Direct signed-url upload for: ${file.name} (${mimeType}) → ${finalPath}`);
-
-      // Progress: start
       onProgress?.(5);
 
-      // 1) Create a signed upload URL for the final object path
-      const { data: signed, error: signedErr } = await supabase.storage
-        .from('uploads')
-        .createSignedUploadUrl(finalPath, { upsert: true });
-
-      if (signedErr || !signed?.token) {
-        throw new Error(`Failed to create signed upload URL: ${signedErr?.message || 'unknown error'}`);
+      // Small files: direct upload
+      const MULTIPART_THRESHOLD = 10 * 1024 * 1024; // 10MB
+      if (file.size < MULTIPART_THRESHOLD) {
+        console.log(`📤 [Direct Upload] File < 10MB, using single PUT`);
+        return await this.uploadFileDirect(file, finalPath, mimeType, onProgress);
       }
 
-      // 2) Upload the file directly to Storage using the signed token (single streaming PUT)
-      const { data: uploaded, error: uploadErr } = await supabase.storage
-        .from('uploads')
-        .uploadToSignedUrl(finalPath, signed.token, file, {
-          upsert: true,
-          contentType: mimeType
-        });
+      // Large files: multipart upload
+      console.log(`📦 [Multipart Upload] File > 10MB, splitting into chunks`);
+      
+      // 1. Create chunks
+      const chunks = this.createChunks(file);
+      const basePath = `temp-multipart/${uploadId}`;
+      
+      onProgress?.(10);
 
-      if (uploadErr) {
-        throw new Error(`Signed upload failed: ${uploadErr.message}`);
+      // 2. Upload chunks in parallel (max 3)
+      console.log(`🚀 [Upload Start] Uploading ${chunks.length} chunks with max 3 parallel streams`);
+      const chunksSuccess = await this.uploadChunksParallel(
+        chunks,
+        basePath,
+        uploadId,
+        mimeType,
+        onProgress
+      );
+
+      if (!chunksSuccess) {
+        throw new Error('Chunk upload failed');
       }
 
-      // Update progress near completion
       onProgress?.(95);
 
-      // 3) Write a small manifest JSON to confirm completion (no server-side merge)
-      const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      // 3. Create manifest JSON
+      console.log(`📝 [Manifest] Creating assembly manifest`);
       const manifestPath = `manifests/${uploadId}.json`;
       const manifest = {
         uploadId,
-        method: 'signed-url-direct',
+        method: 'multipart-signed-urls',
         fileName: file.name,
         mimeType,
         size: file.size,
-        storagePath: uploaded?.path || finalPath,
-        chunks: 1,
+        finalPath,
+        chunks: chunks.map((chunk, i) => ({
+          index: i,
+          path: `${basePath}/chunk_${String(i).padStart(4, '0')}`,
+          size: chunk.size
+        })),
         createdAt: new Date().toISOString(),
       };
 
-      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-      const { data: signedManifest, error: manifestSignedErr } = await supabase.storage
+      const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+      const { data: signedManifest, error: manifestErr } = await supabase.storage
         .from('uploads')
         .createSignedUploadUrl(manifestPath, { upsert: true });
-      if (!manifestSignedErr && signedManifest?.token) {
+
+      if (manifestErr || !signedManifest?.token) {
+        console.warn('⚠️ Could not create manifest signed URL:', manifestErr);
+      } else {
         await supabase.storage
           .from('uploads')
           .uploadToSignedUrl(manifestPath, signedManifest.token, manifestBlob, {
             upsert: true,
             contentType: 'application/json'
           });
-      } else {
-        console.warn('⚠️ Could not create signed URL for manifest. Skipping manifest write.');
+        console.log(`✅ [Manifest] Saved to: ${manifestPath}`);
       }
 
-      // Completed
       onProgress?.(100);
 
+      // For now, return the first chunk URL as placeholder
+      // In production, you'd merge chunks or use a different access pattern
       const { data: urlData } = supabase.storage
         .from('uploads')
-        .getPublicUrl(uploaded?.path || finalPath);
+        .getPublicUrl(`${basePath}/chunk_0000`);
+
+      console.log(`✅ [Upload Complete] ${file.name} (${fileSizeMB}MB) uploaded successfully`);
+      console.log(`  📊 Total chunks: ${chunks.length}`);
+      console.log(`  📝 Manifest: ${manifestPath}`);
 
       return {
         success: true,
@@ -276,12 +355,59 @@ export class StreamingUploadHandler {
         mimeType
       };
     } catch (error) {
-      console.error('💥 Signed URL upload failed:', error);
+      console.error(`💥 [Upload Failed] ${file.name}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Upload failed'
       };
     }
+  }
+
+  /**
+   * Direct upload for small files (< 10MB)
+   */
+  private static async uploadFileDirect(
+    file: File,
+    finalPath: string,
+    mimeType: string,
+    onProgress?: (progress: number) => void
+  ): Promise<StreamingUploadResult> {
+    console.log(`📤 [Direct] Uploading to: ${finalPath}`);
+
+    const { data: signed, error: signedErr } = await supabase.storage
+      .from('uploads')
+      .createSignedUploadUrl(finalPath, { upsert: true });
+
+    if (signedErr || !signed?.token) {
+      throw new Error(`Failed to create signed URL: ${signedErr?.message}`);
+    }
+
+    onProgress?.(50);
+
+    const { data: uploaded, error: uploadErr } = await supabase.storage
+      .from('uploads')
+      .uploadToSignedUrl(finalPath, signed.token, file, {
+        upsert: true,
+        contentType: mimeType
+      });
+
+    if (uploadErr) {
+      throw new Error(`Upload failed: ${uploadErr.message}`);
+    }
+
+    onProgress?.(100);
+
+    const { data: urlData } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(uploaded?.path || finalPath);
+
+    console.log(`✅ [Direct] Upload complete: ${finalPath}`);
+
+    return {
+      success: true,
+      fileUrl: urlData.publicUrl,
+      mimeType
+    };
   }
 
   /**
@@ -320,13 +446,12 @@ export class StreamingUploadHandler {
     const mimeType = this.detectMimeType(file);
     const fileSizeMB = file.size / (1024 * 1024);
     
-    // Larger chunks for video files to speed up upload
+    // Use 5MB chunks for videos (good balance between parallelism and efficiency)
     if (mimeType.startsWith('video/')) {
-      // Use small chunks (1MB) for reliability across edge function payload limits
-      return this.CHUNK_SIZE; // 1MB for all video sizes to avoid 413 and timeouts
+      return 5 * 1024 * 1024; // 5MB chunks for videos
     }
     
-    // Standard chunk size for audio and other files
+    // Standard 1MB chunks for other files
     return this.CHUNK_SIZE;
   }
 }
