@@ -210,10 +210,12 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
         throw new Error('User not authenticated');
       }
 
-      for (const file of files) {
+      const CONCURRENCY = 3;
+
+      const processSingle = async (file: File) => {
         const fileId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
-        
-          const processedFile: ProcessedFile = {
+
+        const processedFile: ProcessedFile = {
           id: fileId,
           originalFile: file,
           type: file.type.startsWith('image/') ? 'image' : 
@@ -281,7 +283,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
             console.log(`✅ Thumbnail generated and uploaded: ${thumbnailUrl}`);
           } catch (thumbError) {
             console.warn('Thumbnail generation failed, using original:', thumbError);
-            thumbnailUrl = watermarkedUrl; // Fallback to original
+            thumbnailUrl = watermarkedUrl!; // Fallback to original
           }
           
           onProgress?.(fileId, 85);
@@ -326,7 +328,6 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           if (resultIndex !== -1) {
             results[resultIndex] = updatedFile;
           }
-
         } catch (error) {
           console.error(`Error processing file ${file.name}:`, error);
           
@@ -348,6 +349,11 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
 
           toast.error(`Failed to process ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+      };
+
+      for (let i = 0; i < files.length; i += CONCURRENCY) {
+        const batch = files.slice(i, i + CONCURRENCY);
+        await Promise.all(batch.map((f) => processSingle(f)));
       }
 
       const successCount = results.filter(f => f.status === 'completed').length;

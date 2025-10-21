@@ -202,115 +202,81 @@ export class StreamingUploadHandler {
     desiredPath?: string
   ): Promise<StreamingUploadResult> {
     try {
-      // Detect MIME type
       const mimeType = this.detectMimeType(file);
-      console.log(`🎯 Starting streaming upload for: ${file.name} (${mimeType})`);
-      
-      // Generate unique upload ID
-      const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Initialize upload first
-      console.log(`🔄 Initializing upload for: ${file.name}`);
-      const initResponse = await supabase.functions.invoke('chunked-upload', {
-        body: { uploadId, action: 'init-upload' }
-      });
-      
-      if (initResponse.error) {
-        throw new Error(`Initialization failed: ${initResponse.error.message}`);
-      };
-      
-      if (!initResponse.data?.success) {
-        throw new Error(`Initialization failed: ${initResponse.data?.error || 'Unknown error'}`);
-      }
-      
-      // Create chunks
-      const chunks = this.createChunks(file);
-      const totalChunks = chunks.length;
-      
-      // Upload chunks in parallel with limited concurrency
-      const CONCURRENT_UPLOADS = 2;
-      let uploadedChunks = 0;
-      let hasErrors = false;
-      
-      for (let i = 0; i < totalChunks; i += CONCURRENT_UPLOADS) {
-        const chunkBatch = chunks.slice(i, i + CONCURRENT_UPLOADS);
-        const uploadPromises = chunkBatch.map((chunk, batchIndex) => {
-          const chunkIndex = i + batchIndex;
-          return this.uploadChunk(chunk, chunkIndex, totalChunks, file.name, uploadId, mimeType);
-        });
-        
-        const results = await Promise.all(uploadPromises);
-        
-        for (const success of results) {
-          if (success) {
-            uploadedChunks++;
-          } else {
-            hasErrors = true;
-          }
-        }
-        
-        // Report progress
-        const progress = (uploadedChunks / totalChunks) * 100;
-        onProgress?.(progress);
-        console.log(`📊 Upload progress: ${progress.toFixed(1)}% (${uploadedChunks}/${totalChunks} chunks)`);
-        
-        if (hasErrors) {
-          throw new Error('Some chunks failed to upload');
-        }
-      }
-      
-      if (uploadedChunks !== totalChunks) {
-        throw new Error(`Upload incomplete: ${uploadedChunks}/${totalChunks} chunks uploaded`);
-      }
-      
-      // Finalize upload by merging chunks on the server
-      console.log(`🔄 Finalizing upload for: ${file.name}`);
       const finalPath = desiredPath || file.name;
-      const finalizeResponse = await supabase.functions.invoke('chunked-upload', {
-        body: { action: 'merge-chunks', uploadId, fileName: finalPath }
-      });
 
-      let completedPath: string | null = null;
+      console.log(`🎯 Direct signed-url upload for: ${file.name} (${mimeType}) → ${finalPath}`);
 
-      if (!finalizeResponse.error && finalizeResponse.data?.success) {
-        completedPath = finalizeResponse.data.path;
-      } else {
-        console.warn('⚠️ Server-side merge failed, falling back to direct upload:', finalizeResponse.error || finalizeResponse.data);
-        // Fallback: direct upload of original file
-        const { data: directData, error: directError } = await supabase.storage
-          .from('uploads')
-          .upload(finalPath, file, { contentType: mimeType, upsert: true });
+      // Progress: start
+      onProgress?.(5);
 
-        if (directError) {
-          throw new Error(`Finalization failed (merge + fallback): ${directError.message}`);
-        }
+      // 1) Create a signed upload URL for the final object path
+      const { data: signed, error: signedErr } = await supabase.storage
+        .from('uploads')
+        .createSignedUploadUrl(finalPath, { upsert: true });
 
-        completedPath = directData?.path || finalPath;
-
-        // Best-effort cleanup of temp chunks
-        try {
-          await supabase.functions.invoke('chunked-upload', {
-            body: { action: 'cleanup', uploadId }
-          });
-        } catch (e) {
-          console.warn('Cleanup of temp chunks failed:', e);
-        }
+      if (signedErr || !signed?.token) {
+        throw new Error(`Failed to create signed upload URL: ${signedErr?.message || 'unknown error'}`);
       }
 
-      console.log(`✅ Upload completed successfully: ${completedPath}`);
-      
-      // Get the public URL from the final path
+      // 2) Upload the file directly to Storage using the signed token (single streaming PUT)
+      const { data: uploaded, error: uploadErr } = await supabase.storage
+        .from('uploads')
+        .uploadToSignedUrl(finalPath, signed.token, file, {
+          upsert: true,
+          contentType: mimeType
+        });
+
+      if (uploadErr) {
+        throw new Error(`Signed upload failed: ${uploadErr.message}`);
+      }
+
+      // Update progress near completion
+      onProgress?.(95);
+
+      // 3) Write a small manifest JSON to confirm completion (no server-side merge)
+      const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const manifestPath = `manifests/${uploadId}.json`;
+      const manifest = {
+        uploadId,
+        method: 'signed-url-direct',
+        fileName: file.name,
+        mimeType,
+        size: file.size,
+        storagePath: uploaded?.path || finalPath,
+        chunks: 1,
+        createdAt: new Date().toISOString(),
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const { data: signedManifest, error: manifestSignedErr } = await supabase.storage
+        .from('uploads')
+        .createSignedUploadUrl(manifestPath, { upsert: true });
+      if (!manifestSignedErr && signedManifest?.token) {
+        await supabase.storage
+          .from('uploads')
+          .uploadToSignedUrl(manifestPath, signedManifest.token, manifestBlob, {
+            upsert: true,
+            contentType: 'application/json'
+          });
+      } else {
+        console.warn('⚠️ Could not create signed URL for manifest. Skipping manifest write.');
+      }
+
+      // Completed
+      onProgress?.(100);
+
       const { data: urlData } = supabase.storage
         .from('uploads')
-        .getPublicUrl(completedPath!);
-      
+        .getPublicUrl(uploaded?.path || finalPath);
+
       return {
         success: true,
         fileUrl: urlData.publicUrl,
-        mimeType: mimeType
+        mimeType
       };
     } catch (error) {
-      console.error('💥 Streaming upload failed:', error);
+      console.error('💥 Signed URL upload failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Upload failed'
