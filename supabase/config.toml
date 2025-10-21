@@ -29,7 +29,7 @@ pop3_port = 54326
 [storage]
 enabled = true
 port = 54325
-file_size_limit = "52428800"
+file_size_limit = "2147483648"
 
 [auth]
 enabled = true
@@ -51,7 +51,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.chunked-upload]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-connect-account]
 verify_jwt = true

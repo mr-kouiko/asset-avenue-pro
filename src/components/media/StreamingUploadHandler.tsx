@@ -263,30 +263,46 @@ export class StreamingUploadHandler {
         throw new Error(`Upload incomplete: ${uploadedChunks}/${totalChunks} chunks uploaded`);
       }
       
-      // Finalize upload by merging chunks
+      // Finalize upload by merging chunks on the server
       console.log(`🔄 Finalizing upload for: ${file.name}`);
+      const finalPath = desiredPath || file.name;
       const finalizeResponse = await supabase.functions.invoke('chunked-upload', {
-        body: {
-          action: 'merge-chunks',
-          uploadId,
-          fileName: desiredPath || file.name
-        }
+        body: { action: 'merge-chunks', uploadId, fileName: finalPath }
       });
-      
-      if (finalizeResponse.error) {
-        throw new Error(`Finalization failed: ${finalizeResponse.error.message}`);
+
+      let completedPath: string | null = null;
+
+      if (!finalizeResponse.error && finalizeResponse.data?.success) {
+        completedPath = finalizeResponse.data.path;
+      } else {
+        console.warn('⚠️ Server-side merge failed, falling back to direct upload:', finalizeResponse.error || finalizeResponse.data);
+        // Fallback: direct upload of original file
+        const { data: directData, error: directError } = await supabase.storage
+          .from('uploads')
+          .upload(finalPath, file, { contentType: mimeType, upsert: true });
+
+        if (directError) {
+          throw new Error(`Finalization failed (merge + fallback): ${directError.message}`);
+        }
+
+        completedPath = directData?.path || finalPath;
+
+        // Best-effort cleanup of temp chunks
+        try {
+          await supabase.functions.invoke('chunked-upload', {
+            body: { action: 'cleanup', uploadId }
+          });
+        } catch (e) {
+          console.warn('Cleanup of temp chunks failed:', e);
+        }
       }
-      
-      if (!finalizeResponse.data?.success) {
-        throw new Error(`Finalization failed: ${finalizeResponse.data?.error || 'Unknown error'}`);
-      }
-      
-      console.log(`✅ Upload completed successfully: ${finalizeResponse.data.path}`);
+
+      console.log(`✅ Upload completed successfully: ${completedPath}`);
       
       // Get the public URL from the final path
       const { data: urlData } = supabase.storage
         .from('uploads')
-        .getPublicUrl(finalizeResponse.data.path);
+        .getPublicUrl(completedPath!);
       
       return {
         success: true,
