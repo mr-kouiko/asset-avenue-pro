@@ -115,14 +115,15 @@ export class StreamingUploadHandler {
    * Create chunks from file with streaming optimization
    */
   private static createChunks(file: File): Blob[] {
+    const chunkSize = this.getOptimalChunkSize(file);
     const chunks: Blob[] = [];
-    const totalChunks = Math.ceil(file.size / this.CHUNK_SIZE);
+    const totalChunks = Math.ceil(file.size / chunkSize);
     
-    console.log(`📦 Creating ${totalChunks} chunks for file: ${file.name} (${file.size} bytes)`);
+    console.log(`📦 Creating ${totalChunks} chunks (size ~${Math.round(chunkSize / (1024 * 1024))}MB) for file: ${file.name} (${file.size} bytes)`);
     
     for (let i = 0; i < totalChunks; i++) {
-      const start = i * this.CHUNK_SIZE;
-      const end = Math.min(start + this.CHUNK_SIZE, file.size);
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
       const chunk = file.slice(start, end);
       chunks.push(chunk);
     }
@@ -185,7 +186,8 @@ export class StreamingUploadHandler {
    */
   public static async uploadFile(
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    desiredPath?: string
   ): Promise<StreamingUploadResult> {
     try {
       // Detect MIME type
@@ -255,7 +257,7 @@ export class StreamingUploadHandler {
         body: {
           action: 'merge-chunks',
           uploadId,
-          fileName: file.name
+          fileName: desiredPath || file.name
         }
       });
       
@@ -271,7 +273,7 @@ export class StreamingUploadHandler {
       
       // Get the public URL from the final path
       const { data: urlData } = supabase.storage
-        .from('original-files')
+        .from('uploads')
         .getPublicUrl(finalizeResponse.data.path);
       
       return {

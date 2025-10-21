@@ -11,13 +11,15 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BUCKET_TEMP = "temp-chunks";
-const BUCKET_FINAL = "original-files";
+const BUCKET_FINAL = "uploads";
 
-// Vérifie que les buckets existent
+// Vérifie que les buckets existent (crée-les si manquants)
 async function ensureBucketExists(bucket: string) {
   const { data, error } = await supabase.storage.getBucket(bucket);
   if (error || !data) {
-    throw new Error(`Bucket '${bucket}' is missing. Please create it in Supabase.`);
+    const makePublic = bucket === BUCKET_FINAL; // final files should be public
+    const { error: createErr } = await supabase.storage.createBucket(bucket, { public: makePublic });
+    if (createErr) throw new Error(`Failed to create bucket '${bucket}': ${createErr.message}`);
   }
 }
 
@@ -190,7 +192,7 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
   }
 
   // Upload du fichier final
-  const finalPath = `${uploadId}/${fileName}`;
+  const finalPath = fileName; // Use provided path directly
   const { error: uploadError } = await supabase.storage
     .from(BUCKET_FINAL)
     .upload(finalPath, mergedFile, {
@@ -214,7 +216,7 @@ serve(async (req) => {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
 
   if (req.method === "OPTIONS") {
@@ -250,9 +252,19 @@ serve(async (req) => {
 
     // Upload chunk
     if (req.method === "POST" && !action) {
-      // Handle direct chunk upload via supabase.functions.invoke
+      // Handle supabase.functions.invoke with body.action
       const body = await req.json();
+
+      // Init upload
+      if (body.action === "init-upload") {
+        const uploadId = body.uploadId || body.body?.uploadId;
+        return new Response(
+          JSON.stringify({ success: true, uploadId }),
+          { headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
       
+      // Upload chunk
       if (body.action === "upload-chunk") {
         const { uploadId, chunkIndex, chunk } = body;
         
@@ -278,6 +290,40 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, chunkIndex }),
+          { headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Merge chunks
+      if (body.action === "merge-chunks") {
+        const uploadId = body.uploadId || body.body?.uploadId;
+        const fileName = body.fileName || body.body?.fileName;
+        if (!uploadId || !fileName) {
+          return new Response(JSON.stringify({ error: "Missing uploadId or fileName" }), { 
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        }
+
+        if (!validateMimeType(fileName)) {
+          const detectedType = detectMimeType(fileName);
+          return new Response(
+            JSON.stringify({ 
+              error: `Unsupported MIME type: ${detectedType}`,
+              fileName: fileName,
+              mimeType: detectedType
+            }), 
+            { 
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            }
+          );
+        }
+
+        const finalPath = await mergeChunks(uploadId, fileName);
+
+        return new Response(
+          JSON.stringify({ success: true, path: finalPath }),
           { headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }

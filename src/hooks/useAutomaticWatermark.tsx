@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateThumbnail, addWatermarkToImage, createWebPreviewWithWatermark } from '@/utils/watermark';
+import { StreamingUploadHandler } from '@/components/media/StreamingUploadHandler';
 
 interface ProcessedFile {
   id: string;
@@ -248,9 +249,19 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           onProgress?.(fileId, 10);
           
           // Upload original file
-          watermarkedUrl = await uploadToSupabase(file, filePath, bucketName, file, file.type, (progress) => {
-            onProgress?.(fileId, Math.min(50, 10 + progress * 0.4));
-          });
+          if (file.type.startsWith('video/')) {
+            const result = await StreamingUploadHandler.uploadFile(file, (p) => {
+              onProgress?.(fileId, Math.min(50, 10 + p * 0.4));
+            }, filePath);
+            if (!result.success || !result.fileUrl) {
+              throw new Error(result.error || 'Streaming upload failed');
+            }
+            watermarkedUrl = result.fileUrl;
+          } else {
+            watermarkedUrl = await uploadToSupabase(file, filePath, bucketName, file, file.type, (progress) => {
+              onProgress?.(fileId, Math.min(50, 10 + progress * 0.4));
+            });
+          }
           
           onProgress?.(fileId, 60);
           
