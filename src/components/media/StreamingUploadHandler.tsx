@@ -114,8 +114,8 @@ export class StreamingUploadHandler {
   /**
    * Create chunks from file for multipart upload
    */
-  private static createChunks(file: File): Blob[] {
-    const chunkSize = this.getOptimalChunkSize(file);
+  private static createChunks(file: File, forcedChunkSize?: number): Blob[] {
+    const chunkSize = forcedChunkSize ?? this.getOptimalChunkSize(file);
     const chunks: Blob[] = [];
     const totalChunks = Math.ceil(file.size / chunkSize);
     
@@ -188,6 +188,118 @@ export class StreamingUploadHandler {
   }
 
   /**
+   * Convert a blob to base64 (without data: prefix)
+   */
+  private static async blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read chunk'));
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1] || '';
+        resolve(base64);
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * Upload a single chunk through the Edge Function (base64 payload)
+   */
+  private static async uploadChunkViaEdge(
+    chunk: Blob,
+    chunkIndex: number,
+    totalChunks: number,
+    uploadId: string,
+    fileName: string,
+    mimeType: string,
+    retryCount = 0
+  ): Promise<boolean> {
+    const chunkSizeMB = (chunk.size / (1024 * 1024)).toFixed(2);
+    console.log(`📤 [Edge Chunk ${chunkIndex + 1}/${totalChunks}] ${chunkSizeMB}MB`);
+    try {
+      const chunkBase64 = await this.blobToBase64(chunk);
+      const { data, error } = await supabase.functions.invoke('chunked-upload', {
+        body: {
+          action: 'upload-chunk',
+          uploadId,
+          fileName,
+          chunkIndex,
+          totalChunks,
+          mimeType,
+          chunkBase64,
+        },
+      });
+
+      if (error || !(data && (data.success === true || data.ok === true))) {
+        throw new Error(error?.message || data?.error || 'Edge chunk upload failed');
+      }
+
+      console.log(`✅ [Edge Chunk ${chunkIndex + 1}/${totalChunks}] Uploaded`);
+      return true;
+    } catch (err) {
+      console.warn(`❌ [Edge Chunk ${chunkIndex + 1}]`, err);
+      if (retryCount < this.MAX_RETRIES) {
+        const waitTime = 1000 * Math.pow(2, retryCount);
+        console.log(`🔄 [Edge Chunk ${chunkIndex + 1}] Retrying in ${waitTime}ms (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+        await new Promise((r) => setTimeout(r, waitTime));
+        return this.uploadChunkViaEdge(chunk, chunkIndex, totalChunks, uploadId, fileName, mimeType, retryCount + 1);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Upload chunks in parallel through Edge Function with concurrency limit
+   */
+  private static async uploadChunksParallelEdge(
+    chunks: Blob[],
+    uploadId: string,
+    fileName: string,
+    mimeType: string,
+    onProgress?: (progress: number) => void
+  ): Promise<boolean> {
+    const MAX_PARALLEL = 3;
+    const totalChunks = chunks.length;
+    let completed = 0;
+    let failed = 0;
+
+    console.log(`🚀 [Edge Multipart] Starting: ${totalChunks} chunks, max ${MAX_PARALLEL} concurrent`);
+
+    const results: boolean[] = new Array(totalChunks).fill(false);
+    let nextIndex = 0;
+
+    const worker = async (workerId: number) => {
+      while (true) {
+        const i = nextIndex++;
+        if (i >= totalChunks) break;
+        const ok = await this.uploadChunkViaEdge(chunks[i], i, totalChunks, uploadId, fileName, mimeType);
+        results[i] = ok;
+        if (ok) {
+          completed++;
+          const progress = 10 + Math.floor((completed / totalChunks) * 85);
+          console.log(`📊 [Edge W${workerId}] Progress: ${completed}/${totalChunks} (${progress}%)`);
+          onProgress?.(progress);
+        } else {
+          failed++;
+          console.warn(`⚠️ [Edge W${workerId}] Chunk ${i} failed`);
+        }
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(MAX_PARALLEL, totalChunks) }, (_, idx) => worker(idx + 1));
+    await Promise.all(workers);
+
+    if (failed > 0) {
+      console.error(`💥 [Edge Multipart] Upload failed: ${failed}/${totalChunks} chunks failed`);
+      return false;
+    }
+
+    console.log(`✅ [Edge Multipart] All ${totalChunks} chunks uploaded successfully`);
+    return true;
+  }
+
+  /**
    * Upload chunks in parallel with concurrency limit
    */
   private static async uploadChunksParallel(
@@ -252,7 +364,7 @@ export class StreamingUploadHandler {
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
-    console.log(`🎯 [Multipart Upload] Starting for: ${file.name}`);
+    console.log(`🎯 [Upload] Starting for: ${file.name}`);
     console.log(`  📦 Size: ${fileSizeMB}MB | Type: ${mimeType}`);
     console.log(`  🎫 Upload ID: ${uploadId}`);
 
@@ -266,88 +378,114 @@ export class StreamingUploadHandler {
         return await this.uploadFileDirect(file, finalPath, mimeType, onProgress);
       }
 
-      // Large files: multipart upload
-      console.log(`📦 [Multipart Upload] File > 10MB, splitting into chunks`);
-      
-      // 1. Create chunks
-      const chunks = this.createChunks(file);
-      const basePath = `temp-multipart/${uploadId}`;
-      
+      // Large files: Use Edge Function based chunked upload (more reliable)
+      console.log(`📦 [Edge Multipart] File > 10MB, using Edge Function chunked upload`);
+      onProgress?.(8);
+
+      // 1) Init upload session
+      const initRes = await supabase.functions.invoke('chunked-upload', {
+        body: {
+          action: 'init-upload',
+          uploadId,
+          fileName: finalPath,
+          mimeType,
+        },
+      });
+
+      if (initRes.error || !(initRes.data && (initRes.data.success === true || initRes.data.ok === true))) {
+        console.error('❌ [Edge Multipart] Init failed, details:', initRes.error || initRes.data);
+        throw new Error('Failed to initialize upload session');
+      }
+
+      // 2) Create smaller chunks for Edge payload limits (4MB each)
+      const EDGE_CHUNK_SIZE = 4 * 1024 * 1024; // 4MB to keep base64 payload < ~6MB
+      const chunks = this.createChunks(file, EDGE_CHUNK_SIZE);
       onProgress?.(10);
 
-      // 2. Upload chunks in parallel (max 3)
-      console.log(`🚀 [Upload Start] Uploading ${chunks.length} chunks with max 3 parallel streams`);
-      const chunksSuccess = await this.uploadChunksParallel(
+      // 3) Upload chunks in parallel (max 3)
+      console.log(`🚀 [Edge Upload Start] Uploading ${chunks.length} chunks with max 3 parallel streams`);
+      const edgeChunksOk = await this.uploadChunksParallelEdge(
         chunks,
-        basePath,
         uploadId,
+        finalPath,
         mimeType,
         onProgress
       );
 
-      if (!chunksSuccess) {
+      if (!edgeChunksOk) {
         throw new Error('Chunk upload failed');
       }
 
       onProgress?.(95);
 
-      // 3. Create manifest JSON
-      console.log(`📝 [Manifest] Creating assembly manifest`);
-      const manifestPath = `manifests/${uploadId}.json`;
-      const manifest = {
-        uploadId,
-        method: 'multipart-signed-urls',
-        fileName: file.name,
-        mimeType,
-        size: file.size,
-        finalPath,
-        chunks: chunks.map((chunk, i) => ({
-          index: i,
-          path: `${basePath}/chunk_${String(i).padStart(4, '0')}`,
-          size: chunk.size
-        })),
-        createdAt: new Date().toISOString(),
-      };
+      // 4) Merge chunks server-side
+      console.log(`🧩 [Edge Merge] Requesting server-side merge`);
+      const mergeRes = await supabase.functions.invoke('chunked-upload', {
+        body: {
+          action: 'merge-chunks',
+          uploadId,
+          fileName: finalPath,
+        },
+      });
 
-      const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
-      const { data: signedManifest, error: manifestErr } = await supabase.storage
+      if (mergeRes.error || !(mergeRes.data && (mergeRes.data.success === true || mergeRes.data.ok === true))) {
+        console.error('❌ [Edge Merge] Failed', mergeRes.error || mergeRes.data);
+        throw new Error(mergeRes.error?.message || mergeRes.data?.error || 'Merge failed');
+      }
+
+      const returnedPath: string | undefined = mergeRes.data.filePath || mergeRes.data.path || mergeRes.data.finalPath;
+      if (!returnedPath) {
+        console.warn('⚠️ [Edge Merge] No filePath returned, falling back to finalPath');
+      }
+
+      const mergedPath = returnedPath || finalPath;
+      const { data: urlData } = supabase.storage
         .from('uploads')
-        .createSignedUploadUrl(manifestPath, { upsert: true });
+        .getPublicUrl(mergedPath);
 
-      if (manifestErr || !signedManifest?.token) {
-        console.warn('⚠️ Could not create manifest signed URL:', manifestErr);
-      } else {
-        await supabase.storage
+      // 5) Optional: Save a manifest for traceability
+      try {
+        const manifestPath = `manifests/${uploadId}.json`;
+        const manifest = {
+          uploadId,
+          method: 'edge-function:chunked-upload',
+          fileName: file.name,
+          mimeType,
+          size: file.size,
+          finalPath: mergedPath,
+          totalChunks: chunks.length,
+          createdAt: new Date().toISOString(),
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+        const { data: signedManifest } = await supabase.storage
           .from('uploads')
-          .uploadToSignedUrl(manifestPath, signedManifest.token, manifestBlob, {
-            upsert: true,
-            contentType: 'application/json'
-          });
-        console.log(`✅ [Manifest] Saved to: ${manifestPath}`);
+          .createSignedUploadUrl(manifestPath, { upsert: true });
+        if (signedManifest?.token) {
+          await supabase.storage
+            .from('uploads')
+            .uploadToSignedUrl(manifestPath, signedManifest.token, manifestBlob, {
+              upsert: true,
+              contentType: 'application/json',
+            });
+          console.log(`✅ [Manifest] Saved to: ${manifestPath}`);
+        }
+      } catch (mErr) {
+        console.warn('⚠️ [Manifest] Could not save manifest', mErr);
       }
 
       onProgress?.(100);
 
-      // For now, return the first chunk URL as placeholder
-      // In production, you'd merge chunks or use a different access pattern
-      const { data: urlData } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(`${basePath}/chunk_0000`);
-
-      console.log(`✅ [Upload Complete] ${file.name} (${fileSizeMB}MB) uploaded successfully`);
-      console.log(`  📊 Total chunks: ${chunks.length}`);
-      console.log(`  📝 Manifest: ${manifestPath}`);
-
+      console.log(`✅ [Upload Complete] ${file.name} (${fileSizeMB}MB) uploaded successfully via Edge Function`);
       return {
         success: true,
         fileUrl: urlData.publicUrl,
-        mimeType
+        mimeType,
       };
     } catch (error) {
       console.error(`💥 [Upload Failed] ${file.name}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed'
+        error: error instanceof Error ? error.message : 'Upload failed',
       };
     }
   }
