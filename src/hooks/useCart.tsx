@@ -36,7 +36,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         toast.info('Cet article est déjà dans votre panier');
         return prev;
       }
-      toast.success('Article ajouté au panier');
+      toast.success('Article ajouté au panier • Connectez-vous pour finaliser l\'achat');
       return [...prev, item];
     });
   };

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DirectPurchaseItem {
   submission_id: string;
@@ -15,6 +16,7 @@ interface DirectPurchaseItem {
 
 export const useDirectPurchase = () => {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const createDirectPayment = async (
@@ -22,7 +24,10 @@ export const useDirectPurchase = () => {
     selectedLicense: string = 'standard'
   ) => {
     if (!user) {
-      toast.error('Vous devez être connecté pour effectuer un achat');
+      toast.info('Veuillez vous connecter pour acheter ce produit');
+      // Redirect to auth with return URL
+      const currentPath = window.location.pathname;
+      window.location.href = `/${language}/auth?redirect=${encodeURIComponent(currentPath)}`;
       return null;
     }
 

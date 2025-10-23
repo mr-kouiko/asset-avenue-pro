@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Lock, User, Store, ArrowLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AuthProps {
@@ -35,18 +35,23 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
   
   const { user, signUp, signIn, signInWithGoogle, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !authLoading) {
-      // Redirect based on user type for seller registration
-      if (defaultUserType === "seller") {
+      // Check for redirect parameter
+      const redirectPath = searchParams.get('redirect');
+      
+      if (redirectPath) {
+        navigate(redirectPath);
+      } else if (defaultUserType === "seller") {
         navigate('/dashboard'); // Will redirect to appropriate dashboard via DashboardRouter
       } else {
         navigate('/');
       }
     }
-  }, [user, authLoading, navigate, defaultUserType]);
+  }, [user, authLoading, navigate, defaultUserType, searchParams]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
