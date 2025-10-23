@@ -259,7 +259,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDownloadWithWatermark}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleDownloadWithWatermark(e);
+              }}
               className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
               title="Télécharger avec watermark"
             >
