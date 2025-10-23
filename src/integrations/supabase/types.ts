@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      album_photos: {
+        Row: {
+          album_id: string
+          created_at: string
+          id: string
+          order_index: number | null
+          photo_name: string
+          photo_url: string
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          photo_name: string
+          photo_url: string
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          photo_name?: string
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_photos_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      albums: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          price: number | null
+          price_type: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          price?: number | null
+          price_type?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          price?: number | null
+          price_type?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -306,6 +374,53 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          album_id: string
+          amount: number
+          buyer_email: string
+          buyer_name: string | null
+          completed_at: string | null
+          created_at: string
+          currency: string | null
+          id: string
+          status: string | null
+          stripe_payment_id: string | null
+        }
+        Insert: {
+          album_id: string
+          amount: number
+          buyer_email: string
+          buyer_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          status?: string | null
+          stripe_payment_id?: string | null
+        }
+        Update: {
+          album_id?: string
+          amount?: number
+          buyer_email?: string
+          buyer_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          status?: string | null
+          stripe_payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payouts: {
         Row: {
           amount: number
@@ -467,7 +582,7 @@ export type Database = {
           downloaded_at: string | null
           expires_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_agent: string | null
           user_id: string
         }
@@ -478,7 +593,7 @@ export type Database = {
           downloaded_at?: string | null
           expires_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
           user_id: string
         }
@@ -489,7 +604,7 @@ export type Database = {
           downloaded_at?: string | null
           expires_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
           user_id?: string
         }
@@ -654,7 +769,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      creator_profiles_public: {
+        Row: {
+          avatar_url: string | null
+          creator_hash: string | null
+          display_name: string | null
+          store_name: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_access_profile_secure: {
@@ -679,7 +803,7 @@ export type Database = {
         }[]
       }
       admin_get_dashboard_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           approved_submissions: number
           pending_submissions: number
@@ -694,7 +818,7 @@ export type Database = {
         Returns: string
       }
       admin_get_platform_settings: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           ai_auto_generate_enabled: boolean
           ai_model: string
@@ -705,6 +829,12 @@ export type Database = {
           stripe_application_fee_rate: number
           updated_at: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "platform_settings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       admin_get_profile_email_emergency: {
         Args: {
@@ -741,10 +871,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      check_admin_access_patterns: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      check_admin_access_patterns: { Args: never; Returns: undefined }
       create_secure_download_token: {
         Args: { content_file_id_param: string; user_id_param?: string }
         Returns: {
@@ -753,7 +880,7 @@ export type Database = {
         }[]
       }
       get_admin_profiles_safe: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           country: string
@@ -770,16 +897,27 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_creator_profiles_public: {
-        Args: Record<PropertyKey, never> | { creator_ids: string[] }
-        Returns: {
-          avatar_url: string
-          creator_hash: string
-          display_name: string
-          store_name: string
-          user_id: string
-        }[]
-      }
+      get_creator_profiles_public:
+        | {
+            Args: { creator_ids: string[] }
+            Returns: {
+              avatar_url: string
+              creator_hash: string
+              display_name: string
+              store_name: string
+              user_id: string
+            }[]
+          }
+        | {
+            Args: never
+            Returns: {
+              avatar_url: string
+              creator_hash: string
+              display_name: string
+              store_name: string
+              user_id: string
+            }[]
+          }
       get_creator_public_info: {
         Args: { creator_ids: string[] }
         Returns: {
@@ -790,7 +928,7 @@ export type Database = {
         }[]
       }
       get_marketplace_content: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           category_id: string
           category_name: string
@@ -822,7 +960,7 @@ export type Database = {
         }[]
       }
       get_public_file_access: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           content_id: string
           file_format: string
@@ -837,7 +975,7 @@ export type Database = {
         }[]
       }
       get_security_audit_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           event_count: number
           event_type: string
@@ -848,7 +986,7 @@ export type Database = {
         }[]
       }
       get_security_audit_summary_admin: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           event_count: number
           event_type: string
@@ -865,10 +1003,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
       log_admin_profile_access: {
         Args: { accessed_profile_user_id: string; admin_user_id: string }
         Returns: boolean
