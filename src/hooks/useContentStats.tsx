@@ -31,7 +31,6 @@ export const useContentStats = () => {
         .select(`
           id,
           status,
-          creator_id,
           content_files!inner (
             file_type,
             is_original
@@ -45,37 +44,45 @@ export const useContentStats = () => {
         return;
       }
 
-      // Count by type
+      // Count by type - using exact file_type values from database
       let photos = 0;
       let videos = 0; 
       let audios = 0;
       let illustrations = 0;
       let ebooks = 0;
 
+      // Use a Map to track unique submissions by ID
+      const processedSubmissions = new Map<string, string>();
+
       submissions?.forEach((submission: any) => {
-        const fileType = submission.content_files[0]?.file_type;
-        const fileName = submission.content_files[0]?.file_name || '';
+        const fileType = submission.content_files[0]?.file_type?.toLowerCase() || '';
+        const submissionId = submission.id;
         
-        console.log('Processing submission:', submission.id, 'fileType:', fileType, 'fileName:', fileName);
+        // Skip if we've already processed this submission
+        if (processedSubmissions.has(submissionId)) {
+          return;
+        }
         
-        if (fileType?.startsWith('video/')) {
+        // Mark this submission as processed
+        processedSubmissions.set(submissionId, fileType);
+        
+        // Match file types - handle both MIME types and simple types
+        if (fileType === 'video' || fileType.startsWith('video/')) {
           videos++;
-        } else if (fileType?.startsWith('audio/')) {
+        } else if (fileType === 'audio' || fileType.startsWith('audio/')) {
           audios++;
         } else if (
+          fileType === 'document' ||
+          fileType === 'ebook' ||
           fileType === 'application/pdf' || 
           fileType === 'application/epub+zip' || 
-          fileType?.includes('ebook') ||
-          fileType === 'document' // Simplified: any document file_type counts as ebook
+          fileType.includes('ebook')
         ) {
           ebooks++;
-          console.log('Found ebook:', fileName, 'fileType:', fileType);
-        } else if (fileType?.includes('vector')) {
+        } else if (fileType === 'illustration' || fileType.includes('vector') || fileType.includes('svg')) {
           illustrations++;
-        } else if (fileType?.startsWith('image/')) {
+        } else if (fileType === 'image' || fileType.startsWith('image/')) {
           photos++;
-        } else {
-          console.log('Unclassified content:', fileType, fileName);
         }
       });
 
