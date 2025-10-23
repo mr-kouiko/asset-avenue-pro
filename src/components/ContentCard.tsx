@@ -140,7 +140,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         
         {/* Premium hover actions - Adobe Stock Style */}
         <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
-          isHovered ? 'opacity-100 bg-stock-dark/10' : 'opacity-0'
+          isHovered ? 'opacity-0' : 'opacity-0'
         } z-30`}>
           <div className="flex gap-1.5">
             <Link to={`/${language}/product/${id}`} target="_blank">
