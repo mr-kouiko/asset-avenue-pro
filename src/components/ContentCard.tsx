@@ -93,10 +93,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     console.log('ContentCard - Video item:', title, 'Video URL:', videoUrl, 'Thumbnail:', thumbnail);
   }
 
+  const handleCardClick = () => {
+    window.location.href = `/${language}/product/${id}`;
+  };
+
   return (
     <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer bg-white border border-stock-border/50 hover:border-stock-blue/20"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
+          onClick={handleCardClick}
           style={{ boxShadow: 'var(--card-shadow)' }}>
       
       {/* Fixed Aspect Ratio Container - Adobe Stock Style */}
@@ -143,18 +148,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           isHovered ? 'opacity-0' : 'opacity-0'
         } z-30`}>
           <div className="flex gap-1.5">
-            <Link to={`/${language}/product/${id}`} target="_blank">
-              <Button 
-                size="sm" 
-                variant="secondary"
-                className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                Aperçu
-              </Button>
-            </Link>
+            <Button 
+              size="sm" 
+              variant="secondary"
+              className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `/${language}/product/${id}`;
+              }}
+            >
+              Aperçu
+            </Button>
             <Button 
               size="sm"
               className="bg-stock-blue hover:bg-stock-blue/90 text-white border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
