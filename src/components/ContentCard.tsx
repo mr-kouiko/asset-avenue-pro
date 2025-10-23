@@ -10,6 +10,8 @@ import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { createWebPreviewWithWatermark } from "@/utils/watermark";
+import { toast } from "sonner";
 
 interface ContentCardProps {
   id: string;
@@ -95,6 +97,59 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   const handleCardClick = () => {
     window.location.href = `/${language}/product/${id}`;
+  };
+
+  const handleDownloadWithWatermark = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      toast.info("Préparation du téléchargement...");
+
+      if (type === 'video') {
+        // For videos, download the thumbnail or preview (already has watermark overlay)
+        const videoPreviewUrl = thumbnail;
+        const response = await fetch(videoPreviewUrl);
+        const blob = await response.blob();
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_watermarked.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast.success("Téléchargement lancé");
+      } else if (type === 'photo' || type === 'illustration') {
+        // For images, apply watermark before download
+        const response = await fetch(thumbnail);
+        const blob = await response.blob();
+        const file = new File([blob], 'preview.jpg', { type: blob.type });
+        
+        const watermarkedBlob = await createWebPreviewWithWatermark(file, {
+          opacity: 0.3,
+          spacing: 150,
+          logoPath: 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png'
+        });
+        
+        const url = URL.createObjectURL(watermarkedBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_watermarked.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast.success("Téléchargement lancé");
+      } else {
+        toast.info("Téléchargement avec watermark non disponible pour ce type de contenu");
+      }
+    } catch (error) {
+      console.error('Error downloading with watermark:', error);
+      toast.error("Erreur lors du téléchargement");
+    }
   };
 
   return (
@@ -196,10 +251,21 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </Button>
         </div>
 
-        {/* Quick add to cart - Bottom right corner */}
-        <div className={`absolute bottom-2 right-2 transition-all duration-300 ${
+        {/* Quick actions - Bottom right corner */}
+        <div className={`absolute bottom-2 right-2 transition-all duration-300 flex gap-1.5 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}>
+          {(type === 'photo' || type === 'video' || type === 'illustration') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDownloadWithWatermark}
+              className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+              title="Télécharger avec watermark"
+            >
+              <Download className="h-3.5 w-3.5 text-stock-dark" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -208,6 +274,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               handleAddToCart();
             }}
             className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+            title="Ajouter au panier"
           >
             <ShoppingCart className="h-3.5 w-3.5 text-stock-dark" />
           </Button>
