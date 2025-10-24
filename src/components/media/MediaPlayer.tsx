@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw, MoreVertical, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { VideoWatermark } from '@/components/VideoWatermark';
-
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/use-toast';
+import { useVideoPreviewGenerator } from '@/hooks/useVideoPreviewGenerator';
 
 interface MediaPlayerProps {
   src?: string;
@@ -74,6 +76,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [canPlay, setCanPlay] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Preview generator
+  const { toast } = useToast();
+  const { isGenerating: isGeneratingPreview, generate } = useVideoPreviewGenerator();
+
+  const handleDownloadPreview = useCallback(async () => {
+    if (type !== 'video' || !src) return;
+    try {
+      toast({ title: 'Génération de l’aperçu…', description: 'Création d’une version basse résolution.', duration: 2000 });
+      const blob = await generate({ url: src, durationSec: 6, targetWidth: 426, fps: 12, videoBitsPerSecond: 280000 });
+      const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
+      const a = document.createElement('a');
+      const href = URL.createObjectURL(blob);
+      a.href = href;
+      a.download = `${filenameBase}_preview_lowres.webm`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(href);
+      a.remove();
+      toast({ title: 'Aperçu prêt', description: 'Version basse résolution téléchargée.', duration: 2500 });
+    } catch (err) {
+      console.error('Preview generation failed:', err);
+      toast({ title: 'Échec de génération', description: 'Impossible de créer l’aperçu.', variant: 'destructive' });
+    }
+  }, [src, type, title, generate, toast]);
 
   // User interaction tracking for mobile autoplay restrictions
   const userInteractedRef = useRef<boolean>(false);
@@ -530,16 +557,45 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   </span>
 
                   {type === 'video' && (
-                    <Button
-                      variant="ghost"
-                      size={deviceInfo.touchCapable ? 'default' : 'sm'}
-                      onClick={toggleFullscreen}
-                      className={`text-white hover:bg-white/20 ${
-                        deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-                      } p-0 rounded-full`}
-                    >
-                      <Maximize className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
-                    </Button>
+                    <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size={deviceInfo.touchCapable ? 'default' : 'sm'}
+                            className={`text-white hover:bg-white/20 ${
+                              deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                            } p-0 rounded-full`}
+                            aria-label="Options"
+                          >
+                            <MoreVertical className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[260px]">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={handleDownloadPreview} disabled={isGeneratingPreview}>
+                            {isGeneratingPreview ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4 mr-2" />
+                            )}
+                            Télécharger l’aperçu (basse résolution)
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Button
+                        variant="ghost"
+                        size={deviceInfo.touchCapable ? 'default' : 'sm'}
+                        onClick={toggleFullscreen}
+                        className={`text-white hover:bg-white/20 ${
+                          deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                        } p-0 rounded-full`}
+                      >
+                        <Maximize className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>

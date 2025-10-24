@@ -21,11 +21,25 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Check if thumbnail is missing or is placeholder
   const hasValidThumbnail = thumbnail && 
     thumbnail !== '/placeholder.svg' && 
     !thumbnail.includes('placeholder');
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isHovered && videoUrl) {
+      v.muted = true;
+      v.play().then(() => setIsVideoReady(true)).catch(() => {});
+    } else {
+      try { v.pause(); } catch {}
+      try { v.currentTime = 0; } catch {}
+      setIsVideoReady(false);
+    }
+  }, [isHovered, videoUrl]);
 
   return (
     <div 
@@ -36,6 +50,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       {/* Video preview on hover */}
       {isHovered && videoUrl && (
         <video
+          ref={videoRef}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
             isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
