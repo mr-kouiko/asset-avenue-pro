@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Film } from 'lucide-react';
 import { VideoWatermark } from './VideoWatermark';
 
 interface WatermarkedVideoThumbnailProps {
   thumbnail: string;
   title: string;
+  videoUrl?: string;
   className?: string;
 }
 
@@ -15,21 +16,80 @@ interface WatermarkedVideoThumbnailProps {
 export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = ({
   thumbnail,
   title,
+  videoUrl,
   className = "w-full h-full"
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
   // Check if thumbnail is missing or is placeholder
   const hasValidThumbnail = thumbnail && 
     thumbnail !== '/placeholder.svg' && 
     !thumbnail.includes('placeholder');
 
+  // Handle hover start - load and play video
+  useEffect(() => {
+    if (isHovered && videoUrl && videoRef.current) {
+      const video = videoRef.current;
+      
+      // Load the video
+      video.load();
+      
+      // Play when ready
+      const playVideo = () => {
+        video.play().catch(err => {
+          console.log('Video autoplay prevented:', err);
+        });
+        setIsVideoReady(true);
+      };
+      
+      video.addEventListener('loadeddata', playVideo);
+      
+      return () => {
+        video.removeEventListener('loadeddata', playVideo);
+      };
+    } else if (!isHovered && videoRef.current) {
+      // Stop and unload video when hover ends
+      const video = videoRef.current;
+      video.pause();
+      video.currentTime = 0;
+      video.removeAttribute('src');
+      video.load();
+      setIsVideoReady(false);
+    }
+  }, [isHovered, videoUrl]);
+
   return (
-    <div className={`relative ${className}`}>
+    <div 
+      className={`relative ${className}`}
+      onMouseEnter={() => videoUrl && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Video preview on hover */}
+      {videoUrl && (
+        <video
+          ref={videoRef}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+            isHovered && isVideoReady ? 'opacity-100' : 'opacity-0'
+          }`}
+          muted
+          loop
+          playsInline
+          preload="none"
+        >
+          <source src={videoUrl} type="video/mp4" />
+        </video>
+      )}
+      
       {/* Thumbnail image or video icon fallback */}
       {hasValidThumbnail ? (
         <img
           src={thumbnail}
           alt={title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
+          }`}
           onError={(e) => {
             // Replace with video icon on error
             const parent = e.currentTarget.parentElement;

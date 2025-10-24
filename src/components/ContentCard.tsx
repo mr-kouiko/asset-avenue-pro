@@ -110,6 +110,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           <WatermarkedVideoThumbnail 
             thumbnail={thumbnail} 
             title={title}
+            videoUrl={videoUrl}
             className="w-full h-full"
           />
         ) : type === 'audio' ? (
