@@ -11,7 +11,7 @@ interface WatermarkedVideoThumbnailProps {
 
 /**
  * Static watermarked thumbnail for video previews in listings
- * Always shows a large watermark over the thumbnail image
+ * Adds hover auto-play preview of the actual video
  */
 export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = ({
   thumbnail,
@@ -21,65 +21,33 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   // Check if thumbnail is missing or is placeholder
   const hasValidThumbnail = thumbnail && 
     thumbnail !== '/placeholder.svg' && 
     !thumbnail.includes('placeholder');
 
-  // Handle hover start - load and play video
-  useEffect(() => {
-    if (isHovered && videoUrl && videoRef.current) {
-      const video = videoRef.current;
-      
-      // Load the video
-      video.load();
-      
-      // Play when ready
-      const playVideo = () => {
-        video.play().catch(err => {
-          console.log('Video autoplay prevented:', err);
-        });
-        setIsVideoReady(true);
-      };
-      
-      video.addEventListener('loadeddata', playVideo);
-      
-      return () => {
-        video.removeEventListener('loadeddata', playVideo);
-      };
-    } else if (!isHovered && videoRef.current) {
-      // Stop and unload video when hover ends
-      const video = videoRef.current;
-      video.pause();
-      video.currentTime = 0;
-      video.removeAttribute('src');
-      video.load();
-      setIsVideoReady(false);
-    }
-  }, [isHovered, videoUrl]);
-
   return (
     <div 
       className={`relative ${className}`}
       onMouseEnter={() => videoUrl && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); }}
     >
       {/* Video preview on hover */}
-      {videoUrl && (
+      {isHovered && videoUrl && (
         <video
-          ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-            isHovered && isVideoReady ? 'opacity-100' : 'opacity-0'
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
+            isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
+          src={videoUrl}
+          poster={thumbnail}
           muted
           loop
+          autoPlay
           playsInline
-          preload="none"
-        >
-          <source src={videoUrl} type="video/mp4" />
-        </video>
+          preload="metadata"
+          onCanPlay={() => setIsVideoReady(true)}
+        />
       )}
       
       {/* Thumbnail image or video icon fallback */}
@@ -87,7 +55,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
         <img
           src={thumbnail}
           alt={title}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
             isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
           }`}
           onError={(e) => {
@@ -112,7 +80,9 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       )}
       
       {/* Large watermark overlay for thumbnail */}
-      <VideoWatermark size="thumbnail" />
+      <div className="pointer-events-none">
+        <VideoWatermark size="thumbnail" />
+      </div>
       
       {/* Video play indicator */}
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">

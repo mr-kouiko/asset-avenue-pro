@@ -129,7 +129,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         )}
 
         {/* Subtle hover overlay */}
-        <div className="absolute inset-0 bg-stock-dark/0 group-hover:bg-stock-dark/5 transition-all duration-300" />
+        <div className="absolute inset-0 bg-stock-dark/0 group-hover:bg-stock-dark/5 transition-all duration-300 pointer-events-none" />
         
         {/* Type Badge - Adobe Stock Style */}
         <div className="absolute top-2 left-2">
