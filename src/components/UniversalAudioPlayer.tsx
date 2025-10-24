@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX, Loader2, AlertCircle, RotateCcw, Music } from 'lucide-react';
 import { Button } from './ui/button';
 import { detectDevice, getMediaPlayerConfig, getOptimalMediaFormats } from '@/utils/deviceDetection';
+import { useAudioWatermark } from '@/hooks/useAudioWatermark';
 
 interface UniversalAudioPlayerProps {
   src?: string;
@@ -48,6 +49,13 @@ export const UniversalAudioPlayer: React.FC<UniversalAudioPlayerProps> = ({
   const [fallbackUsed, setFallbackUsed] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Hook pour le watermark audio
+  useAudioWatermark({
+    isPlaying,
+    mainVolume: volume,
+    isMuted
+  });
 
   /**
    * Smart audio loading with device-specific optimizations
