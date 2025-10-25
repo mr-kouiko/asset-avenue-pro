@@ -17,7 +17,8 @@ import { useProductManager } from "@/hooks/useProductManager";
 import { useAIMetadata } from "@/hooks/useAIMetadata";
 import { supabase } from '@/integrations/supabase/client';
 import { MediaPlayer } from "@/components/media/MediaPlayer";
-import { UniversalAudioPlayer } from "@/components/UniversalAudioPlayer";
+import AudioPlayer from 'react-h5-audio-player';
+import 'react-h5-audio-player/lib/styles.css';
 import { EbookForm } from "@/components/EbookForm";
 
 interface UploadedFileData {
@@ -845,15 +846,16 @@ const ProductManagement = () => {
                       <Music className="h-16 w-16 text-primary" />
                     </div>
                     <div className="w-full">
-                      <UniversalAudioPlayer 
+                      <AudioPlayer
                         src={previewFile.previewUrl || previewFile.url}
-                        title={previewFile.name}
-                        className="w-full"
-                        compact={false}
+                        autoPlay={false}
+                        showJumpControls={false}
+                        customAdditionalControls={[]}
+                        style={{
+                          borderRadius: '0.5rem',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        }}
                       />
-                    </div>
-                    <div className="text-xs text-muted-foreground break-all w-full text-center">
-                      URL: {previewFile.previewUrl || previewFile.url}
                     </div>
                   </div>
                 )}
