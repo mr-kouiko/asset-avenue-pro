@@ -69,7 +69,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
-  const [isMuted, setIsMuted] = useState<boolean>(muted);
+  // Pour audio, toujours démarrer sans mute pour éviter les problèmes de lecture
+  const [isMuted, setIsMuted] = useState<boolean>(type === 'audio' ? false : muted);
   const [volume, setVolume] = useState<number>(1);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -278,6 +279,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     } catch (error: any) {
       console.error('Playback toggle failed:', { name: error?.name, message: error?.message });
       if (error?.name === 'NotAllowedError') {
+        // Pour audio, on ne mute jamais automatiquement - on informe l'utilisateur
         if (type === 'video') {
           try {
             media.muted = true;
@@ -286,6 +288,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           } catch (e) {
             console.warn('Muted play also failed:', e);
           }
+        } else {
+          // Pour audio, log uniquement - l'utilisateur doit interagir
+          console.log('Audio playback requires user interaction');
         }
       } else if (error?.name === 'NotSupportedError') {
         setHasError(true);
