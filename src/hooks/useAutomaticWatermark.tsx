@@ -241,7 +241,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
             filePath = `${user.id}/videos/${fileId}_original.${fileExtension}`;
           } else if (file.type.startsWith('audio/')) {
             filePath = `${user.id}/audio/${fileId}_original.${fileExtension}`;
-            bucketName = 'Audio VisuStock';
+            bucketName = 'uploads';
           } else if (file.type.startsWith('image/')) {
             filePath = `${user.id}/images/${fileId}_original.${fileExtension}`;
           } else {

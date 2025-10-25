@@ -42,21 +42,23 @@ export const useProductManager = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
-        // Auto-upgrade user to creator role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert({ 
-            user_id: user.id, 
-            role: 'creator' 
-          }, {
-            onConflict: 'user_id'
-          });
-        
-        if (roleError) {
-          console.error('Role upgrade error:', roleError);
+        // Promote to creator via secure Edge Function (uses service role)
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const resp = await fetch('https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/ensure-creator-role', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({})
+        });
+        if (!resp.ok) {
+          const msg = await resp.text();
+          console.error('Role upgrade function error:', msg);
           throw new Error('Impossible de mettre à niveau le rôle utilisateur. Contactez le support.');
         }
       }
@@ -99,21 +101,23 @@ export const useProductManager = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
-        // Auto-upgrade user to creator role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert({ 
-            user_id: user.id, 
-            role: 'creator' 
-          }, {
-            onConflict: 'user_id'
-          });
-        
-        if (roleError) {
-          console.error('Role upgrade error:', roleError);
+        // Promote to creator via secure Edge Function (uses service role)
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const resp = await fetch('https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/ensure-creator-role', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({})
+        });
+        if (!resp.ok) {
+          const msg = await resp.text();
+          console.error('Role upgrade function error:', msg);
           throw new Error('Impossible de mettre à niveau le rôle utilisateur. Contactez le support.');
         }
       }
