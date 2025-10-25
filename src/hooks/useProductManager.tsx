@@ -37,6 +37,30 @@ export const useProductManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Ensure user has creator role before saving draft
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
+        // Auto-upgrade user to creator role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert({ 
+            user_id: user.id, 
+            role: 'creator' 
+          }, {
+            onConflict: 'user_id'
+          });
+        
+        if (roleError) {
+          console.error('Role upgrade error:', roleError);
+          throw new Error('Impossible de mettre à niveau le rôle utilisateur. Contactez le support.');
+        }
+      }
+
       // Create content submission as draft
       const { error } = await supabase
         .from('content_submissions')
@@ -69,6 +93,30 @@ export const useProductManager = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+
+      // Ensure user has creator role before publishing
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
+        // Auto-upgrade user to creator role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert({ 
+            user_id: user.id, 
+            role: 'creator' 
+          }, {
+            onConflict: 'user_id'
+          });
+        
+        if (roleError) {
+          console.error('Role upgrade error:', roleError);
+          throw new Error('Impossible de mettre à niveau le rôle utilisateur. Contactez le support.');
+        }
+      }
 
       // Automatically set price to $3.99 USD for eBooks (PDF files)
       const productPrice = submission.file.type === 'application/pdf' ? 3.99 : null;
