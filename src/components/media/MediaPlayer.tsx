@@ -6,6 +6,7 @@ import { VideoWatermark } from '@/components/VideoWatermark';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/components/ui/use-toast';
 import { useVideoPreviewGenerator } from '@/hooks/useVideoPreviewGenerator';
+import { useAudioWatermark } from '@/hooks/useAudioWatermark';
 
 interface MediaPlayerProps {
   src?: string;
@@ -80,6 +81,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // Preview generator
   const { toast } = useToast();
   const { isGenerating: isGeneratingPreview, generate } = useVideoPreviewGenerator();
+
+  // Audio watermark hook - only active for audio type
+  useAudioWatermark({ 
+    isPlaying: type === 'audio' ? isPlaying : false, 
+    mainVolume: volume, 
+    isMuted 
+  });
 
   const handleDownloadPreview = useCallback(async () => {
     if (type !== 'video' || !src) return;
