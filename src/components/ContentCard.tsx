@@ -3,7 +3,7 @@ import { Heart, Download, ShoppingCart, Eye, FileText, Music } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { MediaPlayer } from "./media/MediaPlayer";
@@ -43,6 +43,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
 
   const getTypeColor = (type: string) => {
@@ -94,7 +95,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   }
 
   const handleCardClick = () => {
-    window.location.href = `/${language}/product/${id}`;
+    navigate(`/${language}/product/${id}`);
   };
 
   return (
@@ -155,7 +156,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                window.location.href = `/${language}/product/${id}`;
+                navigate(`/${language}/product/${id}`);
               }}
             >
               Aperçu
