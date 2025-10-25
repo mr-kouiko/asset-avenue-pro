@@ -15,6 +15,8 @@ interface TranslationCache {
 const CACHE_DURATION = 60 * 60 * 1000;
 const translationCache: TranslationCache = {};
 
+// If translation fails (e.g., credits required), disable further attempts to avoid blocking UX
+let translationsDisabled = false;
 export const useContentTranslation = () => {
   const { language } = useLanguage();
   const [isTranslating, setIsTranslating] = useState(false);
@@ -35,6 +37,11 @@ export const useContentTranslation = () => {
 
     try {
       setIsTranslating(true);
+
+      // If translations are disabled (e.g., due to previous 402), short-circuit
+      if (translationsDisabled) {
+        return { title, description, tags, timestamp: Date.now() };
+      }
 
       const { data, error } = await supabase.functions.invoke('translate-content', {
         body: {
@@ -65,6 +72,8 @@ export const useContentTranslation = () => {
       return { title, description, tags, timestamp: Date.now() };
     } catch (error) {
       console.error('Translation error:', error);
+      // Disable further translation attempts to avoid repeated failures (e.g., 402 Payment Required)
+      translationsDisabled = true;
       // Return original content on error
       return { title, description, tags, timestamp: Date.now() };
     } finally {
