@@ -41,6 +41,9 @@ import { StripeSettingsPanel } from "@/components/StripeSettingsPanel";
 import { useStripeConnect } from "@/hooks/useStripeConnect";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SimpleFileUpload } from "@/components/SimpleFileUpload";
+import AudioPlayer from 'react-h5-audio-player';
+import 'react-h5-audio-player/lib/styles.css';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -68,6 +71,14 @@ const Dashboard = () => {
     thumbnailUrl?: string;
     previewUrl?: string;
   }>>([]);
+  const [previewFile, setPreviewFile] = useState<{
+    id: string;
+    url: string;
+    name: string;
+    type: string;
+    previewUrl?: string;
+  } | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const StripeConnectWarning = () => {
     if (!accountStatus || isAccountReady()) return null;
@@ -166,6 +177,49 @@ const Dashboard = () => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const openAudioPreview = async (file: { id: string; file_path: string; file_name: string; file_type: string }) => {
+    // For audio files, generate a signed URL
+    if (file.file_type === 'audio') {
+      try {
+        console.log('🔐 Generating signed URL for audio file:', file.file_path);
+        
+        // Extract bucket and file path from the full path
+        // file_path format: "user_id/audios/filename.mp3"
+        const filePath = file.file_path;
+        
+        const { data, error } = await supabase.storage
+          .from('uploads')
+          .createSignedUrl(filePath, 3600); // 1 hour expiry
+        
+        if (error) {
+          console.error('Error generating signed URL:', error);
+          toast.error('Erreur lors de la génération de l\'URL d\'aperçu');
+          return;
+        } else if (data?.signedUrl) {
+          console.log('✅ Signed URL generated:', data.signedUrl);
+          setPreviewFile({ 
+            id: file.id, 
+            url: data.signedUrl, 
+            name: file.file_name, 
+            type: file.file_type,
+            previewUrl: data.signedUrl 
+          });
+          setIsPreviewOpen(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error processing audio URL:', error);
+        toast.error('Erreur lors du traitement du fichier audio');
+        return;
+      }
+    }
+  };
+
+  const closePreview = () => {
+    setIsPreviewOpen(false);
+    setPreviewFile(null);
   };
 
   return (
@@ -430,13 +484,23 @@ const Dashboard = () => {
                             <h5 className="font-medium mb-3">Fichiers associés ({submission.content_files.length})</h5>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {submission.content_files.slice(0, 4).map((file) => (
-                                <div key={file.id} className="relative bg-muted rounded-lg p-3">
+                                <div key={file.id} className="relative bg-muted rounded-lg p-3 group">
                                   <div className="flex items-center justify-center h-16 mb-2">
                                     {file.file_type === 'image' && <Image className="h-8 w-8 text-muted-foreground" />}
                                     {file.file_type === 'video' && <Film className="h-8 w-8 text-muted-foreground" />}
                                     {file.file_type === 'audio' && <Music className="h-8 w-8 text-muted-foreground" />}
                                     {!['image', 'video', 'audio'].includes(file.file_type) && <FileText className="h-8 w-8 text-muted-foreground" />}
                                   </div>
+                                  {file.file_type === 'audio' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openAudioPreview(file)}
+                                      className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                   <p className="text-xs text-center truncate">{file.file_name}</p>
                                   <Badge variant="secondary" className="text-xs mt-1 w-full justify-center">
                                     {file.file_type}
@@ -648,6 +712,44 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Audio Preview Modal */}
+        {isPreviewOpen && previewFile && previewFile.type === 'audio' && (
+          <div 
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            onClick={closePreview}
+          >
+            <div 
+              className="bg-background rounded-lg p-6 max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Aperçu Audio - {previewFile.name}</h3>
+                <Button variant="ghost" size="sm" onClick={closePreview}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-48 h-48 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Music className="h-16 w-16 text-primary" />
+                </div>
+                <div className="w-full">
+                  <AudioPlayer
+                    src={previewFile.previewUrl || previewFile.url}
+                    autoPlay={false}
+                    showJumpControls={false}
+                    customAdditionalControls={[]}
+                    style={{
+                      borderRadius: '0.5rem',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
