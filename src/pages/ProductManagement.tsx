@@ -404,7 +404,36 @@ const ProductManagement = () => {
     p.title.trim() && p.description.trim() && p.status === 'draft'
   ).length;
 
-  const openPreview = (file: UploadedFileData) => {
+  const openPreview = async (file: UploadedFileData) => {
+    // For audio files, generate a signed URL if the file is from storage
+    if (file.type.startsWith('audio/') && file.url.includes('supabase.co/storage')) {
+      try {
+        const urlParts = file.url.split('/storage/v1/object/public/');
+        if (urlParts.length === 2) {
+          const [bucket, ...pathParts] = urlParts[1].split('/');
+          const filePath = pathParts.join('/');
+          
+          console.log('🔐 Generating signed URL for audio:', { bucket, filePath });
+          
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, 3600); // 1 hour expiry
+          
+          if (error) {
+            console.error('Error generating signed URL:', error);
+            toast.error('Erreur lors de la génération de l\'URL d\'aperçu');
+          } else if (data?.signedUrl) {
+            console.log('✅ Signed URL generated:', data.signedUrl);
+            setPreviewFile({ ...file, previewUrl: data.signedUrl });
+            setIsPreviewOpen(true);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error processing audio URL:', error);
+      }
+    }
+    
     setPreviewFile(file);
     setIsPreviewOpen(true);
   };
@@ -811,15 +840,21 @@ const ProductManagement = () => {
                 )}
                 
                 {previewFile.type.startsWith('audio/') && (
-                  <div className="flex flex-col items-center space-y-4">
+                  <div className="flex flex-col items-center space-y-4 w-full max-w-2xl">
                     <div className="w-48 h-48 bg-primary/10 rounded-lg flex items-center justify-center">
                       <Music className="h-16 w-16 text-primary" />
                     </div>
-                    <UniversalAudioPlayer 
-                      src={previewFile.url}
-                      title={previewFile.name}
-                      className="w-full max-w-md"
-                    />
+                    <div className="w-full">
+                      <UniversalAudioPlayer 
+                        src={previewFile.previewUrl || previewFile.url}
+                        title={previewFile.name}
+                        className="w-full"
+                        compact={false}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground break-all w-full text-center">
+                      URL: {previewFile.previewUrl || previewFile.url}
+                    </div>
                   </div>
                 )}
               </div>

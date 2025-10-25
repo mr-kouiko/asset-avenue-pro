@@ -73,6 +73,13 @@ export const UniversalAudioPlayer: React.FC<UniversalAudioPlayerProps> = ({
       // Smart URL selection based on device and retry count
       let audioSrc = src;
       
+      // Add timestamp to force cache bypass on retries
+      if (retryCount > 0) {
+        const separator = audioSrc.includes('?') ? '&' : '?';
+        audioSrc = `${audioSrc}${separator}_t=${Date.now()}`;
+        console.log('🔄 Adding cache-busting timestamp to audio URL');
+      }
+      
       if (deviceInfo.isMobile && retryCount > 0 && (src as any).public_preview_url) {
         audioSrc = (src as any).public_preview_url;
         setFallbackUsed(true);
