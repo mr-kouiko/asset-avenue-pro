@@ -8,12 +8,14 @@ interface UseAudioWatermarkProps {
   isPlaying: boolean;
   mainVolume: number;
   isMuted: boolean;
+  audioRef?: React.RefObject<HTMLAudioElement>;
 }
 
-export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted }: UseAudioWatermarkProps) => {
+export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted, audioRef }: UseAudioWatermarkProps) => {
   const watermarkRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastPlayTimeRef = useRef<number>(0);
+  const originalVolumeRef = useRef<number>(1);
 
   // Créer l'élément audio du watermark
   useEffect(() => {
@@ -22,16 +24,37 @@ export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted }: UseAudioWa
     watermarkAudio.volume = WATERMARK_VOLUME * mainVolume;
     watermarkRef.current = watermarkAudio;
 
+    // Événements pour gérer le ducking audio
+    const handleWatermarkPlay = () => {
+      if (audioRef?.current) {
+        originalVolumeRef.current = audioRef.current.volume;
+        audioRef.current.volume = originalVolumeRef.current * 0.1; // 10% du volume
+        console.log('🔉 Volume principal baissé à 10%');
+      }
+    };
+
+    const handleWatermarkEnded = () => {
+      if (audioRef?.current) {
+        audioRef.current.volume = originalVolumeRef.current;
+        console.log('🔊 Volume principal restauré');
+      }
+    };
+
+    watermarkAudio.addEventListener('play', handleWatermarkPlay);
+    watermarkAudio.addEventListener('ended', handleWatermarkEnded);
+
     // Précharger le watermark
     watermarkAudio.load();
 
     return () => {
       if (watermarkRef.current) {
+        watermarkRef.current.removeEventListener('play', handleWatermarkPlay);
+        watermarkRef.current.removeEventListener('ended', handleWatermarkEnded);
         watermarkRef.current.pause();
         watermarkRef.current.src = '';
       }
     };
-  }, []);
+  }, [audioRef]);
 
   // Fonction pour jouer le watermark
   const playWatermark = useCallback(async () => {
