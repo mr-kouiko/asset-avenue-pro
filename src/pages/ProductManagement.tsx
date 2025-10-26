@@ -15,6 +15,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
 import { useAIMetadata } from "@/hooks/useAIMetadata";
+import { useUploadedFiles } from "@/hooks/useUploadedFiles";
 import { supabase } from '@/integrations/supabase/client';
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import AudioPlayer from 'react-h5-audio-player';
@@ -46,6 +47,7 @@ interface ProductData {
 const ProductManagement = () => {
   const navigate = useNavigate();
   const { categories } = useSellerDashboard();
+  const { files: draftFiles, updateFileStatus, loadDraftFiles } = useUploadedFiles();
   const { 
     saveProductDraft, 
     publishProduct, 
@@ -62,10 +64,24 @@ const ProductManagement = () => {
   const [aiAutoGenerate, setAiAutoGenerate] = useState(true); // AI auto-generation setting
   
   useEffect(() => {
-    // Load files from session storage
-    const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
-    if (storedFiles) {
-      const files = JSON.parse(storedFiles);
+    // Load draft files from database
+    loadDraftFiles();
+  }, []);
+
+  useEffect(() => {
+    // Convert database files to UploadedFileData format
+    if (draftFiles.length > 0) {
+      const files = draftFiles.map(dbFile => ({
+        id: dbFile.id,
+        url: dbFile.file_url,
+        name: dbFile.file_name,
+        type: dbFile.file_type,
+        size: dbFile.file_size,
+        isWatermarked: dbFile.is_watermarked,
+        thumbnailUrl: dbFile.thumbnail_url,
+        previewUrl: dbFile.preview_url
+      }));
+      
       setUploadedFiles(files);
       
       // Initialize products data with auto-category detection
@@ -84,7 +100,6 @@ const ProductManagement = () => {
             fileName.includes('.avi') || 
             fileName.includes('.webm') || 
             fileName.includes('.mkv')) {
-          // Find video category ID from available categories
           const videoCategory = categories.find(cat => 
             cat.name.toLowerCase().includes('video') || 
             cat.name.toLowerCase().includes('vidéo')
@@ -93,7 +108,6 @@ const ProductManagement = () => {
           console.log('✅ Video category detected:', autoCategory);
         }
         else if (fileType.startsWith('image/')) {
-          // Find photo category ID from available categories
           const photoCategory = categories.find(cat => 
             cat.name.toLowerCase().includes('photo') ||
             cat.name.toLowerCase().includes('image')
@@ -102,7 +116,6 @@ const ProductManagement = () => {
           console.log('✅ Photo category detected:', autoCategory);
         }
         else if (fileType.startsWith('audio/')) {
-          // Find audio category ID from available categories
           const audioCategory = categories.find(cat => 
             cat.name.toLowerCase().includes('audio') ||
             cat.name.toLowerCase().includes('son') ||
@@ -112,7 +125,6 @@ const ProductManagement = () => {
           console.log('✅ Audio category detected:', autoCategory);
         }
         else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
-          // Find ebook/document category ID from available categories
           const ebookCategory = categories.find(cat => 
             cat.name.toLowerCase().includes('ebook') ||
             cat.name.toLowerCase().includes('document') ||
@@ -122,7 +134,6 @@ const ProductManagement = () => {
           console.log('✅ Ebook category detected:', autoCategory);
         }
         else {
-          // Find illustration category for other files
           const illustrationCategory = categories.find(cat => 
             cat.name.toLowerCase().includes('illustration')
           );
@@ -144,7 +155,6 @@ const ProductManagement = () => {
       
       // Auto-generate AI metadata if enabled
       if (aiAutoGenerate && files.length > 0) {
-        // Check if AI auto-generation is enabled globally
         setTimeout(async () => {
           try {
             const { data: platformSettings } = await supabase
@@ -179,19 +189,19 @@ const ProductManagement = () => {
           } catch (error) {
             console.error('Error checking AI settings:', error);
           }
-        }, 1000); // Small delay to let UI render first
+        }, 1000);
       }
       
       // Select first file by default
-      if (files.length > 0) {
+      if (files.length > 0 && !selectedFileId) {
         setSelectedFileId(files[0].id);
       }
-    } else {
+    } else if (draftFiles.length === 0) {
       // No files found, redirect to upload page
       toast.error("Aucun fichier trouvé. Veuillez d'abord uploader vos fichiers.");
       navigate('/file-upload');
     }
-  }, [navigate]);
+  }, [draftFiles, categories, aiAutoGenerate, navigate]);
 
   const selectedFile = uploadedFiles.find(f => f.id === selectedFileId);
   const selectedProductData = selectedFileId ? productsData[selectedFileId] : null;
@@ -340,6 +350,8 @@ const ProductManagement = () => {
 
     if (success) {
       updateProductData(fileId, { status: 'published' });
+      // Update status in database
+      await updateFileStatus(fileId, 'validated');
     }
   };
 
@@ -382,6 +394,8 @@ const ProductManagement = () => {
         if (success) {
           successCount++;
           updateProductData(productData.fileId, { status: 'published' });
+          // Update status in database
+          await updateFileStatus(productData.fileId, 'validated');
         }
       }
     }

@@ -206,23 +206,48 @@ export const SimpleFileUpload = ({
         } : f
       ));
 
-      // Notify parent component with correct file type and separate thumbnail URL
+      // Save to database immediately
+      const detectedMimeType = detectMimeType(uploadFile.file);
+      const isVideo = detectedMimeType.startsWith('video/');
+      const isPDF = detectedMimeType === 'application/pdf';
+      
+      const uploadedFileData = {
+        id: uploadFile.id,
+        url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
+        name: uploadFile.file.name,
+        type: detectedMimeType,
+        size: uploadFile.file.size,
+        isWatermarked: !!processedFile.watermarkedUrl,
+        // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
+        thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
+        previewUrl: processedFile.previewUrl
+      };
+
+      // Save to database
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('uploaded_files').insert({
+            user_id: user.id,
+            file_name: uploadedFileData.name,
+            file_url: uploadedFileData.url,
+            file_type: uploadedFileData.type,
+            file_size: uploadedFileData.size,
+            preview_url: uploadedFileData.previewUrl,
+            thumbnail_url: uploadedFileData.thumbnailUrl,
+            is_watermarked: uploadedFileData.isWatermarked || false,
+            status: 'draft'
+          });
+          console.log('✅ File saved to database:', uploadedFileData.name);
+        }
+      } catch (dbError) {
+        console.error('❌ Error saving file to database:', dbError);
+        // Continue even if DB save fails
+      }
+
+      // Notify parent component
       if (onFilesUploaded) {
-        const detectedMimeType = detectMimeType(uploadFile.file);
-        const isVideo = detectedMimeType.startsWith('video/');
-        const isPDF = detectedMimeType === 'application/pdf';
-        
-        onFilesUploaded([{
-          id: uploadFile.id,
-          url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
-          name: uploadFile.file.name,
-          type: detectedMimeType,
-          size: uploadFile.file.size,
-          isWatermarked: !!processedFile.watermarkedUrl,
-          // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
-          thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
-          previewUrl: processedFile.previewUrl
-        }]);
+        onFilesUploaded([uploadedFileData]);
       }
 
     } catch (error) {
