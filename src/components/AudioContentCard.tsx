@@ -176,7 +176,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         </Button>
 
         {/* Title, Category and Time Display */}
-        <div className="flex flex-col gap-1 min-w-[200px] flex-shrink-0">
+        <div className="flex flex-col gap-1 min-w-[140px] flex-shrink-0">
           <h3 className="font-medium text-sm text-gray-900 line-clamp-1">
             {title}
           </h3>
@@ -189,7 +189,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         {/* Waveform - Takes Most Space */}
         <div 
           ref={waveformRef} 
-          className="flex-1 h-[70px] cursor-pointer min-w-0 mx-8"
+          className="flex-1 h-[70px] cursor-pointer min-w-0 mx-3"
           onClick={(e) => e.stopPropagation()}
         />
 
