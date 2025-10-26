@@ -142,114 +142,93 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
   return (
     <Card 
-      className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer bg-white border border-stock-border/50 hover:border-stock-blue/20"
+      className="group relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer bg-white border border-stock-border/30"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
-      style={{ boxShadow: 'var(--card-shadow)' }}
     >
-      {/* Audio Content Section */}
-      <div className="relative bg-gradient-to-br from-stock-blue/5 to-stock-blue/10 p-4">
+      {/* Horizontal Layout - Arabstock Style */}
+      <div className="flex items-center gap-4 p-4">
         
-        {/* Type Badge */}
-        <div className="absolute top-2 left-2 z-10">
-          <Badge 
-            variant="secondary" 
-            className="bg-white/95 text-stock-dark text-[10px] px-2 py-0.5 font-medium border-0 shadow-sm"
-          >
-            AUDIO
-          </Badge>
+        {/* Play/Pause Button - Large Circle on Left */}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={handlePlayPause}
+          className="h-16 w-16 rounded-full bg-stock-blue hover:bg-stock-blue/90 shadow-md flex-shrink-0"
+        >
+          {playing ? (
+            <Pause className="h-7 w-7 text-white" fill="currentColor" />
+          ) : (
+            <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+          )}
+        </Button>
+
+        {/* Title and Duration */}
+        <div className="flex flex-col gap-0.5 w-32 flex-shrink-0">
+          <h3 className="font-medium text-sm text-stock-dark line-clamp-1">
+            {title}
+          </h3>
+          <p className="text-xs text-stock-dark/50">{author}</p>
+          <span className="text-xs text-stock-dark/70 font-medium mt-1">
+            {audioDuration || "0:00"}
+          </span>
         </div>
 
-        {/* Heart Button */}
-        <div className="absolute top-2 right-2 z-10">
+        {/* Waveform - Takes Most Space */}
+        <div 
+          ref={waveformRef} 
+          className="flex-1 h-[80px] cursor-pointer min-w-0"
+          onClick={(e) => e.stopPropagation()}
+        />
+
+        {/* BPM Badge */}
+        {bpm && (
+          <Badge 
+            variant="outline" 
+            className="text-xs border-stock-dark/20 text-stock-dark/70 px-3 py-1 flex-shrink-0"
+          >
+            {bpm} BPM
+          </Badge>
+        )}
+
+        {/* Action Buttons - Right Side */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Favorite Button */}
           <Button
             variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
             }}
-            className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+            className="h-9 w-9 p-0 hover:bg-stock-gray rounded-full"
           >
             <Heart 
-              className="h-3.5 w-3.5" 
+              className="h-4 w-4" 
               fill={isLiked ? "hsl(var(--stock-blue))" : "none"}
               color={isLiked ? "hsl(var(--stock-blue))" : "hsl(var(--stock-dark))"}
             />
           </Button>
-        </div>
 
-        {/* Play/Pause Button - Centered and Large */}
-        <div className="flex items-center justify-center py-6">
-          <Button
-            variant="default"
-            size="lg"
-            onClick={handlePlayPause}
-            className="h-14 w-14 rounded-full bg-stock-blue hover:bg-stock-blue/90 shadow-lg"
-          >
-            {playing ? (
-              <Pause className="h-6 w-6 text-white" fill="currentColor" />
-            ) : (
-              <Play className="h-6 w-6 text-white ml-0.5" fill="currentColor" />
-            )}
-          </Button>
-        </div>
-
-        {/* Waveform */}
-        <div 
-          ref={waveformRef} 
-          className="w-full h-[60px] cursor-pointer"
-          onClick={(e) => e.stopPropagation()}
-        />
-
-        {/* Audio Metadata Row */}
-        <div className="flex items-center justify-between mt-3 text-xs text-stock-dark/70">
-          <span className="font-medium">{audioDuration || "0:00"}</span>
-          {bpm && (
-            <Badge variant="outline" className="text-[10px] border-stock-dark/20">
-              {bpm} BPM
-            </Badge>
-          )}
-        </div>
-
-        {/* Quick Actions - Show on hover */}
-        <div className={`absolute bottom-2 right-2 flex gap-1 transition-all duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
+          {/* Info Button */}
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleAddToCart}
-            className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+            onClick={handleCardClick}
+            className="h-9 w-9 p-0 hover:bg-stock-gray rounded-full"
           >
-            <ShoppingCart className="h-3.5 w-3.5 text-stock-dark" />
+            <ShoppingCart className="h-4 w-4 text-stock-dark" />
           </Button>
-        </div>
-      </div>
 
-      {/* Metadata */}
-      <div className="p-3 space-y-2">
-        <div>
-          <h3 className="font-medium text-sm text-stock-dark leading-tight line-clamp-2 min-h-[2.5rem]">
-            {title}
-          </h3>
-          <p className="text-xs text-stock-dark/60 mt-1 font-medium">{author}</p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-stock-dark/50">
-            <span className="flex items-center gap-1">
-              <Heart className="h-3 w-3" />
-              {likes}
-            </span>
-            <span className="flex items-center gap-1">
-              <Download className="h-3 w-3" />
-              {downloads}
-            </span>
-          </div>
-          <div className="font-bold text-sm text-stock-dark">
-            {price === null || price === 0 ? 'Gratuit' : `${price}€`}
-          </div>
+          {/* Download/Purchase Button */}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleAddToCart}
+            className="h-9 w-9 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </Card>
