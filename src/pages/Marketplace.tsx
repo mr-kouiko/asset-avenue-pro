@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Marketplace = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -19,6 +22,15 @@ const Marketplace = () => {
   ]);
   const [searchParams] = useSearchParams();
   const { content: marketplaceContent, loading } = useMarketplace();
+  
+  // Audio filter states
+  const [isAudioFilterOpen, setIsAudioFilterOpen] = useState(false);
+  const [audioSortBy, setAudioSortBy] = useState("relevant");
+  const [infinityFilter, setInfinityFilter] = useState("all");
+  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [lengthRange, setLengthRange] = useState([0, 300]); // 0-5 minutes in seconds
+  const [bpmRange, setBpmRange] = useState([60, 180]);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const categoryParam = searchParams.get('category');
@@ -66,6 +78,44 @@ const Marketplace = () => {
     { value: "50+", label: "50€ et plus" },
   ];
 
+  // Close audio filter panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterPanelRef.current && !filterPanelRef.current.contains(event.target as Node)) {
+        setIsAudioFilterOpen(false);
+      }
+    };
+
+    if (isAudioFilterOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isAudioFilterOpen]);
+
+  const moods = [
+    "Action / Sports / Adventure",
+    "Corporate / Promo / Ads",
+    "Comedy / Funny",
+    "Drama / Suspense",
+    "Epic / Orchestral",
+    "Future / Technology",
+    "Fashion / Lifestyle",
+    "Games / Kids",
+    "Happy / Holiday",
+    "Horror / Scary",
+    "Religious",
+    "Inspiration / Magical",
+    "Romantic / Sentimental",
+    "Solo / Relaxation",
+    "Sad / Dark"
+  ];
+
+  const toggleMood = (mood: string) => {
+    setSelectedMoods(prev =>
+      prev.includes(mood) ? prev.filter(m => m !== mood) : [...prev, mood]
+    );
+  };
+
   // Filter content based on search and category
   const filteredContent = marketplaceContent.filter(content => {
     const matchesSearch = (content.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,6 +125,10 @@ const Marketplace = () => {
                            content.type === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // Check if we're viewing audio content
+  const isAudioSection = selectedCategory === "audio" || 
+    filteredContent.some(content => content.type === "audio");
 
   return (
     <div className="min-h-screen bg-background">
@@ -126,9 +180,126 @@ const Marketplace = () => {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" size="icon">
-                <SlidersHorizontal className="h-4 w-4" />
-              </Button>
+              {isAudioSection && (
+                <div className="relative" ref={filterPanelRef}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAudioFilterOpen(!isAudioFilterOpen)}
+                    className="gap-2"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filtres Audio
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isAudioFilterOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+
+                  {isAudioFilterOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-background border rounded-lg shadow-lg p-6 z-50">
+                      {/* Sort By */}
+                      <div className="mb-6">
+                        <Label className="text-sm font-semibold mb-3 block">Trier par</Label>
+                        <Select value={audioSortBy} onValueChange={setAudioSortBy}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="popular">Populaire</SelectItem>
+                            <SelectItem value="relevant">Plus pertinent</SelectItem>
+                            <SelectItem value="fresh">Plus récent</SelectItem>
+                            <SelectItem value="random">Aléatoire</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Visustock Infinity */}
+                      <div className="mb-6">
+                        <Label className="text-sm font-semibold mb-3 block">Visustock Infinity</Label>
+                        <Select value={infinityFilter} onValueChange={setInfinityFilter}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tous</SelectItem>
+                            <SelectItem value="infinity">Inclus dans Infinity</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Moods */}
+                      <div className="mb-6">
+                        <Label className="text-sm font-semibold mb-3 block">Ambiances</Label>
+                        <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+                          {moods.map((mood) => (
+                            <div key={mood} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={mood}
+                                checked={selectedMoods.includes(mood)}
+                                onCheckedChange={() => toggleMood(mood)}
+                              />
+                              <label
+                                htmlFor={mood}
+                                className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {mood}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Length */}
+                      <div className="mb-6">
+                        <Label className="text-sm font-semibold mb-3 block">
+                          Durée: {Math.floor(lengthRange[0] / 60)}:{(lengthRange[0] % 60).toString().padStart(2, '0')} - {Math.floor(lengthRange[1] / 60)}:{(lengthRange[1] % 60).toString().padStart(2, '0')}
+                        </Label>
+                        <Slider
+                          value={lengthRange}
+                          onValueChange={setLengthRange}
+                          min={0}
+                          max={300}
+                          step={5}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* BPM */}
+                      <div className="mb-4">
+                        <Label className="text-sm font-semibold mb-3 block">
+                          BPM: {bpmRange[0]} - {bpmRange[1]}
+                        </Label>
+                        <Slider
+                          value={bpmRange}
+                          onValueChange={setBpmRange}
+                          min={60}
+                          max={180}
+                          step={5}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Reset Button */}
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setAudioSortBy("relevant");
+                          setInfinityFilter("all");
+                          setSelectedMoods([]);
+                          setLengthRange([0, 300]);
+                          setBpmRange([60, 180]);
+                        }}
+                      >
+                        Réinitialiser les filtres
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isAudioSection && (
+                <Button variant="outline" size="icon">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
 
