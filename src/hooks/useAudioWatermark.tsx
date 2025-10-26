@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 
 const WATERMARK_URL = "https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0MS1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NjEzMDg2NzYsImV4cCI6NDkxNDkwODY3Nn0.mEg3fksa-Pmh5eakM_7DKigJg_tizxOY-ehgzDnYbo0";
 const WATERMARK_INTERVAL = 10000; // 10 secondes
-const WATERMARK_VOLUME = 1.5; // Volume du watermark à 150%
+const WATERMARK_VOLUME = 0.5; // Volume du watermark à 50%
 
 interface UseAudioWatermarkProps {
   isPlaying: boolean;
@@ -21,7 +21,7 @@ export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted, audioRef }: 
   useEffect(() => {
     const watermarkAudio = new Audio(WATERMARK_URL);
     watermarkAudio.preload = 'auto';
-    watermarkAudio.volume = WATERMARK_VOLUME * mainVolume;
+    watermarkAudio.volume = Math.min(1, Math.max(0, WATERMARK_VOLUME * mainVolume));
     watermarkRef.current = watermarkAudio;
 
     // Événements pour gérer le ducking audio
@@ -69,7 +69,7 @@ export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted, audioRef }: 
 
     try {
       watermark.currentTime = 0;
-      watermark.volume = WATERMARK_VOLUME * mainVolume;
+      watermark.volume = Math.min(1, Math.max(0, WATERMARK_VOLUME * mainVolume));
       await watermark.play();
       lastPlayTimeRef.current = now;
       console.log('🔊 Watermark audio joué');
@@ -113,7 +113,7 @@ export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted, audioRef }: 
   // Mettre à jour le volume du watermark quand le volume principal change
   useEffect(() => {
     if (watermarkRef.current) {
-      watermarkRef.current.volume = WATERMARK_VOLUME * mainVolume;
+      watermarkRef.current.volume = Math.min(1, Math.max(0, WATERMARK_VOLUME * mainVolume));
     }
   }, [mainVolume]);
 
