@@ -14,6 +14,8 @@ interface TranslationCache {
 // Cache translations for 1 hour
 const CACHE_DURATION = 60 * 60 * 1000;
 const translationCache: TranslationCache = {};
+// Global circuit breaker to avoid repeated failed calls (e.g., 402 Not enough credits)
+let translationsDisabled = false;
 
 export const useContentTranslation = () => {
   const { language } = useLanguage();
@@ -31,6 +33,11 @@ export const useContentTranslation = () => {
     
     if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
       return cached;
+    }
+
+    // If translations are disabled (e.g., due to 402), return original content
+    if (translationsDisabled) {
+      return { title, description, tags, timestamp: Date.now() };
     }
 
     try {
@@ -63,8 +70,19 @@ export const useContentTranslation = () => {
 
       // Return original if translation failed
       return { title, description, tags, timestamp: Date.now() };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Translation error:', error);
+      // Disable further translation attempts if we hit quota/credits errors
+      const msg = typeof error === 'string' ? error : (error?.message || '');
+      const serialized = JSON.stringify(error || {});
+      if (
+        (error && (error as any).status === 402) ||
+        msg.toLowerCase().includes('not enough credits') ||
+        serialized.includes('payment_required') ||
+        serialized.includes('402')
+      ) {
+        translationsDisabled = true;
+      }
       // Return original content on error
       return { title, description, tags, timestamp: Date.now() };
     } finally {
