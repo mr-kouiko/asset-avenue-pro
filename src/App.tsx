@@ -7,6 +7,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { CartProvider } from "./hooks/useCart";
 import { SearchProvider } from "./hooks/useSearch";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { AudioPlayerProvider } from "./contexts/AudioPlayerContext";
 import { LanguageRedirect } from "./components/LanguageRedirect";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -52,14 +53,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <LanguageProvider>
-              <SearchProvider>
-                <LanguageRedirect />
-                <Routes>
+        <AudioPlayerProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <LanguageProvider>
+                <SearchProvider>
+                  <LanguageRedirect />
+                  <Routes>
                   {/* Root Route */}
                   <Route path="/" element={<Index />} />
                   
@@ -171,9 +173,10 @@ const App = () => (
             </LanguageProvider>
           </BrowserRouter>
         </TooltipProvider>
-      </CartProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+      </AudioPlayerProvider>
+    </CartProvider>
+  </AuthProvider>
+</QueryClientProvider>
 );
 
 export default App;

@@ -10,6 +10,7 @@ import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { AudioContentCard } from "./AudioContentCard";
 
 interface ContentCardProps {
   id: string;
@@ -24,6 +25,8 @@ interface ContentCardProps {
   likes: number;
   downloads: number;
   isLiked?: boolean;
+  duration?: string;
+  bpm?: number;
 }
 
 export const ContentCard: React.FC<ContentCardProps> = ({
@@ -39,7 +42,27 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   likes,
   downloads,
   isLiked = false,
+  duration,
+  bpm,
 }) => {
+  // Use specialized AudioContentCard for audio content
+  if (type === 'audio') {
+    return (
+      <AudioContentCard
+        id={id}
+        title={title}
+        author={author}
+        price={price}
+        thumbnail={thumbnail}
+        audioUrl={audioUrl}
+        likes={likes}
+        downloads={downloads}
+        isLiked={isLiked}
+        duration={duration}
+        bpm={bpm}
+      />
+    );
+  }
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
   const { language } = useLanguage();
@@ -49,7 +72,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const getTypeColor = (type: string) => {
     switch (type) {
       case "video": return "bg-red-100 text-red-800";
-      case "audio": return "bg-green-100 text-green-800";
       case "illustration": return "bg-purple-100 text-purple-800";
       case "pdf":
       case "ebook": return "bg-orange-100 text-orange-800";
@@ -114,13 +136,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             videoUrl={videoUrl}
             className="w-full h-full"
           />
-        ) : type === 'audio' ? (
-          <div className="w-full h-full bg-gradient-to-br from-stock-blue/5 to-stock-blue/10 flex items-center justify-center">
-            <div className="text-center p-4">
-              <Music className="h-8 w-8 mx-auto mb-2 text-stock-blue/60" />
-              <span className="text-xs text-stock-dark/70 font-medium">Audio Preview</span>
-            </div>
-          </div>
         ) : (
           <LazyImage
             src={thumbnail}
@@ -140,7 +155,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           >
             {type === 'photo' ? 'PHOTO' : 
              type === 'video' ? 'VIDÉO' : 
-             type === 'audio' ? 'AUDIO' : 
              type === 'illustration' ? 'VECTOR' : 'EBOOK'}
           </Badge>
         </div>

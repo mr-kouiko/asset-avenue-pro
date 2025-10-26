@@ -17,6 +17,8 @@ export interface MarketplaceContent {
   isLiked?: boolean;
   category_id?: string;
   tags?: string[];
+  duration?: string; // Audio duration (e.g., "3:45")
+  bpm?: number; // Beats per minute for audio
 }
 
 export const useMarketplace = () => {
@@ -129,6 +131,13 @@ export const useMarketplace = () => {
             downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
             category_id: item.category_id,
             tags: item.tags || [],
+            // Extract audio metadata if available
+            duration: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'duration' in originalFile.metadata 
+              ? originalFile.metadata.duration as string 
+              : undefined,
+            bpm: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'bpm' in originalFile.metadata 
+              ? originalFile.metadata.bpm as number 
+              : undefined,
           };
 
           console.log(`Content: ${item.title}, Type: ${item.content_type}, Thumbnail: ${thumbnailUrl}, Media: ${mediaUrl}`);
