@@ -44,6 +44,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   const { currentPlayingId, play, pause, isPlaying } = useAudioPlayer();
   const [isHovered, setIsHovered] = useState(false);
   const [audioDuration, setAudioDuration] = useState(duration || "");
+  const [currentTime, setCurrentTime] = useState("0:00");
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
 
@@ -55,14 +56,14 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     // Initialize WaveSurfer
     const wavesurfer = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: 'hsl(var(--stock-blue) / 0.3)',
-      progressColor: 'hsl(var(--stock-blue))',
-      cursorColor: 'hsl(var(--stock-blue))',
+      waveColor: 'rgba(156, 163, 175, 0.5)', // Gray waveform like Arabstock
+      progressColor: 'rgba(99, 102, 241, 0.8)', // Blue progress
+      cursorColor: 'rgba(99, 102, 241, 0.8)',
       cursorWidth: 2,
       barWidth: 3,
       barGap: 2,
       barRadius: 3,
-      height: 60,
+      height: 80,
       normalize: true,
       backend: 'WebAudio',
       interact: true,
@@ -84,7 +85,10 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     });
 
     wavesurfer.on('audioprocess', () => {
-      // Force re-render during playback to ensure smooth animation
+      const current = wavesurfer.getCurrentTime();
+      const minutes = Math.floor(current / 60);
+      const seconds = Math.floor(current % 60);
+      setCurrentTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
     });
 
     wavesurferRef.current = wavesurfer;
@@ -171,21 +175,21 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
           )}
         </Button>
 
-        {/* Title and Duration */}
-        <div className="flex flex-col gap-0.5 w-32 flex-shrink-0">
-          <h3 className="font-medium text-sm text-stock-dark line-clamp-1">
+        {/* Title, Category and Time Display */}
+        <div className="flex flex-col gap-0.5 min-w-[200px] flex-shrink-0">
+          <h3 className="font-semibold text-base text-stock-dark line-clamp-1">
             {title}
           </h3>
-          <p className="text-xs text-stock-dark/50">{author}</p>
-          <span className="text-xs text-stock-dark/70 font-medium mt-1">
-            {audioDuration || "0:00"}
+          <p className="text-xs text-stock-dark/50">Music</p>
+          <span className="text-sm text-stock-dark/70 font-medium mt-1">
+            {currentTime} / {audioDuration || "0:00"}
           </span>
         </div>
 
         {/* Waveform - Takes Most Space */}
         <div 
           ref={waveformRef} 
-          className="flex-1 h-[80px] cursor-pointer min-w-0"
+          className="flex-1 h-[80px] cursor-pointer min-w-0 mx-6"
           onClick={(e) => e.stopPropagation()}
         />
 
@@ -200,7 +204,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         )}
 
         {/* Action Buttons - Right Side */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-shrink-0">
           {/* Favorite Button */}
           <Button
             variant="ghost"
@@ -208,33 +212,32 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
             }}
-            className="h-9 w-9 p-0 hover:bg-stock-gray rounded-full"
+            className="h-12 w-12 p-0 hover:bg-gray-100 rounded-full border border-gray-300"
           >
             <Heart 
-              className="h-4 w-4" 
-              fill={isLiked ? "hsl(var(--stock-blue))" : "none"}
-              color={isLiked ? "hsl(var(--stock-blue))" : "hsl(var(--stock-dark))"}
+              className={`h-5 w-5 ${isLiked ? "text-red-500" : "text-gray-600"}`}
+              fill={isLiked ? "currentColor" : "none"}
             />
           </Button>
 
-          {/* Info Button */}
+          {/* Info/Details Button */}
           <Button
             variant="ghost"
             size="sm"
             onClick={handleCardClick}
-            className="h-9 w-9 p-0 hover:bg-stock-gray rounded-full"
+            className="h-12 w-12 p-0 hover:bg-gray-100 rounded-full border border-gray-300"
           >
-            <ShoppingCart className="h-4 w-4 text-stock-dark" />
+            <ShoppingCart className="h-5 w-5 text-gray-600" />
           </Button>
 
-          {/* Download/Purchase Button */}
+          {/* Download/Add to Cart Button */}
           <Button
             variant="default"
             size="sm"
             onClick={handleAddToCart}
-            className="h-9 w-9 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full"
+            className="h-12 w-12 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-md"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-5 w-5" />
           </Button>
         </div>
       </div>
