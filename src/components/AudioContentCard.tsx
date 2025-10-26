@@ -56,14 +56,14 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     // Initialize WaveSurfer
     const wavesurfer = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: 'rgba(156, 163, 175, 0.5)', // Gray waveform like Arabstock
-      progressColor: 'rgba(99, 102, 241, 0.8)', // Blue progress
-      cursorColor: 'rgba(99, 102, 241, 0.8)',
-      cursorWidth: 2,
-      barWidth: 3,
-      barGap: 2,
-      barRadius: 3,
-      height: 80,
+      waveColor: 'rgba(203, 213, 225, 0.8)', // Light grey waveform
+      progressColor: 'rgba(99, 102, 241, 0.9)', // Blue/indigo progress
+      cursorColor: 'rgba(99, 102, 241, 0.9)',
+      cursorWidth: 1,
+      barWidth: 2,
+      barGap: 1,
+      barRadius: 2,
+      height: 70,
       normalize: true,
       backend: 'WebAudio',
       interact: true,
@@ -153,35 +153,35 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
   return (
     <Card 
-      className="group relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer bg-white border border-stock-border/30"
+      className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg cursor-pointer bg-gray-50/50 border border-gray-200/60 shadow-sm"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
       {/* Horizontal Layout - Arabstock Style */}
-      <div className="flex items-center gap-4 p-4">
+      <div className="flex items-center gap-4 p-5">
         
         {/* Play/Pause Button - Large Circle on Left */}
         <Button
           variant="default"
           size="lg"
           onClick={handlePlayPause}
-          className="h-16 w-16 rounded-full bg-stock-blue hover:bg-stock-blue/90 shadow-md flex-shrink-0"
+          className="h-14 w-14 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-md flex-shrink-0 transition-all"
         >
           {playing ? (
-            <Pause className="h-7 w-7 text-white" fill="currentColor" />
+            <Pause className="h-6 w-6 text-white" fill="currentColor" />
           ) : (
-            <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
+            <Play className="h-6 w-6 text-white ml-0.5" fill="currentColor" />
           )}
         </Button>
 
         {/* Title, Category and Time Display */}
-        <div className="flex flex-col gap-0.5 min-w-[200px] flex-shrink-0">
-          <h3 className="font-semibold text-base text-stock-dark line-clamp-1">
+        <div className="flex flex-col gap-1 min-w-[200px] flex-shrink-0">
+          <h3 className="font-medium text-sm text-gray-900 line-clamp-1">
             {title}
           </h3>
-          <p className="text-xs text-stock-dark/50">Music</p>
-          <span className="text-sm text-stock-dark/70 font-medium mt-1">
+          <p className="text-xs text-gray-400">Music</p>
+          <span className="text-xs text-gray-600 font-medium mt-0.5">
             {currentTime} / {audioDuration || "0:00"}
           </span>
         </div>
@@ -189,7 +189,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         {/* Waveform - Takes Most Space */}
         <div 
           ref={waveformRef} 
-          className="flex-1 h-[80px] cursor-pointer min-w-0 mx-6"
+          className="flex-1 h-[70px] cursor-pointer min-w-0 mx-8"
           onClick={(e) => e.stopPropagation()}
         />
 
@@ -197,14 +197,14 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         {bpm && (
           <Badge 
             variant="outline" 
-            className="text-xs border-stock-dark/20 text-stock-dark/70 px-3 py-1 flex-shrink-0"
+            className="text-xs border-gray-300 text-gray-600 bg-white px-3 py-1.5 flex-shrink-0 font-normal"
           >
             {bpm} BPM
           </Badge>
         )}
 
         {/* Action Buttons - Right Side */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           {/* Favorite Button */}
           <Button
             variant="ghost"
@@ -212,10 +212,10 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
             }}
-            className="h-12 w-12 p-0 hover:bg-gray-100 rounded-full border border-gray-300"
+            className="h-10 w-10 p-0 hover:bg-gray-100 rounded-full border border-gray-300 bg-white transition-colors"
           >
             <Heart 
-              className={`h-5 w-5 ${isLiked ? "text-red-500" : "text-gray-600"}`}
+              className={`h-4 w-4 ${isLiked ? "text-red-500" : "text-gray-700"}`}
               fill={isLiked ? "currentColor" : "none"}
             />
           </Button>
@@ -225,9 +225,9 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleCardClick}
-            className="h-12 w-12 p-0 hover:bg-gray-100 rounded-full border border-gray-300"
+            className="h-10 w-10 p-0 hover:bg-gray-100 rounded-full border border-gray-300 bg-white transition-colors"
           >
-            <ShoppingCart className="h-5 w-5 text-gray-600" />
+            <ShoppingCart className="h-4 w-4 text-gray-700" />
           </Button>
 
           {/* Download/Add to Cart Button */}
@@ -235,9 +235,9 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
             variant="default"
             size="sm"
             onClick={handleAddToCart}
-            className="h-12 w-12 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-md"
+            className="h-10 w-10 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-sm transition-all"
           >
-            <Download className="h-5 w-5" />
+            <Download className="h-4 w-4" />
           </Button>
         </div>
       </div>
