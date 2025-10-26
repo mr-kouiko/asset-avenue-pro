@@ -58,6 +58,26 @@ export function useVideoPreviewGenerator() {
       throw new Error('Canvas context not available');
     }
 
+    // Load watermark logo
+    const watermarkLogo = new Image();
+    watermarkLogo.crossOrigin = 'anonymous';
+    const watermarkUrl = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
+    
+    await new Promise<void>((resolve, reject) => {
+      watermarkLogo.onload = () => resolve();
+      watermarkLogo.onerror = () => {
+        console.warn('Watermark logo failed to load, continuing without it');
+        resolve(); // Continue even if watermark fails
+      };
+      watermarkLogo.src = watermarkUrl;
+    });
+
+    // Calculate watermark size (20% of video width)
+    const watermarkWidth = width * 0.2;
+    const watermarkHeight = (watermarkLogo.height / watermarkLogo.width) * watermarkWidth;
+    const watermarkX = (width - watermarkWidth) / 2;
+    const watermarkY = (height - watermarkHeight) / 2;
+
     // Prepare recorder from canvas stream
     const stream = (canvas as any).captureStream ? canvas.captureStream(fps) : (canvas as any).mozCaptureStream?.(fps);
     if (!stream) {
@@ -82,11 +102,20 @@ export function useVideoPreviewGenerator() {
 
     recorder.start();
 
-    // Draw loop
+    // Draw loop with watermark
     let raf = 0;
     const draw = () => {
       try {
+        // Draw video frame
         ctx.drawImage(video, 0, 0, width, height);
+        
+        // Draw watermark if loaded
+        if (watermarkLogo.complete && watermarkLogo.naturalWidth > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.8; // 80% opacity
+          ctx.drawImage(watermarkLogo, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+          ctx.restore();
+        }
       } catch (_) {
         // Cross-origin taint or not ready; ignore frame
       }
