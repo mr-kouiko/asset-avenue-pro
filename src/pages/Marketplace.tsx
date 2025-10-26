@@ -13,8 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Marketplace = () => {
+  const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([
@@ -93,21 +95,21 @@ const Marketplace = () => {
   }, [isAudioFilterOpen]);
 
   const moods = [
-    "Action / Sports / Adventure",
-    "Corporate / Promo / Ads",
-    "Comedy / Funny",
-    "Drama / Suspense",
-    "Epic / Orchestral",
-    "Future / Technology",
-    "Fashion / Lifestyle",
-    "Games / Kids",
-    "Happy / Holiday",
-    "Horror / Scary",
-    "Religious",
-    "Inspiration / Magical",
-    "Romantic / Sentimental",
-    "Solo / Relaxation",
-    "Sad / Dark"
+    { key: 'action', label: t('audio.mood.action') },
+    { key: 'corporate', label: t('audio.mood.corporate') },
+    { key: 'comedy', label: t('audio.mood.comedy') },
+    { key: 'drama', label: t('audio.mood.drama') },
+    { key: 'epic', label: t('audio.mood.epic') },
+    { key: 'future', label: t('audio.mood.future') },
+    { key: 'fashion', label: t('audio.mood.fashion') },
+    { key: 'games', label: t('audio.mood.games') },
+    { key: 'happy', label: t('audio.mood.happy') },
+    { key: 'horror', label: t('audio.mood.horror') },
+    { key: 'religious', label: t('audio.mood.religious') },
+    { key: 'inspiration', label: t('audio.mood.inspiration') },
+    { key: 'romantic', label: t('audio.mood.romantic') },
+    { key: 'solo', label: t('audio.mood.solo') },
+    { key: 'sad', label: t('audio.mood.sad') },
   ];
 
   const toggleMood = (mood: string) => {
@@ -188,7 +190,7 @@ const Marketplace = () => {
                     className="gap-2"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
-                    Filtres Audio
+                    {t('audio.filters')}
                     <ChevronDown className={`h-4 w-4 transition-transform ${isAudioFilterOpen ? 'rotate-180' : ''}`} />
                   </Button>
 
@@ -196,50 +198,50 @@ const Marketplace = () => {
                     <div className="absolute right-0 top-full mt-2 w-80 bg-background border rounded-lg shadow-lg p-6 z-50">
                       {/* Sort By */}
                       <div className="mb-6">
-                        <Label className="text-sm font-semibold mb-3 block">Trier par</Label>
+                        <Label className="text-sm font-semibold mb-3 block">{t('audio.sortBy')}</Label>
                         <Select value={audioSortBy} onValueChange={setAudioSortBy}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="popular">Populaire</SelectItem>
-                            <SelectItem value="relevant">Plus pertinent</SelectItem>
-                            <SelectItem value="fresh">Plus récent</SelectItem>
-                            <SelectItem value="random">Aléatoire</SelectItem>
+                            <SelectItem value="popular">{t('audio.popular')}</SelectItem>
+                            <SelectItem value="relevant">{t('audio.relevant')}</SelectItem>
+                            <SelectItem value="fresh">{t('audio.fresh')}</SelectItem>
+                            <SelectItem value="random">{t('audio.random')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       {/* Visustock Infinity */}
                       <div className="mb-6">
-                        <Label className="text-sm font-semibold mb-3 block">Visustock Infinity</Label>
+                        <Label className="text-sm font-semibold mb-3 block">{t('audio.infinity')}</Label>
                         <Select value={infinityFilter} onValueChange={setInfinityFilter}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">Tous</SelectItem>
-                            <SelectItem value="infinity">Inclus dans Infinity</SelectItem>
+                            <SelectItem value="all">{t('audio.all')}</SelectItem>
+                            <SelectItem value="infinity">{t('audio.includedInfinity')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       {/* Moods */}
                       <div className="mb-6">
-                        <Label className="text-sm font-semibold mb-3 block">Ambiances</Label>
+                        <Label className="text-sm font-semibold mb-3 block">{t('audio.moods')}</Label>
                         <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
                           {moods.map((mood) => (
-                            <div key={mood} className="flex items-center space-x-2">
+                            <div key={mood.key} className="flex items-center space-x-2">
                               <Checkbox
-                                id={mood}
-                                checked={selectedMoods.includes(mood)}
-                                onCheckedChange={() => toggleMood(mood)}
+                                id={mood.key}
+                                checked={selectedMoods.includes(mood.key)}
+                                onCheckedChange={() => toggleMood(mood.key)}
                               />
                               <label
-                                htmlFor={mood}
+                                htmlFor={mood.key}
                                 className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
-                                {mood}
+                                {mood.label}
                               </label>
                             </div>
                           ))}
@@ -249,7 +251,7 @@ const Marketplace = () => {
                       {/* Length */}
                       <div className="mb-6">
                         <Label className="text-sm font-semibold mb-3 block">
-                          Durée: {Math.floor(lengthRange[0] / 60)}:{(lengthRange[0] % 60).toString().padStart(2, '0')} - {Math.floor(lengthRange[1] / 60)}:{(lengthRange[1] % 60).toString().padStart(2, '0')}
+                          {t('audio.length')}: {Math.floor(lengthRange[0] / 60)}:{(lengthRange[0] % 60).toString().padStart(2, '0')} - {Math.floor(lengthRange[1] / 60)}:{(lengthRange[1] % 60).toString().padStart(2, '0')}
                         </Label>
                         <Slider
                           value={lengthRange}
@@ -264,7 +266,7 @@ const Marketplace = () => {
                       {/* BPM */}
                       <div className="mb-4">
                         <Label className="text-sm font-semibold mb-3 block">
-                          BPM: {bpmRange[0]} - {bpmRange[1]}
+                          {t('audio.bpm')}: {bpmRange[0]} - {bpmRange[1]}
                         </Label>
                         <Slider
                           value={bpmRange}
@@ -288,7 +290,7 @@ const Marketplace = () => {
                           setBpmRange([60, 180]);
                         }}
                       >
-                        Réinitialiser les filtres
+                        {t('audio.reset')}
                       </Button>
                     </div>
                   )}
