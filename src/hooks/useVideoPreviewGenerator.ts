@@ -72,9 +72,17 @@ export function useVideoPreviewGenerator() {
       watermarkLogo.src = watermarkUrl;
     });
 
-    // Calculate watermark size (20% of video width)
-    const watermarkWidth = width * 0.2;
-    const watermarkHeight = (watermarkLogo.height / watermarkLogo.width) * watermarkWidth;
+    // Calculate watermark size matching VideoWatermark 'normal' size
+    // 20% width with max 40% constraints
+    let watermarkWidth = Math.min(width * 0.2, width * 0.4);
+    let watermarkHeight = (watermarkLogo.height / watermarkLogo.width) * watermarkWidth;
+    
+    // Ensure height doesn't exceed 40% of canvas height
+    if (watermarkHeight > height * 0.4) {
+      watermarkHeight = height * 0.4;
+      watermarkWidth = (watermarkLogo.width / watermarkLogo.height) * watermarkHeight;
+    }
+    
     const watermarkX = (width - watermarkWidth) / 2;
     const watermarkY = (height - watermarkHeight) / 2;
 
@@ -109,9 +117,16 @@ export function useVideoPreviewGenerator() {
         // Draw video frame
         ctx.drawImage(video, 0, 0, width, height);
         
-        // Draw watermark if loaded
+        // Draw watermark if loaded (matching VideoWatermark 'normal' style)
         if (watermarkLogo.complete && watermarkLogo.naturalWidth > 0) {
           ctx.save();
+          
+          // Add drop shadow effect (matching filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)))
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 2;
+          
           ctx.globalAlpha = 0.8; // 80% opacity
           ctx.drawImage(watermarkLogo, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
           ctx.restore();
