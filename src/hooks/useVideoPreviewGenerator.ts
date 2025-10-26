@@ -72,14 +72,14 @@ export function useVideoPreviewGenerator() {
       watermarkLogo.src = watermarkUrl;
     });
 
-    // Calculate watermark size - 5x larger than VideoWatermark 'normal' size
-    // 100% width (20% * 5) with max 200% constraints (40% * 5)
-    let watermarkWidth = Math.min(width * 1.0, width * 2.0);
+    // Calculate watermark size - 2.5x larger than VideoWatermark 'normal' size
+    // 50% width (20% * 2.5) with max 100% constraints (40% * 2.5)
+    let watermarkWidth = Math.min(width * 0.5, width * 1.0);
     let watermarkHeight = (watermarkLogo.height / watermarkLogo.width) * watermarkWidth;
     
-    // Ensure height doesn't exceed 200% of canvas height (40% * 5)
-    if (watermarkHeight > height * 2.0) {
-      watermarkHeight = height * 2.0;
+    // Ensure height doesn't exceed 100% of canvas height (40% * 2.5)
+    if (watermarkHeight > height * 1.0) {
+      watermarkHeight = height * 1.0;
       watermarkWidth = (watermarkLogo.width / watermarkLogo.height) * watermarkHeight;
     }
     
