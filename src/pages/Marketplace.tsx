@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Grid, List, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
 
 const Marketplace = () => {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([
@@ -142,38 +141,17 @@ const Marketplace = () => {
               <Badge variant="secondary">Tous</Badge>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Select defaultValue="popular">
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="popular">Populaires</SelectItem>
-                  <SelectItem value="recent">Récents</SelectItem>
-                  <SelectItem value="price-low">Prix croissant</SelectItem>
-                  <SelectItem value="price-high">Prix décroissant</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex border rounded-lg p-1">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                  className="h-8 w-8 p-0"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  className="h-8 w-8 p-0"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <Select defaultValue="popular">
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="popular">Populaires</SelectItem>
+                <SelectItem value="recent">Récents</SelectItem>
+                <SelectItem value="price-low">Prix croissant</SelectItem>
+                <SelectItem value="price-high">Prix décroissant</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -192,11 +170,7 @@ const Marketplace = () => {
           </div>
         ) : (
           <div 
-            className={`grid ${
-              viewMode === "grid" 
-                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6" 
-                : "grid-cols-1 max-w-4xl mx-auto"
-            }`}
+            className="grid grid-cols-1 max-w-4xl mx-auto"
             style={{ gap: 'var(--grid-gap)' }}
           >
             {filteredContent.map((content) => (
