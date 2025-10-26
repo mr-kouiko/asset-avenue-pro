@@ -35,7 +35,6 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
 import TestAccounts from "./pages/TestAccounts";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminHashBackfill from "./pages/AdminHashBackfill";
 import { CreateTestAccounts } from "./pages/CreateTestAccounts";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
@@ -164,13 +163,6 @@ const App = () => (
                   <Route path="/create-test-accounts" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <CreateTestAccounts />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Hash Backfill - Admin only */}
-                  <Route path="/admin/hash-backfill" element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                      <AdminHashBackfill />
                     </ProtectedRoute>
                   } />
                   
