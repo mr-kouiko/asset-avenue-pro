@@ -57,14 +57,17 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
       container: waveformRef.current,
       waveColor: 'hsl(var(--stock-blue) / 0.3)',
       progressColor: 'hsl(var(--stock-blue))',
-      cursorColor: 'transparent',
-      barWidth: 2,
-      barGap: 1,
-      barRadius: 2,
+      cursorColor: 'hsl(var(--stock-blue))',
+      cursorWidth: 2,
+      barWidth: 3,
+      barGap: 2,
+      barRadius: 3,
       height: 60,
       normalize: true,
       backend: 'WebAudio',
       interact: true,
+      hideScrollbar: true,
+      fillParent: true,
     });
 
     wavesurfer.load(audioUrl);
@@ -80,12 +83,16 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
       pause();
     });
 
+    wavesurfer.on('audioprocess', () => {
+      // Force re-render during playback to ensure smooth animation
+    });
+
     wavesurferRef.current = wavesurfer;
 
     return () => {
       wavesurfer.destroy();
     };
-  }, [audioUrl]);
+  }, [audioUrl, pause]);
 
   // Sync playback with global player state
   useEffect(() => {
