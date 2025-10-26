@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
+import { computeFileHash } from "@/utils/fileHash";
+import { useUploadedFiles } from "@/hooks/useUploadedFiles";
 
 interface UploadFile {
   id: string;
@@ -43,6 +45,7 @@ export const SimpleFileUpload = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
+  const { checkDuplicate } = useUploadedFiles();
 
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
@@ -167,6 +170,24 @@ export const SimpleFileUpload = ({
     const startTime = Date.now();
     
     try {
+      // Compute file hash for duplicate detection
+      console.log('🔍 Computing file hash for:', uploadFile.file.name);
+      const fileHash = await computeFileHash(uploadFile.file);
+      console.log('✅ File hash computed:', fileHash);
+
+      // Check for duplicates
+      const isDuplicate = await checkDuplicate(fileHash);
+      if (isDuplicate) {
+        setFiles(prev => prev.map(f => 
+          f.id === uploadFile.id ? { 
+            ...f, 
+            status: 'error', 
+            error: 'Ce fichier existe déjà dans la marketplace' 
+          } : f
+        ));
+        return;
+      }
+
       // Update status to uploading
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
@@ -223,7 +244,7 @@ export const SimpleFileUpload = ({
         previewUrl: processedFile.previewUrl
       };
 
-      // Save to database
+      // Save to database with file hash
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -236,9 +257,10 @@ export const SimpleFileUpload = ({
             preview_url: uploadedFileData.previewUrl,
             thumbnail_url: uploadedFileData.thumbnailUrl,
             is_watermarked: uploadedFileData.isWatermarked || false,
+            file_hash: fileHash,
             status: 'draft'
           });
-          console.log('✅ File saved to database:', uploadedFileData.name);
+          console.log('✅ File saved to database with hash:', uploadedFileData.name, fileHash);
         }
       } catch (dbError) {
         console.error('❌ Error saving file to database:', dbError);

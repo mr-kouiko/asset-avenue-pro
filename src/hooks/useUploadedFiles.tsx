@@ -13,6 +13,7 @@ export interface UploadedFile {
   thumbnail_url?: string;
   is_watermarked?: boolean;
   status: 'draft' | 'validated';
+  file_hash?: string;
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +68,29 @@ export const useUploadedFiles = () => {
       toast.error('Erreur lors du chargement des brouillons');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check if file hash already exists
+  const checkDuplicate = async (fileHash: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .rpc('check_file_duplicate', { hash_value: fileHash });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const duplicate = data[0];
+        if (duplicate.exists_in_uploaded || duplicate.exists_in_content) {
+          toast.error(`Ce fichier existe déjà : ${duplicate.duplicate_file_name || 'fichier existant'}`);
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking duplicate:', error);
+      return false; // Allow upload if check fails
     }
   };
 
@@ -170,6 +194,7 @@ export const useUploadedFiles = () => {
     saveFile,
     updateFileStatus,
     deleteFile,
-    deleteFiles
+    deleteFiles,
+    checkDuplicate
   };
 };
