@@ -51,7 +51,16 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   const playing = isPlaying(id);
 
   useEffect(() => {
-    if (!waveformRef.current || !audioUrl) return;
+    if (!waveformRef.current || !audioUrl) {
+      console.warn('⚠️ AudioContentCard: Missing waveform ref or audioUrl', { 
+        hasRef: !!waveformRef.current, 
+        audioUrl,
+        title 
+      });
+      return;
+    }
+
+    console.log('🎵 AudioContentCard: Initializing WaveSurfer', { title, audioUrl });
 
     // Initialize WaveSurfer
     const wavesurfer = WaveSurfer.create({
@@ -74,10 +83,15 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     wavesurfer.load(audioUrl);
 
     wavesurfer.on('ready', () => {
+      console.log('✅ WaveSurfer ready for:', title);
       const duration = wavesurfer.getDuration();
       const minutes = Math.floor(duration / 60);
       const seconds = Math.floor(duration % 60);
       setAudioDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+    });
+
+    wavesurfer.on('error', (error) => {
+      console.error('❌ WaveSurfer error for:', title, error);
     });
 
     wavesurfer.on('finish', () => {
@@ -111,6 +125,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('🎵 Play/Pause clicked', { playing, id, title, hasWavesurfer: !!wavesurferRef.current });
     if (playing) {
       pause();
     } else {

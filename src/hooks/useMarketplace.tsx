@@ -77,10 +77,23 @@ export const useMarketplace = () => {
 
           // Determine media (video/audio) URL
           let mediaUrl: string | undefined;
-          if (originalFile?.file_path && (item.content_type === 'video' || item.content_type === 'audio')) {
-            mediaUrl = originalFile.file_path.startsWith('http')
-              ? originalFile.file_path
-              : buildPublicUrl('uploads', originalFile.file_path);
+          if (item.content_type === 'video') {
+            // For video, use the PREVIEW (watermarked) version
+            const previewFile = files?.find(f => f.is_preview === true);
+            if (previewFile?.preview_path) {
+              mediaUrl = previewFile.preview_path.startsWith('http')
+                ? previewFile.preview_path
+                : buildPublicUrl('previews', previewFile.preview_path);
+            }
+          } else if (item.content_type === 'audio') {
+            // For audio: Use original file path directly
+            // TODO: Implement audio watermarking system (periodic beep or voice overlay)
+            if (originalFile?.file_path) {
+              mediaUrl = originalFile.file_path.startsWith('http')
+                ? originalFile.file_path
+                : buildPublicUrl('uploads', originalFile.file_path);
+              console.log('🎵 Audio URL:', mediaUrl);
+            }
           }
 
           // For PDFs/ebooks, use thumbnail as cover if available
