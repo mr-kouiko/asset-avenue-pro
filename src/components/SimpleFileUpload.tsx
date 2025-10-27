@@ -7,8 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
-import { computeFileHash } from "@/utils/fileHash";
-import { useUploadedFiles } from "@/hooks/useUploadedFiles";
 
 interface UploadFile {
   id: string;
@@ -45,7 +43,6 @@ export const SimpleFileUpload = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
-  const { checkDuplicate } = useUploadedFiles();
 
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
@@ -170,24 +167,6 @@ export const SimpleFileUpload = ({
     const startTime = Date.now();
     
     try {
-      // Compute file hash for duplicate detection
-      console.log('🔍 Computing file hash for:', uploadFile.file.name);
-      const fileHash = await computeFileHash(uploadFile.file);
-      console.log('✅ File hash computed:', fileHash);
-
-      // Check for duplicates
-      const isDuplicate = await checkDuplicate(fileHash);
-      if (isDuplicate) {
-        setFiles(prev => prev.map(f => 
-          f.id === uploadFile.id ? { 
-            ...f, 
-            status: 'error', 
-            error: 'Ce fichier existe déjà dans la marketplace' 
-          } : f
-        ));
-        return;
-      }
-
       // Update status to uploading
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
@@ -227,49 +206,23 @@ export const SimpleFileUpload = ({
         } : f
       ));
 
-      // Save to database immediately
-      const detectedMimeType = detectMimeType(uploadFile.file);
-      const isVideo = detectedMimeType.startsWith('video/');
-      const isPDF = detectedMimeType === 'application/pdf';
-      
-      const uploadedFileData = {
-        id: uploadFile.id,
-        url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
-        name: uploadFile.file.name,
-        type: detectedMimeType,
-        size: uploadFile.file.size,
-        isWatermarked: !!processedFile.watermarkedUrl,
-        // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
-        thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
-        previewUrl: processedFile.previewUrl
-      };
-
-      // Save to database with file hash
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('uploaded_files').insert({
-            user_id: user.id,
-            file_name: uploadedFileData.name,
-            file_url: uploadedFileData.url,
-            file_type: uploadedFileData.type,
-            file_size: uploadedFileData.size,
-            preview_url: uploadedFileData.previewUrl,
-            thumbnail_url: uploadedFileData.thumbnailUrl,
-            is_watermarked: uploadedFileData.isWatermarked || false,
-            file_hash: fileHash,
-            status: 'draft'
-          });
-          console.log('✅ File saved to database with hash:', uploadedFileData.name, fileHash);
-        }
-      } catch (dbError) {
-        console.error('❌ Error saving file to database:', dbError);
-        // Continue even if DB save fails
-      }
-
-      // Notify parent component
+      // Notify parent component with correct file type and separate thumbnail URL
       if (onFilesUploaded) {
-        onFilesUploaded([uploadedFileData]);
+        const detectedMimeType = detectMimeType(uploadFile.file);
+        const isVideo = detectedMimeType.startsWith('video/');
+        const isPDF = detectedMimeType === 'application/pdf';
+        
+        onFilesUploaded([{
+          id: uploadFile.id,
+          url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
+          name: uploadFile.file.name,
+          type: detectedMimeType,
+          size: uploadFile.file.size,
+          isWatermarked: !!processedFile.watermarkedUrl,
+          // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
+          thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
+          previewUrl: processedFile.previewUrl
+        }]);
       }
 
     } catch (error) {

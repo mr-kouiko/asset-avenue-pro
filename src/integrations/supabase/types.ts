@@ -110,7 +110,6 @@ export type Database = {
         Row: {
           created_at: string
           file_format: string
-          file_hash: string | null
           file_name: string
           file_path: string
           file_size: number
@@ -126,7 +125,6 @@ export type Database = {
         Insert: {
           created_at?: string
           file_format: string
-          file_hash?: string | null
           file_name: string
           file_path: string
           file_size: number
@@ -142,7 +140,6 @@ export type Database = {
         Update: {
           created_at?: string
           file_format?: string
-          file_hash?: string | null
           file_name?: string
           file_path?: string
           file_size?: number
@@ -749,54 +746,6 @@ export type Database = {
           },
         ]
       }
-      uploaded_files: {
-        Row: {
-          created_at: string
-          file_hash: string | null
-          file_name: string
-          file_size: number
-          file_type: string
-          file_url: string
-          id: string
-          is_watermarked: boolean | null
-          preview_url: string | null
-          status: string
-          thumbnail_url: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          file_hash?: string | null
-          file_name: string
-          file_size: number
-          file_type: string
-          file_url: string
-          id?: string
-          is_watermarked?: boolean | null
-          preview_url?: string | null
-          status?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          file_hash?: string | null
-          file_name?: string
-          file_size?: number
-          file_type?: string
-          file_url?: string
-          id?: string
-          is_watermarked?: boolean | null
-          preview_url?: string | null
-          status?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -923,15 +872,6 @@ export type Database = {
         Returns: boolean
       }
       check_admin_access_patterns: { Args: never; Returns: undefined }
-      check_file_duplicate: {
-        Args: { hash_value: string }
-        Returns: {
-          duplicate_file_name: string
-          duplicate_user_id: string
-          exists_in_content: boolean
-          exists_in_uploaded: boolean
-        }[]
-      }
       create_secure_download_token: {
         Args: { content_file_id_param: string; user_id_param?: string }
         Returns: {
