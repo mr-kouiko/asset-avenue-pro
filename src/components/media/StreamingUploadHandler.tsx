@@ -29,6 +29,7 @@ export class StreamingUploadHandler {
   private static readonly CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks for optimal throughput
   private static readonly MAX_RETRIES = 5; // More retries for reliability
   private static readonly MAX_PARALLEL = 6; // Increased parallel uploads
+  private static networkSpeed: 'slow' | 'medium' | 'fast' = 'medium'; // Track network speed
 
   /**
    * Detect MIME type from file extension with WebP priority
@@ -374,6 +375,11 @@ export class StreamingUploadHandler {
     console.log(`  🎫 Upload ID: ${uploadId}`);
 
     try {
+      onProgress?.(2);
+      
+      // Measure network speed first for optimal chunk sizing
+      await this.measureNetworkSpeed();
+      
       onProgress?.(5);
 
       // Small files: direct upload (increased threshold for better performance)
@@ -572,22 +578,77 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Get optimal chunk size based on file type and size
+   * Measure network speed with a test chunk
+   */
+  private static async measureNetworkSpeed(): Promise<void> {
+    try {
+      const testSize = 512 * 1024; // 512KB test
+      const testData = new Uint8Array(testSize);
+      const testPath = `network-test/${Date.now()}.bin`;
+      
+      const start = performance.now();
+      const { data: signed } = await supabase.storage
+        .from('uploads')
+        .createSignedUploadUrl(testPath, { upsert: true });
+      
+      if (signed?.token) {
+        await supabase.storage
+          .from('uploads')
+          .uploadToSignedUrl(testPath, signed.token, testData, { upsert: true });
+        
+        const duration = performance.now() - start;
+        const speedMbps = (testSize * 8) / (duration * 1000); // Mbps
+        
+        // Classify network speed
+        if (speedMbps > 10) {
+          this.networkSpeed = 'fast';
+          console.log(`🚀 [Network] Fast connection detected: ${speedMbps.toFixed(2)} Mbps`);
+        } else if (speedMbps > 2) {
+          this.networkSpeed = 'medium';
+          console.log(`📶 [Network] Medium connection detected: ${speedMbps.toFixed(2)} Mbps`);
+        } else {
+          this.networkSpeed = 'slow';
+          console.log(`🐌 [Network] Slow connection detected: ${speedMbps.toFixed(2)} Mbps`);
+        }
+        
+        // Cleanup test file
+        await supabase.storage.from('uploads').remove([testPath]);
+      }
+    } catch (err) {
+      console.warn('⚠️ [Network] Speed test failed, using default settings', err);
+      this.networkSpeed = 'medium';
+    }
+  }
+
+  /**
+   * Get optimal chunk size based on file type, size, and network speed
    */
   public static getOptimalChunkSize(file: File): number {
-    const mimeType = this.detectMimeType(file);
     const fileSizeMB = file.size / (1024 * 1024);
     
-    // Larger files benefit from bigger chunks (fewer HTTP requests)
+    // Adjust based on network speed
+    const speedMultiplier = {
+      slow: 0.5,    // 50% smaller chunks on slow networks
+      medium: 1.0,  // Default chunk sizes
+      fast: 1.5     // 50% larger chunks on fast networks
+    }[this.networkSpeed];
+    
+    // Base chunk size calculation
+    let baseSize: number;
     if (fileSizeMB > 500) {
-      return 16 * 1024 * 1024; // 16MB for files > 500MB
+      baseSize = 16 * 1024 * 1024; // 16MB for files > 500MB
+    } else if (fileSizeMB > 100) {
+      baseSize = 12 * 1024 * 1024; // 12MB for files > 100MB
+    } else {
+      baseSize = this.CHUNK_SIZE; // 8MB default
     }
     
-    if (fileSizeMB > 100) {
-      return 12 * 1024 * 1024; // 12MB for files > 100MB
-    }
+    // Apply network speed adjustment
+    const optimizedSize = Math.floor(baseSize * speedMultiplier);
+    const finalSize = Math.max(2 * 1024 * 1024, Math.min(optimizedSize, 20 * 1024 * 1024)); // Between 2-20MB
     
-    // Default: Use 8MB chunks for optimal balance
-    return this.CHUNK_SIZE;
+    console.log(`📊 [Chunk Size] File: ${fileSizeMB.toFixed(2)}MB, Network: ${this.networkSpeed}, Size: ${(finalSize / (1024 * 1024)).toFixed(2)}MB`);
+    
+    return finalSize;
   }
 }
