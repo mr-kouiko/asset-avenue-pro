@@ -26,8 +26,9 @@ interface StreamingUploadResult {
  * Handles chunked uploads with proper MIME type detection and streaming support
  */
 export class StreamingUploadHandler {
-  private static readonly CHUNK_SIZE = 1024 * 1024; // 1MB chunks
-  private static readonly MAX_RETRIES = 3;
+  private static readonly CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks for optimal throughput
+  private static readonly MAX_RETRIES = 5; // More retries for reliability
+  private static readonly MAX_PARALLEL = 6; // Increased parallel uploads
 
   /**
    * Detect MIME type from file extension with WebP priority
@@ -176,8 +177,11 @@ export class StreamingUploadHandler {
       console.error(`❌ [Chunk ${chunkIndex + 1}/${totalChunks}] Upload failed:`, error);
       
       if (retryCount < this.MAX_RETRIES) {
-        const waitTime = 1000 * (retryCount + 1);
-        console.log(`🔄 [Chunk ${chunkIndex + 1}] Retrying in ${waitTime}ms (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+        // Exponential backoff with jitter
+        const baseWait = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s, 8s, 16s
+        const jitter = Math.random() * 1000; // Add up to 1s jitter
+        const waitTime = Math.min(baseWait + jitter, 30000); // Cap at 30s
+        console.log(`🔄 [Chunk ${chunkIndex + 1}] Retrying in ${Math.round(waitTime)}ms (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         return this.uploadChunkViaSigned(chunk, chunkIndex, totalChunks, chunkPath, mimeType, retryCount + 1);
       }
@@ -240,8 +244,11 @@ export class StreamingUploadHandler {
     } catch (err) {
       console.warn(`❌ [Edge Chunk ${chunkIndex + 1}]`, err);
       if (retryCount < this.MAX_RETRIES) {
-        const waitTime = 1000 * Math.pow(2, retryCount);
-        console.log(`🔄 [Edge Chunk ${chunkIndex + 1}] Retrying in ${waitTime}ms (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+        // Exponential backoff with jitter
+        const baseWait = Math.pow(2, retryCount) * 1000;
+        const jitter = Math.random() * 1000;
+        const waitTime = Math.min(baseWait + jitter, 30000);
+        console.log(`🔄 [Edge Chunk ${chunkIndex + 1}] Retrying in ${Math.round(waitTime)}ms (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
         await new Promise((r) => setTimeout(r, waitTime));
         return this.uploadChunkViaEdge(chunk, chunkIndex, totalChunks, uploadId, fileName, mimeType, retryCount + 1);
       }
@@ -259,12 +266,11 @@ export class StreamingUploadHandler {
     mimeType: string,
     onProgress?: (progress: number) => void
   ): Promise<boolean> {
-    const MAX_PARALLEL = 3;
     const totalChunks = chunks.length;
     let completed = 0;
     let failed = 0;
 
-    console.log(`🚀 [Edge Multipart] Starting: ${totalChunks} chunks, max ${MAX_PARALLEL} concurrent`);
+    console.log(`🚀 [Edge Multipart] Starting: ${totalChunks} chunks, max ${this.MAX_PARALLEL} concurrent`);
 
     const results: boolean[] = new Array(totalChunks).fill(false);
     let nextIndex = 0;
@@ -287,7 +293,7 @@ export class StreamingUploadHandler {
       }
     };
 
-    const workers = Array.from({ length: Math.min(MAX_PARALLEL, totalChunks) }, (_, idx) => worker(idx + 1));
+    const workers = Array.from({ length: Math.min(this.MAX_PARALLEL, totalChunks) }, (_, idx) => worker(idx + 1));
     await Promise.all(workers);
 
     if (failed > 0) {
@@ -309,12 +315,11 @@ export class StreamingUploadHandler {
     mimeType: string,
     onProgress?: (progress: number) => void
   ): Promise<boolean> {
-    const MAX_PARALLEL = 3;
     const totalChunks = chunks.length;
     let completed = 0;
     let failed = 0;
 
-    console.log(`🚀 [Multipart] Starting parallel upload: ${totalChunks} chunks, max ${MAX_PARALLEL} concurrent`);
+    console.log(`🚀 [Multipart] Starting parallel upload: ${totalChunks} chunks, max ${this.MAX_PARALLEL} concurrent`);
 
     const results: boolean[] = new Array(totalChunks).fill(false);
     let nextIndex = 0;
@@ -339,7 +344,7 @@ export class StreamingUploadHandler {
       }
     };
 
-    const workers = Array.from({ length: Math.min(MAX_PARALLEL, totalChunks) }, (_, idx) => worker(idx + 1));
+    const workers = Array.from({ length: Math.min(this.MAX_PARALLEL, totalChunks) }, (_, idx) => worker(idx + 1));
     await Promise.all(workers);
 
     if (failed > 0) {
@@ -371,15 +376,15 @@ export class StreamingUploadHandler {
     try {
       onProgress?.(5);
 
-      // Small files: direct upload
-      const MULTIPART_THRESHOLD = 10 * 1024 * 1024; // 10MB
+      // Small files: direct upload (increased threshold for better performance)
+      const MULTIPART_THRESHOLD = 20 * 1024 * 1024; // 20MB
       if (file.size < MULTIPART_THRESHOLD) {
-        console.log(`📤 [Direct Upload] File < 10MB, using single PUT`);
+        console.log(`📤 [Direct Upload] File < 20MB, using optimized single PUT`);
         return await this.uploadFileDirect(file, finalPath, mimeType, onProgress);
       }
 
       // Large files: Use Edge Function based chunked upload (more reliable)
-      console.log(`📦 [Edge Multipart] File > 10MB, using Edge Function chunked upload`);
+      console.log(`📦 [Edge Multipart] File > 20MB, using optimized Edge Function chunked upload`);
       onProgress?.(8);
 
       // 1) Init upload session
@@ -397,13 +402,13 @@ export class StreamingUploadHandler {
         throw new Error('Failed to initialize upload session');
       }
 
-      // 2) Create smaller chunks for Edge payload limits (4MB each)
-      const EDGE_CHUNK_SIZE = 4 * 1024 * 1024; // 4MB to keep base64 payload < ~6MB
+      // 2) Create optimized chunks for Edge payload (6MB each for better throughput)
+      const EDGE_CHUNK_SIZE = 6 * 1024 * 1024; // 6MB chunks, base64 encodes to ~8MB
       const chunks = this.createChunks(file, EDGE_CHUNK_SIZE);
       onProgress?.(10);
 
-      // 3) Upload chunks in parallel (max 3)
-      console.log(`🚀 [Edge Upload Start] Uploading ${chunks.length} chunks with max 3 parallel streams`);
+      // 3) Upload chunks in parallel (max ${this.MAX_PARALLEL})
+      console.log(`🚀 [Edge Upload Start] Uploading ${chunks.length} chunks with max ${this.MAX_PARALLEL} parallel streams`);
       const edgeChunksOk = await this.uploadChunksParallelEdge(
         chunks,
         uploadId,
@@ -573,12 +578,16 @@ export class StreamingUploadHandler {
     const mimeType = this.detectMimeType(file);
     const fileSizeMB = file.size / (1024 * 1024);
     
-    // Use 5MB chunks for videos (good balance between parallelism and efficiency)
-    if (mimeType.startsWith('video/')) {
-      return 8 * 1024 * 1024; // 8MB chunks for videos (fewer requests, faster)
+    // Larger files benefit from bigger chunks (fewer HTTP requests)
+    if (fileSizeMB > 500) {
+      return 16 * 1024 * 1024; // 16MB for files > 500MB
     }
     
-    // Standard 1MB chunks for other files
+    if (fileSizeMB > 100) {
+      return 12 * 1024 * 1024; // 12MB for files > 100MB
+    }
+    
+    // Default: Use 8MB chunks for optimal balance
     return this.CHUNK_SIZE;
   }
 }

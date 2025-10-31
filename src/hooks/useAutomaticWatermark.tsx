@@ -210,7 +210,8 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
         throw new Error('User not authenticated');
       }
 
-      const CONCURRENCY = 3;
+      // Increased concurrency for maximum performance
+      const CONCURRENCY = 6;
 
       const processSingle = async (file: File) => {
         const fileId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;

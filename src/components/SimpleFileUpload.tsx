@@ -266,11 +266,11 @@ export const SimpleFileUpload = ({
     setFiles(prev => [...prev, ...newFiles]);
   }, [files.length, maxFiles]);
 
-  const handleUploadAll = () => {
+  const handleUploadAll = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending');
-    pendingFiles.forEach(file => {
-      uploadFile(file);
-    });
+    // Upload all files in parallel for maximum performance
+    const uploadPromises = pendingFiles.map(file => uploadFile(file));
+    await Promise.all(uploadPromises);
   };
 
   const handleRemoveFile = (fileId: string) => {
