@@ -115,39 +115,20 @@ function validateMimeType(fileName: string): boolean {
 // Simplified authentication check for supabase.functions.invoke calls
 function checkAuth(req: Request): boolean {
   const authHeader = req.headers.get("authorization");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const uploadApiKey = Deno.env.get("UPLOAD_API_KEY") || "temp-upload-key-2024";
   
-  console.log("Auth check - Supabase anon key present:", !!supabaseAnonKey);
-  console.log("Auth check - Upload API key:", uploadApiKey);
-  console.log("Auth check - Received header:", authHeader);
-  
-  // Accept either the upload API key or Supabase anon key
+  // For supabase.functions.invoke, auth is handled by Supabase
+  // We just need to verify a Bearer token is present
   if (!authHeader) {
-    console.log("No authorization header provided");
+    console.log("❌ No authorization header provided");
     return false;
   }
   
-  // Check for upload API key format
-  if (authHeader === `Bearer ${uploadApiKey}`) {
-    console.log("✅ Upload API key authentication successful");
-    return true;
-  }
-  
-  // Check for Supabase anon key format
-  if (supabaseAnonKey && authHeader === `Bearer ${supabaseAnonKey}`) {
-    console.log("✅ Supabase anon key authentication successful");
-    return true;
-  }
-  
-  // For supabase.functions.invoke, the auth might be handled differently
-  // Let's be more permissive for now
   if (authHeader.startsWith("Bearer ")) {
-    console.log("✅ Bearer token found, allowing access");
+    console.log("✅ Valid Bearer token present");
     return true;
   }
   
-  console.log("❌ Authentication failed");
+  console.log("❌ Invalid authorization format");
   return false;
 }
 
@@ -447,9 +428,14 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json", ...corsHeaders }
     });
   } catch (err) {
-    console.error("Upload error:", err.message);
+    console.error("❌ Upload error:", err.message);
+    console.error("❌ Error stack:", err.stack);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ 
+        error: err.message,
+        details: err.stack,
+        timestamp: new Date().toISOString()
+      }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

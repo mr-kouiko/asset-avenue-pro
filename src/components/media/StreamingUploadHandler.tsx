@@ -237,7 +237,16 @@ export class StreamingUploadHandler {
       });
 
       if (error || !(data && (data.success === true || data.ok === true))) {
-        throw new Error(error?.message || data?.error || 'Edge chunk upload failed');
+        const errorMsg = error?.message || data?.error || 'Edge chunk upload failed';
+        console.error(`❌ [Edge Chunk ${chunkIndex + 1}] Error details:`, {
+          error,
+          data,
+          uploadId,
+          fileName,
+          chunkIndex,
+          totalChunks
+        });
+        throw new Error(errorMsg);
       }
 
       console.log(`✅ [Edge Chunk ${chunkIndex + 1}/${totalChunks}] Uploaded`);
