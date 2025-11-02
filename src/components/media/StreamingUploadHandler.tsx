@@ -651,6 +651,9 @@ export class StreamingUploadHandler {
     console.log(`☁️ [R2 Chunked] Starting chunked upload: ${finalPath} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       onProgress?.(5);
       
       // Create chunks (10MB each for R2)
@@ -661,37 +664,34 @@ export class StreamingUploadHandler {
       console.log(`📦 Created ${totalChunks} chunks of ${(R2_CHUNK_SIZE / 1024 / 1024)}MB each`);
       onProgress?.(10);
       
-      // Upload chunks sequentially to avoid overwhelming the edge function
+      // Upload chunks directly to Supabase Storage (bypass edge function)
       let uploadedChunks = 0;
       for (let i = 0; i < totalChunks; i++) {
         const chunk = chunks[i];
-        const chunkBase64 = await this.blobToBase64(chunk);
+        const chunkBuffer = await chunk.arrayBuffer();
+        const chunkBytes = new Uint8Array(chunkBuffer);
         
-        console.log(`📤 [R2 Chunk ${i + 1}/${totalChunks}] Uploading ${(chunk.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`📤 [R2 Chunk ${i + 1}/${totalChunks}] Uploading ${(chunk.size / 1024 / 1024).toFixed(2)}MB directly to storage`);
         
-        const { data, error } = await supabase.functions.invoke('r2-upload', {
-          body: {
-            action: 'upload-chunk',
-            fileName: finalPath,
-            chunkIndex: i,
-            totalChunks,
-            chunkData: chunkBase64,
-            fileType: mimeType,
-            fileSize: file.size
-          }
-        });
+        const chunkPath = `temp-chunks/${user.id}/${finalPath}/chunk_${i}`;
+        const { error: uploadError } = await supabase.storage
+          .from('uploads')
+          .upload(chunkPath, chunkBytes, {
+            contentType: 'application/octet-stream',
+            upsert: true
+          });
         
-        if (error || !data?.success) {
-          throw new Error(`Chunk ${i + 1} upload failed: ${data?.error || error?.message}`);
+        if (uploadError) {
+          throw new Error(`Chunk ${i + 1} upload failed: ${uploadError.message}`);
         }
         
         uploadedChunks++;
         const progress = 10 + Math.floor((uploadedChunks / totalChunks) * 85);
         onProgress?.(progress);
-        console.log(`✅ [R2 Chunk ${i + 1}/${totalChunks}] Uploaded successfully`);
+        console.log(`✅ [R2 Chunk ${i + 1}/${totalChunks}] Uploaded successfully to temp storage`);
       }
       
-      // Finalize upload
+      // Finalize upload via edge function
       console.log(`🧩 [R2] Finalizing upload...`);
       onProgress?.(95);
       

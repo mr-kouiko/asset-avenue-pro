@@ -191,43 +191,9 @@ Deno.serve(async (req) => {
     }
     
     const body = await req.json();
-    const { action, fileName, fileType, fileSize, chunkData, chunkIndex, totalChunks } = body;
+    const { action, fileName, fileType, fileSize, totalChunks } = body;
     
-    console.log(`📤 [R2] Action: ${action}, File: ${fileName}, Chunk: ${chunkIndex + 1}/${totalChunks}`);
-    
-    if (action === 'upload-chunk') {
-      // Store chunk temporarily in Supabase Storage
-      if (!chunkData) {
-        throw new Error('Missing chunk data');
-      }
-      
-      const binaryString = atob(chunkData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      // Store in uploads bucket with temp-chunks prefix
-      const chunkPath = `temp-chunks/${user.id}/${fileName}/chunk_${chunkIndex}`;
-      const { error: uploadError } = await supabase.storage
-        .from('uploads')
-        .upload(chunkPath, bytes, {
-          contentType: 'application/octet-stream',
-          upsert: true
-        });
-      
-      if (uploadError) {
-        console.error(`❌ Failed to store chunk ${chunkIndex}:`, uploadError);
-        throw uploadError;
-      }
-      
-      console.log(`✅ Stored chunk ${chunkIndex + 1}/${totalChunks} (${(bytes.length / 1024 / 1024).toFixed(2)}MB)`);
-      
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`📤 [R2] Action: ${action}, File: ${fileName}`);
     
     if (action === 'finalize-upload') {
       console.log(`🔄 Finalizing upload: ${fileName} (${totalChunks} chunks)`);
