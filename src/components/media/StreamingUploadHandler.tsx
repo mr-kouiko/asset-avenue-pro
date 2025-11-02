@@ -368,7 +368,7 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Upload file with intelligent routing (all files via Supabase Storage for now)
+   * Upload file with intelligent routing (Supabase < 100MB, R2 >= 100MB)
    */
   public static async uploadFile(
     file: File,
@@ -379,6 +379,7 @@ export class StreamingUploadHandler {
     const finalPath = desiredPath || file.name;
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const R2_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
     console.log(`🎯 [Upload] Starting for: ${file.name}`);
     console.log(`  📦 Size: ${fileSizeMB}MB | Type: ${mimeType}`);
@@ -387,9 +388,13 @@ export class StreamingUploadHandler {
     try {
       onProgress?.(2);
       
-      // NOTE: R2 routing temporarily disabled - using optimized Supabase Storage for all files
-      // TODO: Re-implement R2 routing with proper AWS SDK when needed
-      console.log(`📦 [Supabase Route] Using optimized Supabase Storage`);
+      // Route to R2 for files >= 100MB (chunked upload via edge function)
+      if (file.size >= R2_THRESHOLD) {
+        console.log(`☁️ [R2 Route] File >= 100MB (${fileSizeMB}MB), routing to Cloudflare R2`);
+        return await this.uploadToR2Chunked(file, finalPath, mimeType, onProgress);
+      }
+      
+      console.log(`📦 [Supabase Route] File < 100MB, using Supabase Storage`);
       
       // Measure network speed first for optimal chunk sizing
       await this.measureNetworkSpeed();
@@ -635,67 +640,89 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Upload to Cloudflare R2 via edge function
+   * Upload to Cloudflare R2 via chunked edge function (for files >= 100MB)
    */
-  private static async uploadToR2(
+  private static async uploadToR2Chunked(
     file: File,
     finalPath: string,
     mimeType: string,
     onProgress?: (progress: number) => void
   ): Promise<StreamingUploadResult> {
-    console.log(`☁️ [R2] Starting upload to Cloudflare R2: ${finalPath}`);
+    console.log(`☁️ [R2 Chunked] Starting chunked upload: ${finalPath} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     
     try {
+      onProgress?.(5);
+      
+      // Create chunks (10MB each for R2)
+      const R2_CHUNK_SIZE = 10 * 1024 * 1024;
+      const chunks = this.createChunks(file, R2_CHUNK_SIZE);
+      const totalChunks = chunks.length;
+      
+      console.log(`📦 Created ${totalChunks} chunks of ${(R2_CHUNK_SIZE / 1024 / 1024)}MB each`);
       onProgress?.(10);
       
-      // Convert file to base64 for edge function transport
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1] || '';
-          resolve(base64);
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      });
+      // Upload chunks sequentially to avoid overwhelming the edge function
+      let uploadedChunks = 0;
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = chunks[i];
+        const chunkBase64 = await this.blobToBase64(chunk);
+        
+        console.log(`📤 [R2 Chunk ${i + 1}/${totalChunks}] Uploading ${(chunk.size / 1024 / 1024).toFixed(2)}MB`);
+        
+        const { data, error } = await supabase.functions.invoke('r2-upload', {
+          body: {
+            action: 'upload-chunk',
+            fileName: finalPath,
+            chunkIndex: i,
+            totalChunks,
+            chunkData: chunkBase64,
+            fileType: mimeType,
+            fileSize: file.size
+          }
+        });
+        
+        if (error || !data?.success) {
+          throw new Error(`Chunk ${i + 1} upload failed: ${data?.error || error?.message}`);
+        }
+        
+        uploadedChunks++;
+        const progress = 10 + Math.floor((uploadedChunks / totalChunks) * 85);
+        onProgress?.(progress);
+        console.log(`✅ [R2 Chunk ${i + 1}/${totalChunks}] Uploaded successfully`);
+      }
       
-      onProgress?.(30);
-      const fileData = await base64Promise;
+      // Finalize upload
+      console.log(`🧩 [R2] Finalizing upload...`);
+      onProgress?.(95);
       
-      onProgress?.(40);
-      console.log(`📤 [R2] Sending ${(file.size / 1024 / 1024).toFixed(2)}MB to edge function`);
-      
-      // Upload via edge function
-      const { data, error } = await supabase.functions.invoke('r2-upload', {
+      const { data: finalData, error: finalError } = await supabase.functions.invoke('r2-upload', {
         body: {
-          action: 'upload-direct',
+          action: 'finalize-upload',
           fileName: finalPath,
           fileType: mimeType,
           fileSize: file.size,
-          fileData
+          totalChunks
         }
       });
       
-      if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'R2 upload failed');
+      if (finalError || !finalData?.success) {
+        throw new Error(`Finalization failed: ${finalData?.error || finalError?.message}`);
       }
       
       onProgress?.(100);
-      
-      console.log(`✅ [R2 Complete] ${file.name} uploaded successfully`);
+      console.log(`✅ [R2 Complete] ${file.name} uploaded to R2 successfully`);
       
       return {
         success: true,
-        fileUrl: data.publicUrl,
+        fileUrl: finalData.publicUrl,
         mimeType,
-        message: data.message || 'Fichier stocké avec succès dans R2 Cloudflare'
+        message: 'Fichier stocké avec succès dans R2 Cloudflare'
       };
     } catch (error) {
-      console.error(`💥 [R2 Failed] ${file.name}:`, error);
+      console.error(`💥 [R2 Chunked Failed] ${file.name}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'R2 upload failed'
+        error: error instanceof Error ? error.message : 'R2 chunked upload failed'
       };
     }
   }

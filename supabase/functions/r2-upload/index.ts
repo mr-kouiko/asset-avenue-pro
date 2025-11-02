@@ -164,6 +164,9 @@ async function saveFileMetadata(
   return data;
 }
 
+// Temporary storage for chunks
+const chunkStorage = new Map<string, Uint8Array[]>();
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -191,25 +194,57 @@ Deno.serve(async (req) => {
     }
     
     const body = await req.json();
-    const { action, fileName, fileType, fileSize, fileData } = body;
+    const { action, fileName, fileType, fileSize, chunkData, chunkIndex, totalChunks } = body;
     
-    console.log(`📤 [R2 Upload] Action: ${action}, File: ${fileName}, Size: ${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + 'MB' : 'unknown'}`);
+    console.log(`📤 [R2] Action: ${action}, File: ${fileName}`);
     
-    if (action === 'upload-direct') {
-      // Direct upload via edge function (for large files)
-      if (!fileData) {
-        throw new Error('Missing file data');
+    if (action === 'upload-chunk') {
+      // Store chunk temporarily
+      if (!chunkData) {
+        throw new Error('Missing chunk data');
       }
       
-      // Convert base64 to Uint8Array
-      const binaryString = atob(fileData);
+      const binaryString = atob(chunkData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
       
+      if (!chunkStorage.has(fileName)) {
+        chunkStorage.set(fileName, []);
+      }
+      
+      const chunks = chunkStorage.get(fileName)!;
+      chunks[chunkIndex] = bytes;
+      
+      console.log(`✅ Stored chunk ${chunkIndex + 1}/${totalChunks} (${(bytes.length / 1024 / 1024).toFixed(2)}MB)`);
+      
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (action === 'finalize-upload') {
+      // Combine all chunks and upload to R2
+      const chunks = chunkStorage.get(fileName);
+      if (!chunks || chunks.length !== totalChunks) {
+        throw new Error(`Missing chunks: expected ${totalChunks}, got ${chunks?.length || 0}`);
+      }
+      
+      // Combine chunks
+      const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const combined = new Uint8Array(totalSize);
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      console.log(`🧩 Combined ${chunks.length} chunks into ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
+      
       // Upload to R2
-      const publicUrl = await uploadToR2(bytes, fileName, fileType);
+      const publicUrl = await uploadToR2(combined, fileName, fileType);
       
       // Save metadata
       const metadata = await saveFileMetadata(
@@ -220,6 +255,9 @@ Deno.serve(async (req) => {
         'r2',
         publicUrl
       );
+      
+      // Clean up
+      chunkStorage.delete(fileName);
       
       return new Response(
         JSON.stringify({
@@ -232,35 +270,10 @@ Deno.serve(async (req) => {
       );
     }
     
-    if (action === 'save-metadata') {
-      // Save metadata only (when upload was done elsewhere)
-      const { publicUrl, storageLocation } = body;
-      
-      const metadata = await saveFileMetadata(
-        user.id,
-        fileName,
-        fileSize,
-        fileType,
-        storageLocation,
-        publicUrl
-      );
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          metadata,
-          message: storageLocation === 'r2' 
-            ? 'Fichier stocké avec succès dans R2 Cloudflare'
-            : 'Fichier stocké avec succès dans Supabase Storage'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
     throw new Error(`Unknown action: ${action}`);
     
   } catch (error) {
-    console.error('❌ R2 Upload error:', error);
+    console.error('❌ R2 error:', error);
     return new Response(
       JSON.stringify({ 
         success: false,
