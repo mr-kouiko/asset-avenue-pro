@@ -5,92 +5,82 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// AWS SDK v3 compatible S3 client for Cloudflare R2
-async function createR2Client() {
+// R2 configuration helper
+async function getR2Config() {
   const accountId = Deno.env.get('R2_ACCOUNT_ID');
   const accessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
   const secretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
+  const bucketName = Deno.env.get('R2_BUCKET_NAME') || 'visustock';
   
   if (!accountId || !accessKeyId || !secretAccessKey) {
-    throw new Error('Missing R2 credentials');
+    throw new Error('Missing R2 credentials in environment');
   }
   
   return {
     accountId,
     accessKeyId,
     secretAccessKey,
+    bucketName,
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`
   };
 }
 
-// Generate presigned URL for R2 upload
-async function generatePresignedUrl(
+// Upload file directly to R2
+async function uploadToR2(
+  fileData: Uint8Array,
   fileName: string,
-  fileType: string,
-  expiresIn: number = 3600
+  contentType: string
 ): Promise<string> {
-  const r2Config = await createR2Client();
-  const bucketName = Deno.env.get('R2_BUCKET_NAME') || 'visustock';
+  const config = await getR2Config();
+  const url = `${config.endpoint}/${config.bucketName}/${fileName}`;
   
-  // Create AWS signature v4 for presigned URL
-  const region = 'auto'; // R2 uses 'auto' region
-  const service = 's3';
-  const host = `${bucketName}.${r2Config.accountId}.r2.cloudflarestorage.com`;
-  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  console.log(`📤 Uploading to R2: ${fileName} (${(fileData.length / 1024 / 1024).toFixed(2)}MB)`);
+  
+  // Create AWS v4 signature for authentication
+  const date = new Date();
+  const amzDate = date.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const dateStamp = amzDate.slice(0, 8);
+  const region = 'auto';
+  const service = 's3';
   
-  // Canonical request
-  const canonicalUri = `/${encodeURIComponent(fileName)}`;
-  const canonicalQuerystring = [
-    `X-Amz-Algorithm=AWS4-HMAC-SHA256`,
-    `X-Amz-Credential=${encodeURIComponent(`${r2Config.accessKeyId}/${dateStamp}/${region}/${service}/aws4_request`)}`,
-    `X-Amz-Date=${amzDate}`,
-    `X-Amz-Expires=${expiresIn}`,
-    `X-Amz-SignedHeaders=host`
-  ].join('&');
+  // Calculate content hash
+  const encoder = new TextEncoder();
+  const payloadHash = Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', fileData))
+  ).map(b => b.toString(16).padStart(2, '0')).join('');
   
-  const canonicalHeaders = `host:${host}\n`;
-  const signedHeaders = 'host';
-  const payloadHash = 'UNSIGNED-PAYLOAD';
+  // Build canonical request
+  const canonicalUri = `/${config.bucketName}/${fileName}`;
+  const canonicalHeaders = [
+    `host:${config.accountId}.r2.cloudflarestorage.com`,
+    `x-amz-content-sha256:${payloadHash}`,
+    `x-amz-date:${amzDate}`
+  ].join('\n') + '\n';
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
   
   const canonicalRequest = [
     'PUT',
     canonicalUri,
-    canonicalQuerystring,
+    '',
     canonicalHeaders,
     signedHeaders,
     payloadHash
   ].join('\n');
   
-  // String to sign
-  const algorithm = 'AWS4-HMAC-SHA256';
+  // Create string to sign
+  const canonicalRequestHash = Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest)))
+  ).map(b => b.toString(16).padStart(2, '0')).join('');
+  
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-  
-  const encoder = new TextEncoder();
-  const canonicalRequestHash = await crypto.subtle.digest(
-    'SHA-256',
-    encoder.encode(canonicalRequest)
-  );
-  const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-  
   const stringToSign = [
-    algorithm,
+    'AWS4-HMAC-SHA256',
     amzDate,
     credentialScope,
-    canonicalRequestHashHex
+    canonicalRequestHash
   ].join('\n');
   
   // Calculate signature
-  const getSignatureKey = async (key: string, dateStamp: string, regionName: string, serviceName: string) => {
-    const kDate = await hmac(`AWS4${key}`, dateStamp);
-    const kRegion = await hmac(kDate, regionName);
-    const kService = await hmac(kRegion, serviceName);
-    const kSigning = await hmac(kService, 'aws4_request');
-    return kSigning;
-  };
-  
   const hmac = async (key: string | ArrayBuffer, data: string): Promise<ArrayBuffer> => {
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
@@ -102,23 +92,39 @@ async function generatePresignedUrl(
     return await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(data));
   };
   
-  const signingKey = await getSignatureKey(
-    r2Config.secretAccessKey,
-    dateStamp,
-    region,
-    service
-  );
+  let signingKey = await hmac(`AWS4${config.secretAccessKey}`, dateStamp);
+  signingKey = await hmac(signingKey, region);
+  signingKey = await hmac(signingKey, service);
+  signingKey = await hmac(signingKey, 'aws4_request');
   
-  const signature = await hmac(signingKey, stringToSign);
-  const signatureHex = Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  const signature = Array.from(
+    new Uint8Array(await hmac(signingKey, stringToSign))
+  ).map(b => b.toString(16).padStart(2, '0')).join('');
   
-  // Construct presigned URL
-  const presignedUrl = `https://${host}${canonicalUri}?${canonicalQuerystring}&X-Amz-Signature=${signatureHex}`;
+  // Make authenticated PUT request
+  const authorization = `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   
-  console.log(`✅ Generated presigned URL for: ${fileName}`);
-  return presignedUrl;
+  const response = await fetch(url, {
+    method: 'PUT',
+    body: fileData,
+    headers: {
+      'Authorization': authorization,
+      'x-amz-content-sha256': payloadHash,
+      'x-amz-date': amzDate,
+      'Content-Type': contentType
+    }
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`❌ R2 upload failed: ${response.status} ${response.statusText}`, errorText);
+    throw new Error(`R2 upload failed: ${response.statusText}`);
+  }
+  
+  console.log(`✅ R2 upload successful: ${fileName}`);
+  
+  // Return CDN URL
+  return `https://cdn.visustock.com/${fileName}`;
 }
 
 // Save file metadata to Supabase
@@ -184,29 +190,51 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
     
-    const { action, fileName, fileType, fileSize } = await req.json();
+    const body = await req.json();
+    const { action, fileName, fileType, fileSize, fileData } = body;
     
-    console.log(`📤 [R2 Upload] Action: ${action}, File: ${fileName}`);
+    console.log(`📤 [R2 Upload] Action: ${action}, File: ${fileName}, Size: ${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + 'MB' : 'unknown'}`);
     
-    if (action === 'generate-presigned-url') {
-      // Generate presigned URL for client-side upload
-      const presignedUrl = await generatePresignedUrl(fileName, fileType);
-      const cdnUrl = `https://cdn.visustock.com/${fileName}`;
+    if (action === 'upload-direct') {
+      // Direct upload via edge function (for large files)
+      if (!fileData) {
+        throw new Error('Missing file data');
+      }
+      
+      // Convert base64 to Uint8Array
+      const binaryString = atob(fileData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Upload to R2
+      const publicUrl = await uploadToR2(bytes, fileName, fileType);
+      
+      // Save metadata
+      const metadata = await saveFileMetadata(
+        user.id,
+        fileName,
+        fileSize,
+        fileType,
+        'r2',
+        publicUrl
+      );
       
       return new Response(
         JSON.stringify({
           success: true,
-          presignedUrl,
-          publicUrl: cdnUrl,
-          fileName
+          publicUrl,
+          metadata,
+          message: 'Fichier stocké avec succès dans R2 Cloudflare'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     if (action === 'save-metadata') {
-      // Save metadata after successful upload
-      const { publicUrl, storageLocation } = await req.json();
+      // Save metadata only (when upload was done elsewhere)
+      const { publicUrl, storageLocation } = body;
       
       const metadata = await saveFileMetadata(
         user.id,

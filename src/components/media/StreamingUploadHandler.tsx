@@ -368,7 +368,7 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Upload file with intelligent routing (Supabase < 100MB, R2 >= 100MB)
+   * Upload file with intelligent routing (all files via Supabase Storage for now)
    */
   public static async uploadFile(
     file: File,
@@ -379,7 +379,6 @@ export class StreamingUploadHandler {
     const finalPath = desiredPath || file.name;
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    const R2_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
     console.log(`🎯 [Upload] Starting for: ${file.name}`);
     console.log(`  📦 Size: ${fileSizeMB}MB | Type: ${mimeType}`);
@@ -388,13 +387,9 @@ export class StreamingUploadHandler {
     try {
       onProgress?.(2);
       
-      // Route to R2 for files >= 100MB
-      if (file.size >= R2_THRESHOLD) {
-        console.log(`☁️ [R2 Route] File >= 100MB, routing to Cloudflare R2`);
-        return await this.uploadToR2(file, finalPath, mimeType, onProgress);
-      }
-      
-      console.log(`📦 [Supabase Route] File < 100MB, using Supabase Storage`);
+      // NOTE: R2 routing temporarily disabled - using optimized Supabase Storage for all files
+      // TODO: Re-implement R2 routing with proper AWS SDK when needed
+      console.log(`📦 [Supabase Route] Using optimized Supabase Storage`);
       
       // Measure network speed first for optimal chunk sizing
       await this.measureNetworkSpeed();
@@ -640,7 +635,7 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Upload to Cloudflare R2 using presigned URL
+   * Upload to Cloudflare R2 via edge function
    */
   private static async uploadToR2(
     file: File,
@@ -653,64 +648,48 @@ export class StreamingUploadHandler {
     try {
       onProgress?.(10);
       
-      // Step 1: Get presigned URL from edge function
-      const { data: presignedData, error: presignedError } = await supabase.functions.invoke('r2-upload', {
-        body: {
-          action: 'generate-presigned-url',
-          fileName: finalPath,
-          fileType: mimeType,
-          fileSize: file.size
-        }
+      // Convert file to base64 for edge function transport
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1] || '';
+          resolve(base64);
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
       });
       
-      if (presignedError || !presignedData?.presignedUrl) {
-        throw new Error(`Failed to get R2 presigned URL: ${presignedError?.message}`);
-      }
-      
-      console.log(`🔑 [R2] Presigned URL obtained`);
       onProgress?.(30);
+      const fileData = await base64Promise;
       
-      // Step 2: Upload directly to R2 using presigned URL
-      const uploadResponse = await fetch(presignedData.presignedUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': mimeType
-        }
-      });
+      onProgress?.(40);
+      console.log(`📤 [R2] Sending ${(file.size / 1024 / 1024).toFixed(2)}MB to edge function`);
       
-      if (!uploadResponse.ok) {
-        throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
-      }
-      
-      console.log(`✅ [R2] File uploaded successfully`);
-      onProgress?.(80);
-      
-      // Step 3: Save metadata to database
-      const { data: metadataResult, error: metadataError } = await supabase.functions.invoke('r2-upload', {
+      // Upload via edge function
+      const { data, error } = await supabase.functions.invoke('r2-upload', {
         body: {
-          action: 'save-metadata',
+          action: 'upload-direct',
           fileName: finalPath,
-          fileSize: file.size,
           fileType: mimeType,
-          publicUrl: presignedData.publicUrl,
-          storageLocation: 'r2'
+          fileSize: file.size,
+          fileData
         }
       });
       
-      if (metadataError) {
-        console.warn('⚠️ [R2] Failed to save metadata:', metadataError);
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'R2 upload failed');
       }
       
       onProgress?.(100);
       
-      console.log(`✅ [R2 Complete] ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) uploaded to R2`);
+      console.log(`✅ [R2 Complete] ${file.name} uploaded successfully`);
       
       return {
         success: true,
-        fileUrl: presignedData.publicUrl,
+        fileUrl: data.publicUrl,
         mimeType,
-        message: 'Fichier stocké avec succès dans R2 Cloudflare'
+        message: data.message || 'Fichier stocké avec succès dans R2 Cloudflare'
       };
     } catch (error) {
       console.error(`💥 [R2 Failed] ${file.name}:`, error);

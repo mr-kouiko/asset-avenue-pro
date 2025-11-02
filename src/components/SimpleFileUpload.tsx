@@ -205,10 +205,9 @@ export const SimpleFileUpload = ({
         } : f
       ));
 
-      // Get file size for storage location message
+      // Get file size for storage location message (all in Supabase for now)
       const fileSizeMB = uploadFile.file.size / (1024 * 1024);
-      const storageLocation = fileSizeMB >= 100 ? 'R2 Cloudflare' : 'Supabase Storage';
-      toast.success(`✅ ${uploadFile.file.name} - Stocké dans ${storageLocation}`);
+      toast.success(`✅ ${uploadFile.file.name} - Stocké dans Supabase Storage (${fileSizeMB.toFixed(2)}MB)`);
 
       // Notify parent component with correct file type and separate thumbnail URL
       if (onFilesUploaded) {
