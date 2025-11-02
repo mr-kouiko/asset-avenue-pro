@@ -207,10 +207,10 @@ Deno.serve(async (req) => {
         bytes[i] = binaryString.charCodeAt(i);
       }
       
-      // Store in temp-chunks bucket
-      const chunkPath = `${user.id}/${fileName}/chunk_${chunkIndex}`;
+      // Store in uploads bucket with temp-chunks prefix
+      const chunkPath = `temp-chunks/${user.id}/${fileName}/chunk_${chunkIndex}`;
       const { error: uploadError } = await supabase.storage
-        .from('temp-chunks')
+        .from('uploads')
         .upload(chunkPath, bytes, {
           contentType: 'application/octet-stream',
           upsert: true
@@ -235,9 +235,9 @@ Deno.serve(async (req) => {
       // Download all chunks from Supabase Storage
       const chunks: Uint8Array[] = [];
       for (let i = 0; i < totalChunks; i++) {
-        const chunkPath = `${user.id}/${fileName}/chunk_${i}`;
+        const chunkPath = `temp-chunks/${user.id}/${fileName}/chunk_${i}`;
         const { data, error } = await supabase.storage
-          .from('temp-chunks')
+          .from('uploads')
           .download(chunkPath);
         
         if (error || !data) {
@@ -275,8 +275,8 @@ Deno.serve(async (req) => {
       // Clean up temp chunks
       console.log('🧹 Cleaning up temp chunks...');
       for (let i = 0; i < totalChunks; i++) {
-        const chunkPath = `${user.id}/${fileName}/chunk_${i}`;
-        await supabase.storage.from('temp-chunks').remove([chunkPath]);
+        const chunkPath = `temp-chunks/${user.id}/${fileName}/chunk_${i}`;
+        await supabase.storage.from('uploads').remove([chunkPath]);
       }
       
       return new Response(
