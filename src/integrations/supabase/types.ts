@@ -350,6 +350,51 @@ export type Database = {
           },
         ]
       }
+      file_uploads: {
+        Row: {
+          bucket_name: string | null
+          created_at: string
+          file_name: string
+          file_path: string | null
+          file_size: number
+          file_type: string
+          id: string
+          metadata: Json | null
+          public_url: string
+          storage_location: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          bucket_name?: string | null
+          created_at?: string
+          file_name: string
+          file_path?: string | null
+          file_size: number
+          file_type: string
+          id?: string
+          metadata?: Json | null
+          public_url: string
+          storage_location: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          bucket_name?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string | null
+          file_size?: number
+          file_type?: string
+          id?: string
+          metadata?: Json | null
+          public_url?: string
+          storage_location?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       licenses: {
         Row: {
           created_at: string

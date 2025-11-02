@@ -251,19 +251,20 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           
           onProgress?.(fileId, 10);
           
-          // Upload original file
-          if (file.type.startsWith('video/')) {
-            const result = await StreamingUploadHandler.uploadFile(file, (p) => {
-              onProgress?.(fileId, Math.min(50, 10 + p * 0.4));
-            }, filePath);
-            if (!result.success || !result.fileUrl) {
-              throw new Error(result.error || 'Streaming upload failed');
-            }
-            watermarkedUrl = result.fileUrl;
-          } else {
-            watermarkedUrl = await uploadToSupabase(file, filePath, bucketName, file, file.type, (progress) => {
-              onProgress?.(fileId, Math.min(50, 10 + progress * 0.4));
-            });
+          // Upload original file using StreamingUploadHandler (intelligent routing: Supabase < 100MB, R2 >= 100MB)
+          const result = await StreamingUploadHandler.uploadFile(file, (p) => {
+            onProgress?.(fileId, Math.min(50, 10 + p * 0.4));
+          }, filePath);
+          
+          if (!result.success || !result.fileUrl) {
+            throw new Error(result.error || 'Upload failed');
+          }
+          
+          watermarkedUrl = result.fileUrl;
+          
+          // Show storage location message if available
+          if (result.message) {
+            console.log(`📦 ${result.message} - ${file.name}`);
           }
           
           onProgress?.(fileId, 60);

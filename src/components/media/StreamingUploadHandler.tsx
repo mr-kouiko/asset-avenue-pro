@@ -19,6 +19,7 @@ interface StreamingUploadResult {
   fileUrl?: string;
   mimeType?: string;
   error?: string;
+  message?: string;
 }
 
 /**
@@ -367,7 +368,7 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Upload file with multipart signed URLs (for large files)
+   * Upload file with intelligent routing (Supabase < 100MB, R2 >= 100MB)
    */
   public static async uploadFile(
     file: File,
@@ -378,6 +379,7 @@ export class StreamingUploadHandler {
     const finalPath = desiredPath || file.name;
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const R2_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
     console.log(`🎯 [Upload] Starting for: ${file.name}`);
     console.log(`  📦 Size: ${fileSizeMB}MB | Type: ${mimeType}`);
@@ -385,6 +387,14 @@ export class StreamingUploadHandler {
 
     try {
       onProgress?.(2);
+      
+      // Route to R2 for files >= 100MB
+      if (file.size >= R2_THRESHOLD) {
+        console.log(`☁️ [R2 Route] File >= 100MB, routing to Cloudflare R2`);
+        return await this.uploadToR2(file, finalPath, mimeType, onProgress);
+      }
+      
+      console.log(`📦 [Supabase Route] File < 100MB, using Supabase Storage`);
       
       // Measure network speed first for optimal chunk sizing
       await this.measureNetworkSpeed();
@@ -626,6 +636,88 @@ export class StreamingUploadHandler {
     } catch (err) {
       console.warn('⚠️ [Network] Speed test failed, using default settings', err);
       this.networkSpeed = 'medium';
+    }
+  }
+
+  /**
+   * Upload to Cloudflare R2 using presigned URL
+   */
+  private static async uploadToR2(
+    file: File,
+    finalPath: string,
+    mimeType: string,
+    onProgress?: (progress: number) => void
+  ): Promise<StreamingUploadResult> {
+    console.log(`☁️ [R2] Starting upload to Cloudflare R2: ${finalPath}`);
+    
+    try {
+      onProgress?.(10);
+      
+      // Step 1: Get presigned URL from edge function
+      const { data: presignedData, error: presignedError } = await supabase.functions.invoke('r2-upload', {
+        body: {
+          action: 'generate-presigned-url',
+          fileName: finalPath,
+          fileType: mimeType,
+          fileSize: file.size
+        }
+      });
+      
+      if (presignedError || !presignedData?.presignedUrl) {
+        throw new Error(`Failed to get R2 presigned URL: ${presignedError?.message}`);
+      }
+      
+      console.log(`🔑 [R2] Presigned URL obtained`);
+      onProgress?.(30);
+      
+      // Step 2: Upload directly to R2 using presigned URL
+      const uploadResponse = await fetch(presignedData.presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': mimeType
+        }
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
+      }
+      
+      console.log(`✅ [R2] File uploaded successfully`);
+      onProgress?.(80);
+      
+      // Step 3: Save metadata to database
+      const { data: metadataResult, error: metadataError } = await supabase.functions.invoke('r2-upload', {
+        body: {
+          action: 'save-metadata',
+          fileName: finalPath,
+          fileSize: file.size,
+          fileType: mimeType,
+          publicUrl: presignedData.publicUrl,
+          storageLocation: 'r2'
+        }
+      });
+      
+      if (metadataError) {
+        console.warn('⚠️ [R2] Failed to save metadata:', metadataError);
+      }
+      
+      onProgress?.(100);
+      
+      console.log(`✅ [R2 Complete] ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB) uploaded to R2`);
+      
+      return {
+        success: true,
+        fileUrl: presignedData.publicUrl,
+        mimeType,
+        message: 'Fichier stocké avec succès dans R2 Cloudflare'
+      };
+    } catch (error) {
+      console.error(`💥 [R2 Failed] ${file.name}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'R2 upload failed'
+      };
     }
   }
 

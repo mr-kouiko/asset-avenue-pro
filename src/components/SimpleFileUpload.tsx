@@ -187,7 +187,6 @@ export const SimpleFileUpload = ({
         ));
       };
 
-      // Process with automatic watermarking and real-time progress
       const processedResults = await processFiles([uploadFile.file], onProgress);
       const processedFile = processedResults[0];
 
@@ -205,6 +204,11 @@ export const SimpleFileUpload = ({
           isWatermarked: !!processedFile.watermarkedUrl
         } : f
       ));
+
+      // Get file size for storage location message
+      const fileSizeMB = uploadFile.file.size / (1024 * 1024);
+      const storageLocation = fileSizeMB >= 100 ? 'R2 Cloudflare' : 'Supabase Storage';
+      toast.success(`✅ ${uploadFile.file.name} - Stocké dans ${storageLocation}`);
 
       // Notify parent component with correct file type and separate thumbnail URL
       if (onFilesUploaded) {
