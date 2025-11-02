@@ -164,9 +164,6 @@ async function saveFileMetadata(
   return data;
 }
 
-// Temporary storage for chunks
-const chunkStorage = new Map<string, Uint8Array[]>();
-
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -196,10 +193,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, fileName, fileType, fileSize, chunkData, chunkIndex, totalChunks } = body;
     
-    console.log(`📤 [R2] Action: ${action}, File: ${fileName}`);
+    console.log(`📤 [R2] Action: ${action}, File: ${fileName}, Chunk: ${chunkIndex + 1}/${totalChunks}`);
     
     if (action === 'upload-chunk') {
-      // Store chunk temporarily
+      // Store chunk temporarily in Supabase Storage
       if (!chunkData) {
         throw new Error('Missing chunk data');
       }
@@ -210,12 +207,19 @@ Deno.serve(async (req) => {
         bytes[i] = binaryString.charCodeAt(i);
       }
       
-      if (!chunkStorage.has(fileName)) {
-        chunkStorage.set(fileName, []);
-      }
+      // Store in temp-chunks bucket
+      const chunkPath = `${user.id}/${fileName}/chunk_${chunkIndex}`;
+      const { error: uploadError } = await supabase.storage
+        .from('temp-chunks')
+        .upload(chunkPath, bytes, {
+          contentType: 'application/octet-stream',
+          upsert: true
+        });
       
-      const chunks = chunkStorage.get(fileName)!;
-      chunks[chunkIndex] = bytes;
+      if (uploadError) {
+        console.error(`❌ Failed to store chunk ${chunkIndex}:`, uploadError);
+        throw uploadError;
+      }
       
       console.log(`✅ Stored chunk ${chunkIndex + 1}/${totalChunks} (${(bytes.length / 1024 / 1024).toFixed(2)}MB)`);
       
@@ -226,10 +230,22 @@ Deno.serve(async (req) => {
     }
     
     if (action === 'finalize-upload') {
-      // Combine all chunks and upload to R2
-      const chunks = chunkStorage.get(fileName);
-      if (!chunks || chunks.length !== totalChunks) {
-        throw new Error(`Missing chunks: expected ${totalChunks}, got ${chunks?.length || 0}`);
+      console.log(`🔄 Finalizing upload: ${fileName} (${totalChunks} chunks)`);
+      
+      // Download all chunks from Supabase Storage
+      const chunks: Uint8Array[] = [];
+      for (let i = 0; i < totalChunks; i++) {
+        const chunkPath = `${user.id}/${fileName}/chunk_${i}`;
+        const { data, error } = await supabase.storage
+          .from('temp-chunks')
+          .download(chunkPath);
+        
+        if (error || !data) {
+          console.error(`❌ Failed to download chunk ${i}:`, error);
+          throw new Error(`Missing chunk ${i}`);
+        }
+        
+        chunks[i] = new Uint8Array(await data.arrayBuffer());
       }
       
       // Combine chunks
@@ -256,8 +272,12 @@ Deno.serve(async (req) => {
         publicUrl
       );
       
-      // Clean up
-      chunkStorage.delete(fileName);
+      // Clean up temp chunks
+      console.log('🧹 Cleaning up temp chunks...');
+      for (let i = 0; i < totalChunks; i++) {
+        const chunkPath = `${user.id}/${fileName}/chunk_${i}`;
+        await supabase.storage.from('temp-chunks').remove([chunkPath]);
+      }
       
       return new Response(
         JSON.stringify({
