@@ -28,6 +28,17 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     thumbnail !== '/placeholder.svg' && 
     !thumbnail.includes('placeholder');
 
+  const shouldUseCrossOrigin = React.useMemo(() => {
+    if (!videoUrl) return false;
+    try {
+      const host = new URL(videoUrl).hostname;
+      // Only use CORS for Supabase-hosted assets; omit for external CDN to avoid blocked requests
+      return host.includes('supabase.co');
+    } catch {
+      return false;
+    }
+  }, [videoUrl]);
+
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -61,8 +72,9 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           autoPlay
           playsInline
           preload="metadata"
-          crossOrigin="anonymous"
+          crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
           onCanPlay={() => setIsVideoReady(true)}
+          onError={() => { setIsVideoReady(false); }}
         />
       )}
       
