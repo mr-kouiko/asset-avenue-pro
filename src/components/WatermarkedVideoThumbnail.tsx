@@ -43,11 +43,24 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     const v = videoRef.current;
     if (!v) return;
     if (isHovered && videoUrl) {
+      console.log('[HoverPreview] mouseenter, trying to play', { src: videoUrl });
       v.muted = true;
-      v.play().then(() => setIsVideoReady(true)).catch(() => {});
+      const playPromise = v.play();
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise
+          .then(() => {
+            console.log('[HoverPreview] play() resolved');
+            setIsVideoReady(true);
+          })
+          .catch((err) => {
+            console.warn('[HoverPreview] play() failed', err);
+            setIsVideoReady(false);
+          });
+      }
     } else {
       try { v.pause(); } catch {}
       try { v.currentTime = 0; } catch {}
+      console.log('[HoverPreview] mouseleave, paused and reset');
       setIsVideoReady(false);
     }
   }, [isHovered, videoUrl]);
@@ -61,6 +74,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       {/* Video preview on hover */}
       {isHovered && videoUrl && (
         <video
+          key={videoUrl}
           ref={videoRef}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
             isVideoReady ? 'opacity-100' : 'opacity-0'
@@ -73,8 +87,10 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           playsInline
           preload="metadata"
           crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
-          onCanPlay={() => setIsVideoReady(true)}
-          onError={() => { setIsVideoReady(false); }}
+          onLoadedData={() => console.log('[HoverPreview] loadeddata')}
+          onCanPlay={() => { console.log('[HoverPreview] canplay'); setIsVideoReady(true); }}
+          onPlay={() => console.log('[HoverPreview] playing')}
+          onError={(e) => { console.error('[HoverPreview] video error', e); setIsVideoReady(false); }}
         />
       )}
       
