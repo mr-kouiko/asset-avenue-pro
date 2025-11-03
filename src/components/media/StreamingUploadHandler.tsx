@@ -135,6 +135,24 @@ export class StreamingUploadHandler {
     return chunks;
   }
 
+  // Ensure session has enough TTL; refresh if near expiry
+  private static async ensureFreshSession(minTTLSeconds = 120) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const now = Math.floor(Date.now() / 1000);
+    const exp = session?.expires_at ?? 0;
+    if (!session?.user) {
+      throw new Error('User not authenticated');
+    }
+    if (exp - now < minTTLSeconds) {
+      const { error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.warn('⚠️ Failed to refresh session proactively:', error);
+      } else {
+        console.log('🔄 Session refreshed (proactive)');
+      }
+    }
+  }
+
   /**
    * Upload single chunk via signed URL with retry logic
    */
@@ -150,6 +168,8 @@ export class StreamingUploadHandler {
     console.log(`📤 [Chunk ${chunkIndex + 1}/${totalChunks}] Uploading ${chunkSizeMB}MB to: ${chunkPath}`);
     
     try {
+      // Ensure fresh session for signed URL
+      await this.ensureFreshSession(120);
       // Create signed upload URL for this chunk
       const { data: signed, error: signedErr } = await supabase.storage
         .from('uploads')
@@ -686,18 +706,17 @@ export class StreamingUploadHandler {
         const chunkBuffer = await chunk.arrayBuffer();
         const chunkBytes = new Uint8Array(chunkBuffer);
         
-        console.log(`📤 [R2 Chunk ${i + 1}/${totalChunks}] Uploading ${(chunk.size / 1024 / 1024).toFixed(2)}MB directly to storage`);
-        
+        console.log(`📤 [R2 Chunk ${i + 1}/${totalChunks}] Uploading ${(chunk.size / 1024 / 1024).toFixed(2)}MB using signed URL`);
         const chunkPath = `temp-chunks/${user.id}/${finalPath}/chunk_${i}`;
-        const { error: uploadError } = await supabase.storage
-          .from('uploads')
-          .upload(chunkPath, chunkBytes, {
-            contentType: 'application/octet-stream',
-            upsert: true
-          });
-        
-        if (uploadError) {
-          throw new Error(`Chunk ${i + 1} upload failed: ${uploadError.message}`);
+        // Upload via signed URL to avoid auth token on large payload
+        const ok = await this.uploadChunkViaSigned(chunk, i, totalChunks, chunkPath, 'application/octet-stream');
+        if (!ok) {
+          // Try one forced refresh + retry once
+          await this.ensureFreshSession(5);
+          const retryOk = await this.uploadChunkViaSigned(chunk, i, totalChunks, chunkPath, 'application/octet-stream');
+          if (!retryOk) {
+            throw new Error(`Chunk ${i + 1} upload failed after retry`);
+          }
         }
         
         uploadedChunks++;
@@ -709,6 +728,7 @@ export class StreamingUploadHandler {
       // Finalize upload via edge function
       console.log(`🧩 [R2] Finalizing upload...`);
       onProgress?.(95);
+      await this.ensureFreshSession(60);
       
       const { data: finalData, error: finalError } = await supabase.functions.invoke('r2-upload', {
         body: {
