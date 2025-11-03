@@ -651,8 +651,13 @@ export class StreamingUploadHandler {
     console.log(`☁️ [R2 Chunked] Starting chunked upload: ${finalPath} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      // Refresh session to get a fresh token for long uploads
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session?.user) {
+        throw new Error('Failed to refresh authentication session');
+      }
+      const user = session.user;
+      console.log('🔄 Session refreshed for long upload');
 
       onProgress?.(5);
       
@@ -667,6 +672,16 @@ export class StreamingUploadHandler {
       // Upload chunks directly to Supabase Storage (bypass edge function)
       let uploadedChunks = 0;
       for (let i = 0; i < totalChunks; i++) {
+        // Refresh session every 10 chunks to keep token fresh
+        if (i > 0 && i % 10 === 0) {
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.warn('⚠️ Failed to refresh session during upload:', refreshError);
+          } else {
+            console.log('🔄 Session refreshed during upload');
+          }
+        }
+
         const chunk = chunks[i];
         const chunkBuffer = await chunk.arrayBuffer();
         const chunkBytes = new Uint8Array(chunkBuffer);
