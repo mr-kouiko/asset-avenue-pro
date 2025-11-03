@@ -78,12 +78,19 @@ export const useMarketplace = () => {
           // Determine media (video/audio) URL
           let mediaUrl: string | undefined;
           if (item.content_type === 'video') {
-            // For video, use the PREVIEW (watermarked) version
-            const previewFile = files?.find(f => f.is_preview === true);
+            // For video, prefer the PREVIEW (watermarked) version
+            const previewFile = files?.find(f => f.is_preview === true && f.preview_path);
             if (previewFile?.preview_path) {
               mediaUrl = previewFile.preview_path.startsWith('http')
                 ? previewFile.preview_path
                 : buildPublicUrl('previews', previewFile.preview_path);
+            }
+            // Fallback: if no preview exists yet, use the original file (watermarked originals)
+            if (!mediaUrl && originalFile?.file_path) {
+              mediaUrl = originalFile.file_path.startsWith('http')
+                ? originalFile.file_path
+                : buildPublicUrl('uploads', originalFile.file_path);
+              console.warn('⚠️ No video preview found, using original file as fallback for listing preview:', mediaUrl);
             }
           } else if (item.content_type === 'audio') {
             // For audio: Use original file path directly

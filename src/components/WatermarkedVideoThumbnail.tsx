@@ -61,6 +61,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           autoPlay
           playsInline
           preload="metadata"
+          crossOrigin="anonymous"
           onCanPlay={() => setIsVideoReady(true)}
         />
       )}
