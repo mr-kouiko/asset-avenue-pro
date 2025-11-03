@@ -62,7 +62,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
     console.log('🎵 AudioContentCard: Initializing WaveSurfer', { title, audioUrl });
 
-    // Initialize WaveSurfer
+    // Initialize WaveSurfer with MediaElement backend to avoid CORS issues
     const wavesurfer = WaveSurfer.create({
       container: waveformRef.current,
       waveColor: 'rgba(203, 213, 225, 0.8)', // Light grey waveform
@@ -74,13 +74,15 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
       barRadius: 2,
       height: 70,
       normalize: true,
-      backend: 'WebAudio',
+      backend: 'MediaElement', // Use MediaElement to avoid CORS issues with WebAudio
       interact: true,
       hideScrollbar: true,
       fillParent: true,
     });
 
+    // Load audio with error handling
     wavesurfer.load(audioUrl);
+    console.log('📡 Loading audio from:', audioUrl);
 
     wavesurfer.on('ready', () => {
       console.log('✅ WaveSurfer ready for:', title);
@@ -92,6 +94,8 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
     wavesurfer.on('error', (error) => {
       console.error('❌ WaveSurfer error for:', title, error);
+      console.error('❌ Audio URL:', audioUrl);
+      console.error('❌ Error details:', JSON.stringify(error));
     });
 
     wavesurfer.on('finish', () => {
@@ -105,12 +109,17 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
       setCurrentTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
     });
 
+    wavesurfer.on('loading', (percent) => {
+      console.log(`📥 Loading audio: ${percent}%`);
+    });
+
     wavesurferRef.current = wavesurfer;
 
     return () => {
+      console.log('🧹 Destroying WaveSurfer for:', title);
       wavesurfer.destroy();
     };
-  }, [audioUrl, pause]);
+  }, [audioUrl, pause, title]);
 
   // Sync playback with global player state
   useEffect(() => {
