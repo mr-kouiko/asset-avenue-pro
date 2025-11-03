@@ -21,6 +21,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Check if thumbnail is missing or is placeholder
@@ -52,16 +53,18 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
             console.log('[HoverPreview] play() resolved');
             setIsVideoReady(true);
           })
-          .catch((err) => {
-            console.warn('[HoverPreview] play() failed', err);
-            setIsVideoReady(false);
-          });
+            .catch((err) => {
+              console.warn('[HoverPreview] play() failed', err);
+              setIsVideoReady(false);
+              setPlayError(err instanceof Error ? err.message : 'play_failed');
+            });
       }
     } else {
       try { v.pause(); } catch {}
       try { v.currentTime = 0; } catch {}
       console.log('[HoverPreview] mouseleave, paused and reset');
       setIsVideoReady(false);
+      setPlayError(null);
     }
   }, [isHovered, videoUrl]);
 
@@ -69,14 +72,14 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     <div 
       className={`relative ${className}`}
       onMouseEnter={() => videoUrl && setIsHovered(true)}
-      onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); }}
+      onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); setPlayError(null); }}
     >
       {/* Video preview on hover */}
       {isHovered && videoUrl && (
         <video
           key={videoUrl}
           ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
+          className={`absolute inset-0 z-10 w-full h-full object-cover transition-opacity duration-200 ${
             isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
           src={videoUrl}
@@ -87,10 +90,14 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           playsInline
           preload="metadata"
           crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
-          onLoadedData={() => console.log('[HoverPreview] loadeddata')}
+          onLoadedData={() => { console.log('[HoverPreview] loadeddata'); setIsVideoReady(true); }}
+          onLoadedMetadata={() => {
+            console.log('[HoverPreview] loadedmetadata');
+            try { if (videoRef.current && videoRef.current.currentTime === 0) videoRef.current.currentTime = 0.05; } catch {}
+          }}
           onCanPlay={() => { console.log('[HoverPreview] canplay'); setIsVideoReady(true); }}
           onPlay={() => console.log('[HoverPreview] playing')}
-          onError={(e) => { console.error('[HoverPreview] video error', e); setIsVideoReady(false); }}
+          onError={(e) => { console.error('[HoverPreview] video error', e); setIsVideoReady(false); setPlayError('video_error'); }}
         />
       )}
       
@@ -127,6 +134,28 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       <div className="pointer-events-none">
         <VideoWatermark size="thumbnail" />
       </div>
+      
+      {/* Fallback CTA when autoplay fails */}
+      {playError && videoUrl && (
+        <button
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 text-white text-xs font-medium"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPlayError(null);
+            const v = videoRef.current;
+            if (v) {
+              v.muted = true;
+              v.play().then(() => setIsVideoReady(true)).catch((err) => {
+                console.warn('[HoverPreview] manual play failed', err);
+                setPlayError('play_failed');
+              });
+            }
+          }}
+          aria-label="Lancer l’aperçu vidéo"
+        >
+          Cliquer pour lancer l’aperçu
+        </button>
+      )}
       
       {/* Video play indicator */}
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
