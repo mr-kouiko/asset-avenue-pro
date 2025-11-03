@@ -63,18 +63,19 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     console.log('🎵 AudioContentCard: Initializing WaveSurfer', { title, audioUrl });
 
     // Initialize WaveSurfer with MediaElement backend to avoid CORS issues
+    // Optimized settings for faster loading, especially for WAV files
     const wavesurfer = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: 'rgba(203, 213, 225, 0.8)', // Light grey waveform
-      progressColor: 'rgba(99, 102, 241, 0.9)', // Blue/indigo progress
+      waveColor: 'rgba(203, 213, 225, 0.8)',
+      progressColor: 'rgba(99, 102, 241, 0.9)',
       cursorColor: 'rgba(99, 102, 241, 0.9)',
       cursorWidth: 1,
-      barWidth: 2,
-      barGap: 1,
+      barWidth: 3, // Slightly wider bars = fewer bars = faster rendering
+      barGap: 2,
       barRadius: 2,
       height: 70,
-      normalize: true,
-      backend: 'MediaElement', // Use MediaElement to avoid CORS issues with WebAudio
+      normalize: false, // Disable normalization for faster processing
+      backend: 'MediaElement', // Use MediaElement to avoid CORS issues
       interact: true,
       hideScrollbar: true,
       fillParent: true,
