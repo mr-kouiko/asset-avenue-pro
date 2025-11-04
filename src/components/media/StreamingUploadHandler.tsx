@@ -70,16 +70,9 @@ export class StreamingUploadHandler {
       'm4v': 'video/mp4'
     };
 
-    // Audio MIME types
+    // Audio MIME types - Only MP3 allowed
     const audioTypes: Record<string, string> = {
-      'mp3': 'audio/mpeg',
-      'aac': 'audio/aac',
-      'm4a': 'audio/mp4',
-      'wav': 'audio/wav',
-      'ogg': 'audio/ogg',
-      'ога': 'audio/ogg',
-      'webm': 'audio/webm',
-      'flac': 'audio/flac'
+      'mp3': 'audio/mpeg'
     };
 
     // Priority 1: Use extension-based detection first for reliability

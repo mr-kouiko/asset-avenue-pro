@@ -47,12 +47,12 @@ export const SimpleFileUpload = ({
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
     'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/ogg',
-    'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac',
+    'audio/mpeg', // Only MP3 audio files allowed
     'application/pdf',
     'model/*'
   ];
 
-  const acceptAttribute = 'image/*,video/*,audio/*,.pdf,application/pdf';
+  const acceptAttribute = 'image/*,video/*,.mp3,audio/mpeg,.pdf,application/pdf';
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image className="h-4 w-4" />;
@@ -98,14 +98,8 @@ export const SimpleFileUpload = ({
       'bmp': 'image/bmp',
       'tiff': 'image/tiff',
       'svg': 'image/svg+xml',
-      // Audio
+      // Audio - Only MP3 allowed
       'mp3': 'audio/mpeg',
-      'wav': 'audio/wav',
-      'ogg': 'audio/ogg',
-      'm4a': 'audio/mp4',
-      'aac': 'audio/aac',
-      'flac': 'audio/flac',
-      'wma': 'audio/x-ms-wma',
       // Documents
       'pdf': 'application/pdf'
     };
@@ -332,7 +326,7 @@ export const SimpleFileUpload = ({
             Drop files here or click to browse
           </p>
           <p className="text-sm text-muted-foreground">
-            Supported: Images, Videos, Audio, PDF/Ebooks, 3D Models (max {formatFileSize(maxFileSize * 1024 * 1024)} each)
+            Supported: Images, Videos, Audio (MP3 only), PDF/Ebooks, 3D Models (max {formatFileSize(maxFileSize * 1024 * 1024)} each)
           </p>
           <p className="text-xs text-muted-foreground">
             Maximum {maxFiles} files • All files automatically watermarked & optimized
