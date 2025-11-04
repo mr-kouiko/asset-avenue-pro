@@ -117,9 +117,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // MIME type calculation
   const mimeType = useMemo(() => getMimeFromSrc(src, type), [src, type]);
 
-  // Reload key for forcing media reload on src change or retry
+// Reload key for forcing media reload on src change or retry
   const mediaKey = useMemo(() => `${src || 'no-src'}::${retryCount}`, [src, retryCount]);
-
+  
+  // Decide whether to set crossOrigin attribute (only when server supports CORS)
+  const shouldUseCrossOrigin = useMemo(() => {
+    if (!src) return false;
+    try {
+      const host = new URL(src).hostname;
+      // Enable CORS for Supabase assets or same-origin media only
+      return host.includes('supabase.co') || host === window.location.hostname;
+    } catch {
+      return false;
+    }
+  }, [src]);
+  
   // Event handlers
   const handleCanPlay = useCallback(() => {
     setIsLoading(false);
@@ -432,7 +444,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           autoPlay={autoPlay && !deviceInfo.isMobile}
           muted={isMuted}
           playsInline
-          crossOrigin="anonymous"
+          crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
           className="w-full h-full object-cover"
           style={{ display: isLoading ? 'none' : 'block' }}
           controls={false}
@@ -446,7 +458,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           preload={deviceInfo.isMobile ? 'metadata' : 'auto'}
           autoPlay={autoPlay && !deviceInfo.isMobile}
           muted={isMuted}
-          crossOrigin="anonymous"
+          crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
           style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
           controls={false}
         >
