@@ -339,7 +339,26 @@ const ProductManagement = () => {
     });
 
     if (success) {
-      updateProductData(fileId, { status: 'published' });
+      // Remove the published file from the list
+      const updatedFiles = uploadedFiles.filter(f => f.id !== fileId);
+      setUploadedFiles(updatedFiles);
+      
+      // Update sessionStorage
+      sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
+      
+      // Remove product data
+      const updatedProductsData = { ...productsData };
+      delete updatedProductsData[fileId];
+      setProductsData(updatedProductsData);
+      
+      // If no more files, redirect to portfolio
+      if (updatedFiles.length === 0) {
+        toast.success("Tous les produits ont été publiés! Redirection vers votre portfolio...");
+        setTimeout(() => navigate('/portfolio'), 1500);
+      } else {
+        // Select the first remaining file
+        setSelectedFileId(updatedFiles[0].id);
+      }
     }
   };
 
@@ -354,6 +373,8 @@ const ProductManagement = () => {
     }
 
     let successCount = 0;
+    const publishedFileIds: string[] = [];
+    
     for (const productData of validProducts) {
       const file = uploadedFiles.find(f => f.id === productData.fileId);
       if (file) {
@@ -381,13 +402,36 @@ const ProductManagement = () => {
 
         if (success) {
           successCount++;
-          updateProductData(productData.fileId, { status: 'published' });
+          publishedFileIds.push(productData.fileId);
         }
       }
     }
 
     if (successCount > 0) {
       toast.success(`${successCount} produit(s) publié(s) avec succès !`);
+      
+      // Remove all published files from the list
+      const updatedFiles = uploadedFiles.filter(f => !publishedFileIds.includes(f.id));
+      setUploadedFiles(updatedFiles);
+      
+      // Update sessionStorage
+      sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
+      
+      // Remove published products data
+      const updatedProductsData = { ...productsData };
+      publishedFileIds.forEach(fileId => {
+        delete updatedProductsData[fileId];
+      });
+      setProductsData(updatedProductsData);
+      
+      // If no more files, redirect to portfolio
+      if (updatedFiles.length === 0) {
+        toast.success("Tous les produits ont été publiés! Redirection vers votre portfolio...");
+        setTimeout(() => navigate('/portfolio'), 1500);
+      } else {
+        // Select the first remaining file
+        setSelectedFileId(updatedFiles[0].id);
+      }
     }
   };
 
