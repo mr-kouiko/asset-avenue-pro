@@ -182,7 +182,10 @@ export const useMarketplace = () => {
         tags: translations[index].tags
       }));
 
-      setContent(translatedContent);
+      // Randomize the order of content for the homepage
+      const shuffledContent = [...translatedContent].sort(() => Math.random() - 0.5);
+
+      setContent(shuffledContent);
     } catch (error) {
       console.error('Error in fetchMarketplaceContent:', error);
     } finally {
