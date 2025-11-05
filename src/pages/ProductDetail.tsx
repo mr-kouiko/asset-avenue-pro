@@ -28,6 +28,8 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
+import { SocialShare } from "@/components/SocialShare";
+import { SEOHead } from "@/components/SEOHead";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
@@ -271,8 +273,27 @@ const ProductDetail = () => {
     }, selectedLicense);
   };
 
+  // Generate SEO-optimized URL and metadata
+  const productUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const productImage = product.thumbnail || product.previewUrl || '';
+  const productPrice = isVideo ? basePrice : (product.price || 0);
+
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Meta Tags */}
+      <SEOHead
+        title={product.title}
+        description={product.description}
+        image={productImage}
+        url={productUrl}
+        type="product"
+        author={product.author}
+        publishedTime={product.uploadDate}
+        tags={product.tags}
+        price={productPrice}
+        currency={isVideo ? 'USD' : 'EUR'}
+      />
+      
       <Header />
       <Navigation />
 
@@ -361,13 +382,16 @@ const ProductDetail = () => {
               color={isLiked ? "hsl(var(--primary))" : "currentColor"}
             />
           </Button>
-          <Button 
-            variant="secondary" 
-            size="sm" 
+          <SocialShare
+            url={productUrl}
+            title={product.title}
+            description={product.description}
+            image={productImage}
+            hashtags={product.tags}
+            variant="secondary"
+            size="sm"
             className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
-          >
-            <Share2 className="h-4 w-4" />
-          </Button>
+          />
         </div>
         
         {/* Audio/Video indicator badge */}
