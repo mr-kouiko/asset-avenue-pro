@@ -687,22 +687,15 @@ const ProductManagement = () => {
                         </div>
                        
                         <div>
-                          <Label htmlFor="category">Catégorie</Label>
-                          <Select 
-                            value={selectedProductData.category}
-                            onValueChange={(value) => updateProductData(selectedFileId!, { category: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner une catégorie" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label>Catégorie</Label>
+                          <div className="flex items-center space-x-2 h-10 px-3 border rounded-md bg-muted/50">
+                            <Badge variant="secondary">
+                              {categories.find(c => c.id === selectedProductData.category)?.name || 'Détectée automatiquement'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              (Basée sur le type de fichier)
+                            </span>
+                          </div>
                         </div>
                         
                         <div className="md:col-span-2 space-y-2">

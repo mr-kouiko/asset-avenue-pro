@@ -255,29 +255,17 @@ export const EbookForm = ({
           />
         </div>
 
-        {/* Catégorie (pré-sélectionnée sur Ebooks) */}
+        {/* Catégorie (détectée automatiquement) */}
         <div>
-          <Label htmlFor="category">Catégorie</Label>
-          <Select 
-            value={productData.category} 
-            onValueChange={(value) => onUpdateProductData({ category: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner une catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {ebooksCategory && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Catégorie "Ebooks" pré-sélectionnée pour les fichiers PDF
-            </p>
-          )}
+          <Label>Catégorie</Label>
+          <div className="flex items-center space-x-2 h-10 px-3 border rounded-md bg-muted/50">
+            <Badge variant="secondary">
+              {categories.find(c => c.id === productData.category)?.name || 'Ebooks'}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              (Détectée automatiquement pour les PDF)
+            </span>
+          </div>
         </div>
 
         {/* Description */}
