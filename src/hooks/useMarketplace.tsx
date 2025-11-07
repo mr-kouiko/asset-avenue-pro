@@ -19,6 +19,7 @@ export interface MarketplaceContent {
   tags?: string[];
   duration?: string; // Audio duration (e.g., "3:45")
   bpm?: number; // Beats per minute for audio
+  created_at?: string; // Upload date for sorting
 }
 
 export const useMarketplace = () => {
@@ -151,6 +152,7 @@ export const useMarketplace = () => {
             downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
             category_id: item.category_id,
             tags: item.tags || [],
+            created_at: item.created_at,
             // Extract audio metadata if available
             duration: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'duration' in originalFile.metadata 
               ? originalFile.metadata.duration as string 

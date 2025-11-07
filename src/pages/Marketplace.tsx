@@ -19,6 +19,7 @@ const Marketplace = () => {
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("popular");
   const [categories, setCategories] = useState([
     { value: "all", label: "Toutes les catégories", count: "0" }
   ]);
@@ -126,6 +127,30 @@ const Marketplace = () => {
                            content.category_id === selectedCategory ||
                            content.type === selectedCategory;
     return matchesSearch && matchesCategory;
+  });
+
+  // Sort the filtered content
+  const sortedContent = [...filteredContent].sort((a, b) => {
+    switch (sortBy) {
+      case "popular":
+        // Sort by downloads + likes
+        const popularityA = (a.downloads || 0) + (a.likes || 0);
+        const popularityB = (b.downloads || 0) + (b.likes || 0);
+        return popularityB - popularityA;
+      case "recent":
+        // Sort by upload date (most recent first)
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      case "price-low":
+        // Sort by price ascending
+        return (a.price || 0) - (b.price || 0);
+      case "price-high":
+        // Sort by price descending
+        return (b.price || 0) - (a.price || 0);
+      default:
+        return 0;
+    }
   });
 
   // Check if we're viewing audio content
@@ -314,7 +339,7 @@ const Marketplace = () => {
               <Badge variant="secondary">Tous</Badge>
             </div>
 
-            <Select defaultValue="popular">
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
@@ -336,7 +361,7 @@ const Marketplace = () => {
               <div className="text-stock-dark/60 font-medium">Chargement des contenus...</div>
             </div>
           </div>
-        ) : filteredContent.length === 0 ? (
+        ) : sortedContent.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-stock-dark/60 text-lg">Aucun contenu trouvé</div>
             <p className="text-stock-dark/40 mt-2">Essayez d'ajuster vos filtres de recherche</p>
@@ -346,7 +371,7 @@ const Marketplace = () => {
             className="grid grid-cols-1 max-w-4xl mx-auto"
             style={{ gap: 'var(--grid-gap)' }}
           >
-            {filteredContent.map((content) => (
+            {sortedContent.map((content) => (
               <ContentCard key={content.id} {...content} />
             ))}
           </div>
