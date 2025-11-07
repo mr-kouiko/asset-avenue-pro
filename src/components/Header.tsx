@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ShoppingCart, User, Menu, Globe, LogOut, Shield } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, Globe, LogOut, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -88,6 +88,14 @@ export const Header = () => {
 
         {/* Navigation & Actions */}
         <div className="flex items-center space-x-4">
+          {/* AI Image Generator Link */}
+          <Button variant="outline" size="sm" asChild className="hidden md:flex">
+            <Link to={`/${language}/ai-image-generator`} className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              IA Image
+            </Link>
+          </Button>
+
           {/* Infinity Link */}
           <Button variant="default" size="sm" asChild className="hidden md:flex">
             <Link to={`/${language}/infinity`}>

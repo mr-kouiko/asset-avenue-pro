@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_image_generations: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          prompt: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          prompt: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          prompt?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       album_photos: {
         Row: {
           album_id: string
