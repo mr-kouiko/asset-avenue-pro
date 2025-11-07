@@ -367,10 +367,7 @@ const Marketplace = () => {
             <p className="text-stock-dark/40 mt-2">Essayez d'ajuster vos filtres de recherche</p>
           </div>
         ) : (
-          <div 
-            className="grid grid-cols-1 max-w-4xl mx-auto"
-            style={{ gap: 'var(--grid-gap)' }}
-          >
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {sortedContent.map((content) => (
               <ContentCard key={content.id} {...content} />
             ))}
