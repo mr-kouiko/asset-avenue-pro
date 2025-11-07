@@ -63,39 +63,96 @@ export default function AIImageGenerator() {
     }
 
     setIsGenerating(true);
+    setGeneratedImage(null);
     
     try {
+      console.log('Invoking generate-ai-image function with prompt:', prompt.trim());
       const { data, error } = await supabase.functions.invoke('generate-ai-image', {
-        body: { prompt }
+        body: { prompt: prompt.trim() }
       });
 
-      if (error) {
-        if (data?.error === 'limit_reached') {
+      console.log('Function response:', { data, error });
+
+      // Handle limit reached
+      if (data?.error === 'limit_reached') {
+        toast({
+          title: "Limite atteinte",
+          description: data.message || "Vous avez utilisé vos 5 générations gratuites.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Handle other errors from function response
+      if (data?.error) {
+        const errorMsg = data.error;
+        if (errorMsg.includes('Paiement requis') || errorMsg.includes('402')) {
           toast({
-            title: "Limite atteinte",
-            description: data.message,
+            title: "Crédits insuffisants",
+            description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
+            variant: "destructive"
+          });
+        } else if (errorMsg.includes('Limite de taux') || errorMsg.includes('429')) {
+          toast({
+            title: "Trop de requêtes",
+            description: "Veuillez réessayer dans quelques minutes.",
             variant: "destructive"
           });
         } else {
-          throw error;
+          toast({
+            title: "Erreur",
+            description: errorMsg,
+            variant: "destructive"
+          });
         }
         return;
       }
 
-      setGeneratedImage(data.imageUrl);
-      setRemainingGenerations(data.remainingGenerations);
-      
-      toast({
-        title: "Image générée avec succès !",
-        description: `Il vous reste ${data.remainingGenerations} générations gratuites.`
-      });
-    } catch (error) {
+      // Handle error thrown by invoke
+      if (error) {
+        throw error;
+      }
+
+      // Success case
+      if (data?.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+        setRemainingGenerations(data.remainingGenerations ?? 0);
+        
+        toast({
+          title: "Image générée avec succès !",
+          description: `Il vous reste ${data.remainingGenerations ?? 0} génération${(data.remainingGenerations ?? 0) > 1 ? 's' : ''} gratuite${(data.remainingGenerations ?? 0) > 1 ? 's' : ''}.`
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Aucune image générée dans la réponse.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
       console.error('Error generating image:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de générer l'image. Veuillez réessayer.",
-        variant: "destructive"
-      });
+      
+      // Parse error message for specific cases
+      const errorMsg = error?.message || JSON.stringify(error);
+      if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
+        toast({
+          title: "Crédits insuffisants",
+          description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
+          variant: "destructive"
+        });
+      } else if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('rate limit')) {
+        toast({
+          title: "Limite de requêtes",
+          description: "Trop de requêtes. Veuillez réessayer dans quelques minutes.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de générer l'image. Veuillez réessayer.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsGenerating(false);
     }

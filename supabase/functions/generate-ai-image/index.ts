@@ -51,16 +51,21 @@ serve(async (req) => {
     }
 
     // Check generation count
+    console.log('Checking generation count for user:', user.id);
     const { count, error: countError } = await supabaseClient
       .from('ai_image_generations')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
     if (countError) {
+      console.error('Error checking generation count:', countError);
       throw countError;
     }
 
+    console.log('Current generation count:', count);
+
     if (count !== null && count >= 5) {
+      console.log('Generation limit reached for user:', user.id);
       return new Response(
         JSON.stringify({ 
           error: 'limit_reached',
@@ -71,6 +76,7 @@ serve(async (req) => {
     }
 
     // Call Lovable AI Gateway with Gemini Flash Image model (Nano banana)
+    console.log('Calling Lovable AI Gateway with prompt:', prompt.substring(0, 50) + '...');
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -88,6 +94,8 @@ serve(async (req) => {
         modalities: ['image', 'text']
       })
     });
+
+    console.log('AI Gateway response status:', response.status);
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -108,12 +116,15 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log('AI Gateway response data:', JSON.stringify(data).substring(0, 200));
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageUrl) {
+      console.error('No image URL in response. Full response:', JSON.stringify(data));
       throw new Error('No image generated');
     }
 
+    console.log('Image generated successfully, storing record...');
     // Store generation record
     const { error: insertError } = await supabaseClient
       .from('ai_image_generations')
@@ -125,6 +136,8 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Error storing generation:', insertError);
+    } else {
+      console.log('Generation record stored successfully');
     }
 
     return new Response(
