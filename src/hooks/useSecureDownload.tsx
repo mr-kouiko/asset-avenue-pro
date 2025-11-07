@@ -48,6 +48,8 @@ export const useSecureDownload = () => {
     setIsDownloading(true);
 
     try {
+      console.log('Initiating secure download with token...');
+      
       // Step 1: Get the signed download URL from the secure endpoint
       const response = await fetch(
         `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/secure-download?token=${downloadToken}`,
@@ -61,23 +63,39 @@ export const useSecureDownload = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Download failed with status ${response.status}`);
+        console.error('Download endpoint error:', { status: response.status, errorData });
+        
+        // Provide specific error messages based on status code
+        let errorMessage = errorData.error || 'Download failed';
+        
+        if (response.status === 403) {
+          errorMessage = 'Access denied. Your download link may have expired or already been used.';
+        } else if (response.status === 404) {
+          errorMessage = 'Download not found. The file may have been removed.';
+        } else if (response.status === 500) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Step 2: Parse the JSON response to get the signed URL
       const data = await response.json();
+      console.log('Received download data:', { fileName: data.fileName, fileSize: data.fileSize });
       
       if (!data.downloadUrl) {
-        throw new Error('No download URL received');
+        throw new Error('No download URL received from server');
       }
 
       // Step 3: Use the signed URL to download the actual file
+      console.log('Downloading file from signed URL...');
       const fileResponse = await fetch(data.downloadUrl);
       if (!fileResponse.ok) {
-        throw new Error('Failed to download file from signed URL');
+        throw new Error('Failed to download file. The download link may have expired.');
       }
 
       // Step 4: Create blob and trigger download
+      console.log('Creating download blob...');
       const blob = await fileResponse.blob();
       const url = window.URL.createObjectURL(blob);
       
@@ -91,11 +109,13 @@ export const useSecureDownload = () => {
       // Clean up
       window.URL.revokeObjectURL(url);
       
+      console.log('Download completed successfully');
       toast.success('File downloaded successfully!');
 
     } catch (error) {
       console.error('Download failed:', error);
-      toast.error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(errorMessage);
     } finally {
       setIsDownloading(false);
     }
