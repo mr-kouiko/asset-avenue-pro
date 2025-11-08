@@ -89,7 +89,7 @@ export default function AIImageGenerator() {
         setAiErrorCode('quota_exceeded');
         toast({
           title: "Quota dépassé",
-          description: "Le quota quotidien Google API (1500 images/jour) a été atteint. Réessayez demain.",
+          description: "Le quota quotidien Google API a été atteint. Réessayez demain.",
           variant: "destructive"
         });
         return;
@@ -99,15 +99,6 @@ export default function AIImageGenerator() {
         toast({
           title: "Trop de requêtes",
           description: "Veuillez réessayer dans quelques minutes.",
-          variant: "destructive"
-        });
-        return;
-      }
-      if (data?.error === 'payment_required') {
-        setAiErrorCode('payment_required');
-        toast({
-          title: "Crédits épuisés",
-          description: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace → Usage.",
           variant: "destructive"
         });
         return;
@@ -128,13 +119,6 @@ export default function AIImageGenerator() {
           toast({
             title: "Trop de requêtes",
             description: "Veuillez réessayer dans quelques minutes.",
-            variant: "destructive"
-          });
-        } else if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
-          setAiErrorCode('payment_required');
-          toast({
-            title: "Crédits épuisés",
-            description: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace → Usage.",
             variant: "destructive"
           });
         } else {
@@ -188,13 +172,6 @@ export default function AIImageGenerator() {
           description: "Trop de requêtes. Veuillez réessayer dans quelques minutes.",
           variant: "destructive"
         });
-      } else if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
-        setAiErrorCode('payment_required');
-        toast({
-          title: "Crédits épuisés",
-          description: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace → Usage.",
-          variant: "destructive"
-        });
       } else {
         toast({
           title: "Erreur",
@@ -216,7 +193,7 @@ export default function AIImageGenerator() {
         <div className="text-center mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-medium">Propulsé par l'IA</span>
+            <span className="text-sm font-medium">Propulsé par Google Gemini</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Générateur d'images IA
@@ -229,7 +206,7 @@ export default function AIImageGenerator() {
               <Alert variant="destructive">
                 <AlertTitle>Quota Google API dépassé</AlertTitle>
                 <AlertDescription>
-                  Le quota quotidien de 1500 images/jour a été atteint. Réessayez demain ou augmentez votre quota sur{' '}
+                  Le quota quotidien a été atteint. Réessayez demain ou augmentez votre quota sur{' '}
                   <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-medium">
                     Google AI Studio
                   </a>.
@@ -243,16 +220,6 @@ export default function AIImageGenerator() {
                 <AlertTitle>Trop de requêtes</AlertTitle>
                 <AlertDescription>
                   Veuillez attendre quelques minutes avant de réessayer.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-          {aiErrorCode === 'payment_required' && (
-            <div className="max-w-2xl mx-auto">
-              <Alert variant="destructive">
-                <AlertTitle>Crédits épuisés</AlertTitle>
-                <AlertDescription>
-                  Les crédits Lovable AI de l’atelier sont épuisés. Ajoutez des crédits dans Workspace → Usage et réessayez.
                 </AlertDescription>
               </Alert>
             </div>
@@ -289,7 +256,7 @@ export default function AIImageGenerator() {
               
               <Button
                 onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded' || aiErrorCode === 'payment_required'}
+                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded'}
                 className="w-full mt-6 h-12 text-base font-semibold rounded-xl"
                 size="lg"
               >

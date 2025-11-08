@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     // Get authenticated user
@@ -75,48 +75,58 @@ serve(async (req) => {
       );
     }
 
-    // Call Lovable AI Gateway for image generation
-    console.log('Calling Lovable AI Gateway with prompt:', prompt.substring(0, 50) + '...');
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call Google Gemini API directly for image generation
+    console.log('Calling Google Gemini API with prompt:', prompt.substring(0, 50) + '...');
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + GOOGLE_GEMINI_API_KEY, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        modalities: ['image', 'text']
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          response_modalities: ['image']
+        }
       })
     });
 
-    console.log('Lovable AI Gateway response status:', response.status);
+    console.log('Google Gemini API response status:', response.status);
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'rate_limited', message: 'Limite de taux dépassée, veuillez réessayer plus tard.' }),
+          JSON.stringify({ error: 'rate_limited', message: 'Quota Google dépassé, veuillez réessayer plus tard.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
+      if (response.status === 403) {
         return new Response(
-          JSON.stringify({ error: 'payment_required', message: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace > Usage." }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'quota_exceeded', message: 'Quota Google dépassé pour aujourd\'hui.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       const errorText = await response.text();
-      console.error('Lovable AI Gateway error:', response.status, errorText);
-      throw new Error('Lovable AI gateway error');
+      console.error('Google Gemini API error:', response.status, errorText);
+      throw new Error('Google Gemini API error');
     }
 
     const data = await response.json();
-    console.log('Lovable AI response data (truncated):', JSON.stringify(data).substring(0, 200));
+    console.log('Google Gemini response data (truncated):', JSON.stringify(data).substring(0, 200));
 
-    // Extract base64 image from Lovable AI response
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url as string | undefined;
+    // Extract base64 image from Google Gemini response
+    const imageData = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inline_data)?.inline_data;
+    
+    if (!imageData?.data) {
+      console.error('No image in Google Gemini response. Full response:', JSON.stringify(data));
+      throw new Error('No image generated');
+    }
+
+    // Convert to data URL format
+    const imageUrl = `data:${imageData.mime_type};base64,${imageData.data}`;
 
     if (!imageUrl) {
       console.error('No image in Lovable AI response. Full response:', JSON.stringify(data));
