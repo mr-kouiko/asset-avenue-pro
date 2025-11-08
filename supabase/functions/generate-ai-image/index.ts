@@ -76,11 +76,12 @@ serve(async (req) => {
     }
 
     // Call Google Gemini API directly for image generation
-    console.log('Calling Google Gemini API with prompt:', prompt.substring(0, 50) + '...');
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=' + GOOGLE_GEMINI_API_KEY, {
+    console.log('Calling Google Gemini API (gemini-2.5-flash-image) with prompt:', prompt.substring(0, 50) + '...');
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': GOOGLE_GEMINI_API_KEY
       },
       body: JSON.stringify({
         contents: [
@@ -91,10 +92,7 @@ serve(async (req) => {
               }
             ]
           }
-        ],
-        generationConfig: {
-          responseModalities: ["TEXT", "IMAGE"]
-        }
+        ]
       }),
     });
 
