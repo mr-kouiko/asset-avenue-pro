@@ -103,6 +103,15 @@ export default function AIImageGenerator() {
         });
         return;
       }
+      if (data?.error === 'payment_required') {
+        setAiErrorCode('payment_required');
+        toast({
+          title: "Crédits épuisés",
+          description: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace → Usage.",
+          variant: "destructive"
+        });
+        return;
+      }
 
       // Handle other errors from function response (string-based)
       if (data?.error) {
@@ -119,6 +128,13 @@ export default function AIImageGenerator() {
           toast({
             title: "Trop de requêtes",
             description: "Veuillez réessayer dans quelques minutes.",
+            variant: "destructive"
+          });
+        } else if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
+          setAiErrorCode('payment_required');
+          toast({
+            title: "Crédits épuisés",
+            description: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace → Usage.",
             variant: "destructive"
           });
         } else {
@@ -170,6 +186,13 @@ export default function AIImageGenerator() {
         toast({
           title: "Limite de requêtes",
           description: "Trop de requêtes. Veuillez réessayer dans quelques minutes.",
+          variant: "destructive"
+        });
+      } else if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
+        setAiErrorCode('payment_required');
+        toast({
+          title: "Crédits épuisés",
+          description: "Crédits Lovable AI insuffisants. Ajoutez des crédits dans Workspace → Usage.",
           variant: "destructive"
         });
       } else {
@@ -224,6 +247,16 @@ export default function AIImageGenerator() {
               </Alert>
             </div>
           )}
+          {aiErrorCode === 'payment_required' && (
+            <div className="max-w-2xl mx-auto">
+              <Alert variant="destructive">
+                <AlertTitle>Crédits épuisés</AlertTitle>
+                <AlertDescription>
+                  Les crédits Lovable AI de l’atelier sont épuisés. Ajoutez des crédits dans Workspace → Usage et réessayez.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
           
           {user && remainingGenerations !== null && (
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent/50 border border-border">
@@ -256,7 +289,7 @@ export default function AIImageGenerator() {
               
               <Button
                 onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded'}
+                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded' || aiErrorCode === 'payment_required'}
                 className="w-full mt-6 h-12 text-base font-semibold rounded-xl"
                 size="lg"
               >
