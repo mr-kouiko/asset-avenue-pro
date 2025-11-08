@@ -100,13 +100,13 @@ serve(async (req) => {
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'Limite de taux dépassée, veuillez réessayer plus tard.' }),
+          JSON.stringify({ error: 'rate_limited', message: 'Limite de taux dépassée, veuillez réessayer plus tard.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'Paiement requis, veuillez ajouter des crédits à votre espace Lovable AI.' }),
+          JSON.stringify({ error: 'payment_required', message: 'Paiement requis, veuillez ajouter des crédits à votre espace Lovable AI.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

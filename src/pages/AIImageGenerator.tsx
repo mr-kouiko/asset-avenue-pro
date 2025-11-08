@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,6 +25,7 @@ export default function AIImageGenerator() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [remainingGenerations, setRemainingGenerations] = useState<number | null>(null);
+  const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -64,6 +66,7 @@ export default function AIImageGenerator() {
 
     setIsGenerating(true);
     setGeneratedImage(null);
+    setAiErrorCode(null);
     
     try {
       console.log('Invoking generate-ai-image function with prompt:', prompt.trim());
@@ -73,7 +76,7 @@ export default function AIImageGenerator() {
 
       console.log('Function response:', { data, error });
 
-      // Handle limit reached
+      // Handle specific errors from function
       if (data?.error === 'limit_reached') {
         toast({
           title: "Limite atteinte",
@@ -82,17 +85,37 @@ export default function AIImageGenerator() {
         });
         return;
       }
+      if (data?.error === 'payment_required') {
+        setAiErrorCode('payment_required');
+        toast({
+          title: "Crédits insuffisants",
+          description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
+          variant: "destructive"
+        });
+        return;
+      }
+      if (data?.error === 'rate_limited') {
+        setAiErrorCode('rate_limited');
+        toast({
+          title: "Trop de requêtes",
+          description: "Veuillez réessayer dans quelques minutes.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // Handle other errors from function response
+      // Handle other errors from function response (string-based)
       if (data?.error) {
-        const errorMsg = data.error;
+        const errorMsg = String(data.error);
         if (errorMsg.includes('Paiement requis') || errorMsg.includes('402')) {
+          setAiErrorCode('payment_required');
           toast({
             title: "Crédits insuffisants",
             description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
             variant: "destructive"
           });
         } else if (errorMsg.includes('Limite de taux') || errorMsg.includes('429')) {
+          setAiErrorCode('rate_limited');
           toast({
             title: "Trop de requêtes",
             description: "Veuillez réessayer dans quelques minutes.",
@@ -117,6 +140,7 @@ export default function AIImageGenerator() {
       if (data?.imageUrl) {
         setGeneratedImage(data.imageUrl);
         setRemainingGenerations(data.remainingGenerations ?? 0);
+        setAiErrorCode(null);
         
         toast({
           title: "Image générée avec succès !",
@@ -135,12 +159,14 @@ export default function AIImageGenerator() {
       // Parse error message for specific cases
       const errorMsg = error?.message || JSON.stringify(error);
       if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
+        setAiErrorCode('payment_required');
         toast({
           title: "Crédits insuffisants",
           description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
           variant: "destructive"
         });
       } else if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('rate limit')) {
+        setAiErrorCode('rate_limited');
         toast({
           title: "Limite de requêtes",
           description: "Trop de requêtes. Veuillez réessayer dans quelques minutes.",
@@ -175,6 +201,26 @@ export default function AIImageGenerator() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Transformez vos idées en visuels époustouflants instantanément.
           </p>
+          {aiErrorCode === 'payment_required' && (
+            <div className="max-w-2xl mx-auto">
+              <Alert variant="destructive">
+                <AlertTitle>Crédits Lovable AI épuisés</AlertTitle>
+                <AlertDescription>
+                  Ajoutez des crédits dans Settings → Workspace → Usage, puis réessayez.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          {aiErrorCode === 'rate_limited' && (
+            <div className="max-w-2xl mx-auto">
+              <Alert variant="destructive">
+                <AlertTitle>Trop de requêtes</AlertTitle>
+                <AlertDescription>
+                  Veuillez attendre quelques minutes avant de réessayer.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
           
           {user && remainingGenerations !== null && (
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent/50 border border-border">
@@ -207,7 +253,7 @@ export default function AIImageGenerator() {
               
               <Button
                 onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim()}
+                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'payment_required'}
                 className="w-full mt-6 h-12 text-base font-semibold rounded-xl"
                 size="lg"
               >
