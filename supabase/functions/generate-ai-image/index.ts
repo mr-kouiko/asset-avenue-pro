@@ -77,7 +77,7 @@ serve(async (req) => {
 
     // Call Google Gemini API directly for image generation
     console.log('Calling Google Gemini API with prompt:', prompt.substring(0, 50) + '...');
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + GOOGLE_GEMINI_API_KEY, {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=' + GOOGLE_GEMINI_API_KEY, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ serve(async (req) => {
           }
         ],
         generationConfig: {
-          response_modalities: ['image']
+          responseModalities: ["TEXT", "IMAGE"]
         }
       }),
     });
@@ -122,16 +122,16 @@ serve(async (req) => {
     console.log('Google Gemini API response data (truncated):', JSON.stringify(data).substring(0, 200));
 
     // Extract base64 image from Google Gemini response
-    const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inline_data);
+    const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
     
-    if (!imagePart?.inline_data?.data) {
+    if (!imagePart?.inlineData?.data) {
       console.error('No image in Google Gemini response. Full response:', JSON.stringify(data));
       throw new Error('No image generated');
     }
 
     // Convert to data URL format
-    const mimeType = imagePart.inline_data.mime_type || 'image/png';
-    const imageUrl = `data:${mimeType};base64,${imagePart.inline_data.data}`;
+    const mimeType = imagePart.inlineData.mimeType || 'image/png';
+    const imageUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
 
     console.log('Image generated successfully, storing record...');
     // Store generation record
