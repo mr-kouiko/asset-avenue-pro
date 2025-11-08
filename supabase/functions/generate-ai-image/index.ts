@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
 
     // Get authenticated user
@@ -75,54 +75,65 @@ serve(async (req) => {
       );
     }
 
-    // Call Lovable AI Gateway with Gemini Flash Image model (Nano banana)
-    console.log('Calling Lovable AI Gateway with prompt:', prompt.substring(0, 50) + '...');
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
+    // Call Google Gemini API directly with Gemini 2.0 Flash (image generation)
+    console.log('Calling Google Gemini API with prompt:', prompt.substring(0, 50) + '...');
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 1,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192,
+            responseMimeType: 'image/png'
           }
-        ],
-        modalities: ['image', 'text']
-      })
-    });
+        })
+      }
+    );
 
-    console.log('AI Gateway response status:', response.status);
+    console.log('Google Gemini API response status:', response.status);
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'rate_limited', message: 'Limite de taux dépassée, veuillez réessayer plus tard.' }),
+          JSON.stringify({ error: 'rate_limited', message: 'Limite de taux Google dépassée, veuillez réessayer plus tard.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
+      if (response.status === 403) {
         return new Response(
-          JSON.stringify({ error: 'payment_required', message: 'Paiement requis, veuillez ajouter des crédits à votre espace Lovable AI.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'quota_exceeded', message: 'Quota Google API dépassé. Limite quotidienne : 1500 images/jour.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      throw new Error('AI gateway error');
+      console.error('Google Gemini API error:', response.status, errorText);
+      throw new Error('Google Gemini API error');
     }
 
     const data = await response.json();
-    console.log('AI Gateway response data:', JSON.stringify(data).substring(0, 200));
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageUrl) {
-      console.error('No image URL in response. Full response:', JSON.stringify(data));
+    console.log('Google Gemini API response data:', JSON.stringify(data).substring(0, 200));
+    
+    // Extract base64 image from Google's response format
+    const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    
+    if (!imageData) {
+      console.error('No image data in response. Full response:', JSON.stringify(data));
       throw new Error('No image generated');
     }
+
+    // Construct data URL from base64
+    const imageUrl = `data:image/png;base64,${imageData}`;
 
     console.log('Image generated successfully, storing record...');
     // Store generation record

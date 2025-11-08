@@ -85,11 +85,11 @@ export default function AIImageGenerator() {
         });
         return;
       }
-      if (data?.error === 'payment_required') {
-        setAiErrorCode('payment_required');
+      if (data?.error === 'quota_exceeded') {
+        setAiErrorCode('quota_exceeded');
         toast({
-          title: "Crédits insuffisants",
-          description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
+          title: "Quota dépassé",
+          description: "Le quota quotidien Google API (1500 images/jour) a été atteint. Réessayez demain.",
           variant: "destructive"
         });
         return;
@@ -107,11 +107,11 @@ export default function AIImageGenerator() {
       // Handle other errors from function response (string-based)
       if (data?.error) {
         const errorMsg = String(data.error);
-        if (errorMsg.includes('Paiement requis') || errorMsg.includes('402')) {
-          setAiErrorCode('payment_required');
+        if (errorMsg.includes('Quota') || errorMsg.includes('403')) {
+          setAiErrorCode('quota_exceeded');
           toast({
-            title: "Crédits insuffisants",
-            description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
+            title: "Quota dépassé",
+            description: "Le quota quotidien Google API a été atteint. Réessayez demain.",
             variant: "destructive"
           });
         } else if (errorMsg.includes('Limite de taux') || errorMsg.includes('429')) {
@@ -158,11 +158,11 @@ export default function AIImageGenerator() {
       
       // Parse error message for specific cases
       const errorMsg = error?.message || JSON.stringify(error);
-      if (errorMsg.includes('402') || errorMsg.toLowerCase().includes('payment')) {
-        setAiErrorCode('payment_required');
+      if (errorMsg.includes('403') || errorMsg.toLowerCase().includes('quota')) {
+        setAiErrorCode('quota_exceeded');
         toast({
-          title: "Crédits insuffisants",
-          description: "Veuillez ajouter des crédits Lovable AI dans Settings → Workspace → Usage.",
+          title: "Quota dépassé",
+          description: "Le quota quotidien Google API a été atteint. Réessayez demain.",
           variant: "destructive"
         });
       } else if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('rate limit')) {
@@ -201,12 +201,15 @@ export default function AIImageGenerator() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Transformez vos idées en visuels époustouflants instantanément.
           </p>
-          {aiErrorCode === 'payment_required' && (
+          {aiErrorCode === 'quota_exceeded' && (
             <div className="max-w-2xl mx-auto">
               <Alert variant="destructive">
-                <AlertTitle>Crédits Lovable AI épuisés</AlertTitle>
+                <AlertTitle>Quota Google API dépassé</AlertTitle>
                 <AlertDescription>
-                  Ajoutez des crédits dans Settings → Workspace → Usage, puis réessayez.
+                  Le quota quotidien de 1500 images/jour a été atteint. Réessayez demain ou augmentez votre quota sur{' '}
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                    Google AI Studio
+                  </a>.
                 </AlertDescription>
               </Alert>
             </div>
@@ -253,7 +256,7 @@ export default function AIImageGenerator() {
               
               <Button
                 onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'payment_required'}
+                disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded'}
                 className="w-full mt-6 h-12 text-base font-semibold rounded-xl"
                 size="lg"
               >
