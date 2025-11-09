@@ -29,7 +29,7 @@ import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
 import { SocialShare } from "@/components/SocialShare";
-import { SEOHead } from "@/components/SEOHead";
+import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
@@ -278,21 +278,21 @@ const ProductDetail = () => {
   const productImage = product.thumbnail || product.previewUrl || '';
   const productPrice = isVideo ? basePrice : (product.price || 0);
 
+  // SEO Configuration
+  useSEO({
+    title: product.title,
+    description: product.description,
+    image: productImage,
+    type: 'product',
+    author: product.author,
+    publishedTime: product.uploadDate,
+    tags: product.tags,
+    price: productPrice,
+    currency: isVideo ? 'USD' : 'EUR'
+  });
+
   return (
     <div className="min-h-screen bg-background">
-      {/* SEO Meta Tags */}
-      <SEOHead
-        title={product.title}
-        description={product.description}
-        image={productImage}
-        url={productUrl}
-        type="product"
-        author={product.author}
-        publishedTime={product.uploadDate}
-        tags={product.tags}
-        price={productPrice}
-        currency={isVideo ? 'USD' : 'EUR'}
-      />
       
       <Header />
       <Navigation />

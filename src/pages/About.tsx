@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 import { 
   Camera, 
   Video, 
@@ -20,6 +21,17 @@ import {
 
 const About = () => {
   const { language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "About Us - Global Creative Content Marketplace"
+      : "À Propos - Marketplace de Contenu Créatif Mondial",
+    description: language === 'en'
+      ? "VisuStock is a global marketplace for licensed digital media featuring images, videos, audio, and graphics from creators worldwide. Discover our mission, vision, and commitment to diversity."
+      : "VisuStock est une marketplace mondiale pour les médias numériques sous licence proposant des images, vidéos, audio et graphiques de créateurs du monde entier. Découvrez notre mission, vision et engagement pour la diversité.",
+    type: 'website'
+  });
 
   const content = {
     fr: {

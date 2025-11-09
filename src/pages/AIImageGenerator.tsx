@@ -9,6 +9,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSEO } from '@/hooks/useSEO';
 
 export default function AIImageGenerator() {
   const { user } = useAuth();
@@ -20,6 +21,17 @@ export default function AIImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "AI Image Generator - Create Stunning Visuals"
+      : "Générateur d'Images IA - Créez des Visuels Époustouflants",
+    description: language === 'en'
+      ? "Transform your ideas into stunning visuals instantly with our AI-powered image generator. Create professional-quality images using Google Gemini technology."
+      : "Transformez vos idées en visuels époustouflants instantanément avec notre générateur d'images IA. Créez des images de qualité professionnelle avec la technologie Google Gemini.",
+    type: 'website'
+  });
   
   const content = {
     fr: {

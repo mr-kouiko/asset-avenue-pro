@@ -1,14 +1,15 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Allow all robots to access the site
 User-agent: *
 Allow: /
+
+# Disallow admin and private areas
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /checkout
+Disallow: /cart
+
+# Sitemap location
+Sitemap: https://visustock.com/sitemap.xml
+
+# Crawl delay for courtesy
+Crawl-delay: 0

@@ -7,8 +7,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 const Contact = () => {
+  const { language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "Contact Us - Get in Touch with VisuStock"
+      : "Contactez-nous - Entrez en Contact avec VisuStock",
+    description: language === 'en'
+      ? "Have questions? Contact the VisuStock team. We're here to help with your creative content needs, licensing inquiries, and platform support."
+      : "Des questions ? Contactez l'équipe VisuStock. Nous sommes là pour vous aider avec vos besoins en contenu créatif, demandes de licences et support de la plateforme.",
+    type: 'website'
+  });
   return (
     <div className="min-h-screen bg-background">
       <Header />

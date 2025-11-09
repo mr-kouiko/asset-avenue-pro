@@ -7,10 +7,25 @@ import { ArrowRight, Star, Shield, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useContentStats } from "@/hooks/useContentStats";
+import { useSEO } from "@/hooks/useSEO";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Index = () => {
   const { content: featuredContent, loading } = useMarketplace();
   const { stats, loading: statsLoading } = useContentStats();
+  const { language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "Creative Content Marketplace - Buy & Sell Photos, Videos, Audio & Illustrations"
+      : "Marketplace de Contenu Créatif - Achetez et Vendez Photos, Vidéos, Audio et Illustrations",
+    description: language === 'en'
+      ? "Discover millions of professional photos, videos, illustrations and audio. Buy and sell creative content on VisuStock - the global marketplace for creators."
+      : "Découvrez des millions de photos, vidéos, illustrations et audios professionnels. Achetez et vendez du contenu créatif sur VisuStock - la marketplace mondiale pour créateurs.",
+    type: 'website',
+    image: 'https://lovable.dev/opengraph-image-p98pqg.png'
+  });
 
   const features = [
     {

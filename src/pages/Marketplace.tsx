@@ -14,9 +14,21 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 const Marketplace = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en'
+      ? "Marketplace - Browse Creative Content"
+      : "Marketplace - Parcourez le Contenu Créatif",
+    description: language === 'en'
+      ? "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects."
+      : "Parcourez des milliers de photos, vidéos, pistes audio et illustrations professionnelles. Trouvez le contenu créatif parfait pour vos projets.",
+    type: 'website'
+  });
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("popular");

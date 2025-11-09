@@ -4,9 +4,21 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 const Licenses = () => {
   const { language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "Licenses & Usage Rights - Understand Your Content Rights"
+      : "Licences et Droits d'Usage - Comprenez Vos Droits sur les Contenus",
+    description: language === 'en'
+      ? "Understand the different license types available on VisuStock. Choose between Standard, Extended, and Exclusive licenses for your creative projects."
+      : "Comprenez les différents types de licences disponibles sur VisuStock. Choisissez entre les licences Standard, Étendue et Exclusive pour vos projets créatifs.",
+    type: 'website'
+  });
   
   const content = {
     fr: {

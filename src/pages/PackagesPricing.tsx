@@ -7,11 +7,23 @@ import { Check, CreditCard, Zap, Star } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 const PackagesPricing = () => {
   const [isYearly, setIsYearly] = useState(false);
   const { toast } = useToast();
   const { language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "Packages & Pricing - Flexible Creative Content Plans"
+      : "Forfaits & Tarifs - Plans de Contenu Créatif Flexibles",
+    description: language === 'en'
+      ? "Explore our flexible pricing plans for creative content. Choose from credit packages or subscriptions to access unlimited images, videos, vectors, and audio for your projects."
+      : "Découvrez nos plans tarifaires flexibles pour le contenu créatif. Choisissez parmi des packages de crédits ou des abonnements pour accéder à des images, vidéos, vecteurs et audios illimités pour vos projets.",
+    type: 'website'
+  });
 
   const content = {
     fr: {

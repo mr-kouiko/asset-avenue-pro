@@ -7,9 +7,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Search, HelpCircle, MessageCircle, Mail } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 const Support = () => {
   const { language } = useLanguage();
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "Support Center - Get Help with VisuStock"
+      : "Centre d'Aide - Obtenez de l'Aide avec VisuStock",
+    description: language === 'en'
+      ? "Find answers to your questions about VisuStock. Browse our FAQ, contact support, or start a live chat with our team."
+      : "Trouvez les réponses à vos questions sur VisuStock. Parcourez notre FAQ, contactez le support ou démarrez un chat en direct avec notre équipe.",
+    type: 'website'
+  });
   
   const content = {
     fr: {

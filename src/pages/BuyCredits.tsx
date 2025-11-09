@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Check, Zap } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSEO } from '@/hooks/useSEO';
 
 const CREDIT_PACKS = {
   fr: [
@@ -164,6 +165,17 @@ export default function BuyCredits() {
   
   const t = content[language];
   const creditPacks = CREDIT_PACKS[language];
+
+  // SEO Configuration
+  useSEO({
+    title: language === 'en' 
+      ? "Buy AI Credits - Power Your Creative Projects"
+      : "Acheter des Crédits IA - Alimentez Vos Projets Créatifs",
+    description: language === 'en'
+      ? "Purchase AI credits to generate stunning images with our AI-powered image generator. Flexible credit packages from 10 to 500 credits. Start creating now!"
+      : "Achetez des crédits IA pour générer des images époustouflantes avec notre générateur d'images IA. Packages de crédits flexibles de 10 à 500 crédits. Commencez à créer maintenant!",
+    type: 'website'
+  });
 
   useEffect(() => {
     if (user) {
