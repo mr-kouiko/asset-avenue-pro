@@ -866,6 +866,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          created_at: string
+          credits_balance: number
+          id: string
+          total_purchased: number
+          total_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_balance?: number
+          id?: string
+          total_purchased?: number
+          total_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_balance?: number
+          id?: string
+          total_purchased?: number
+          total_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -901,6 +931,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_user_credits: {
+        Args: { amount_param: number; user_id_param: string }
+        Returns: boolean
+      }
       admin_access_profile_secure: {
         Args: {
           access_reason?: string
@@ -1007,6 +1041,10 @@ export type Database = {
           download_token: string
           expires_at: string
         }[]
+      }
+      deduct_user_credit: {
+        Args: { cost_param?: number; user_id_param: string }
+        Returns: boolean
       }
       get_admin_profiles_safe: {
         Args: never

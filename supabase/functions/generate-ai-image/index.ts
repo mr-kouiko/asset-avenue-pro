@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
-    if (!GOOGLE_GEMINI_API_KEY) {
-      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     // Get authenticated user
@@ -50,89 +50,105 @@ serve(async (req) => {
       );
     }
 
-    // Check generation count
-    console.log('Checking generation count for user:', user.id);
-    const { count, error: countError } = await supabaseClient
-      .from('ai_image_generations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
+    // Check user credits using the service role client
+    console.log('Checking user credits for user:', user.id);
+    
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    if (countError) {
-      console.error('Error checking generation count:', countError);
-      throw countError;
+    const { data: creditsData, error: creditsError } = await serviceClient
+      .from('user_credits')
+      .select('credits_balance')
+      .eq('user_id', user.id)
+      .single();
+
+    if (creditsError && creditsError.code !== 'PGRST116') { // PGRST116 = not found
+      console.error('Error checking user credits:', creditsError);
+      throw creditsError;
     }
 
-    console.log('Current generation count:', count);
+    const currentBalance = creditsData?.credits_balance ?? 0;
+    console.log('Current credit balance:', currentBalance);
 
-    if (count !== null && count >= 5) {
-      console.log('Generation limit reached for user:', user.id);
+    if (currentBalance < 1) {
+      console.log('Insufficient credits for user:', user.id);
       return new Response(
         JSON.stringify({ 
-          error: 'limit_reached',
-          message: "Vous avez utilisé vos 5 générations d'images IA gratuites. Abonnez-vous pour continuer."
+          error: 'insufficient_credits',
+          message: "Crédits insuffisants pour générer une image. Veuillez acheter des crédits pour continuer.",
+          current_balance: currentBalance
         }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Call Google Gemini API directly for image generation
-    console.log('Calling Google Gemini API (gemini-2.0-flash-preview-image-generation) with prompt:', prompt.substring(0, 50) + '...');
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent', {
+    // Call Lovable AI Gateway for image generation
+    console.log('Calling Lovable AI (google/gemini-2.5-flash-image) with prompt:', prompt.substring(0, 50) + '...');
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': GOOGLE_GEMINI_API_KEY
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ]
+        model: 'google/gemini-2.5-flash-image',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        modalities: ['image', 'text']
       }),
     });
 
-    console.log('Google Gemini API response status:', response.status);
+    console.log('Lovable AI response status:', response.status);
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'rate_limited', message: 'Trop de requêtes. Veuillez réessayer plus tard.' }),
+          JSON.stringify({ error: 'rate_limited', message: 'Limite de requêtes atteinte. Veuillez réessayer dans quelques instants.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 403) {
+      if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'quota_exceeded', message: 'Quota Google Gemini dépassé.' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'payment_required', message: 'Crédits Lovable AI insuffisants. Veuillez recharger votre compte workspace.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       const errorText = await response.text();
-      console.error('Google Gemini API error:', response.status, errorText);
-      throw new Error('Google Gemini API error');
+      console.error('Lovable AI error:', response.status, errorText);
+      throw new Error('Lovable AI gateway error');
     }
 
     const data = await response.json();
-    console.log('Google Gemini API response data (truncated):', JSON.stringify(data).substring(0, 200));
+    console.log('Lovable AI response data (truncated):', JSON.stringify(data).substring(0, 200));
 
-    // Extract base64 image from Google Gemini response
-    const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
+    // Extract base64 image data URL from Lovable AI response
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url as string | undefined;
     
-    if (!imagePart?.inlineData?.data) {
-      console.error('No image in Google Gemini response. Full response:', JSON.stringify(data));
+    if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('data:')) {
+      console.error('No image in Lovable AI response. Full response:', JSON.stringify(data));
       throw new Error('No image generated');
     }
 
-    // Convert to data URL format
-    const mimeType = imagePart.inlineData.mimeType || 'image/png';
-    const imageUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+    console.log('Image generated successfully, deducting credit...');
+    
+    // Deduct credit using service role
+    const { data: deductResult, error: deductError } = await serviceClient
+      .rpc('deduct_user_credit', { 
+        user_id_param: user.id,
+        cost_param: 1 
+      });
 
-    console.log('Image generated successfully, storing record...');
-    // Store generation record
+    if (deductError || !deductResult) {
+      console.error('Error deducting credit:', deductError);
+      // Still return image but log the error
+    } else {
+      console.log('Credit deducted successfully');
+    }
+    
+    // Store generation record for history
     const { error: insertError } = await supabaseClient
       .from('ai_image_generations')
       .insert({
@@ -142,13 +158,21 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error('Error storing generation:', insertError);
-    } else {
-      console.log('Generation record stored successfully');
+      console.error('Error storing generation history:', insertError);
     }
 
+    // Get updated balance
+    const { data: updatedCredits } = await serviceClient
+      .from('user_credits')
+      .select('credits_balance')
+      .eq('user_id', user.id)
+      .single();
+
     return new Response(
-      JSON.stringify({ imageUrl, remainingGenerations: 4 - (count || 0) }),
+      JSON.stringify({ 
+        imageUrl, 
+        creditsRemaining: updatedCredits?.credits_balance ?? (currentBalance - 1)
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

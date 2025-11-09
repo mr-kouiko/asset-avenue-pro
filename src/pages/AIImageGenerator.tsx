@@ -24,24 +24,30 @@ export default function AIImageGenerator() {
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [remainingGenerations, setRemainingGenerations] = useState<number | null>(null);
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      fetchRemainingGenerations();
+      fetchCreditsBalance();
     }
   }, [user]);
 
-  const fetchRemainingGenerations = async () => {
+  const fetchCreditsBalance = async () => {
     if (!user) return;
     
-    const { count } = await supabase
-      .from('ai_image_generations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
+    const { data, error } = await supabase
+      .from('user_credits')
+      .select('credits_balance')
+      .eq('user_id', user.id)
+      .single();
     
-    setRemainingGenerations(5 - (count || 0));
+    if (error) {
+      console.error('Error fetching credits:', error);
+      setCreditsBalance(0);
+    } else {
+      setCreditsBalance(data?.credits_balance ?? 0);
+    }
   };
 
   const handleGenerate = async () => {
@@ -77,19 +83,20 @@ export default function AIImageGenerator() {
       console.log('Function response:', { data, error });
 
       // Handle specific errors from function
-      if (data?.error === 'limit_reached') {
+      if (data?.error === 'insufficient_credits') {
         toast({
-          title: "Limite atteinte",
-          description: data.message || "Vous avez utilisé vos 5 générations gratuites.",
+          title: "Crédits insuffisants",
+          description: data.message || "Veuillez acheter des crédits pour continuer à générer des images.",
           variant: "destructive"
         });
+        setCreditsBalance(data.current_balance ?? 0);
         return;
       }
-      if (data?.error === 'quota_exceeded') {
-        setAiErrorCode('quota_exceeded');
+      if (data?.error === 'payment_required') {
+        setAiErrorCode('payment_required');
         toast({
-          title: "Quota dépassé",
-          description: "Le quota quotidien Google API a été atteint. Réessayez demain.",
+          title: "Crédits workspace insuffisants",
+          description: "Le compte Lovable AI nécessite plus de crédits. Contactez l'administrateur.",
           variant: "destructive"
         });
         return;
@@ -97,7 +104,7 @@ export default function AIImageGenerator() {
       if (data?.error === 'rate_limited') {
         setAiErrorCode('rate_limited');
         toast({
-          title: "Trop de requêtes",
+          title: "Limite de requêtes atteinte",
           description: "Veuillez réessayer dans quelques minutes.",
           variant: "destructive"
         });
@@ -139,12 +146,12 @@ export default function AIImageGenerator() {
       // Success case
       if (data?.imageUrl) {
         setGeneratedImage(data.imageUrl);
-        setRemainingGenerations(data.remainingGenerations ?? 0);
+        setCreditsBalance(data.creditsRemaining ?? 0);
         setAiErrorCode(null);
         
         toast({
           title: "Image générée avec succès !",
-          description: `Il vous reste ${data.remainingGenerations ?? 0} génération${(data.remainingGenerations ?? 0) > 1 ? 's' : ''} gratuite${(data.remainingGenerations ?? 0) > 1 ? 's' : ''}.`
+          description: `Il vous reste ${data.creditsRemaining ?? 0} crédit${(data.creditsRemaining ?? 0) > 1 ? 's' : ''}.`
         });
       } else {
         toast({
@@ -225,13 +232,13 @@ export default function AIImageGenerator() {
             </div>
           )}
           
-          {user && remainingGenerations !== null && (
+          {user && creditsBalance !== null && (
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent/50 border border-border">
               <ImageIcon className="w-5 h-5 text-primary" />
               <span className="font-medium">
-                {remainingGenerations > 0 
-                  ? `${remainingGenerations} génération${remainingGenerations > 1 ? 's' : ''} gratuite${remainingGenerations > 1 ? 's' : ''} restante${remainingGenerations > 1 ? 's' : ''}`
-                  : "Vous avez utilisé vos 5 générations gratuites"}
+                {creditsBalance > 0 
+                  ? `${creditsBalance} crédit${creditsBalance > 1 ? 's' : ''} disponible${creditsBalance > 1 ? 's' : ''}`
+                  : "Aucun crédit disponible - Veuillez acheter des crédits"}
               </span>
             </div>
           )}
@@ -333,8 +340,8 @@ export default function AIImageGenerator() {
         <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-8 border border-primary/20">
           <div className="grid md:grid-cols-3 gap-6 text-center">
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">5</div>
-              <div className="text-sm text-muted-foreground">Générations gratuites</div>
+              <div className="text-3xl font-bold text-primary">💳</div>
+              <div className="text-sm text-muted-foreground">Crédits à l'unité</div>
             </div>
             <div className="space-y-2">
               <div className="text-3xl font-bold text-primary">∞</div>
