@@ -8,24 +8,129 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const examplePrompts = [
-  "Un coucher de soleil vibrant sur une ville futuriste avec des gratte-ciels illuminés",
-  "Un portrait artistique d'un chat astronaute explorant une planète colorée",
-  "Une forêt enchantée avec des arbres lumineux et des créatures fantastiques",
-  "Un paysage de montagne enneigé sous une aurore boréale spectaculaire",
-  "Une scène urbaine moderne avec des néons et une ambiance cyberpunk"
-];
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function AIImageGenerator() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
+  
+  const content = {
+    fr: {
+      poweredBy: "Propulsé par Google Gemini",
+      title: "Générateur d'images IA",
+      subtitle: "Transformez vos idées en visuels époustouflants instantanément.",
+      quotaError: {
+        title: "Quota Google API dépassé",
+        description: "Le quota quotidien a été atteint. Réessayez demain ou augmentez votre quota sur"
+      },
+      rateLimitError: {
+        title: "Trop de requêtes",
+        description: "Veuillez attendre quelques minutes avant de réessayer."
+      },
+      creditsAvailable: (count: number) => `${count} crédit${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}`,
+      noCredits: "Aucun crédit disponible",
+      buyCredits: "Acheter des crédits",
+      promptLabel: "Décrivez l'image que vous souhaitez créer",
+      promptPlaceholder: "Par exemple : Un paysage de montagne majestueux au coucher du soleil...",
+      generating: "Génération en cours...",
+      generate: "Générer l'image",
+      suggestions: "Suggestions de prompts",
+      imagePreview: "Votre image apparaîtra ici",
+      enterPrompt: "Entrez un prompt et cliquez sur \"Générer l'image\"",
+      download: "Télécharger l'image",
+      creditsUnique: "Crédits à l'unité",
+      unlimited: "Possibilités créatives",
+      quality: "Qualité professionnelle",
+      loginRequired: "Connexion requise",
+      loginDescription: "Veuillez vous connecter pour générer des images IA.",
+      promptRequired: "Prompt requis",
+      promptRequiredDesc: "Veuillez entrer une description pour générer une image.",
+      insufficientCredits: "Crédits insuffisants",
+      insufficientCreditsDesc: "Veuillez acheter des crédits pour continuer à générer des images.",
+      workspaceCreditsError: "Crédits workspace insuffisants",
+      workspaceCreditsDesc: "Le compte Lovable AI nécessite plus de crédits. Contactez l'administrateur.",
+      rateLimitedTitle: "Limite de requêtes atteinte",
+      rateLimitedDesc: "Veuillez réessayer dans quelques minutes.",
+      quotaTitle: "Quota dépassé",
+      quotaDesc: "Le quota quotidien Google API a été atteint. Réessayez demain.",
+      tooManyRequests: "Trop de requêtes",
+      tooManyRequestsDesc: "Trop de requêtes. Veuillez réessayer dans quelques minutes.",
+      error: "Erreur",
+      errorDesc: "Impossible de générer l'image. Veuillez réessayer.",
+      successTitle: "Image générée avec succès !",
+      successDesc: (count: number) => `Il vous reste ${count} crédit${count > 1 ? 's' : ''}.`,
+      noImageError: "Aucune image générée dans la réponse.",
+      examplePrompts: [
+        "Un coucher de soleil vibrant sur une ville futuriste avec des gratte-ciels illuminés",
+        "Un portrait artistique d'un chat astronaute explorant une planète colorée",
+        "Une forêt enchantée avec des arbres lumineux et des créatures fantastiques",
+        "Un paysage de montagne enneigé sous une aurore boréale spectaculaire",
+        "Une scène urbaine moderne avec des néons et une ambiance cyberpunk"
+      ]
+    },
+    en: {
+      poweredBy: "Powered by Google Gemini",
+      title: "AI Image Generator",
+      subtitle: "Transform your ideas into stunning visuals instantly.",
+      quotaError: {
+        title: "Google API Quota Exceeded",
+        description: "The daily quota has been reached. Try again tomorrow or increase your quota on"
+      },
+      rateLimitError: {
+        title: "Too Many Requests",
+        description: "Please wait a few minutes before trying again."
+      },
+      creditsAvailable: (count: number) => `${count} credit${count > 1 ? 's' : ''} available`,
+      noCredits: "No credits available",
+      buyCredits: "Buy Credits",
+      promptLabel: "Describe the image you want to create",
+      promptPlaceholder: "For example: A majestic mountain landscape at sunset...",
+      generating: "Generating...",
+      generate: "Generate Image",
+      suggestions: "Prompt Suggestions",
+      imagePreview: "Your image will appear here",
+      enterPrompt: "Enter a prompt and click \"Generate Image\"",
+      download: "Download Image",
+      creditsUnique: "Pay-as-you-go Credits",
+      unlimited: "Creative Possibilities",
+      quality: "Professional Quality",
+      loginRequired: "Login Required",
+      loginDescription: "Please log in to generate AI images.",
+      promptRequired: "Prompt Required",
+      promptRequiredDesc: "Please enter a description to generate an image.",
+      insufficientCredits: "Insufficient Credits",
+      insufficientCreditsDesc: "Please purchase credits to continue generating images.",
+      workspaceCreditsError: "Insufficient Workspace Credits",
+      workspaceCreditsDesc: "The Lovable AI account needs more credits. Contact the administrator.",
+      rateLimitedTitle: "Rate Limit Reached",
+      rateLimitedDesc: "Please try again in a few minutes.",
+      quotaTitle: "Quota Exceeded",
+      quotaDesc: "The daily Google API quota has been reached. Try again tomorrow.",
+      tooManyRequests: "Too Many Requests",
+      tooManyRequestsDesc: "Too many requests. Please try again in a few minutes.",
+      error: "Error",
+      errorDesc: "Unable to generate image. Please try again.",
+      successTitle: "Image generated successfully!",
+      successDesc: (count: number) => `You have ${count} credit${count > 1 ? 's' : ''} remaining.`,
+      noImageError: "No image generated in the response.",
+      examplePrompts: [
+        "A vibrant sunset over a futuristic city with illuminated skyscrapers",
+        "An artistic portrait of an astronaut cat exploring a colorful planet",
+        "An enchanted forest with glowing trees and fantastic creatures",
+        "A snowy mountain landscape under a spectacular aurora borealis",
+        "A modern urban scene with neon lights and a cyberpunk atmosphere"
+      ]
+    }
+  };
+  
+  const t = content[language];
 
   useEffect(() => {
     if (user) {
@@ -53,8 +158,8 @@ export default function AIImageGenerator() {
   const handleGenerate = async () => {
     if (!user) {
       toast({
-        title: "Connexion requise",
-        description: "Veuillez vous connecter pour générer des images IA.",
+        title: t.loginRequired,
+        description: t.loginDescription,
         variant: "destructive"
       });
       navigate('/auth');
@@ -63,8 +168,8 @@ export default function AIImageGenerator() {
 
     if (!prompt.trim()) {
       toast({
-        title: "Prompt requis",
-        description: "Veuillez entrer une description pour générer une image.",
+        title: t.promptRequired,
+        description: t.promptRequiredDesc,
         variant: "destructive"
       });
       return;
@@ -85,8 +190,8 @@ export default function AIImageGenerator() {
       // Handle specific errors from function
       if (data?.error === 'insufficient_credits') {
         toast({
-          title: "Crédits insuffisants",
-          description: data.message || "Veuillez acheter des crédits pour continuer à générer des images.",
+          title: t.insufficientCredits,
+          description: data.message || t.insufficientCreditsDesc,
           variant: "destructive"
         });
         setCreditsBalance(data.current_balance ?? 0);
@@ -95,8 +200,8 @@ export default function AIImageGenerator() {
       if (data?.error === 'payment_required') {
         setAiErrorCode('payment_required');
         toast({
-          title: "Crédits workspace insuffisants",
-          description: "Le compte Lovable AI nécessite plus de crédits. Contactez l'administrateur.",
+          title: t.workspaceCreditsError,
+          description: t.workspaceCreditsDesc,
           variant: "destructive"
         });
         return;
@@ -104,8 +209,8 @@ export default function AIImageGenerator() {
       if (data?.error === 'rate_limited') {
         setAiErrorCode('rate_limited');
         toast({
-          title: "Limite de requêtes atteinte",
-          description: "Veuillez réessayer dans quelques minutes.",
+          title: t.rateLimitedTitle,
+          description: t.rateLimitedDesc,
           variant: "destructive"
         });
         return;
@@ -117,20 +222,20 @@ export default function AIImageGenerator() {
         if (errorMsg.includes('Quota') || errorMsg.includes('403')) {
           setAiErrorCode('quota_exceeded');
           toast({
-            title: "Quota dépassé",
-            description: "Le quota quotidien Google API a été atteint. Réessayez demain.",
+            title: t.quotaTitle,
+            description: t.quotaDesc,
             variant: "destructive"
           });
         } else if (errorMsg.includes('Limite de taux') || errorMsg.includes('429')) {
           setAiErrorCode('rate_limited');
           toast({
-            title: "Trop de requêtes",
-            description: "Veuillez réessayer dans quelques minutes.",
+            title: t.tooManyRequests,
+            description: t.tooManyRequestsDesc,
             variant: "destructive"
           });
         } else {
           toast({
-            title: "Erreur",
+            title: t.error,
             description: errorMsg,
             variant: "destructive"
           });
@@ -150,13 +255,13 @@ export default function AIImageGenerator() {
         setAiErrorCode(null);
         
         toast({
-          title: "Image générée avec succès !",
-          description: `Il vous reste ${data.creditsRemaining ?? 0} crédit${(data.creditsRemaining ?? 0) > 1 ? 's' : ''}.`
+          title: t.successTitle,
+          description: t.successDesc(data.creditsRemaining ?? 0)
         });
       } else {
         toast({
-          title: "Erreur",
-          description: "Aucune image générée dans la réponse.",
+          title: t.error,
+          description: t.noImageError,
           variant: "destructive"
         });
       }
@@ -168,21 +273,21 @@ export default function AIImageGenerator() {
       if (errorMsg.includes('403') || errorMsg.toLowerCase().includes('quota')) {
         setAiErrorCode('quota_exceeded');
         toast({
-          title: "Quota dépassé",
-          description: "Le quota quotidien Google API a été atteint. Réessayez demain.",
+          title: t.quotaTitle,
+          description: t.quotaDesc,
           variant: "destructive"
         });
       } else if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('rate limit')) {
         setAiErrorCode('rate_limited');
         toast({
-          title: "Limite de requêtes",
-          description: "Trop de requêtes. Veuillez réessayer dans quelques minutes.",
+          title: t.tooManyRequests,
+          description: t.tooManyRequestsDesc,
           variant: "destructive"
         });
       } else {
         toast({
-          title: "Erreur",
-          description: "Impossible de générer l'image. Veuillez réessayer.",
+          title: t.error,
+          description: t.errorDesc,
           variant: "destructive"
         });
       }
@@ -200,20 +305,20 @@ export default function AIImageGenerator() {
         <div className="text-center mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-medium">Propulsé par Google Gemini</span>
+            <span className="text-sm font-medium">{t.poweredBy}</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Générateur d'images IA
+            {t.title}
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Transformez vos idées en visuels époustouflants instantanément.
+            {t.subtitle}
           </p>
           {aiErrorCode === 'quota_exceeded' && (
             <div className="max-w-2xl mx-auto">
               <Alert variant="destructive">
-                <AlertTitle>Quota Google API dépassé</AlertTitle>
+                <AlertTitle>{t.quotaError.title}</AlertTitle>
                 <AlertDescription>
-                  Le quota quotidien a été atteint. Réessayez demain ou augmentez votre quota sur{' '}
+                  {t.quotaError.description}{' '}
                   <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-medium">
                     Google AI Studio
                   </a>.
@@ -224,9 +329,9 @@ export default function AIImageGenerator() {
           {aiErrorCode === 'rate_limited' && (
             <div className="max-w-2xl mx-auto">
               <Alert variant="destructive">
-                <AlertTitle>Trop de requêtes</AlertTitle>
+                <AlertTitle>{t.rateLimitError.title}</AlertTitle>
                 <AlertDescription>
-                  Veuillez attendre quelques minutes avant de réessayer.
+                  {t.rateLimitError.description}
                 </AlertDescription>
               </Alert>
             </div>
@@ -235,9 +340,7 @@ export default function AIImageGenerator() {
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent/50 border border-border">
               <ImageIcon className="w-5 h-5 text-primary" />
               <span className="font-medium">
-                {creditsBalance > 0 
-                  ? `${creditsBalance} crédit${creditsBalance > 1 ? 's' : ''} disponible${creditsBalance > 1 ? 's' : ''}`
-                  : "Aucun crédit disponible"}
+                {creditsBalance > 0 ? t.creditsAvailable(creditsBalance) : t.noCredits}
               </span>
               {creditsBalance === 0 && (
                 <Button
@@ -246,7 +349,7 @@ export default function AIImageGenerator() {
                   onClick={() => navigate('/buy-credits')}
                   className="ml-2"
                 >
-                  Acheter des crédits
+                  {t.buyCredits}
                 </Button>
               )}
             </div>
@@ -259,13 +362,13 @@ export default function AIImageGenerator() {
           <div className="space-y-6">
             <div className="bg-card rounded-2xl p-8 shadow-lg border border-border">
               <label htmlFor="prompt" className="block text-sm font-medium mb-3">
-                Décrivez l'image que vous souhaitez créer
+                {t.promptLabel}
               </label>
               <Textarea
                 id="prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Par exemple : Un paysage de montagne majestueux au coucher du soleil..."
+                placeholder={t.promptPlaceholder}
                 className="min-h-[150px] resize-none text-base"
                 disabled={isGenerating}
               />
@@ -279,12 +382,12 @@ export default function AIImageGenerator() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Génération en cours...
+                    {t.generating}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Générer l'image
+                    {t.generate}
                   </>
                 )}
               </Button>
@@ -294,10 +397,10 @@ export default function AIImageGenerator() {
             <div className="bg-card rounded-2xl p-6 shadow-lg border border-border">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary" />
-                Suggestions de prompts
+                {t.suggestions}
               </h3>
               <div className="space-y-2">
-                {examplePrompts.map((example, index) => (
+                {t.examplePrompts.map((example, index) => (
                   <button
                     key={index}
                     onClick={() => setPrompt(example)}
@@ -317,7 +420,7 @@ export default function AIImageGenerator() {
               <div className="w-full space-y-4">
                 <img
                   src={generatedImage}
-                  alt="Image générée par IA"
+                  alt={t.title}
                   className="w-full h-auto rounded-xl shadow-xl"
                 />
                 <Button
@@ -330,7 +433,7 @@ export default function AIImageGenerator() {
                     link.click();
                   }}
                 >
-                  Télécharger l'image
+                  {t.download}
                 </Button>
               </div>
             ) : (
@@ -338,8 +441,8 @@ export default function AIImageGenerator() {
                 <div className="w-24 h-24 mx-auto rounded-full bg-accent/30 flex items-center justify-center">
                   <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
                 </div>
-                <p className="text-lg font-medium">Votre image apparaîtra ici</p>
-                <p className="text-sm">Entrez un prompt et cliquez sur "Générer l'image"</p>
+                <p className="text-lg font-medium">{t.imagePreview}</p>
+                <p className="text-sm">{t.enterPrompt}</p>
               </div>
             )}
           </div>
@@ -350,15 +453,15 @@ export default function AIImageGenerator() {
           <div className="grid md:grid-cols-3 gap-6 text-center">
             <div className="space-y-2">
               <div className="text-3xl font-bold text-primary">💳</div>
-              <div className="text-sm text-muted-foreground">Crédits à l'unité</div>
+              <div className="text-sm text-muted-foreground">{t.creditsUnique}</div>
             </div>
             <div className="space-y-2">
               <div className="text-3xl font-bold text-primary">∞</div>
-              <div className="text-sm text-muted-foreground">Possibilités créatives</div>
+              <div className="text-sm text-muted-foreground">{t.unlimited}</div>
             </div>
             <div className="space-y-2">
               <div className="text-3xl font-bold text-primary">✨</div>
-              <div className="text-sm text-muted-foreground">Qualité professionnelle</div>
+              <div className="text-sm text-muted-foreground">{t.quality}</div>
             </div>
           </div>
         </div>

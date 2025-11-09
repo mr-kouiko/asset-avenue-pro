@@ -7,57 +7,163 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Check, Zap } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const CREDIT_PACKS = [
-  {
-    id: 'starter',
-    name: 'Pack Starter',
-    credits: 10,
-    price: 1.99,
-    pricePerCredit: 0.199,
-    popular: false,
-    icon: Sparkles,
-    features: ['10 générations d\'images', 'Qualité standard', 'Support par email']
-  },
-  {
-    id: 'pro',
-    name: 'Pack Pro',
-    credits: 50,
-    price: 7.99,
-    pricePerCredit: 0.160,
-    popular: true,
-    icon: Zap,
-    features: ['50 générations d\'images', 'Qualité professionnelle', 'Support prioritaire', 'Économisez 20%']
-  },
-  {
-    id: 'premium',
-    name: 'Pack Premium',
-    credits: 100,
-    price: 12.99,
-    pricePerCredit: 0.130,
-    popular: false,
-    icon: Sparkles,
-    features: ['100 générations d\'images', 'Qualité maximale', 'Support dédié', 'Économisez 35%']
-  },
-  {
-    id: 'ultimate',
-    name: 'Pack Ultimate',
-    credits: 500,
-    price: 49.99,
-    pricePerCredit: 0.100,
-    popular: false,
-    icon: Sparkles,
-    features: ['500 générations d\'images', 'Qualité premium', 'Support VIP 24/7', 'Meilleure offre - 50% d\'économie']
-  }
-];
+const CREDIT_PACKS = {
+  fr: [
+    {
+      id: 'starter',
+      name: 'Pack Starter',
+      credits: 10,
+      price: 1.99,
+      pricePerCredit: 0.199,
+      popular: false,
+      icon: Sparkles,
+      features: ['10 générations d\'images', 'Qualité standard', 'Support par email']
+    },
+    {
+      id: 'pro',
+      name: 'Pack Pro',
+      credits: 50,
+      price: 7.99,
+      pricePerCredit: 0.160,
+      popular: true,
+      icon: Zap,
+      features: ['50 générations d\'images', 'Qualité professionnelle', 'Support prioritaire', 'Économisez 20%']
+    },
+    {
+      id: 'premium',
+      name: 'Pack Premium',
+      credits: 100,
+      price: 12.99,
+      pricePerCredit: 0.130,
+      popular: false,
+      icon: Sparkles,
+      features: ['100 générations d\'images', 'Qualité maximale', 'Support dédié', 'Économisez 35%']
+    },
+    {
+      id: 'ultimate',
+      name: 'Pack Ultimate',
+      credits: 500,
+      price: 49.99,
+      pricePerCredit: 0.100,
+      popular: false,
+      icon: Sparkles,
+      features: ['500 générations d\'images', 'Qualité premium', 'Support VIP 24/7', 'Meilleure offre - 50% d\'économie']
+    }
+  ],
+  en: [
+    {
+      id: 'starter',
+      name: 'Starter Pack',
+      credits: 10,
+      price: 1.99,
+      pricePerCredit: 0.199,
+      popular: false,
+      icon: Sparkles,
+      features: ['10 image generations', 'Standard quality', 'Email support']
+    },
+    {
+      id: 'pro',
+      name: 'Pro Pack',
+      credits: 50,
+      price: 7.99,
+      pricePerCredit: 0.160,
+      popular: true,
+      icon: Zap,
+      features: ['50 image generations', 'Professional quality', 'Priority support', 'Save 20%']
+    },
+    {
+      id: 'premium',
+      name: 'Premium Pack',
+      credits: 100,
+      price: 12.99,
+      pricePerCredit: 0.130,
+      popular: false,
+      icon: Sparkles,
+      features: ['100 image generations', 'Maximum quality', 'Dedicated support', 'Save 35%']
+    },
+    {
+      id: 'ultimate',
+      name: 'Ultimate Pack',
+      credits: 500,
+      price: 49.99,
+      pricePerCredit: 0.100,
+      popular: false,
+      icon: Sparkles,
+      features: ['500 image generations', 'Premium quality', 'VIP 24/7 support', 'Best deal - 50% savings']
+    }
+  ]
+};
 
 export default function BuyCredits() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const [searchParams] = useSearchParams();
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<string | null>(null);
+  
+  const content = {
+    fr: {
+      title: "Acheter des crédits IA",
+      subtitle: "Générez des images époustouflantes avec notre IA. Choisissez le pack qui vous convient.",
+      currentBalance: "Solde actuel",
+      credit: "crédit",
+      credits: "crédits",
+      mostPopular: "Plus populaire",
+      processing: "Traitement...",
+      buyNow: "Acheter maintenant",
+      loginRequired: "Connexion requise",
+      loginDesc: "Veuillez vous connecter pour acheter des crédits.",
+      paymentCanceled: "Paiement annulé",
+      paymentCanceledDesc: "Votre paiement a été annulé. Aucun montant n'a été débité.",
+      paymentRedirect: "Redirection vers le paiement",
+      paymentRedirectDesc: "Une nouvelle fenêtre s'est ouverte pour finaliser votre achat.",
+      error: "Erreur",
+      errorDesc: "Impossible de créer la session de paiement.",
+      whyBuy: "Pourquoi acheter des crédits ?",
+      qualityTitle: "🎨 Qualité professionnelle",
+      qualityDesc: "Générez des images de haute qualité avec notre IA basée sur Lovable AI Gateway (Google Gemini).",
+      speedTitle: "⚡ Génération rapide",
+      speedDesc: "Créez vos images en quelques secondes seulement, sans attente.",
+      pricingTitle: "💰 Tarification transparente",
+      pricingDesc: "Pas d'abonnement. Payez uniquement pour les crédits que vous utilisez. Plus vous achetez, plus vous économisez.",
+      securityTitle: "🔒 Paiement sécurisé",
+      securityDesc: "Tous les paiements sont traités de manière sécurisée par Stripe, leader mondial des paiements en ligne."
+    },
+    en: {
+      title: "Buy AI Credits",
+      subtitle: "Generate stunning images with our AI. Choose the pack that suits you.",
+      currentBalance: "Current balance",
+      credit: "credit",
+      credits: "credits",
+      mostPopular: "Most Popular",
+      processing: "Processing...",
+      buyNow: "Buy Now",
+      loginRequired: "Login Required",
+      loginDesc: "Please log in to purchase credits.",
+      paymentCanceled: "Payment Canceled",
+      paymentCanceledDesc: "Your payment was canceled. No amount was charged.",
+      paymentRedirect: "Redirecting to payment",
+      paymentRedirectDesc: "A new window has opened to complete your purchase.",
+      error: "Error",
+      errorDesc: "Unable to create payment session.",
+      whyBuy: "Why buy credits?",
+      qualityTitle: "🎨 Professional Quality",
+      qualityDesc: "Generate high-quality images with our AI based on Lovable AI Gateway (Google Gemini).",
+      speedTitle: "⚡ Fast Generation",
+      speedDesc: "Create your images in just seconds, without waiting.",
+      pricingTitle: "💰 Transparent Pricing",
+      pricingDesc: "No subscription. Pay only for the credits you use. The more you buy, the more you save.",
+      securityTitle: "🔒 Secure Payment",
+      securityDesc: "All payments are processed securely by Stripe, the global leader in online payments."
+    }
+  };
+  
+  const t = content[language];
+  const creditPacks = CREDIT_PACKS[language];
 
   useEffect(() => {
     if (user) {
@@ -70,12 +176,12 @@ export default function BuyCredits() {
   useEffect(() => {
     if (searchParams.get('canceled') === 'true') {
       toast({
-        title: "Paiement annulé",
-        description: "Votre paiement a été annulé. Aucun montant n'a été débité.",
+        title: t.paymentCanceled,
+        description: t.paymentCanceledDesc,
         variant: "destructive"
       });
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, t]);
 
   const fetchCreditsBalance = async () => {
     if (!user) return;
@@ -95,8 +201,8 @@ export default function BuyCredits() {
   const handlePurchase = async (packId: string) => {
     if (!user) {
       toast({
-        title: "Connexion requise",
-        description: "Veuillez vous connecter pour acheter des crédits.",
+        title: t.loginRequired,
+        description: t.loginDesc,
         variant: "destructive"
       });
       navigate('/auth');
@@ -120,8 +226,8 @@ export default function BuyCredits() {
         window.open(data.url, '_blank');
         
         toast({
-          title: "Redirection vers le paiement",
-          description: "Une nouvelle fenêtre s'est ouverte pour finaliser votre achat."
+          title: t.paymentRedirect,
+          description: t.paymentRedirectDesc
         });
       } else {
         throw new Error('No checkout URL received');
@@ -129,8 +235,8 @@ export default function BuyCredits() {
     } catch (error: any) {
       console.error('Error creating payment:', error);
       toast({
-        title: "Erreur",
-        description: error.message || "Impossible de créer la session de paiement.",
+        title: t.error,
+        description: error.message || t.errorDesc,
         variant: "destructive"
       });
     } finally {
@@ -146,17 +252,17 @@ export default function BuyCredits() {
         {/* Hero Section */}
         <div className="text-center mb-12 space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Acheter des crédits IA
+            {t.title}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Générez des images époustouflantes avec notre IA. Choisissez le pack qui vous convient.
+            {t.subtitle}
           </p>
           
           {creditsBalance !== null && (
             <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-primary/10 border border-primary/20">
               <Sparkles className="w-5 h-5 text-primary" />
               <span className="font-semibold text-lg">
-                Solde actuel : {creditsBalance} crédit{creditsBalance > 1 ? 's' : ''}
+                {t.currentBalance} : {creditsBalance} {creditsBalance > 1 ? t.credits : t.credit}
               </span>
             </div>
           )}
@@ -164,7 +270,7 @@ export default function BuyCredits() {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {CREDIT_PACKS.map((pack) => (
+          {creditPacks.map((pack) => (
             <Card 
               key={pack.id}
               className={`relative ${pack.popular ? 'border-primary shadow-lg scale-105' : 'border-border'}`}
@@ -172,7 +278,7 @@ export default function BuyCredits() {
               {pack.popular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                   <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
-                    Plus populaire
+                    {t.mostPopular}
                   </span>
                 </div>
               )}
@@ -183,13 +289,13 @@ export default function BuyCredits() {
                   <div className="text-right">
                     <div className="text-3xl font-bold">{pack.price}€</div>
                     <div className="text-xs text-muted-foreground">
-                      {pack.pricePerCredit.toFixed(3)}€/crédit
+                      {pack.pricePerCredit.toFixed(3)}€/{t.credit}
                     </div>
                   </div>
                 </div>
                 <CardTitle className="text-xl">{pack.name}</CardTitle>
                 <CardDescription className="text-lg font-semibold text-foreground">
-                  {pack.credits} crédits
+                  {pack.credits} {t.credits}
                 </CardDescription>
               </CardHeader>
               
@@ -214,10 +320,10 @@ export default function BuyCredits() {
                   {isLoading === pack.id ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Traitement...
+                      {t.processing}
                     </>
                   ) : (
-                    'Acheter maintenant'
+                    t.buyNow
                   )}
                 </Button>
               </CardFooter>
@@ -229,32 +335,32 @@ export default function BuyCredits() {
         <div className="mt-16 max-w-4xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Pourquoi acheter des crédits ?</CardTitle>
+              <CardTitle className="text-2xl">{t.whyBuy}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">🎨 Qualité professionnelle</h3>
+                  <h3 className="font-semibold text-foreground mb-2">{t.qualityTitle}</h3>
                   <p className="text-sm">
-                    Générez des images de haute qualité avec notre IA basée sur Lovable AI Gateway (Google Gemini).
+                    {t.qualityDesc}
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">⚡ Génération rapide</h3>
+                  <h3 className="font-semibold text-foreground mb-2">{t.speedTitle}</h3>
                   <p className="text-sm">
-                    Créez vos images en quelques secondes seulement, sans attente.
+                    {t.speedDesc}
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">💰 Tarification transparente</h3>
+                  <h3 className="font-semibold text-foreground mb-2">{t.pricingTitle}</h3>
                   <p className="text-sm">
-                    Pas d'abonnement. Payez uniquement pour les crédits que vous utilisez. Plus vous achetez, plus vous économisez.
+                    {t.pricingDesc}
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">🔒 Paiement sécurisé</h3>
+                  <h3 className="font-semibold text-foreground mb-2">{t.securityTitle}</h3>
                   <p className="text-sm">
-                    Tous les paiements sont traités de manière sécurisée par Stripe, leader mondial des paiements en ligne.
+                    {t.securityDesc}
                   </p>
                 </div>
               </div>
