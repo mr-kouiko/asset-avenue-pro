@@ -16,8 +16,10 @@ interface PurchasedItem {
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  const purchaseType = searchParams.get('type') || 'content'; // 'content' or 'credits'
   const [loading, setLoading] = useState(true);
   const [purchases, setPurchases] = useState<PurchasedItem[]>([]);
+  const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchPurchases = async () => {
@@ -97,13 +99,27 @@ const PaymentSuccess = () => {
             
             <CardContent className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="font-semibold text-green-800 mb-2">
-                  Votre contenu est maintenant disponible
-                </h3>
-                <p className="text-green-700 text-sm mb-3">
-                  Vous pouvez télécharger votre contenu depuis votre tableau de bord acheteur.
-                  Un email de confirmation a été envoyé à votre adresse.
-                </p>
+                {purchaseType === 'credits' || creditsAdded ? (
+                  <>
+                    <h3 className="font-semibold text-green-800 mb-2">
+                      Vos crédits ont été ajoutés !
+                    </h3>
+                    <p className="text-green-700 text-sm mb-3">
+                      Vous pouvez maintenant générer des images avec l'IA.
+                      {creditsAdded && ` ${creditsAdded} crédits ont été ajoutés à votre compte.`}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-semibold text-green-800 mb-2">
+                      Votre contenu est maintenant disponible
+                    </h3>
+                    <p className="text-green-700 text-sm mb-3">
+                      Vous pouvez télécharger votre contenu depuis votre tableau de bord acheteur.
+                      Un email de confirmation a été envoyé à votre adresse.
+                    </p>
+                  </>
+                )}
                 
                 {purchases.length > 0 && (
                   <div className="mt-4 text-left">
@@ -127,28 +143,57 @@ const PaymentSuccess = () => {
               </div>
 
               <div className="space-y-4">
-                <Button size="lg" className="w-full" asChild>
-                  <Link to="/buyer-dashboard">
-                    <Download className="h-4 w-4 mr-2" />
-                    Accéder à mes téléchargements
-                  </Link>
-                </Button>
-                
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" asChild>
-                    <Link to="/marketplace">
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                      Continuer mes achats
-                    </Link>
-                  </Button>
-                  
-                  <Button variant="outline" className="flex-1" asChild>
-                    <Link to="/">
-                      <Home className="h-4 w-4 mr-2" />
-                      Retour à l'accueil
-                    </Link>
-                  </Button>
-                </div>
+                {purchaseType === 'credits' || creditsAdded ? (
+                  <>
+                    <Button size="lg" className="w-full" asChild>
+                      <Link to="/ai-image-generator">
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        Générer des images IA
+                      </Link>
+                    </Button>
+                    
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="flex-1" asChild>
+                        <Link to="/buy-credits">
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Acheter plus de crédits
+                        </Link>
+                      </Button>
+                      
+                      <Button variant="outline" className="flex-1" asChild>
+                        <Link to="/">
+                          <Home className="h-4 w-4 mr-2" />
+                          Retour à l'accueil
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Button size="lg" className="w-full" asChild>
+                      <Link to="/buyer-dashboard">
+                        <Download className="h-4 w-4 mr-2" />
+                        Accéder à mes téléchargements
+                      </Link>
+                    </Button>
+                    
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="flex-1" asChild>
+                        <Link to="/marketplace">
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Continuer mes achats
+                        </Link>
+                      </Button>
+                      
+                      <Button variant="outline" className="flex-1" asChild>
+                        <Link to="/">
+                          <Home className="h-4 w-4 mr-2" />
+                          Retour à l'accueil
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="text-xs text-muted-foreground border-t pt-4">

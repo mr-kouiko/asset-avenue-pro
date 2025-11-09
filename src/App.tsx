@@ -47,6 +47,7 @@ import PrivacyPolicyEN from "./pages/en/PrivacyPolicyEN";
 import LicenseAgreementEN from "./pages/en/LicenseAgreementEN";
 import InfinityEN from "./pages/en/InfinityEN";
 import AIImageGenerator from "./pages/AIImageGenerator";
+import BuyCredits from "./pages/BuyCredits";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
                   <Route path="/fr/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/fr/about" element={<About />} />
                   <Route path="/fr/ai-image-generator" element={<AIImageGenerator />} />
+                  <Route path="/fr/buy-credits" element={<BuyCredits />} />
                   <Route path="/fr/admin" element={
                     <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Seuls les administrateurs peuvent accéder à cette page.">
                       <AdminDashboard />
@@ -122,6 +124,7 @@ const App = () => (
                   <Route path="/en/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/en/about" element={<AboutEN />} />
                   <Route path="/en/ai-image-generator" element={<AIImageGenerator />} />
+                  <Route path="/en/buy-credits" element={<BuyCredits />} />
                   <Route path="/en/admin" element={
                     <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
                       <AdminDashboard />
@@ -154,6 +157,7 @@ const App = () => (
                   <Route path="/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/ai-image-generator" element={<AIImageGenerator />} />
+                  <Route path="/buy-credits" element={<BuyCredits />} />
                   <Route path="/test-accounts" element={<TestAccounts />} />
                   
                   {/* Admin Routes - Sécurisées */}

@@ -82,3 +82,9 @@ verify_jwt = true
 
 [functions.generate-ai-image]
 verify_jwt = true
+
+[functions.create-credits-payment]
+verify_jwt = true
+
+[functions.credits-payment-webhook]
+verify_jwt = false

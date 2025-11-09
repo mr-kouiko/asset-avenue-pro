@@ -231,15 +231,24 @@ export default function AIImageGenerator() {
               </Alert>
             </div>
           )}
-          
           {user && creditsBalance !== null && (
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-accent/50 border border-border">
               <ImageIcon className="w-5 h-5 text-primary" />
               <span className="font-medium">
                 {creditsBalance > 0 
                   ? `${creditsBalance} crédit${creditsBalance > 1 ? 's' : ''} disponible${creditsBalance > 1 ? 's' : ''}`
-                  : "Aucun crédit disponible - Veuillez acheter des crédits"}
+                  : "Aucun crédit disponible"}
               </span>
+              {creditsBalance === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/buy-credits')}
+                  className="ml-2"
+                >
+                  Acheter des crédits
+                </Button>
+              )}
             </div>
           )}
         </div>
