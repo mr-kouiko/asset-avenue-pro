@@ -216,5 +216,18 @@ export const useSEO = (config: SEOConfig) => {
       // Reset to default on unmount
       document.title = `${SITE_NAME} - Creative Content Marketplace`;
     };
-  }, [config, location, language]);
+  }, [
+    config.title,
+    config.description,
+    config.image,
+    config.type,
+    config.author,
+    config.publishedTime,
+    config.tags?.join(','),
+    config.price,
+    config.currency,
+    config.noindex,
+    location.pathname,
+    language
+  ]);
 };

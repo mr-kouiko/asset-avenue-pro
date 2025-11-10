@@ -42,7 +42,10 @@ export const useProductDetail = (productId: string) => {
 
   useEffect(() => {
     const fetchProductDetail = async () => {
+      console.log('🔍 fetchProductDetail called with productId:', productId);
+      
       if (!productId) {
+        console.error('❌ No product ID provided');
         setError('ID produit manquant');
         setLoading(false);
         return;
@@ -51,6 +54,7 @@ export const useProductDetail = (productId: string) => {
       try {
         setLoading(true);
         setError(null);
+        console.log('📡 Fetching product from RPC...');
 
         // Use the secure function instead of direct table access
         const { data: productDetails, error: productError } = await supabase
@@ -247,12 +251,14 @@ export const useProductDetail = (productId: string) => {
         };
 
         // Translate product details to visitor's language
+        console.log('🌐 Translating content to:', currentLanguage);
         const translation = await translateContent(
           productData.id,
           productData.title,
           productData.description,
           productData.tags
         );
+        console.log('✅ Translation complete');
 
         const translatedProduct = {
           ...productData,
@@ -261,6 +267,7 @@ export const useProductDetail = (productId: string) => {
           tags: translation.tags
         };
 
+        console.log('✅ Setting product data:', translatedProduct.title);
         setProduct(translatedProduct);
       } catch (err) {
         console.error('Error loading product:', err);
