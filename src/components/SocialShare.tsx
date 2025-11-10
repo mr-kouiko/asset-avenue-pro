@@ -138,17 +138,27 @@ export const SocialShare = ({
   const whatsappContent = generateShareContent(title, description, productType, author, 'whatsapp');
   const defaultContent = generateShareContent(title, description, productType, author);
 
-  const shareUrl = encodeURIComponent(url);
-  const shareTitle = encodeURIComponent(title);
-  const shareDescription = encodeURIComponent(description);
+  // Build tracked URL with UTM parameters per platform
+  const getTrackedUrl = (platform?: string) => {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('utm_source', platform || 'share');
+      u.searchParams.set('utm_medium', 'social');
+      u.searchParams.set('utm_campaign', 'product_share');
+      u.searchParams.set('utm_content', productType);
+      return u.toString();
+    } catch {
+      return url;
+    }
+  };
 
   const socialLinks = {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${encodeURIComponent(defaultContent)}`,
-    twitter: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${encodeURIComponent(twitterContent)}${shareHashtags ? `&hashtags=${shareHashtags}` : ''}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}&summary=${encodeURIComponent(linkedinContent)}`,
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(whatsappContent)}%20${shareUrl}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getTrackedUrl('facebook'))}&quote=${encodeURIComponent(defaultContent)}`,
+    twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(getTrackedUrl('twitter'))}&text=${encodeURIComponent(twitterContent)}${shareHashtags ? `&hashtags=${shareHashtags}` : ''}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getTrackedUrl('linkedin'))}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(whatsappContent)}%20${encodeURIComponent(getTrackedUrl('whatsapp'))}`,
     pinterest: image 
-      ? `https://pinterest.com/pin/create/button/?url=${shareUrl}&media=${encodeURIComponent(image)}&description=${encodeURIComponent(defaultContent)}`
+      ? `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(getTrackedUrl('pinterest'))}&media=${encodeURIComponent(image)}&description=${encodeURIComponent(defaultContent)}`
       : undefined,
   };
 
@@ -161,7 +171,7 @@ export const SocialShare = ({
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(getTrackedUrl('copy_link'));
       setCopied(true);
       toast.success("Lien copié dans le presse-papiers!");
       setTimeout(() => setCopied(false), 2000);
@@ -170,18 +180,18 @@ export const SocialShare = ({
     }
   };
 
+  const canShare = typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function';
+
   const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title,
-          text: description,
-          url,
-        });
-      } catch (error) {
-        // User cancelled or share failed
-        console.log('Share cancelled');
-      }
+    if (!canShare) return;
+    try {
+      await (navigator as any).share({
+        title,
+        text: description,
+        url: getTrackedUrl('native_share'),
+      });
+    } catch {
+      // Ignored: user cancelled or share failed
     }
   };
 
@@ -264,15 +274,15 @@ export const SocialShare = ({
           <DropdownMenuSeparator />
 
           {/* Native Share (Mobile) */}
-          {navigator.share && (
-            <>
-              <DropdownMenuItem onClick={handleNativeShare} className="cursor-pointer">
-                <Share2 className="mr-2 h-4 w-4" />
-                <span>Partager...</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          )}
+            {canShare && (
+              <>
+                <DropdownMenuItem onClick={handleNativeShare} className="cursor-pointer">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  <span>Partager...</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
 
           {/* Facebook */}
           <DropdownMenuItem onClick={() => handleShare('facebook')} className="cursor-pointer">
