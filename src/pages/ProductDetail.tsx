@@ -29,7 +29,7 @@ import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
 import { SocialShare } from "@/components/SocialShare";
-// import { useSEO } from "@/hooks/useSEO"; // Temporarily disabled
+import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
@@ -276,19 +276,20 @@ const ProductDetail = () => {
   // Variables for social sharing
   const productUrl = typeof window !== 'undefined' ? window.location.href : '';
   const productImage = product?.thumbnail || product?.previewUrl || '';
+  const productPrice = product ? (isVideo ? basePrice : (product.price || 0)) : 0;
 
-  // SEO temporarily disabled for debugging
-  // useSEO({
-  //   title: product?.title || 'Chargement du produit...',
-  //   description: product?.description || 'Chargement en cours',
-  //   image: productImage,
-  //   type: 'product',
-  //   author: product?.author,
-  //   publishedTime: product?.uploadDate,
-  //   tags: product?.tags || [],
-  //   price: product ? (isVideo ? basePrice : (product.price || 0)) : undefined,
-  //   currency: isVideo ? 'USD' : 'EUR'
-  // });
+  // SEO Configuration - only execute when product is loaded
+  useSEO({
+    title: product?.title || 'Produit',
+    description: product?.description || '',
+    image: productImage,
+    type: 'product',
+    author: product?.author,
+    publishedTime: product?.uploadDate,
+    tags: product?.tags || [],
+    price: productPrice,
+    currency: isVideo ? 'USD' : 'EUR'
+  });
 
   return (
     <div className="min-h-screen bg-background">

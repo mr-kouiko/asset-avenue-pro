@@ -24,6 +24,11 @@ export const useSEO = (config: SEOConfig) => {
   const { language } = useLanguage();
 
   useEffect(() => {
+    // Prevent execution if critical data is missing
+    if (!config.title || !config.description) {
+      console.warn('⚠️ useSEO: Missing required fields (title or description)');
+      return;
+    }
     const {
       title,
       description,
