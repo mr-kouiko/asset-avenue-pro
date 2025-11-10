@@ -388,6 +388,8 @@ const ProductDetail = () => {
             description={product.description}
             image={productImage}
             hashtags={product.tags}
+            productType={product.type as 'photo' | 'video' | 'audio' | 'illustration' | 'ebook' | 'pdf' | 'music'}
+            author={product.author}
             variant="secondary"
             size="sm"
             className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
