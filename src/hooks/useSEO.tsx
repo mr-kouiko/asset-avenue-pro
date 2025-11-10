@@ -24,12 +24,13 @@ export const useSEO = (config: SEOConfig) => {
   const { language } = useLanguage();
 
   useEffect(() => {
-    // Prevent execution if critical data is missing
-    if (!config.title || !config.description) {
-      console.warn('⚠️ useSEO: Missing required fields (title or description)');
-      return;
-    }
-    const {
+    try {
+      // Prevent execution if critical data is missing
+      if (!config.title || !config.description) {
+        console.warn('⚠️ useSEO: Missing required fields (title or description)');
+        return;
+      }
+      const {
       title,
       description,
       image = DEFAULT_IMAGE,
@@ -214,6 +215,10 @@ export const useSEO = (config: SEOConfig) => {
       script.type = 'application/ld+json';
       script.text = JSON.stringify(websiteData);
       document.head.appendChild(script);
+    }
+
+    } catch (e) {
+      console.error('useSEO error:', e);
     }
 
     // Cleanup function

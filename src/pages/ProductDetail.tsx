@@ -31,6 +31,7 @@ import { useCart } from "@/hooks/useCart";
 import { SocialShare } from "@/components/SocialShare";
 import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
+import { ErrorBoundary } from "@/components/utils/ErrorBoundary";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -382,18 +383,30 @@ const ProductDetail = () => {
               color={isLiked ? "hsl(var(--primary))" : "currentColor"}
             />
           </Button>
-          <SocialShare
-            url={productUrl}
-            title={product.title}
-            description={product.description}
-            image={productImage}
-            hashtags={product.tags}
-            productType={product.type as 'photo' | 'video' | 'audio' | 'illustration' | 'ebook' | 'pdf' | 'music'}
-            author={product.author}
-            variant="secondary"
-            size="sm"
-            className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
-          />
+          {/* Wrap SocialShare in ErrorBoundary to prevent page crash */}
+          <ErrorBoundary fallback={
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 border border-white/20 shadow-sm"
+              aria-label="Partage indisponible"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          }>
+            <SocialShare
+              url={productUrl}
+              title={product.title}
+              description={product.description}
+              image={productImage}
+              hashtags={product.tags}
+              productType={product.type as 'photo' | 'video' | 'audio' | 'illustration' | 'ebook' | 'pdf' | 'music'}
+              author={product.author}
+              variant="secondary"
+              size="sm"
+              className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
+            />
+          </ErrorBoundary>
         </div>
         
         {/* Audio/Video indicator badge */}
