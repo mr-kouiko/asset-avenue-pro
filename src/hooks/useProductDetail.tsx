@@ -52,22 +52,46 @@ export const useProductDetail = (productId: string) => {
         setLoading(true);
         setError(null);
 
-        // Use the secure function instead of direct table access
+        // Use the secure function instead of direct table access with a safe fallback
+        let productInfo: any | null = null;
         const { data: productDetails, error: productError } = await supabase
           .rpc('get_product_detail', { product_id: productId });
 
         if (productError) {
-          console.error('Error fetching product detail:', productError);
-          throw productError;
+          console.warn('Error fetching product detail via RPC, trying fallback...', productError);
         }
 
-        if (!productDetails || productDetails.length === 0) {
+        if (productDetails && productDetails.length > 0) {
+          productInfo = productDetails[0];
+        } else {
+          // Fallback: load from marketplace content and pick the matching item
+          console.warn('RPC returned empty; attempting get_marketplace_content fallback for id:', productId);
+          const { data: marketplaceData, error: marketplaceError } = await supabase.rpc('get_marketplace_content');
+          if (marketplaceError) {
+            console.error('Fallback get_marketplace_content error:', marketplaceError);
+          } else if (marketplaceData) {
+            const found = (marketplaceData as any[]).find((i) => i.id === productId);
+            if (found) {
+              productInfo = {
+                id: found.id,
+                title: found.title || 'Untitled',
+                description: found.description || '',
+                creator_store_name: found.creator_store_name || 'Boutique anonyme',
+                created_at: found.created_at,
+                price: found.price ?? null,
+                tags: found.tags || [],
+                category_id: found.category_id,
+                category_name: (found as any).category_name,
+              };
+            }
+          }
+        }
+
+        if (!productInfo) {
           setError('Produit non trouvé');
           setLoading(false);
           return;
         }
-
-        const productInfo = productDetails[0];
 
         // Fetch content files for the product
         const { data: files, error: filesError } = await supabase
