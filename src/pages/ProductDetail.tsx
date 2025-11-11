@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -28,10 +28,13 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
-import { SocialShare } from "@/components/SocialShare";
+
 import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 import { ErrorBoundary } from "@/components/utils/ErrorBoundary";
+
+const SocialShareLazy = lazy(() => import("@/components/SocialShare").then(m => ({ default: m.SocialShare })));
+
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -394,18 +397,29 @@ const ProductDetail = () => {
               <Share2 className="h-4 w-4" />
             </Button>
           }>
-            <SocialShare
-              url={productUrl}
-              title={product.title}
-              description={product.description}
-              image={productImage}
-              hashtags={product.tags}
-              productType={product.type as 'photo' | 'video' | 'audio' | 'illustration' | 'ebook' | 'pdf' | 'music'}
-              author={product.author}
-              variant="secondary"
-              size="sm"
-              className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
-            />
+            <Suspense fallback={
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 border border-white/20 shadow-sm"
+                aria-label="Chargement du partage"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            }>
+              <SocialShareLazy
+                url={productUrl}
+                title={product.title}
+                description={product.description}
+                image={productImage}
+                hashtags={product.tags}
+                productType={product.type as 'photo' | 'video' | 'audio' | 'illustration' | 'ebook' | 'pdf' | 'music'}
+                author={product.author}
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
+              />
+            </Suspense>
           </ErrorBoundary>
         </div>
         
