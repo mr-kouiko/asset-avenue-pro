@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -43,10 +43,40 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
 
-  // Create watermarked preview for images
+  // Create a minimal fallback product from marketplace if detailed fetch fails
+  const fallbackProduct = useMemo(() => {
+    if (!id) return null;
+    const item = marketplaceContent.find((i) => i.id === id);
+    if (!item) return null;
+    return {
+      id: item.id,
+      title: item.title,
+      description: '',
+      author: item.author,
+      authorId: 'anonymous',
+      type: item.type,
+      thumbnail: item.thumbnail,
+      previewUrl: item.videoUrl || item.audioUrl,
+      tags: item.tags || [],
+      uploadDate: item.created_at || '',
+      likes: 0,
+      downloads: 0,
+      views: 0,
+      price: item.price ?? 0,
+      files: [],
+      category: item.category_id ? { id: item.category_id, name: '' } : undefined,
+    } as const;
+  }, [marketplaceContent, id]);
+
+  // Create watermarked preview for images (use product or fallback)
   const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
-    imageUrl: (product?.type === 'photo' || product?.type === 'illustration') ? product?.thumbnail : undefined,
-    enabled: product?.type === 'photo' || product?.type === 'illustration'
+    imageUrl:
+      (product?.type === 'photo' || product?.type === 'illustration') ? product?.thumbnail :
+      (fallbackProduct?.type === 'photo' || fallbackProduct?.type === 'illustration') ? fallbackProduct?.thumbnail :
+      undefined,
+    enabled:
+      (product?.type === 'photo' || product?.type === 'illustration') ||
+      (fallbackProduct?.type === 'photo' || fallbackProduct?.type === 'illustration')
   });
 
   // Use dynamic pricing for videos
@@ -122,7 +152,7 @@ const ProductDetail = () => {
     };
   }, []);
 
-  if (productLoading) {
+  if (productLoading && !fallbackProduct) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -131,6 +161,64 @@ const ProductDetail = () => {
           <div className="flex items-center gap-3">
             <Loader2 className="h-6 w-6 animate-spin" />
             <span>Chargement du produit...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback minimal view if detailed product failed but marketplace has the item
+  if ((error || !product) && fallbackProduct) {
+    const fp = fallbackProduct;
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        <div className="container py-8">
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
+                {fp.type === 'video' ? (
+                  <MediaPlayer 
+                    src={fp.previewUrl || ''}
+                    type="video"
+                    title={fp.title}
+                    poster={fp.thumbnail}
+                    className="w-full h-full"
+                    autoPlay={false}
+                    controls={true}
+                    muted={false}
+                    watermarkSize="thumbnail"
+                  />
+                ) : fp.type === 'audio' ? (
+                  <div className="w-full h-full flex flex-col justify-center p-6">
+                    <MediaPlayer 
+                      src={fp.previewUrl || ''}
+                      type="audio"
+                      title={fp.title}
+                      className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
+                      autoPlay={false}
+                      controls={true}
+                      muted={false}
+                      watermarkSize="normal"
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={watermarkedUrl || fp.thumbnail}
+                    alt={fp.title}
+                    className="w-full h-full object-cover"
+                    draggable="false"
+                    onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h1 className="text-2xl font-bold text-stock-dark">{fp.title}</h1>
+              <div className="text-sm text-stock-dark/60">par {fp.author}</div>
+              <div className="text-sm text-muted-foreground">Affichage en mode réduit — détails complets indisponibles pour l’instant.</div>
+            </div>
           </div>
         </div>
       </div>
