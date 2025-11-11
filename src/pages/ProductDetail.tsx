@@ -302,12 +302,10 @@ const ProductDetail = () => {
 
   return (
     <ErrorBoundary fallback={
-      <div className="min-h-screen bg-background">
-        <Header />
-        <Navigation />
-        <div className="container py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Un problème est survenu</h1>
-          <p className="text-muted-foreground">Le module a été isolé. Rechargez la page ou réessayez plus tard.</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-6">
+          <h1 className="text-xl font-semibold mb-2">Un problème est survenu</h1>
+          <p className="text-muted-foreground text-sm">Veuillez recharger la page.</p>
         </div>
       </div>
     }>
