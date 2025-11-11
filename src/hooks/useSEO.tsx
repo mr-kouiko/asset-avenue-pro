@@ -24,13 +24,7 @@ export const useSEO = (config: SEOConfig) => {
   const { language } = useLanguage();
 
   useEffect(() => {
-    try {
-      // Prevent execution if critical data is missing
-      if (!config.title || !config.description) {
-        console.warn('⚠️ useSEO: Missing required fields (title or description)');
-        return;
-      }
-      const {
+    const {
       title,
       description,
       image = DEFAULT_IMAGE,
@@ -217,27 +211,10 @@ export const useSEO = (config: SEOConfig) => {
       document.head.appendChild(script);
     }
 
-    } catch (e) {
-      console.error('useSEO error:', e);
-    }
-
     // Cleanup function
     return () => {
       // Reset to default on unmount
       document.title = `${SITE_NAME} - Creative Content Marketplace`;
     };
-  }, [
-    config.title,
-    config.description,
-    config.image,
-    config.type,
-    config.author,
-    config.publishedTime,
-    config.tags?.join(','),
-    config.price,
-    config.currency,
-    config.noindex,
-    location.pathname,
-    language
-  ]);
+  }, [config, location, language]);
 };

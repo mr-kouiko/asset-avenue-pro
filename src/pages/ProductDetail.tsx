@@ -1,9 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
-import { RelatedContent } from "@/components/RelatedContent";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -29,13 +28,9 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
-
+import { SocialShare } from "@/components/SocialShare";
 import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
-import { ErrorBoundary } from "@/components/utils/ErrorBoundary";
-
-const SocialShareLazy = lazy(() => import("@/components/SocialShare").then(m => ({ default: m.SocialShare })));
-
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -142,65 +137,7 @@ const ProductDetail = () => {
     );
   }
 
-  // Try to build a minimal fallback from marketplace cache when RPC fails
-  const fallbackItem = marketplaceContent.find((item) => item.id === (id || ''));
-
   if (error || !product) {
-    if (fallbackItem) {
-      return (
-        <div className="min-h-screen bg-background">
-          <Header />
-          <Navigation />
-          <div className="container py-8">
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
-                  {fallbackItem.type === 'video' ? (
-                    <MediaPlayer
-                      src={fallbackItem.videoUrl}
-                      type="video"
-                      title={fallbackItem.title}
-                      poster={fallbackItem.thumbnail}
-                      className="w-full h-full"
-                      autoPlay={false}
-                      controls={true}
-                    />
-                  ) : fallbackItem.type === 'audio' ? (
-                    <MediaPlayer
-                      src={fallbackItem.audioUrl}
-                      type="audio"
-                      title={fallbackItem.title}
-                      className="w-full h-full"
-                      autoPlay={false}
-                      controls={true}
-                    />
-                  ) : (
-                    <img
-                      src={fallbackItem.thumbnail}
-                      alt={fallbackItem.title}
-                      className="w-full h-full object-cover"
-                      draggable="false"
-                      onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
-                    />
-                  )}
-                </div>
-              </div>
-              <div className="space-y-4">
-                <h1 className="text-2xl font-bold text-stock-dark leading-tight">{fallbackItem.title}</h1>
-                <div className="text-sm text-stock-dark/60">{fallbackItem.author}</div>
-                <div className="text-lg font-semibold text-stock-dark">
-                  {fallbackItem.price === null || fallbackItem.price === 0 ? 'Gratuit' : `${fallbackItem.price}€`}
-                </div>
-                <div className="text-muted-foreground text-sm bg-muted/50 rounded-lg p-4">
-                  Vue minimale chargée depuis le cache de la marketplace en attendant les détails du produit.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -279,10 +216,24 @@ const ProductDetail = () => {
     }
   };
 
-  // Related content will be handled by a dedicated component to isolate heavy hooks
-  // and avoid impacting the main product render lifecycle.
-  // See: <RelatedContent /> below.
-
+  // Get related products from marketplace with better filtering
+  const relatedProducts = marketplaceContent
+    .filter(item => item.id !== product.id)
+    .filter(item => {
+      // Prioritize same category, then same author
+      const sameCategory = item.category_id === product.category?.id;
+      const sameAuthor = item.author === product.author;
+      return sameCategory || sameAuthor;
+    })
+    .sort((a, b) => {
+      // Sort by category match first, then by author match
+      const aCategory = a.category_id === product.category?.id ? 2 : 0;
+      const bCategory = b.category_id === product.category?.id ? 2 : 0;
+      const aAuthor = a.author === product.author ? 1 : 0;
+      const bAuthor = b.author === product.author ? 1 : 0;
+      return (bCategory + bAuthor) - (aCategory + aAuthor);
+    })
+    .slice(0, 6);
 
   const handleAddToCart = () => {
     try {
@@ -322,39 +273,26 @@ const ProductDetail = () => {
     }, selectedLicense);
   };
 
-  // Variables for social sharing
+  // Generate SEO-optimized URL and metadata
   const productUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const productImage = product?.thumbnail || product?.previewUrl || '';
-  const productPrice = product ? (isVideo ? basePrice : (product.price || 0)) : 0;
+  const productImage = product.thumbnail || product.previewUrl || '';
+  const productPrice = isVideo ? basePrice : (product.price || 0);
 
-  // SEO Configuration - only execute when product is loaded
+  // SEO Configuration
   useSEO({
-    title: product?.title || 'Produit',
-    description: product?.description || '',
+    title: product.title,
+    description: product.description,
     image: productImage,
     type: 'product',
-    author: product?.author,
-    publishedTime: product?.uploadDate,
-    tags: product?.tags || [],
+    author: product.author,
+    publishedTime: product.uploadDate,
+    tags: product.tags,
     price: productPrice,
     currency: isVideo ? 'USD' : 'EUR'
   });
-  
-  // Debug render states
-  useEffect(() => {
-    console.log('[ProductDetail] state', { id, productLoading, hasProduct: !!product, error });
-  }, [id, productLoading, product, error]);
 
   return (
-    <ErrorBoundary fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center p-6">
-          <h1 className="text-xl font-semibold mb-2">Un problème est survenu</h1>
-          <p className="text-muted-foreground text-sm">Veuillez recharger la page.</p>
-        </div>
-      </div>
-    }>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       
       <Header />
       <Navigation />
@@ -444,41 +382,16 @@ const ProductDetail = () => {
               color={isLiked ? "hsl(var(--primary))" : "currentColor"}
             />
           </Button>
-          {/* Wrap SocialShare in ErrorBoundary to prevent page crash */}
-          <ErrorBoundary fallback={
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 border border-white/20 shadow-sm"
-              aria-label="Partage indisponible"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          }>
-            <Suspense fallback={
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 border border-white/20 shadow-sm"
-                aria-label="Chargement du partage"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            }>
-              <SocialShareLazy
-                url={productUrl}
-                title={product.title}
-                description={product.description}
-                image={productImage}
-                hashtags={product.tags}
-                productType={product.type as 'photo' | 'video' | 'audio' | 'illustration' | 'ebook' | 'pdf' | 'music'}
-                author={product.author}
-                variant="secondary"
-                size="sm"
-                className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
-              />
-            </Suspense>
-          </ErrorBoundary>
+          <SocialShare
+            url={productUrl}
+            title={product.title}
+            description={product.description}
+            image={productImage}
+            hashtags={product.tags}
+            variant="secondary"
+            size="sm"
+            className="h-9 w-9 p-0 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm"
+          />
         </div>
         
         {/* Audio/Video indicator badge */}
@@ -696,16 +609,56 @@ const ProductDetail = () => {
         </div>
 
         {/* Tabs Section */}
-        <RelatedContent 
-          productId={product.id} 
-          author={product.author} 
-          categoryId={product.category?.id} 
-        />
+        <div className="mt-16">
+          <Tabs defaultValue="related" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="related">Contenus similaires</TabsTrigger>
+              <TabsTrigger value="author">Plus de cet auteur</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="related" className="mt-8">
+              <h3 className="text-xl font-semibold mb-6">Contenus similaires</h3>
+              {relatedProducts.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {relatedProducts.map((item) => (
+                    <ContentCard key={item.id} {...item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                    <Eye className="h-8 w-8" />
+                  </div>
+                  <p>Aucun contenu similaire trouvé pour le moment.</p>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="author" className="mt-8">
+              <h3 className="text-xl font-semibold mb-6">Plus de {product.author}</h3>
+              {relatedProducts.filter(item => item.author === product.author).length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {relatedProducts
+                    .filter(item => item.author === product.author)
+                    .map((item) => (
+                      <ContentCard key={item.id} {...item} />
+                    ))
+                  }
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                    <User className="h-8 w-8" />
+                  </div>
+                  <p>Aucun autre contenu de cet auteur pour le moment.</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
-    </ErrorBoundary>
   );
 };
-
 
 export default ProductDetail;

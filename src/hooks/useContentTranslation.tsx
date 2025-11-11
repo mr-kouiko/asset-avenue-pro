@@ -35,11 +35,6 @@ export const useContentTranslation = () => {
       return cached;
     }
 
-    // Short-circuit: if UI language is already French, skip translation
-    if (language === 'fr') {
-      return { title, description, tags, timestamp: Date.now() };
-    }
-
     // If translations are disabled (e.g., due to 402), return original content
     if (translationsDisabled) {
       return { title, description, tags, timestamp: Date.now() };
