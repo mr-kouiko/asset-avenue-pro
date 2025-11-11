@@ -142,7 +142,65 @@ const ProductDetail = () => {
     );
   }
 
+  // Try to build a minimal fallback from marketplace cache when RPC fails
+  const fallbackItem = marketplaceContent.find((item) => item.id === (id || ''));
+
   if (error || !product) {
+    if (fallbackItem) {
+      return (
+        <div className="min-h-screen bg-background">
+          <Header />
+          <Navigation />
+          <div className="container py-8">
+            <div className="grid lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
+                  {fallbackItem.type === 'video' ? (
+                    <MediaPlayer
+                      src={fallbackItem.videoUrl}
+                      type="video"
+                      title={fallbackItem.title}
+                      poster={fallbackItem.thumbnail}
+                      className="w-full h-full"
+                      autoPlay={false}
+                      controls={true}
+                    />
+                  ) : fallbackItem.type === 'audio' ? (
+                    <MediaPlayer
+                      src={fallbackItem.audioUrl}
+                      type="audio"
+                      title={fallbackItem.title}
+                      className="w-full h-full"
+                      autoPlay={false}
+                      controls={true}
+                    />
+                  ) : (
+                    <img
+                      src={fallbackItem.thumbnail}
+                      alt={fallbackItem.title}
+                      className="w-full h-full object-cover"
+                      draggable="false"
+                      onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h1 className="text-2xl font-bold text-stock-dark leading-tight">{fallbackItem.title}</h1>
+                <div className="text-sm text-stock-dark/60">{fallbackItem.author}</div>
+                <div className="text-lg font-semibold text-stock-dark">
+                  {fallbackItem.price === null || fallbackItem.price === 0 ? 'Gratuit' : `${fallbackItem.price}€`}
+                </div>
+                <div className="text-muted-foreground text-sm bg-muted/50 rounded-lg p-4">
+                  Vue minimale chargée depuis le cache de la marketplace en attendant les détails du produit.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background">
         <Header />
