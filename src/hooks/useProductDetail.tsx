@@ -52,22 +52,54 @@ export const useProductDetail = (productId: string) => {
         setLoading(true);
         setError(null);
 
-        // Use the secure function instead of direct table access
-        const { data: productDetails, error: productError } = await supabase
-          .rpc('get_product_detail', { product_id: productId });
+        // Retry helper with exponential backoff
+        const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+        const getDetailWithRetry = async (maxAttempts = 3) => {
+          let lastErr: any = null;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const { data, error } = await supabase.rpc('get_product_detail', { product_id: productId });
+            if (!error && data && data.length > 0) {
+              return data[0];
+            }
+            lastErr = error || new Error('Empty response');
+            console.warn(`[useProductDetail] get_product_detail attempt ${attempt}/${maxAttempts} failed`, lastErr);
+            if (attempt < maxAttempts) {
+              await sleep(300 * Math.pow(2, attempt - 1)); // 300ms, 600ms
+            }
+          }
+          throw lastErr;
+        };
 
-        if (productError) {
-          console.error('Error fetching product detail:', productError);
-          throw productError;
+        let productInfo: any = null;
+        try {
+          productInfo = await getDetailWithRetry(3);
+        } catch (rpcErr) {
+          console.error('[useProductDetail] RPC get_product_detail failed after retries:', rpcErr);
+          // Fallback to marketplace content (public, approved only)
+          const { data: marketplace, error: marketError } = await supabase.rpc('get_marketplace_content');
+          if (marketError) {
+            console.error('[useProductDetail] Fallback get_marketplace_content failed:', marketError);
+          }
+          const fallback = (marketplace || []).find((m: any) => m.id === productId);
+          if (fallback) {
+            toast.warning('Détails indisponibles, affichage en mode réduit');
+            productInfo = {
+              id: fallback.id,
+              title: fallback.title,
+              description: fallback.description,
+              price: fallback.price,
+              tags: fallback.tags,
+              created_at: fallback.created_at,
+              category_id: fallback.category_id,
+              creator_store_name: fallback.creator_store_name,
+              category_name: fallback.category_name,
+            };
+          } else {
+            setError('Produit non trouvé');
+            setLoading(false);
+            return;
+          }
         }
-
-        if (!productDetails || productDetails.length === 0) {
-          setError('Produit non trouvé');
-          setLoading(false);
-          return;
-        }
-
-        const productInfo = productDetails[0];
 
         // Fetch content files for the product
         const { data: files, error: filesError } = await supabase
