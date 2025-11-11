@@ -702,7 +702,9 @@ const ProductDetail = () => {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 };
+
 
 export default ProductDetail;
