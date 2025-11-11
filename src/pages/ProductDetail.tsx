@@ -220,24 +220,10 @@ const ProductDetail = () => {
     }
   };
 
-  // Get related products from marketplace with better filtering
-  const relatedProducts = marketplaceContent
-    .filter(item => item.id !== product.id)
-    .filter(item => {
-      // Prioritize same category, then same author
-      const sameCategory = item.category_id === product.category?.id;
-      const sameAuthor = item.author === product.author;
-      return sameCategory || sameAuthor;
-    })
-    .sort((a, b) => {
-      // Sort by category match first, then by author match
-      const aCategory = a.category_id === product.category?.id ? 2 : 0;
-      const bCategory = b.category_id === product.category?.id ? 2 : 0;
-      const aAuthor = a.author === product.author ? 1 : 0;
-      const bAuthor = b.author === product.author ? 1 : 0;
-      return (bCategory + bAuthor) - (aCategory + aAuthor);
-    })
-    .slice(0, 6);
+  // Related content will be handled by a dedicated component to isolate heavy hooks
+  // and avoid impacting the main product render lifecycle.
+  // See: <RelatedContent /> below.
+
 
   const handleAddToCart = () => {
     try {
