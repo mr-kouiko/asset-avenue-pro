@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
+import { RelatedContent } from "@/components/RelatedContent";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -637,53 +638,11 @@ const ProductDetail = () => {
         </div>
 
         {/* Tabs Section */}
-        <div className="mt-16">
-          <Tabs defaultValue="related" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="related">Contenus similaires</TabsTrigger>
-              <TabsTrigger value="author">Plus de cet auteur</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="related" className="mt-8">
-              <h3 className="text-xl font-semibold mb-6">Contenus similaires</h3>
-              {relatedProducts.length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {relatedProducts.map((item) => (
-                    <ContentCard key={item.id} {...item} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-                    <Eye className="h-8 w-8" />
-                  </div>
-                  <p>Aucun contenu similaire trouvé pour le moment.</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="author" className="mt-8">
-              <h3 className="text-xl font-semibold mb-6">Plus de {product.author}</h3>
-              {relatedProducts.filter(item => item.author === product.author).length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {relatedProducts
-                    .filter(item => item.author === product.author)
-                    .map((item) => (
-                      <ContentCard key={item.id} {...item} />
-                    ))
-                  }
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-                    <User className="h-8 w-8" />
-                  </div>
-                  <p>Aucun autre contenu de cet auteur pour le moment.</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+        <RelatedContent 
+          productId={product.id} 
+          author={product.author} 
+          categoryId={product.category?.id} 
+        />
       </div>
     </div>
     </ErrorBoundary>
