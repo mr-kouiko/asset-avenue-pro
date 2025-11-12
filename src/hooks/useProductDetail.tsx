@@ -48,45 +48,78 @@ export const useProductDetail = (productId: string) => {
         return;
       }
 
+      // Helper: create timeout promise
+      const createTimeout = (ms: number) => 
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms));
+
+      // Helper: fetch marketplace fallback
+      const fetchMarketplaceFallback = async (): Promise<any | null> => {
+        try {
+          console.warn('🔄 Attempting marketplace fallback for id:', productId);
+          const marketplacePromise = supabase.rpc('get_marketplace_content');
+          const result = await Promise.race([marketplacePromise, createTimeout(5000)]);
+          
+          const { data: marketplaceData, error: marketplaceError } = result as any;
+          if (marketplaceError) throw marketplaceError;
+          if (!marketplaceData) return null;
+
+          const found = (marketplaceData as any[]).find((i) => i.id === productId);
+          if (!found) return null;
+
+          return {
+            id: found.id,
+            title: found.title || 'Untitled',
+            description: found.description || '',
+            creator_store_name: found.creator_store_name || 'Boutique anonyme',
+            created_at: found.created_at,
+            price: found.price ?? null,
+            tags: found.tags || [],
+            category_id: found.category_id,
+            category_name: (found as any).category_name,
+          };
+        } catch (err) {
+          console.error('❌ Marketplace fallback failed:', err);
+          return null;
+        }
+      };
+
       try {
         setLoading(true);
         setError(null);
 
-        // Use the secure function instead of direct table access with a safe fallback
         let productInfo: any | null = null;
-        const { data: productDetails, error: productError } = await supabase
-          .rpc('get_product_detail', { product_id: productId });
-
-        if (productError) {
-          console.warn('Error fetching product detail via RPC, trying fallback...', productError);
-        }
-
-        if (productDetails && productDetails.length > 0) {
-          productInfo = productDetails[0];
-        } else {
-          // Fallback: load from marketplace content and pick the matching item
-          console.warn('RPC returned empty; attempting get_marketplace_content fallback for id:', productId);
-          const { data: marketplaceData, error: marketplaceError } = await supabase.rpc('get_marketplace_content');
-          if (marketplaceError) {
-            console.error('Fallback get_marketplace_content error:', marketplaceError);
-          } else if (marketplaceData) {
-            const found = (marketplaceData as any[]).find((i) => i.id === productId);
-            if (found) {
-              productInfo = {
-                id: found.id,
-                title: found.title || 'Untitled',
-                description: found.description || '',
-                creator_store_name: found.creator_store_name || 'Boutique anonyme',
-                created_at: found.created_at,
-                price: found.price ?? null,
-                tags: found.tags || [],
-                category_id: found.category_id,
-                category_name: (found as any).category_name,
-              };
+        
+        // Try get_product_detail with timeout + 1 retry
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            console.log(`🔍 Fetching product detail (attempt ${attempt}/2)...`);
+            const rpcPromise = supabase.rpc('get_product_detail', { product_id: productId });
+            const result = await Promise.race([rpcPromise, createTimeout(5000)]);
+            
+            const { data: productDetails, error: productError } = result as any;
+            if (productError) throw productError;
+            
+            if (productDetails && productDetails.length > 0) {
+              productInfo = productDetails[0];
+              console.log('✅ Product detail loaded successfully');
+              break;
+            }
+          } catch (err) {
+            console.warn(`⚠️ RPC attempt ${attempt} failed:`, err);
+            if (attempt === 2) {
+              console.warn('❌ All RPC attempts failed, using marketplace fallback');
+            } else {
+              await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay before retry
             }
           }
         }
 
+        // If RPC failed, use marketplace fallback
+        if (!productInfo) {
+          productInfo = await fetchMarketplaceFallback();
+        }
+
+        // If still no product info, set error but don't block render (ProductDetail has UI fallback)
         if (!productInfo) {
           setError('Produit non trouvé');
           setLoading(false);
