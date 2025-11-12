@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -22,6 +22,7 @@ const BASE_URL = 'https://visustock.com';
 export const useSEO = (config: SEOConfig) => {
   const location = useLocation();
   const { language } = useLanguage();
+  const lastConfigRef = useRef<string>('');
 
   useEffect(() => {
     const {
@@ -36,6 +37,19 @@ export const useSEO = (config: SEOConfig) => {
       currency = 'EUR',
       noindex = false
     } = config;
+
+    // GUARD: Only proceed if essential fields are present and valid
+    if (!title || !description || title.trim().length === 0 || description.trim().length === 0) {
+      console.warn('⚠️ useSEO: Missing or empty title/description, skipping DOM update');
+      return;
+    }
+
+    // GUARD: Prevent re-execution if config hasn't meaningfully changed
+    const configHash = JSON.stringify({ title, description, image, type, price, location: location.pathname, language });
+    if (configHash === lastConfigRef.current) {
+      return;
+    }
+    lastConfigRef.current = configHash;
 
     // Update document title
     document.title = `${title} | ${SITE_NAME}`;
