@@ -55,6 +55,12 @@ export const SocialShare = ({
   };
 
   const handleCopyLink = async () => {
+    // Guard: prevent SSR access to navigator
+    if (typeof window === 'undefined' || !navigator?.clipboard) {
+      toast.error("Fonction de copie non disponible");
+      return;
+    }
+    
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -66,17 +72,20 @@ export const SocialShare = ({
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title,
-          text: description,
-          url,
-        });
-      } catch (error) {
-        // User cancelled or share failed
-        console.log('Share cancelled');
-      }
+    // Guard: prevent SSR access to navigator
+    if (typeof window === 'undefined' || !navigator?.share) {
+      return;
+    }
+    
+    try {
+      await navigator.share({
+        title,
+        text: description,
+        url,
+      });
+    } catch (error) {
+      // User cancelled or share failed
+      console.log('Share cancelled');
     }
   };
 
@@ -93,7 +102,7 @@ export const SocialShare = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         {/* Native Share (Mobile) */}
-        {navigator.share && (
+        {typeof window !== 'undefined' && navigator?.share && (
           <DropdownMenuItem onClick={handleNativeShare} className="cursor-pointer">
             <Share2 className="mr-2 h-4 w-4" />
             <span>Partager...</span>

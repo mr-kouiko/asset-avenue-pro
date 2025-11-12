@@ -28,7 +28,7 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
-import { SocialShare } from "@/components/SocialShare";
+import { SocialShareLazy } from "@/components/SocialShareLazy";
 import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
@@ -470,7 +470,7 @@ const ProductDetail = () => {
               color={isLiked ? "hsl(var(--primary))" : "currentColor"}
             />
           </Button>
-          <SocialShare
+          <SocialShareLazy
             url={productUrl}
             title={product.title}
             description={product.description}
