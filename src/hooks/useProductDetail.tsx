@@ -18,6 +18,7 @@ interface ProductDetailData {
   downloads: number;
   views: number;
   price: number | null;
+  original_language?: string;
   files: Array<{
     id: string;
     file_name: string;
@@ -288,6 +289,7 @@ export const useProductDetail = (productId: string) => {
           downloads: 0, // Would need to fetch from downloads table
           views: 0, // Would need to implement views tracking
           price: productInfo.price,
+          original_language: productInfo.original_language || 'en',
           files: filesList.map((file: any) => ({
             id: file.id,
             file_name: file.file_name,
@@ -314,6 +316,13 @@ export const useProductDetail = (productId: string) => {
 
         (async () => {
           try {
+            const originalLang = productData.original_language || 'en';
+            
+            // Short-circuit: if current language matches original, no translation needed
+            if (currentLanguage === originalLang) {
+              return;
+            }
+
             // First, try cached translation
             const cached = getCachedTranslation(productData.id);
 
@@ -333,7 +342,8 @@ export const useProductDetail = (productId: string) => {
               productData.id,
               productData.title,
               productData.description,
-              productData.tags
+              productData.tags,
+              originalLang
             );
             if (!isMounted || !translation) return;
 
