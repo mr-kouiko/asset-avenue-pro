@@ -20,6 +20,7 @@ export interface MarketplaceContent {
   duration?: string; // Audio duration (e.g., "3:45")
   bpm?: number; // Beats per minute for audio
   created_at?: string; // Upload date for sorting
+  original_language?: string; // Original language of the content
 }
 
 export const useMarketplace = () => {
@@ -167,8 +168,12 @@ export const useMarketplace = () => {
         })
       );
 
-      // Translate content to visitor's language, only for items not cached
+      // Translate content to visitor's language, with short-circuit for matching languages
       const newItems = contentWithFiles.filter(item => {
+        const originalLang = item.original_language || 'en';
+        // Skip translation if current language matches original
+        if (currentLanguage === originalLang) return false;
+        
         const cached = getCachedTranslation(item.id);
         return !cached;
       }).map(item => ({
@@ -185,6 +190,13 @@ export const useMarketplace = () => {
 
       // Apply translations (prefer cache, fallback to freshly translated)
       const translatedContent = contentWithFiles.map((item) => {
+        const originalLang = item.original_language || 'en';
+        
+        // Short-circuit: if current language matches original, return as-is
+        if (currentLanguage === originalLang) {
+          return item;
+        }
+
         const cached = getCachedTranslation(item.id);
         const t = cached || translationsMap[item.id];
         return {

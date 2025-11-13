@@ -56,8 +56,14 @@ export const useContentTranslation = () => {
       id: string,
       title: string,
       description: string,
-      tags: string[]
+      tags: string[],
+      originalLanguage: string = 'en'
     ): Promise<TranslationResult> => {
+      // Short-circuit: if target language is same as original, return original content
+      if (language === originalLanguage) {
+        return { title, description, tags };
+      }
+
       const cacheKey = `${id}_${language}`;
 
       // Check in-memory cache first
