@@ -110,11 +110,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Extract language from URL path
+  // Extract language from URL path - now English is default
   const getLanguageFromPath = (pathname: string): Language => {
-    if (pathname.startsWith('/en/') || pathname === '/en') return 'en';
     if (pathname.startsWith('/fr/') || pathname === '/fr') return 'fr';
-    return 'fr'; // default
+    // Everything else is English now
+    return 'en';
   };
 
   const [language, setLanguageState] = useState<Language>(getLanguageFromPath(location.pathname));
@@ -122,22 +122,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     
-    // Update URL to reflect new language
-    const currentPath = location.pathname;
-    let newPath = '';
-    
-    // Remove existing language prefix
-    if (currentPath.startsWith('/fr/') || currentPath.startsWith('/en/')) {
-      newPath = currentPath.substring(3); // Remove /xx/
-    } else if (currentPath === '/fr' || currentPath === '/en') {
-      newPath = '';
-    } else {
-      newPath = currentPath;
-    }
-    
-    // Add new language prefix
-    const finalPath = `/${lang}${newPath || ''}`;
-    navigate(finalPath, { replace: true });
+    // Site is now English only - no need to change URL
+    // Language switching can be disabled or kept for future use
   };
 
   const t = (key: string): string => {
