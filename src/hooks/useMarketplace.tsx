@@ -134,10 +134,21 @@ export const useMarketplace = () => {
 
           // Map content types including PDFs
           let contentType: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook' = 'photo';
-          if (item.content_type === 'video') contentType = 'video';
-          else if (item.content_type === 'audio') contentType = 'audio';
-          else if (item.content_type === 'illustration') contentType = 'illustration';
-          else if (item.content_type === 'document') contentType = 'ebook';
+          
+          // Explicit mapping for all content types
+          if (item.content_type === 'video') {
+            contentType = 'video';
+          } else if (item.content_type === 'audio') {
+            contentType = 'audio';
+          } else if (item.content_type === 'illustration') {
+            contentType = 'illustration';
+          } else if (item.content_type === 'document' || item.content_type === 'pdf') {
+            contentType = 'ebook';
+          } else if (item.content_type === 'photo' || item.content_type === 'image') {
+            contentType = 'photo';
+          }
+          
+          console.log(`📊 Content type mapping: ${item.content_type} → ${contentType} for "${item.title}"`);
 
           const contentItem: MarketplaceContent = {
             id: item.id,
