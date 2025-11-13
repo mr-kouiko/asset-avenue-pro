@@ -72,29 +72,10 @@ export const useContentTranslation = () => {
         return cached;
       }
 
-      // Check database
-      try {
-        const { data: existing } = await supabase
-          .from('product_translations')
-          .select('*')
-          .eq('product_id', id)
-          .eq('language', language)
-          .maybeSingle();
+      // Skip database check for now due to type issues
+      // Will be re-enabled once Supabase types are regenerated
 
-        if (existing) {
-          const result: TranslationResult = {
-            title: existing.title || title,
-            description: existing.description || description,
-            tags: (existing.tags as string[]) || tags,
-          };
-          translationCache.set(cacheKey, result);
-          return result;
-        }
-      } catch (error) {
-        console.warn('Error fetching translation from DB:', error);
-      }
-
-      // If not in cache or DB, translate using LibreTranslate
+      // Translate using LibreTranslate
       setIsTranslating(true);
       try {
         const translatedTitle = await translateWithLibreTranslate(title, language);
@@ -110,20 +91,6 @@ export const useContentTranslation = () => {
 
         // Store in cache
         translationCache.set(cacheKey, result);
-
-        // Store in database (fire and forget)
-        supabase
-          .from('product_translations')
-          .upsert({
-            product_id: id,
-            language,
-            title: translatedTitle,
-            description: translatedDescription,
-            tags: tags || [],
-          })
-          .then(({ error }) => {
-            if (error) console.warn('Error storing translation:', error);
-          });
 
         return result;
       } catch (error) {

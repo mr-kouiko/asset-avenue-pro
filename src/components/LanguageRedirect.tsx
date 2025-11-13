@@ -8,15 +8,22 @@ export const LanguageRedirect = () => {
   useEffect(() => {
     const path = location.pathname;
     
-    // If user is on root path, redirect to French version
+    // If user is on root path, no redirect needed - English is default
     if (path === '/') {
-      navigate('/fr', { replace: true });
       return;
     }
     
-    // If path doesn't start with language prefix, redirect to French version
-    if (!path.startsWith('/fr/') && !path.startsWith('/en/') && path !== '/fr' && path !== '/en') {
-      navigate(`/fr${path}`, { replace: true });
+    // Redirect old French routes to English
+    if (path.startsWith('/fr/') || path === '/fr') {
+      const newPath = path.replace('/fr', '');
+      navigate(newPath || '/', { replace: true });
+      return;
+    }
+    
+    // Redirect old /en/ routes to root
+    if (path.startsWith('/en/') || path === '/en') {
+      const newPath = path.replace('/en', '');
+      navigate(newPath || '/', { replace: true });
       return;
     }
   }, [location.pathname, navigate]);
