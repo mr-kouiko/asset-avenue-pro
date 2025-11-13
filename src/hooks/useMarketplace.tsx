@@ -169,7 +169,7 @@ export const useMarketplace = () => {
 
       // Translate content to visitor's language, only for items not cached
       const newItems = contentWithFiles.filter(item => {
-        const cached = getCachedTranslation(item.id, item.title, '', item.tags || []);
+        const cached = getCachedTranslation(item.id);
         return !cached;
       }).map(item => ({
         id: item.id,
@@ -178,19 +178,19 @@ export const useMarketplace = () => {
         tags: item.tags || []
       }));
 
-      let translationsMap: Record<string, { title: string; description: string; tags: string; timestamp: number } | any> = {};
+      let translationsMap: Record<string, { title: string; description: string; tags: string[] }> = {};
       if (newItems.length > 0) {
         translationsMap = await translateBatch(newItems);
       }
 
       // Apply translations (prefer cache, fallback to freshly translated)
       const translatedContent = contentWithFiles.map((item) => {
-        const cached = getCachedTranslation(item.id, item.title, '', item.tags || []);
+        const cached = getCachedTranslation(item.id);
         const t = cached || translationsMap[item.id];
         return {
           ...item,
           title: t?.title || item.title,
-          tags: (t?.tags as any) || item.tags
+          tags: t?.tags || item.tags
         };
       });
 
