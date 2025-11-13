@@ -41,6 +41,7 @@ export const useProductDetail = (productId: string) => {
   const { translateContent, currentLanguage } = useContentTranslation();
 
   useEffect(() => {
+    let isMounted = true;
     const fetchProductDetail = async () => {
       if (!productId) {
         setError('ID produit manquant');
@@ -303,28 +304,31 @@ export const useProductDetail = (productId: string) => {
           } : undefined
         };
 
-        // Translate product details to visitor's language (with fallback to original)
-        try {
-          const translation = await translateContent(
-            productData.id,
-            productData.title,
-            productData.description,
-            productData.tags
-          );
-
-          const translatedProduct = {
-            ...productData,
-            title: translation.title,
-            description: translation.description,
-            tags: translation.tags
-          };
-
-          setProduct(translatedProduct);
-        } catch (translationError) {
-          // If translation fails completely, use original product data
-          console.warn('Translation failed, using original content');
-          setProduct(productData);
-        }
+        // Set original product first to avoid blocking UI, then translate in background
+        setProduct(productData);
+        (async () => {
+          try {
+            const translation = await translateContent(
+              productData.id,
+              productData.title,
+              productData.description,
+              productData.tags
+            );
+            if (!translation) return;
+            if (!isMounted) return;
+            setProduct(prev => {
+              if (!prev || prev.id !== productData.id) return prev;
+              return {
+                ...prev,
+                title: translation.title,
+                description: translation.description,
+                tags: translation.tags
+              };
+            });
+          } catch (translationError) {
+            console.warn('Translation failed, keeping original content');
+          }
+        })();
       } catch (err) {
         console.error('Error loading product:', err);
         setError('Erreur lors du chargement du produit');
@@ -335,6 +339,7 @@ export const useProductDetail = (productId: string) => {
     };
 
     fetchProductDetail();
+    return () => { isMounted = false; };
   }, [productId, currentLanguage]);
 
   return {
