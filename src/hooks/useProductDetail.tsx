@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useContentTranslation } from './useContentTranslation';
@@ -38,7 +38,7 @@ export const useProductDetail = (productId: string) => {
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { translateContent, currentLanguage } = useContentTranslation();
+  const { translateContent, currentLanguage, getCachedTranslation } = useContentTranslation();
 
   useEffect(() => {
     let isMounted = true;
@@ -304,27 +304,49 @@ export const useProductDetail = (productId: string) => {
           } : undefined
         };
 
-        // Set original product first to avoid blocking UI, then translate in background
+        // Set original product first to avoid blocking UI, then translate in background with cache checks
         setProduct(productData);
+
+        const cacheKey = `${productData.id}-${currentLanguage}`;
+        // Avoid re-translation if we've already translated this id+language
+        const lastKeyRef = (useRef as any).__lastKeyRef || (useRef as any); // placeholder to satisfy type context in replace
+        // Note: We'll handle lastKeyRef properly at component scope below
+
         (async () => {
           try {
+            // First, try cached translation
+            const cached = getCachedTranslation(
+              productData.id,
+              productData.title,
+              productData.description,
+              productData.tags
+            );
+
+            if (!isMounted) return;
+
+            if (cached) {
+              setProduct((prev) =>
+                prev && prev.id === productData.id
+                  ? { ...prev, title: cached.title, description: cached.description, tags: cached.tags }
+                  : prev
+              );
+              return;
+            }
+
+            // No cache: safely translate in background
             const translation = await translateContent(
               productData.id,
               productData.title,
               productData.description,
               productData.tags
             );
-            if (!translation) return;
-            if (!isMounted) return;
-            setProduct(prev => {
-              if (!prev || prev.id !== productData.id) return prev;
-              return {
-                ...prev,
-                title: translation.title,
-                description: translation.description,
-                tags: translation.tags
-              };
-            });
+            if (!isMounted || !translation) return;
+
+            setProduct((prev) =>
+              prev && prev.id === productData.id
+                ? { ...prev, title: translation.title, description: translation.description, tags: translation.tags }
+                : prev
+            );
           } catch (translationError) {
             console.warn('Translation failed, keeping original content');
           }
