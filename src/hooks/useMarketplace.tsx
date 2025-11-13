@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useContentTranslation } from './useContentTranslation';
 
 export interface MarketplaceContent {
   id: string;
@@ -26,7 +25,6 @@ export interface MarketplaceContent {
 export const useMarketplace = () => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { translateBatch, currentLanguage, getCachedTranslation } = useContentTranslation();
 
   const fetchMarketplaceContent = async () => {
     try {
@@ -179,46 +177,8 @@ export const useMarketplace = () => {
         })
       );
 
-      // Translate content to visitor's language, with short-circuit for matching languages
-      const newItems = contentWithFiles.filter(item => {
-        const originalLang = item.original_language || 'en';
-        // Skip translation if current language matches original
-        if (currentLanguage === originalLang) return false;
-        
-        const cached = getCachedTranslation(item.id);
-        return !cached;
-      }).map(item => ({
-        id: item.id,
-        title: item.title,
-        description: '',
-        tags: item.tags || []
-      }));
-
-      let translationsMap: Record<string, { title: string; description: string; tags: string[] }> = {};
-      if (newItems.length > 0) {
-        translationsMap = await translateBatch(newItems);
-      }
-
-      // Apply translations (prefer cache, fallback to freshly translated)
-      const translatedContent = contentWithFiles.map((item) => {
-        const originalLang = item.original_language || 'en';
-        
-        // Short-circuit: if current language matches original, return as-is
-        if (currentLanguage === originalLang) {
-          return item;
-        }
-
-        const cached = getCachedTranslation(item.id);
-        const t = cached || translationsMap[item.id];
-        return {
-          ...item,
-          title: t?.title || item.title,
-          tags: t?.tags || item.tags
-        };
-      });
-
       // Randomize the order of content for the homepage
-      const shuffledContent = [...translatedContent].sort(() => Math.random() - 0.5);
+      const shuffledContent = [...contentWithFiles].sort(() => Math.random() - 0.5);
 
       setContent(shuffledContent);
     } catch (error) {
@@ -242,7 +202,7 @@ export const useMarketplace = () => {
     return () => {
       window.removeEventListener('refreshMarketplace', handleRefresh);
     };
-  }, [currentLanguage]);
+  }, []);
 
   return {
     content,
