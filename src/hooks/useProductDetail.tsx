@@ -315,12 +315,7 @@ export const useProductDetail = (productId: string) => {
         (async () => {
           try {
             // First, try cached translation
-            const cached = getCachedTranslation(
-              productData.id,
-              productData.title,
-              productData.description,
-              productData.tags
-            );
+            const cached = getCachedTranslation(productData.id);
 
             if (!isMounted) return;
 

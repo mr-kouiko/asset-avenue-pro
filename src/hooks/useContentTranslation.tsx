@@ -6,74 +6,37 @@ interface TranslationResult {
   title: string;
   description: string;
   tags: string[];
-  timestamp: number;
 }
 
-interface TranslationCache {
-  [key: string]: TranslationResult;
-}
+// In-memory cache for faster access
+const translationCache = new Map<string, TranslationResult>();
 
-// Cache translations for 1 hour
-const CACHE_DURATION = 60 * 60 * 1000;
-const RATE_LIMIT_MS = 500; // throttle: one call every 500ms
-
-// In-memory cache and control flags
-const translationCache: TranslationCache = {};
-let translationsDisabled = false; // Global circuit breaker
-let failureCount = 0;
-const MAX_FAILURES = 3; // Disable after 3 consecutive failures
-
-// Global throttling and de-duplication
-const inFlight = new Map<string, Promise<TranslationResult>>();
-let globalQueue: Promise<void> = Promise.resolve();
-let lastStartTime = 0;
-
-const storageKeyFor = (cacheKey: string) => `t_cache_${cacheKey}`;
-
-function getCacheKey(id: string, language: string) {
-  return `${id}-${language}`;
-}
-
-function getFromStorage(cacheKey: string): TranslationResult | null {
-  if (typeof window === 'undefined') return null;
+// Free translation using LibreTranslate
+async function translateWithLibreTranslate(text: string, targetLang: string): Promise<string> {
+  if (!text || text.trim() === '') return text;
+  
   try {
-    const raw = localStorage.getItem(storageKeyFor(cacheKey));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as TranslationResult;
-    if (!parsed?.timestamp) return null;
-    if (Date.now() - parsed.timestamp > CACHE_DURATION) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function setToStorage(cacheKey: string, value: TranslationResult) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(storageKeyFor(cacheKey), JSON.stringify(value));
-  } catch {
-    // ignore storage errors
-  }
-}
-
-async function enqueueRateLimited<T>(fn: () => Promise<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    globalQueue = globalQueue.then(async () => {
-      const now = Date.now();
-      const wait = Math.max(0, RATE_LIMIT_MS - (now - lastStartTime));
-      if (wait > 0) {
-        await new Promise((r) => setTimeout(r, wait));
-      }
-      lastStartTime = Date.now();
-      try {
-        const res = await fn();
-        resolve(res);
-      } catch (e) {
-        reject(e);
-      }
+    const response = await fetch('https://libretranslate.de/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        q: text,
+        source: 'auto',
+        target: targetLang,
+        format: 'text'
+      }),
     });
-  });
+    
+    if (!response.ok) {
+      throw new Error(`Translation API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.translatedText || text;
+  } catch (error) {
+    console.warn('LibreTranslate error:', error);
+    return text; // Return original on error
+  }
 }
 
 export const useContentTranslation = () => {
@@ -81,18 +44,9 @@ export const useContentTranslation = () => {
   const [isTranslating, setIsTranslating] = useState(false);
 
   const getCachedTranslation = useCallback(
-    (id: string, title: string, description: string, tags: string[]): TranslationResult | undefined => {
-      const cacheKey = getCacheKey(id, language);
-      // in-memory first
-      const mem = translationCache[cacheKey];
-      if (mem && Date.now() - mem.timestamp < CACHE_DURATION) return mem;
-      // storage fallback
-      const stored = getFromStorage(cacheKey);
-      if (stored) {
-        translationCache[cacheKey] = stored;
-        return stored;
-      }
-      return undefined;
+    (id: string): TranslationResult | undefined => {
+      const cacheKey = `${id}_${language}`;
+      return translationCache.get(cacheKey);
     },
     [language]
   );
@@ -104,93 +58,77 @@ export const useContentTranslation = () => {
       description: string,
       tags: string[]
     ): Promise<TranslationResult> => {
-      const cacheKey = getCacheKey(id, language);
+      const cacheKey = `${id}_${language}`;
 
-      // Cache: memory or storage
-      const cached = getCachedTranslation(id, title, description, tags);
-      if (cached) return cached;
-
-      // Circuit breaker
-      if (translationsDisabled) {
-        return { title, description, tags, timestamp: Date.now() };
+      // Check in-memory cache first
+      const cached = translationCache.get(cacheKey);
+      if (cached) {
+        return cached;
       }
 
-      // De-duplicate same request
-      const existing = inFlight.get(cacheKey);
-      if (existing) {
-        try {
-          const res = await existing;
-          return res;
-        } catch {
-          return { title, description, tags, timestamp: Date.now() };
-        }
-      }
+      // Check database
+      try {
+        const { data: existing } = await supabase
+          .from('product_translations')
+          .select('*')
+          .eq('product_id', id)
+          .eq('language', language)
+          .maybeSingle();
 
-      // Wrap the network call in the rate-limited queue
-      const promise = enqueueRateLimited(async () => {
-        setIsTranslating(true);
-        const { data, error } = await supabase.functions.invoke('translate-content', {
-          body: {
-            title,
-            description,
-            tags,
-            targetLanguage: language,
-          },
-        });
-
-        if (error) throw error;
-
-        if (data?.success && data?.translation) {
-          // Reset failure count on success
-          failureCount = 0;
-
+        if (existing) {
           const result: TranslationResult = {
-            title: data.translation.translated_title,
-            description: data.translation.translated_description,
-            tags: data.translation.translated_tags,
-            timestamp: Date.now(),
+            title: existing.title || title,
+            description: existing.description || description,
+            tags: (existing.tags as string[]) || tags,
           };
-          translationCache[cacheKey] = result;
-          setToStorage(cacheKey, result);
+          translationCache.set(cacheKey, result);
           return result;
         }
+      } catch (error) {
+        console.warn('Error fetching translation from DB:', error);
+      }
 
-        // Fallback if unexpected response
-        return { title, description, tags, timestamp: Date.now() };
-      })
-        .catch((error: any) => {
-          failureCount++;
-          // Only log first few errors to avoid console spam
-          if (!translationsDisabled && failureCount <= MAX_FAILURES) {
-            console.error('Translation error:', error);
-          }
+      // If not in cache or DB, translate using LibreTranslate
+      setIsTranslating(true);
+      try {
+        const translatedTitle = await translateWithLibreTranslate(title, language);
+        const translatedDescription = description 
+          ? await translateWithLibreTranslate(description, language)
+          : '';
 
-          // Disable on quota/credits errors or too many failures
-          const msg = typeof error === 'string' ? error : error?.message || '';
-          const serialized = JSON.stringify(error || {});
-          if (
-            failureCount >= MAX_FAILURES ||
-            (error && (error as any).status === 402) ||
-            msg.toLowerCase().includes('not enough credits') ||
-            serialized.includes('payment_required') ||
-            serialized.includes('402')
-          ) {
-            if (!translationsDisabled) {
-              console.warn('🚫 Translations disabled due to errors');
-              translationsDisabled = true;
-            }
-          }
-          return { title, description, tags, timestamp: Date.now() };
-        })
-        .finally(() => {
-          inFlight.delete(cacheKey);
-          setIsTranslating(false);
-        });
+        const result: TranslationResult = {
+          title: translatedTitle,
+          description: translatedDescription,
+          tags, // Tags remain as-is for now
+        };
 
-      inFlight.set(cacheKey, promise);
-      return promise;
+        // Store in cache
+        translationCache.set(cacheKey, result);
+
+        // Store in database (fire and forget)
+        supabase
+          .from('product_translations')
+          .upsert({
+            product_id: id,
+            language,
+            title: translatedTitle,
+            description: translatedDescription,
+            tags: tags || [],
+          })
+          .then(({ error }) => {
+            if (error) console.warn('Error storing translation:', error);
+          });
+
+        return result;
+      } catch (error) {
+        console.warn('Translation failed:', error);
+        // Return original on error
+        return { title, description, tags };
+      } finally {
+        setIsTranslating(false);
+      }
     },
-    [language, getCachedTranslation]
+    [language]
   );
 
   const translateBatch = useCallback(
@@ -200,16 +138,21 @@ export const useContentTranslation = () => {
       const results: Record<string, TranslationResult> = {};
 
       // Filter to only items not already cached
-      const toProcess = items.filter(
-        (it) => !getCachedTranslation(it.id, it.title, it.description, it.tags)
-      );
+      const toTranslate = items.filter((item) => !getCachedTranslation(item.id));
 
-      // Nothing to translate
-      if (toProcess.length === 0) return results;
+      if (toTranslate.length === 0) return results;
 
-      for (const it of toProcess) {
-        const res = await translateContent(it.id, it.title, it.description, it.tags);
-        results[it.id] = res;
+      // Translate one by one to avoid rate limits
+      for (const item of toTranslate) {
+        try {
+          const result = await translateContent(item.id, item.title, item.description, item.tags);
+          results[item.id] = result;
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.warn(`Translation failed for ${item.id}:`, error);
+          results[item.id] = { title: item.title, description: item.description, tags: item.tags };
+        }
       }
 
       return results;
