@@ -58,7 +58,7 @@ export const useProductDetail = (productId: string) => {
         try {
           console.warn('🔄 Attempting marketplace fallback for id:', productId);
           const marketplacePromise = supabase.rpc('get_marketplace_content');
-          const result = await Promise.race([marketplacePromise, createTimeout(5000)]);
+          const result = await Promise.race([marketplacePromise, createTimeout(3000)]);
           
           const { data: marketplaceData, error: marketplaceError } = result as any;
           if (marketplaceError) throw marketplaceError;
@@ -90,12 +90,10 @@ export const useProductDetail = (productId: string) => {
 
         let productInfo: any | null = null;
         
-        // Try get_product_detail with timeout + 1 retry
-        for (let attempt = 1; attempt <= 2; attempt++) {
           try {
-            console.log(`🔍 Fetching product detail (attempt ${attempt}/2)...`);
+            console.log('🔍 Fetching product detail (single attempt, 3s timeout)...');
             const rpcPromise = supabase.rpc('get_product_detail', { product_id: productId });
-            const result = await Promise.race([rpcPromise, createTimeout(5000)]);
+            const result = await Promise.race([rpcPromise, createTimeout(3000)]);
             
             const { data: productDetails, error: productError } = result as any;
             if (productError) throw productError;
@@ -103,17 +101,11 @@ export const useProductDetail = (productId: string) => {
             if (productDetails && productDetails.length > 0) {
               productInfo = productDetails[0];
               console.log('✅ Product detail loaded successfully');
-              break;
             }
           } catch (err) {
-            console.warn(`⚠️ RPC attempt ${attempt} failed:`, err);
-            if (attempt === 2) {
-              console.warn('❌ All RPC attempts failed, using marketplace fallback');
-            } else {
-              await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay before retry
-            }
+            console.warn('⚠️ RPC failed:', err);
+            console.warn('🔄 Using marketplace fallback');
           }
-        }
 
         // If RPC failed, use marketplace fallback
         if (!productInfo) {
