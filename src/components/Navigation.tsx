@@ -31,7 +31,7 @@ export const Navigation = () => {
                 className="flex items-center space-x-2 whitespace-nowrap hover:bg-primary/10"
                 asChild
               >
-                <Link to={`/${language}/marketplace?category=${category.category}`}>
+                <Link to={`/marketplace?category=${category.category}`}>
                   <Icon className="h-4 w-4" />
                   <span>{category.name}</span>
                   <span className="text-xs text-muted-foreground">
