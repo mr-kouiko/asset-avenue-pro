@@ -107,36 +107,17 @@ const translations = {
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  // Extract language from URL path - now English is default
-  const getLanguageFromPath = (pathname: string): Language => {
-    if (pathname.startsWith('/fr/') || pathname === '/fr') return 'fr';
-    // Everything else is English now
-    return 'en';
-  };
-
-  const [language, setLanguageState] = useState<Language>(getLanguageFromPath(location.pathname));
+  // Site is now 100% English - always use 'en'
+  const [language, setLanguageState] = useState<Language>('en');
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    
-    // Site is now English only - no need to change URL
-    // Language switching can be disabled or kept for future use
+    // Site is English only - language switching disabled
+    setLanguageState('en');
   };
 
   const t = (key: string): string => {
-    return translations[language][key] || key;
+    return translations['en'][key] || key;
   };
-
-  // Update language when URL changes
-  useEffect(() => {
-    const newLang = getLanguageFromPath(location.pathname);
-    if (newLang !== language) {
-      setLanguageState(newLang);
-    }
-  }, [location.pathname, language]);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
