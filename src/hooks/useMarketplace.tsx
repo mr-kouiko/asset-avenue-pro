@@ -25,7 +25,7 @@ export interface MarketplaceContent {
 export const useMarketplace = () => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { translateBatch, currentLanguage } = useContentTranslation();
+  const { translateBatch, currentLanguage, getCachedTranslation } = useContentTranslation();
 
   const fetchMarketplaceContent = async () => {
     try {
@@ -167,22 +167,32 @@ export const useMarketplace = () => {
         })
       );
 
-      // Translate content to visitor's language
-      const itemsToTranslate = contentWithFiles.map(item => ({
+      // Translate content to visitor's language, only for items not cached
+      const newItems = contentWithFiles.filter(item => {
+        const cached = getCachedTranslation(item.id, item.title, '', item.tags || []);
+        return !cached;
+      }).map(item => ({
         id: item.id,
         title: item.title,
-        description: '', // No description in current interface
+        description: '',
         tags: item.tags || []
       }));
 
-      const translations = await translateBatch(itemsToTranslate);
+      let translationsMap: Record<string, { title: string; description: string; tags: string; timestamp: number } | any> = {};
+      if (newItems.length > 0) {
+        translationsMap = await translateBatch(newItems);
+      }
 
-      // Apply translations
-      const translatedContent = contentWithFiles.map((item, index) => ({
-        ...item,
-        title: translations[index].title,
-        tags: translations[index].tags
-      }));
+      // Apply translations (prefer cache, fallback to freshly translated)
+      const translatedContent = contentWithFiles.map((item) => {
+        const cached = getCachedTranslation(item.id, item.title, '', item.tags || []);
+        const t = cached || translationsMap[item.id];
+        return {
+          ...item,
+          title: t?.title || item.title,
+          tags: (t?.tags as any) || item.tags
+        };
+      });
 
       // Randomize the order of content for the homepage
       const shuffledContent = [...translatedContent].sort(() => Math.random() - 0.5);
