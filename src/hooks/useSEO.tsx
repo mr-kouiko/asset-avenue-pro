@@ -88,8 +88,6 @@ export const useSEO = (config: SEOConfig) => {
 
     // Construct full URL
     const fullUrl = `${BASE_URL}${location.pathname}`;
-    const frUrl = fullUrl.replace('/en/', '/fr/').replace(/^https:\/\/visustock\.com\//, 'https://visustock.com/fr/');
-    const enUrl = fullUrl.replace('/fr/', '/en/');
 
     // Basic meta tags
     updateMetaTag('description', description, false);
@@ -106,10 +104,9 @@ export const useSEO = (config: SEOConfig) => {
     // Canonical URL
     updateLinkTag('canonical', fullUrl);
 
-    // Hreflang tags for multilingual SEO
-    updateLinkTag('alternate', frUrl, 'fr');
-    updateLinkTag('alternate', enUrl, 'en');
-    updateLinkTag('alternate', frUrl, 'x-default');
+    // Hreflang tags for English only
+    updateLinkTag('alternate', fullUrl, 'en');
+    updateLinkTag('alternate', fullUrl, 'x-default');
 
     // Open Graph meta tags
     updateMetaTag('og:title', title);
@@ -121,8 +118,7 @@ export const useSEO = (config: SEOConfig) => {
     updateMetaTag('og:image:width', '1200');
     updateMetaTag('og:image:height', '630');
     updateMetaTag('og:site_name', SITE_NAME);
-    updateMetaTag('og:locale', language === 'en' ? 'en_US' : 'fr_FR');
-    updateMetaTag('og:locale:alternate', language === 'en' ? 'fr_FR' : 'en_US');
+    updateMetaTag('og:locale', 'en_US');
 
     // Twitter Card meta tags
     updateMetaTag('twitter:card', image ? 'summary_large_image' : 'summary', false);

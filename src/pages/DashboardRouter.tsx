@@ -14,7 +14,7 @@ const DashboardRouter = () => {
         <Header />
         <div className="container py-16 text-center">
           <div className="animate-spin h-12 w-12 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Redirection vers votre tableau de bord...</p>
+          <p className="text-muted-foreground">Redirecting to your dashboard...</p>
         </div>
       </div>
     );
@@ -39,12 +39,12 @@ const DashboardRouter = () => {
       <Header />
       <div className="container py-16 text-center">
         <AlertCircle className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
-        <h1 className="text-3xl font-bold mb-4">Rôle non défini</h1>
+        <h1 className="text-3xl font-bold mb-4">Role Not Defined</h1>
         <p className="text-muted-foreground mb-8">
-          Votre rôle utilisateur n'a pas pu être déterminé. Veuillez contacter le support.
+          Your user role could not be determined. Please contact support.
         </p>
         <p className="text-sm text-muted-foreground">
-          Rôle détecté: {role || 'Aucun'}
+          Detected role: {role || 'None'}
         </p>
       </div>
     </div>
