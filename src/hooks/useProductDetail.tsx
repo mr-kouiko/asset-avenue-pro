@@ -303,22 +303,28 @@ export const useProductDetail = (productId: string) => {
           } : undefined
         };
 
-        // Translate product details to visitor's language
-        const translation = await translateContent(
-          productData.id,
-          productData.title,
-          productData.description,
-          productData.tags
-        );
+        // Translate product details to visitor's language (with fallback to original)
+        try {
+          const translation = await translateContent(
+            productData.id,
+            productData.title,
+            productData.description,
+            productData.tags
+          );
 
-        const translatedProduct = {
-          ...productData,
-          title: translation.title,
-          description: translation.description,
-          tags: translation.tags
-        };
+          const translatedProduct = {
+            ...productData,
+            title: translation.title,
+            description: translation.description,
+            tags: translation.tags
+          };
 
-        setProduct(translatedProduct);
+          setProduct(translatedProduct);
+        } catch (translationError) {
+          // If translation fails completely, use original product data
+          console.warn('Translation failed, using original content');
+          setProduct(productData);
+        }
       } catch (err) {
         console.error('Error loading product:', err);
         setError('Erreur lors du chargement du produit');
