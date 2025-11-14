@@ -39,6 +39,17 @@ export const useProductDetail = (productId: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Normalize route param to handle IDs with extra slugs (e.g., 
+  // "/product/<uuid>-some-title" → extract the UUID). Also strips query/hash.
+  const normalizeId = (raw: string) => {
+    if (!raw) return raw;
+    const uuidMatch = raw.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+    if (uuidMatch) return uuidMatch[0];
+    const clean = raw.split('?')[0].split('#')[0];
+    return clean;
+  };
+  const normalizedId = normalizeId(productId);
+
   useEffect(() => {
     let isMounted = true;
     const fetchProductDetail = async () => {
