@@ -117,7 +117,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   }
 
   const handleCardClick = () => {
-    navigate(`/${language}/product/${id}`);
+    navigate(`/product/${id}`);
   };
 
   return (
@@ -170,7 +170,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/${language}/product/${id}`);
+                navigate(`/product/${id}`);
               }}
             >
               Aperçu

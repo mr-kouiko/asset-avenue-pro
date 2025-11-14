@@ -173,7 +173,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   };
 
   const handleCardClick = () => {
-    navigate(`/${language}/product/${id}`);
+    navigate(`/product/${id}`);
   };
 
   return (
