@@ -54,6 +54,7 @@ export const useProductDetail = (productId: string) => {
     let isMounted = true;
     const fetchProductDetail = async () => {
       if (!normalizedId) {
+        console.log('🔎 useProductDetail: raw id:', productId, 'normalized:', normalizedId);
         setError('ID produit manquant');
         setLoading(false);
         return;
