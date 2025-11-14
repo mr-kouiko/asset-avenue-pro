@@ -130,14 +130,25 @@ export const useProductDetail = (productId: string) => {
           return;
         }
 
-        // Fetch content files for the product
+        // Fetch content files for the product using secure RPC
+        console.log('📂 Fetching files for product:', normalizedId);
+        const filesStartTime = performance.now();
+        
         const { data: files, error: filesError } = await supabase
-          .from('content_files')
-          .select('*')
-          .eq('submission_id', normalizedId);
+          .rpc('get_product_files', { content_id: normalizedId });
 
+        const filesFetchTime = (performance.now() - filesStartTime).toFixed(2);
+        
         if (filesError) {
-          console.error('Error fetching files:', filesError);
+          console.error('❌ Error fetching files:', filesError);
+          console.error('   Product ID:', normalizedId);
+          console.error('   Error details:', JSON.stringify(filesError, null, 2));
+        } else {
+          console.log(`✅ Files fetched in ${filesFetchTime}ms:`, files?.length || 0, 'files');
+          if (files && files.length > 0) {
+            console.log('   File types:', files.map(f => f.file_type).join(', '));
+            console.log('   Total size:', (files.reduce((sum, f) => sum + (f.file_size || 0), 0) / 1024 / 1024).toFixed(2), 'MB');
+          }
         }
 
         // Determine thumbnail and preview URLs

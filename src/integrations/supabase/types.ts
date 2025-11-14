@@ -200,6 +200,7 @@ export type Database = {
           description: string
           id: string
           license_id: string | null
+          original_language: string | null
           price: number | null
           rejection_reason: string | null
           status: string
@@ -217,6 +218,7 @@ export type Database = {
           description: string
           id?: string
           license_id?: string | null
+          original_language?: string | null
           price?: number | null
           rejection_reason?: string | null
           status?: string
@@ -234,6 +236,7 @@ export type Database = {
           description?: string
           id?: string
           license_id?: string | null
+          original_language?: string | null
           price?: number | null
           rejection_reason?: string | null
           status?: string
@@ -570,6 +573,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      product_translations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          language: string
+          product_id: string
+          tags: Json | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          language: string
+          product_id: string
+          tags?: Json | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          language?: string
+          product_id?: string
+          tags?: Json | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_translations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1124,6 +1168,24 @@ export type Database = {
           price: number
           tags: string[]
           title: string
+        }[]
+      }
+      get_product_files: {
+        Args: { content_id: string }
+        Returns: {
+          created_at: string
+          file_format: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          is_original: boolean
+          is_preview: boolean
+          metadata: Json
+          preview_path: string
+          submission_id: string
+          thumbnail_path: string
         }[]
       }
       get_public_file_access: {
