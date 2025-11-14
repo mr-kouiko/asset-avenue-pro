@@ -53,7 +53,7 @@ export const useProductDetail = (productId: string) => {
   useEffect(() => {
     let isMounted = true;
     const fetchProductDetail = async () => {
-      if (!productId) {
+      if (!normalizedId) {
         setError('ID produit manquant');
         setLoading(false);
         return;
@@ -66,7 +66,7 @@ export const useProductDetail = (productId: string) => {
       // Helper: fetch marketplace fallback
       const fetchMarketplaceFallback = async (): Promise<any | null> => {
         try {
-          console.warn('🔄 Attempting marketplace fallback for id:', productId);
+          console.warn('🔄 Attempting marketplace fallback for id:', normalizedId);
           const marketplacePromise = supabase.rpc('get_marketplace_content');
           const result = await Promise.race([marketplacePromise, createTimeout(3000)]);
           
@@ -74,7 +74,7 @@ export const useProductDetail = (productId: string) => {
           if (marketplaceError) throw marketplaceError;
           if (!marketplaceData) return null;
 
-          const found = (marketplaceData as any[]).find((i) => i.id === productId);
+          const found = (marketplaceData as any[]).find((i) => i.id === normalizedId);
           if (!found) return null;
 
           return {
@@ -102,7 +102,7 @@ export const useProductDetail = (productId: string) => {
         
           try {
             console.log('🔍 Fetching product detail (single attempt, 3s timeout)...');
-            const rpcPromise = supabase.rpc('get_product_detail', { product_id: productId });
+            const rpcPromise = supabase.rpc('get_product_detail', { product_id: normalizedId });
             const result = await Promise.race([rpcPromise, createTimeout(3000)]);
             
             const { data: productDetails, error: productError } = result as any;
@@ -133,7 +133,7 @@ export const useProductDetail = (productId: string) => {
         const { data: files, error: filesError } = await supabase
           .from('content_files')
           .select('*')
-          .eq('submission_id', productId);
+          .eq('submission_id', normalizedId);
 
         if (filesError) {
           console.error('Error fetching files:', filesError);
