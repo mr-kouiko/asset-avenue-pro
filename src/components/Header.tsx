@@ -103,8 +103,6 @@ export const Header = () => {
             </Link>
           </Button>
 
-          {/* Language Selector */}
-
           {/* Cart */}
           {user && (
             <Button variant="ghost" size="sm" className="relative" asChild>
