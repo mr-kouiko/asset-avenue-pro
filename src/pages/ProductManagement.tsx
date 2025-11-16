@@ -59,91 +59,124 @@ const ProductManagement = () => {
   const [productsData, setProductsData] = useState<Record<string, ProductData>>({});
   const [previewFile, setPreviewFile] = useState<UploadedFileData | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [aiAutoGenerate, setAiAutoGenerate] = useState(true); // AI auto-generation setting
+  const [aiAutoGenerate, setAiAutoGenerate] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   
   useEffect(() => {
-    // Load files from session storage
+    // Check if we're in edit mode
+    const editingData = sessionStorage.getItem('editingSubmission');
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
+    
+    if (editingData) {
+      const editData = JSON.parse(editingData);
+      setIsEditMode(true);
+      setEditingSubmissionId(editData.submissionId);
+      console.log('📝 Edit mode activated for submission:', editData.submissionId);
+    }
+    
     if (storedFiles) {
       const files = JSON.parse(storedFiles);
       setUploadedFiles(files);
+      console.log('📂 Loaded files:', files.length);
       
-      // Initialize products data with auto-category detection
+      // Initialize products data
       const initialData: Record<string, ProductData> = {};
-      files.forEach((file: UploadedFileData) => {
-        // Auto-detect category based on file type
-        let autoCategory = '';
-        const fileType = file.type?.toLowerCase() || '';
-        const fileName = file.name?.toLowerCase() || '';
-        
-        console.log(`🔍 Auto-detecting category for ${file.name}:`, { fileType, fileName });
-        
-        if (fileType.startsWith('video/') || 
-            fileName.includes('.mp4') || 
-            fileName.includes('.mov') || 
-            fileName.includes('.avi') || 
-            fileName.includes('.webm') || 
-            fileName.includes('.mkv')) {
-          // Find video category ID from available categories
-          const videoCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('video') || 
-            cat.name.toLowerCase().includes('vidéo')
-          );
-          autoCategory = videoCategory?.id || '';
-          console.log('✅ Video category detected:', autoCategory);
-        }
-        else if (fileType.startsWith('image/')) {
-          // Find photo category ID from available categories
-          const photoCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('photo') ||
-            cat.name.toLowerCase().includes('image')
-          );
-          autoCategory = photoCategory?.id || '';
-          console.log('✅ Photo category detected:', autoCategory);
-        }
-        else if (fileType.startsWith('audio/')) {
-          // Find audio category ID from available categories
-          const audioCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('audio') ||
-            cat.name.toLowerCase().includes('son') ||
-            cat.name.toLowerCase().includes('musique')
-          );
-          autoCategory = audioCategory?.id || '';
-          console.log('✅ Audio category detected:', autoCategory);
-        }
-        else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
-          // Find ebook/document category ID from available categories
-          const ebookCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('ebook') ||
-            cat.name.toLowerCase().includes('document') ||
-            cat.name.toLowerCase().includes('pdf')
-          );
-          autoCategory = ebookCategory?.id || '';
-          console.log('✅ Ebook category detected:', autoCategory);
-        }
-        else {
-          // Find illustration category for other files
-          const illustrationCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('illustration')
-          );
-          autoCategory = illustrationCategory?.id || '';
-          console.log('✅ Illustration category detected (fallback):', autoCategory);
-        }
-        
-        initialData[file.id] = {
-          fileId: file.id,
-          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-          description: '',
-          category: autoCategory, // Auto-detected category
-          tags: [],
-          currentTag: '',
-          status: 'draft'
-        };
-      });
+      
+      // If in edit mode, load existing data
+      if (editingData) {
+        const editData = JSON.parse(editingData);
+        files.forEach((file: UploadedFileData) => {
+          initialData[file.id] = {
+            fileId: file.id,
+            title: editData.title || '',
+            description: editData.description || '',
+            category: editData.category || '',
+            tags: editData.tags || [],
+            currentTag: '',
+            status: editData.status || 'draft',
+            coverUrl: file.thumbnailUrl
+          };
+        });
+        console.log('✅ Loaded existing product data:', initialData);
+      } else {
+        // Auto-detect category for new uploads
+        files.forEach((file: UploadedFileData) => {
+          // Auto-detect category based on file type
+          let autoCategory = '';
+          const fileType = file.type?.toLowerCase() || '';
+          const fileName = file.name?.toLowerCase() || '';
+          
+          console.log(`🔍 Auto-detecting category for ${file.name}:`, { fileType, fileName });
+          
+          if (fileType.startsWith('video/') || 
+              fileName.includes('.mp4') || 
+              fileName.includes('.mov') || 
+              fileName.includes('.avi') || 
+              fileName.includes('.webm') || 
+              fileName.includes('.mkv')) {
+            // Find video category ID from available categories
+            const videoCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('video') || 
+              cat.name.toLowerCase().includes('vidéo')
+            );
+            autoCategory = videoCategory?.id || '';
+            console.log('✅ Video category detected:', autoCategory);
+          }
+          else if (fileType.startsWith('image/')) {
+            // Find photo category ID from available categories
+            const photoCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('photo') ||
+              cat.name.toLowerCase().includes('image')
+            );
+            autoCategory = photoCategory?.id || '';
+            console.log('✅ Photo category detected:', autoCategory);
+          }
+          else if (fileType.startsWith('audio/')) {
+            // Find audio category ID from available categories
+            const audioCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('audio') ||
+              cat.name.toLowerCase().includes('son') ||
+              cat.name.toLowerCase().includes('musique')
+            );
+            autoCategory = audioCategory?.id || '';
+            console.log('✅ Audio category detected:', autoCategory);
+          }
+          else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
+            // Find ebook/document category ID from available categories
+            const ebookCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('ebook') ||
+              cat.name.toLowerCase().includes('document') ||
+              cat.name.toLowerCase().includes('livre')
+            );
+            autoCategory = ebookCategory?.id || '';
+            console.log('✅ Ebook category detected:', autoCategory);
+          }
+          else {
+            // Find illustration category for other files
+            const illustrationCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('illustration')
+            );
+            autoCategory = illustrationCategory?.id || '';
+            console.log('✅ Illustration category detected (fallback):', autoCategory);
+          }
+          
+          initialData[file.id] = {
+            fileId: file.id,
+            title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+            description: '',
+            category: autoCategory, // Auto-detected category
+            tags: [],
+            currentTag: '',
+            status: 'draft'
+          };
+        });
+      }
+      
       setProductsData(initialData);
       
-      // Auto-generate AI metadata if enabled
-      if (aiAutoGenerate && files.length > 0) {
+      // Auto-generate AI metadata if enabled (only for new uploads, not edits)
+      if (!editingData && aiAutoGenerate && files.length > 0) {
         // Check if AI auto-generation is enabled globally
         setTimeout(async () => {
           try {
@@ -186,12 +219,15 @@ const ProductManagement = () => {
       if (files.length > 0) {
         setSelectedFileId(files[0].id);
       }
+      
+      // Clear session storage
+      sessionStorage.removeItem('pendingUploadedFiles');
     } else {
       // No files found, redirect to upload page
       toast.error("Aucun fichier trouvé. Veuillez d'abord uploader vos fichiers.");
       navigate('/file-upload');
     }
-  }, [navigate]);
+  }, [categories, navigate, aiAutoGenerate, generateBatchMetadata]);
 
   const selectedFile = uploadedFiles.find(f => f.id === selectedFileId);
   const selectedProductData = selectedFileId ? productsData[selectedFileId] : null;
@@ -307,6 +343,13 @@ const ProductManagement = () => {
   };
 
   const handlePublish = async (fileId: string) => {
+    // If in edit mode, update the submission instead
+    if (isEditMode && editingSubmissionId) {
+      await handleUpdateSubmission(fileId);
+      return;
+    }
+    
+    // Original publish logic for new submissions
     const productData = productsData[fileId];
     const file = uploadedFiles.find(f => f.id === fileId);
     
@@ -359,6 +402,43 @@ const ProductManagement = () => {
         // Select the first remaining file
         setSelectedFileId(updatedFiles[0].id);
       }
+    }
+  };
+
+  const handleUpdateSubmission = async (fileId: string) => {
+    if (!editingSubmissionId) return;
+    
+    try {
+      const productData = productsData[fileId];
+      if (!productData) {
+        toast.error('Aucune donnée de produit à sauvegarder');
+        return;
+      }
+
+      if (!productData.title.trim() || !productData.description.trim()) {
+        toast.error("Le titre et la description sont obligatoires");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('content_submissions')
+        .update({
+          title: productData.title,
+          description: productData.description,
+          category_id: productData.category || null,
+          tags: productData.tags,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingSubmissionId);
+
+      if (error) throw error;
+
+      toast.success('Produit mis à jour avec succès');
+      sessionStorage.removeItem('editingSubmission');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error updating submission:', error);
+      toast.error('Erreur lors de la mise à jour du produit');
     }
   };
 
@@ -762,8 +842,17 @@ const ProductManagement = () => {
                           onClick={() => handlePublish(selectedFileId!)}
                           disabled={loading || !selectedProductData.title.trim() || !selectedProductData.description.trim()}
                         >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Publier ce produit
+                          {isEditMode ? (
+                            <>
+                              <Save className="h-4 w-4 mr-2" />
+                              Mettre à jour le produit
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Publier ce produit
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -803,11 +892,15 @@ const ProductManagement = () => {
               </div>
               
               <div className="flex space-x-4">
-                <Button variant="outline" asChild>
-                  <Link to="/file-upload">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Retour aux uploads
-                  </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    sessionStorage.removeItem('editingSubmission');
+                    navigate('/dashboard');
+                  }}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {isEditMode ? 'Annuler les modifications' : 'Retour aux uploads'}
                 </Button>
                 
                 <Button 
@@ -819,14 +912,16 @@ const ProductManagement = () => {
                   Générer tout avec IA
                 </Button>
                 
-                <Button 
-                  onClick={handlePublishAll}
-                  disabled={loading || readyToPublish === 0}
-                  size="lg"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Publier tous les produits prêts ({readyToPublish})
-                </Button>
+                {!isEditMode && (
+                  <Button 
+                    onClick={handlePublishAll}
+                    disabled={loading || readyToPublish === 0}
+                    size="lg"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Publier tous les produits prêts ({readyToPublish})
+                  </Button>
+                )}
                 
                 <Button variant="outline" asChild>
                   <Link to="/seller-dashboard">Aller au tableau de bord</Link>
