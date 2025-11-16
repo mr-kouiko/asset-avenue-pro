@@ -45,8 +45,15 @@ const ProductDetail = () => {
 
   // Create a minimal fallback product from marketplace if detailed fetch fails
   const fallbackProduct = useMemo(() => {
-    if (!id) return null;
-    const item = marketplaceContent.find((i) => i.id === id);
+    const normalizeId = (raw?: string) => {
+      if (!raw) return '';
+      const match = raw.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+      if (match) return match[0];
+      return raw.split('?')[0].split('#')[0];
+    };
+    const normalized = normalizeId(id);
+    if (!normalized) return null;
+    const item = marketplaceContent.find((i) => i.id === normalized);
     if (!item) return null;
     return {
       id: item.id,

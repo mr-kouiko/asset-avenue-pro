@@ -49,6 +49,7 @@ export const useProductDetail = (productId: string) => {
     return clean;
   };
   const normalizedId = normalizeId(productId);
+  console.log('🆔 useProductDetail IDs', { originalId: productId, normalizedId });
 
   useEffect(() => {
     let isMounted = true;
@@ -69,7 +70,7 @@ export const useProductDetail = (productId: string) => {
         try {
           console.warn('🔄 Attempting marketplace fallback for id:', normalizedId);
           const marketplacePromise = supabase.rpc('get_marketplace_content');
-          const result = await Promise.race([marketplacePromise, createTimeout(3000)]);
+          const result = await Promise.race([marketplacePromise, createTimeout(8000)]);
           
           const { data: marketplaceData, error: marketplaceError } = result as any;
           if (marketplaceError) throw marketplaceError;
@@ -102,20 +103,28 @@ export const useProductDetail = (productId: string) => {
         let productInfo: any | null = null;
         
           try {
-            console.log('🔍 Fetching product detail (single attempt, 3s timeout)...');
+            const rpcStart = performance.now();
+            console.log('🔍 RPC get_product_detail start', { originalId: productId, normalizedId, timeoutMs: 8000 });
             const rpcPromise = supabase.rpc('get_product_detail', { product_id: normalizedId });
-            const result = await Promise.race([rpcPromise, createTimeout(3000)]);
-            
+            const result = await Promise.race([rpcPromise, createTimeout(8000)]);
             const { data: productDetails, error: productError } = result as any;
-            if (productError) throw productError;
-            
-            if (productDetails && productDetails.length > 0) {
-              productInfo = productDetails[0];
-              console.log('✅ Product detail loaded successfully');
+            const rpcDuration = (performance.now() - rpcStart).toFixed(2);
+            if (productError) {
+              console.error('❌ RPC get_product_detail error', { normalizedId, rpcDuration, error: productError });
+              throw productError;
             }
-          } catch (err) {
-            console.warn('⚠️ RPC failed:', err);
-            console.warn('🔄 Using marketplace fallback');
+            const count = Array.isArray(productDetails) ? productDetails.length : 0;
+            console.log('📥 RPC get_product_detail result', { count, rpcDuration });
+            if (count > 0) {
+              productInfo = productDetails[0];
+              console.log('✅ Product detail loaded', { id: productInfo.id });
+            } else {
+              console.warn('⚠️ RPC returned empty array for id', { normalizedId });
+            }
+          } catch (err: any) {
+            const isTimeout = typeof err?.message === 'string' && err.message.toLowerCase().includes('timeout');
+            console.warn(isTimeout ? '⏳ RPC timeout reached' : '⚠️ RPC failed', { normalizedId, error: err });
+            console.warn('🔄 Will try marketplace fallback next');
           }
 
         // If RPC failed, use marketplace fallback
@@ -320,6 +329,7 @@ export const useProductDetail = (productId: string) => {
         };
 
         // Site is 100% English now - no translation needed
+        console.log('📦 Final productData', productData);
         setProduct(productData);
       } catch (err) {
         console.error('Error loading product:', err);
