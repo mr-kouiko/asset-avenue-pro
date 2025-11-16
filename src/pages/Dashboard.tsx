@@ -60,7 +60,56 @@ const Dashboard = () => {
   
   const { accountStatus, isAccountReady } = useStripeConnect();
   const [activeTab, setActiveTab] = useState("overview");
-  const [editingSubmission, setEditingSubmission] = useState<string | null>(null);
+  const handleEditSubmission = async (submissionId: string) => {
+    try {
+      // Fetch full submission details with files
+      const { data: submission, error } = await supabase
+        .from('content_submissions')
+        .select(`
+          *,
+          content_files (*)
+        `)
+        .eq('id', submissionId)
+        .single();
+
+      if (error) throw error;
+      if (!submission) {
+        toast.error('Produit introuvable');
+        return;
+      }
+
+      // Format files for ProductManagement
+      const formattedFiles = submission.content_files?.map((file: any) => ({
+        id: file.id,
+        url: file.file_path,
+        name: file.file_name,
+        type: file.file_type,
+        size: file.file_size,
+        isWatermarked: !file.is_original,
+        thumbnailUrl: file.thumbnail_path,
+        previewUrl: file.preview_path
+      })) || [];
+
+      // Store editing context in sessionStorage
+      sessionStorage.setItem('editingSubmission', JSON.stringify({
+        submissionId: submission.id,
+        title: submission.title,
+        description: submission.description,
+        category: submission.category_id,
+        tags: submission.tags || [],
+        price: submission.price,
+        status: submission.status
+      }));
+      sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(formattedFiles));
+
+      // Navigate to product management
+      navigate('/product-management');
+      toast.success('Chargement du produit pour modification...');
+    } catch (error) {
+      console.error('Error loading submission for edit:', error);
+      toast.error('Erreur lors du chargement du produit');
+    }
+  };
   const [uploadedFiles, setUploadedFiles] = useState<Array<{
     id: string;
     url: string;
@@ -459,7 +508,7 @@ const Dashboard = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setEditingSubmission(submission.id)}>
+                              <DropdownMenuItem onClick={() => handleEditSubmission(submission.id)}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
