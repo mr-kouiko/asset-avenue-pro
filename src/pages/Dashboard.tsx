@@ -62,6 +62,8 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const handleEditSubmission = async (submissionId: string) => {
     try {
+      console.log('🔍 Loading submission for edit:', submissionId);
+      
       // Fetch full submission details with files
       const { data: submission, error } = await supabase
         .from('content_submissions')
@@ -72,14 +74,27 @@ const Dashboard = () => {
         .eq('id', submissionId)
         .single();
 
-      if (error) throw error;
+      console.log('📦 Submission data:', submission);
+      console.log('📁 Content files:', submission?.content_files);
+
+      if (error) {
+        console.error('❌ Error fetching submission:', error);
+        throw error;
+      }
+      
       if (!submission) {
         toast.error('Produit introuvable');
         return;
       }
 
+      if (!submission.content_files || submission.content_files.length === 0) {
+        console.warn('⚠️ No files found for submission');
+        toast.error('Aucun fichier trouvé pour ce produit');
+        return;
+      }
+
       // Format files for ProductManagement
-      const formattedFiles = submission.content_files?.map((file: any) => ({
+      const formattedFiles = submission.content_files.map((file: any) => ({
         id: file.id,
         url: file.file_path,
         name: file.file_name,
@@ -88,10 +103,12 @@ const Dashboard = () => {
         isWatermarked: !file.is_original,
         thumbnailUrl: file.thumbnail_path,
         previewUrl: file.preview_path
-      })) || [];
+      }));
+
+      console.log('✅ Formatted files:', formattedFiles);
 
       // Store editing context in sessionStorage
-      sessionStorage.setItem('editingSubmission', JSON.stringify({
+      const editingData = {
         submissionId: submission.id,
         title: submission.title,
         description: submission.description,
@@ -99,14 +116,17 @@ const Dashboard = () => {
         tags: submission.tags || [],
         price: submission.price,
         status: submission.status
-      }));
+      };
+      
+      console.log('💾 Storing editing data:', editingData);
+      sessionStorage.setItem('editingSubmission', JSON.stringify(editingData));
       sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(formattedFiles));
 
       // Navigate to product management
       navigate('/product-management');
       toast.success('Chargement du produit pour modification...');
     } catch (error) {
-      console.error('Error loading submission for edit:', error);
+      console.error('❌ Error loading submission for edit:', error);
       toast.error('Erreur lors du chargement du produit');
     }
   };
