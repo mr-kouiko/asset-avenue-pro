@@ -64,22 +64,19 @@ const Dashboard = () => {
     try {
       console.log('🔍 Loading submission for edit:', submissionId);
       
-      // Fetch full submission details with files
-      const { data: submission, error } = await supabase
+      // Fetch submission details first
+      const { data: submission, error: submissionError } = await supabase
         .from('content_submissions')
-        .select(`
-          *,
-          content_files (*)
-        `)
+        .select('*')
         .eq('id', submissionId)
         .single();
 
       console.log('📦 Submission data:', submission);
-      console.log('📁 Content files:', submission?.content_files);
 
-      if (error) {
-        console.error('❌ Error fetching submission:', error);
-        throw error;
+      if (submissionError) {
+        console.error('❌ Error fetching submission:', submissionError);
+        toast.error('Erreur lors du chargement du produit: ' + submissionError.message);
+        return;
       }
       
       if (!submission) {
@@ -87,14 +84,28 @@ const Dashboard = () => {
         return;
       }
 
-      if (!submission.content_files || submission.content_files.length === 0) {
+      // Fetch content files separately
+      const { data: contentFiles, error: filesError } = await supabase
+        .from('content_files')
+        .select('*')
+        .eq('submission_id', submissionId);
+
+      console.log('📁 Content files:', contentFiles);
+
+      if (filesError) {
+        console.error('❌ Error fetching files:', filesError);
+        toast.error('Erreur lors du chargement des fichiers: ' + filesError.message);
+        return;
+      }
+
+      if (!contentFiles || contentFiles.length === 0) {
         console.warn('⚠️ No files found for submission');
         toast.error('Aucun fichier trouvé pour ce produit');
         return;
       }
 
       // Format files for ProductManagement
-      const formattedFiles = submission.content_files.map((file: any) => ({
+      const formattedFiles = contentFiles.map((file: any) => ({
         id: file.id,
         url: file.file_path,
         name: file.file_name,
