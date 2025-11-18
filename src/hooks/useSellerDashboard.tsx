@@ -104,9 +104,14 @@ export const useSellerDashboard = () => {
 
   // Fetch seller submissions
   const fetchSubmissions = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('🚫 fetchSubmissions: No user found');
+      return;
+    }
 
     try {
+      console.log('🔍 fetchSubmissions: Fetching for user:', user.id);
+      
       const { data, error } = await supabase
         .from('content_submissions')
         .select(`
@@ -115,6 +120,9 @@ export const useSellerDashboard = () => {
         `)
         .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
+
+      console.log('📦 fetchSubmissions: Data received:', data);
+      console.log('❌ fetchSubmissions: Error:', error);
 
       if (error) throw error;
 
@@ -126,9 +134,10 @@ export const useSellerDashboard = () => {
         content_files: submission.content_files || []
       }));
 
+      console.log('✅ fetchSubmissions: Transformed data count:', transformedData.length);
       setSubmissions(transformedData);
     } catch (error) {
-      console.error('Error fetching submissions:', error);
+      console.error('💥 Error fetching submissions:', error);
       toast.error('Erreur lors du chargement du contenu');
     }
   };
