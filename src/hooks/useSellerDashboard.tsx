@@ -362,18 +362,39 @@ export const useSellerDashboard = () => {
   // Update submission
   const updateSubmission = async (id: string, updates: Partial<ContentSubmission>) => {
     try {
-      const { error } = await supabase
+      if (!user) {
+        toast.error('Vous devez être connecté');
+        return false;
+      }
+
+      console.log('🔄 Updating submission:', id);
+      console.log('👤 User ID:', user.id);
+      console.log('📝 Updates:', updates);
+
+      const { data, error } = await supabase
         .from('content_submissions')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('creator_id', user.id) // Security: ensure user owns this submission
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Update error:', error);
+        if (error.code === 'PGRST116') {
+          toast.error('Produit non trouvé ou vous n\'avez pas les droits pour le modifier');
+        } else {
+          toast.error(`Erreur: ${error.message}`);
+        }
+        return false;
+      }
 
+      console.log('✅ Submission updated successfully:', data);
       toast.success('Contenu mis à jour');
       await fetchSubmissions();
       return true;
     } catch (error) {
-      console.error('Error updating submission:', error);
+      console.error('💥 Error updating submission:', error);
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
