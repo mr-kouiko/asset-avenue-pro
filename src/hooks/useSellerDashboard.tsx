@@ -40,6 +40,18 @@ interface ContentFile {
   created_at: string;
 }
 
+interface UploadedFile {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  thumbnail_url?: string;
+  preview_url?: string;
+  is_watermarked?: boolean;
+  created_at: string;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -59,6 +71,7 @@ export const useSellerDashboard = () => {
   });
   const [submissions, setSubmissions] = useState<ContentSubmission[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [unsubmittedFiles, setUnsubmittedFiles] = useState<UploadedFile[]>([]);
   const [draftFiles, setDraftFiles] = useState<{
     url: string; 
     name: string; 
@@ -182,11 +195,61 @@ export const useSellerDashboard = () => {
       console.log(`✅ [SELLER-DASHBOARD] Total fetch time: ${totalTime}ms`);
       console.log('✅ [SELLER-DASHBOARD] Final submissions with files:', submissionsWithFiles.length);
       setSubmissions(submissionsWithFiles);
+
+      // Also fetch unsubmitted files
+      await fetchUnsubmittedFiles();
     } catch (error) {
       console.error('❌ [SELLER-DASHBOARD] Critical error in fetchSubmissions:', error);
       toast.error("Erreur lors du chargement des soumissions");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch files that haven't been submitted yet
+  const fetchUnsubmittedFiles = async () => {
+    if (!user) return;
+
+    try {
+      console.log('📂 [SELLER-DASHBOARD] Fetching unsubmitted files...');
+      
+      // Get all uploaded_files for this user
+      const { data: uploadedFiles, error: uploadedError } = await supabase
+        .from('uploaded_files')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false });
+
+      if (uploadedError) {
+        console.error('❌ [SELLER-DASHBOARD] Error fetching uploaded_files:', uploadedError);
+        return;
+      }
+
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        console.log('📂 [SELLER-DASHBOARD] No uploaded files found');
+        setUnsubmittedFiles([]);
+        return;
+      }
+
+      // Get all content_files to check which uploaded files are already in submissions
+      const { data: contentFiles, error: contentError } = await supabase
+        .from('content_files')
+        .select('file_path')
+        .in('file_path', uploadedFiles.map(f => f.file_url));
+
+      if (contentError) {
+        console.error('❌ [SELLER-DASHBOARD] Error checking content_files:', contentError);
+      }
+
+      // Filter out files that are already in content_files
+      const submittedUrls = new Set(contentFiles?.map(cf => cf.file_path) || []);
+      const unsubmitted = uploadedFiles.filter(file => !submittedUrls.has(file.file_url));
+
+      console.log('📂 [SELLER-DASHBOARD] Unsubmitted files:', unsubmitted.length);
+      setUnsubmittedFiles(unsubmitted);
+    } catch (error) {
+      console.error('❌ [SELLER-DASHBOARD] Error in fetchUnsubmittedFiles:', error);
     }
   };
 
@@ -586,12 +649,14 @@ export const useSellerDashboard = () => {
     submissions,
     categories,
     draftFiles,
+    unsubmittedFiles,
     createSubmission,
     updateSubmission,
     deleteSubmission,
     addFilesToSubmission,
     addDraftFiles,
     clearDraftFiles,
+    fetchUnsubmittedFiles,
     refreshData: () => {
       fetchStats();
       fetchSubmissions();

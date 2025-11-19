@@ -53,6 +53,7 @@ const Dashboard = () => {
     loading, 
     stats, 
     submissions, 
+    unsubmittedFiles,
     updateSubmission, 
     deleteSubmission,
     refreshData 
@@ -482,10 +483,93 @@ const Dashboard = () => {
 
           {/* Content Tab */}
           <TabsContent value="content" className="space-y-6">
+            {/* Unsubmitted Files Section */}
+            {unsubmittedFiles && unsubmittedFiles.length > 0 && (
+              <Card className="border-yellow-500/50 bg-yellow-500/5">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-500" />
+                    <CardTitle>Fichiers non soumis ({unsubmittedFiles.length})</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Ces fichiers ont été uploadés mais n'ont pas encore été soumis à validation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {unsubmittedFiles.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
+                        <div className="flex items-center gap-3 flex-1">
+                          {file.file_type.startsWith('image') ? (
+                            <Image className="h-5 w-5 text-muted-foreground" />
+                          ) : file.file_type.startsWith('video') ? (
+                            <Film className="h-5 w-5 text-muted-foreground" />
+                          ) : file.file_type.startsWith('audio') ? (
+                            <Music className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{file.file_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(file.file_size)} • {new Date(file.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            sessionStorage.setItem('pendingUploadedFiles', JSON.stringify([{
+                              id: file.id,
+                              url: file.file_url,
+                              name: file.file_name,
+                              type: file.file_type,
+                              size: file.file_size,
+                              thumbnailUrl: file.thumbnail_url,
+                              previewUrl: file.preview_url,
+                              isWatermarked: file.is_watermarked
+                            }]));
+                            navigate('/product-management');
+                          }}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-1" />
+                          Soumettre
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="pt-2">
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          const allFiles = unsubmittedFiles.map(file => ({
+                            id: file.id,
+                            url: file.file_url,
+                            name: file.file_name,
+                            type: file.file_type,
+                            size: file.file_size,
+                            thumbnailUrl: file.thumbnail_url,
+                            previewUrl: file.preview_url,
+                            isWatermarked: file.is_watermarked
+                          }));
+                          sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(allFiles));
+                          navigate('/product-management');
+                        }}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Soumettre tous les fichiers ({unsubmittedFiles.length})
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Submitted Content Section */}
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Mon contenu</CardTitle>
+                  <CardTitle>Contenu soumis</CardTitle>
                   <CardDescription>
                     Gérez vos créations et suivez leur statut
                   </CardDescription>
@@ -503,7 +587,7 @@ const Dashboard = () => {
                     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
                     <p className="text-muted-foreground mt-2">Chargement...</p>
                   </div>
-                ) : submissions.length === 0 ? (
+                ) : submissions.length === 0 && (!unsubmittedFiles || unsubmittedFiles.length === 0) ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Upload className="h-16 w-16 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium mb-2">Aucun contenu</h3>
@@ -514,6 +598,11 @@ const Dashboard = () => {
                         Créer du contenu
                       </Link>
                     </Button>
+                  </div>
+                ) : submissions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Aucun contenu soumis pour le moment</p>
+                    <p className="text-sm mt-2">Soumettez les fichiers ci-dessus pour les voir apparaître ici</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
