@@ -105,12 +105,97 @@ export const useSellerDashboard = () => {
   // Fetch seller submissions
   const fetchSubmissions = async () => {
     if (!user) {
-      console.log('🚫 fetchSubmissions: No user found');
+      console.log('❌ [SELLER-DASHBOARD] No user found, cannot fetch submissions');
       return;
     }
 
+    console.log('🔍 [SELLER-DASHBOARD] Starting fetchSubmissions...');
+    console.log('👤 [SELLER-DASHBOARD] Current user ID (normalized):', user.id);
+
     try {
-      console.log('🔍 fetchSubmissions: Fetching for user:', user.id);
+      setLoading(true);
+      const startTime = Date.now();
+      
+      // First query: Fetch submissions
+      console.log('📊 [SELLER-DASHBOARD] Querying content_submissions for creator_id:', user.id);
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('content_submissions')
+        .select('*')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const queryTime1 = Date.now() - startTime;
+      console.log(`📦 [SELLER-DASHBOARD] Submissions query completed in ${queryTime1}ms`);
+      console.log('📦 [SELLER-DASHBOARD] Submissions result:', { 
+        count: submissions?.length || 0, 
+        error: submissionsError,
+        sample: submissions?.[0] || null
+      });
+
+      if (submissionsError) {
+        console.error('❌ [SELLER-DASHBOARD] RLS ERROR on content_submissions:', submissionsError);
+        throw submissionsError;
+      }
+
+      if (!submissions || submissions.length === 0) {
+        console.log('⚠️ [SELLER-DASHBOARD] No submissions found for user');
+        setSubmissions([]);
+        return;
+      }
+
+      // Second query: Fetch files for these submissions
+      const submissionIds = submissions.map(s => s.id);
+      console.log('🔍 [SELLER-DASHBOARD] Fetching files for submission IDs:', submissionIds);
+
+      const startTime2 = Date.now();
+      const { data: files, error: filesError } = await supabase
+        .from('content_files')
+        .select('*')
+        .in('submission_id', submissionIds);
+
+      const queryTime2 = Date.now() - startTime2;
+      console.log(`📁 [SELLER-DASHBOARD] Files query completed in ${queryTime2}ms`);
+      console.log('📁 [SELLER-DASHBOARD] Files result:', { 
+        count: files?.length || 0, 
+        error: filesError,
+        sample: files?.[0] || null
+      });
+
+      if (filesError) {
+        console.error('❌ [SELLER-DASHBOARD] RLS ERROR on content_files:', filesError);
+      }
+
+      // Map files to submissions
+      const submissionsWithFiles = submissions.map(submission => {
+        const submissionFiles = files?.filter(f => f.submission_id === submission.id) || [];
+        console.log(`📋 [SELLER-DASHBOARD] Submission "${submission.title}" (${submission.id}) has ${submissionFiles.length} files`);
+        submissionFiles.forEach(file => {
+          console.log(`  📄 [SELLER-DASHBOARD] File: ${file.file_name} | Path: ${file.file_path} | Preview: ${file.is_preview} | Original: ${file.is_original}`);
+        });
+        return {
+          ...submission,
+          content_files: submissionFiles
+        };
+      });
+
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ [SELLER-DASHBOARD] Total fetch time: ${totalTime}ms`);
+      console.log('✅ [SELLER-DASHBOARD] Final submissions with files:', submissionsWithFiles.length);
+      setSubmissions(submissionsWithFiles);
+    } catch (error) {
+      console.error('❌ [SELLER-DASHBOARD] Critical error in fetchSubmissions:', error);
+      toast.error("Erreur lors du chargement des soumissions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // DEPRECATED - Original code for reference
+  const fetchSubmissions_OLD = async () => {
+    if (!user) return;
+
+    try {
+      console.log('🔍 fetchSubmissions_OLD: Fetching for user:', user.id);
       
       const { data, error } = await supabase
         .from('content_submissions')
@@ -121,8 +206,8 @@ export const useSellerDashboard = () => {
         .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
 
-      console.log('📦 fetchSubmissions: Data received:', data);
-      console.log('❌ fetchSubmissions: Error:', error);
+      console.log('📦 fetchSubmissions_OLD: Data received:', data);
+      console.log('❌ fetchSubmissions_OLD: Error:', error);
 
       if (error) throw error;
 

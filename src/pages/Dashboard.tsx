@@ -62,47 +62,70 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const handleEditSubmission = async (submissionId: string) => {
     try {
-      console.log('🔍 Loading submission for edit:', submissionId);
+      console.log('📝 [DASHBOARD] Starting edit for submission:', submissionId);
+      const startTime = Date.now();
       
-      // Fetch submission details first
+      // Normalize UUID
+      const normalizedId = submissionId.split('/').pop() || submissionId;
+      console.log('🆔 [DASHBOARD] Normalized submission ID:', normalizedId);
+      console.log('👤 [DASHBOARD] Current user ID:', user?.id);
+      
+      // Query 1: Get submission data
+      console.log('📊 [DASHBOARD] Querying content_submissions...');
+      const queryStart = Date.now();
       const { data: submission, error: submissionError } = await supabase
         .from('content_submissions')
         .select('*')
-        .eq('id', submissionId)
+        .eq('id', normalizedId)
+        .eq('creator_id', user?.id) // Ensure user owns this submission
         .single();
 
-      console.log('📦 Submission data:', submission);
+      const queryTime1 = Date.now() - queryStart;
+      console.log(`📦 [DASHBOARD] Submission query completed in ${queryTime1}ms`);
+      console.log('📦 [DASHBOARD] Submission result:', { data: submission, error: submissionError });
 
       if (submissionError) {
-        console.error('❌ Error fetching submission:', submissionError);
-        toast.error('Erreur lors du chargement du produit: ' + submissionError.message);
-        return;
-      }
-      
-      if (!submission) {
-        toast.error('Produit introuvable');
+        console.error('❌ [DASHBOARD] RLS ERROR on content_submissions:', submissionError);
+        toast.error("Impossible de charger cette soumission");
         return;
       }
 
-      // Fetch content files separately
+      if (!submission) {
+        console.error('❌ [DASHBOARD] No submission found with ID:', normalizedId);
+        toast.error("Soumission introuvable");
+        return;
+      }
+
+      console.log('✅ [DASHBOARD] Submission loaded:', submission.title);
+
+      // Query 2: Get files separately
+      console.log('📁 [DASHBOARD] Querying content_files...');
+      const filesStart = Date.now();
       const { data: contentFiles, error: filesError } = await supabase
         .from('content_files')
         .select('*')
-        .eq('submission_id', submissionId);
+        .eq('submission_id', normalizedId);
 
-      console.log('📁 Content files:', contentFiles);
+      const queryTime2 = Date.now() - filesStart;
+      console.log(`📁 [DASHBOARD] Files query completed in ${queryTime2}ms`);
+      console.log('📁 [DASHBOARD] Files result:', { 
+        count: contentFiles?.length || 0, 
+        error: filesError 
+      });
 
       if (filesError) {
-        console.error('❌ Error fetching files:', filesError);
-        toast.error('Erreur lors du chargement des fichiers: ' + filesError.message);
-        return;
+        console.error('❌ [DASHBOARD] RLS ERROR on content_files:', filesError);
       }
 
       if (!contentFiles || contentFiles.length === 0) {
-        console.warn('⚠️ No files found for submission');
+        console.warn('⚠️ [DASHBOARD] No files found for submission');
         toast.error('Aucun fichier trouvé pour ce produit');
         return;
       }
+
+      contentFiles.forEach(file => {
+        console.log(`  📄 [DASHBOARD] File: ${file.file_name} | Path: ${file.file_path} | Bucket: uploads`);
+      });
 
       // Format files for ProductManagement
       const formattedFiles = contentFiles.map((file: any) => ({
@@ -116,7 +139,9 @@ const Dashboard = () => {
         previewUrl: file.preview_path
       }));
 
-      console.log('✅ Formatted files:', formattedFiles);
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ [DASHBOARD] Total load time: ${totalTime}ms`);
+      console.log('✅ [DASHBOARD] Formatted files:', formattedFiles);
 
       // Store editing context in sessionStorage
       const editingData = {

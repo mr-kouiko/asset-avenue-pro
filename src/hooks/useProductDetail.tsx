@@ -97,29 +97,39 @@ export const useProductDetail = (productId: string) => {
       };
 
       try {
+        console.log('🔍 [PRODUCT-DETAIL] Starting fetchProduct for ID:', productId);
+        const startTime = Date.now();
+        
         setLoading(true);
         setError(null);
+
+        // Normalize UUID (remove URL parts if present)
+        console.log('🆔 [PRODUCT-DETAIL] Normalized product ID:', normalizedId);
 
         let productInfo: any | null = null;
         
           try {
-            const rpcStart = performance.now();
-            console.log('🔍 RPC get_product_detail start', { originalId: productId, normalizedId, timeoutMs: 8000 });
+            console.log('📊 [PRODUCT-DETAIL] Calling RPC get_product_detail...');
+            const rpcStart = Date.now();
             const rpcPromise = supabase.rpc('get_product_detail', { product_id: normalizedId });
             const result = await Promise.race([rpcPromise, createTimeout(8000)]);
             const { data: productDetails, error: productError } = result as any;
-            const rpcDuration = (performance.now() - rpcStart).toFixed(2);
+            
+            const rpcTime = Date.now() - rpcStart;
+            console.log(`📦 [PRODUCT-DETAIL] RPC get_product_detail completed in ${rpcTime}ms`);
+            console.log('📦 [PRODUCT-DETAIL] Product data:', productDetails);
+            
             if (productError) {
-              console.error('❌ RPC get_product_detail error', { normalizedId, rpcDuration, error: productError });
+              console.error('❌ [PRODUCT-DETAIL] RPC ERROR get_product_detail:', productError);
               throw productError;
             }
             const count = Array.isArray(productDetails) ? productDetails.length : 0;
-            console.log('📥 RPC get_product_detail result', { count, rpcDuration });
+            console.log('📥 [PRODUCT-DETAIL] RPC result count:', count);
             if (count > 0) {
               productInfo = productDetails[0];
-              console.log('✅ Product detail loaded', { id: productInfo.id });
+              console.log('✅ [PRODUCT-DETAIL] Product loaded:', productInfo.title);
             } else {
-              console.warn('⚠️ RPC returned empty array for id', { normalizedId });
+              console.warn('⚠️ [PRODUCT-DETAIL] RPC returned empty array for id:', normalizedId);
             }
           } catch (err: any) {
             const isTimeout = typeof err?.message === 'string' && err.message.toLowerCase().includes('timeout');
@@ -140,23 +150,27 @@ export const useProductDetail = (productId: string) => {
         }
 
         // Fetch content files for the product using secure RPC
-        console.log('📂 Fetching files for product:', normalizedId);
-        const filesStartTime = performance.now();
+        console.log('📁 [PRODUCT-DETAIL] Fetching files for product:', normalizedId);
+        const filesStartTime = Date.now();
         
         const { data: files, error: filesError } = await supabase
           .rpc('get_product_files', { content_id: normalizedId });
 
-        const filesFetchTime = (performance.now() - filesStartTime).toFixed(2);
+        const filesFetchTime = Date.now() - filesStartTime;
+        console.log(`📁 [PRODUCT-DETAIL] Files fetch completed in ${filesFetchTime}ms`);
         
         if (filesError) {
-          console.error('❌ Error fetching files:', filesError);
+          console.error('❌ [PRODUCT-DETAIL] Error fetching files:', filesError);
           console.error('   Product ID:', normalizedId);
           console.error('   Error details:', JSON.stringify(filesError, null, 2));
         } else {
-          console.log(`✅ Files fetched in ${filesFetchTime}ms:`, files?.length || 0, 'files');
+          console.log(`✅ [PRODUCT-DETAIL] Files fetched: ${files?.length || 0} files`);
           if (files && files.length > 0) {
             console.log('   File types:', files.map(f => f.file_type).join(', '));
             console.log('   Total size:', (files.reduce((sum, f) => sum + (f.file_size || 0), 0) / 1024 / 1024).toFixed(2), 'MB');
+            files.forEach(file => {
+              console.log(`  📄 [PRODUCT-DETAIL] File: ${file.file_name} | Path: ${file.file_path} | Preview: ${file.is_preview} | Original: ${file.is_original}`);
+            });
           }
         }
 
