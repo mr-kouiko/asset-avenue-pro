@@ -420,7 +420,18 @@ const ProductManagement = () => {
         return;
       }
 
-      const { error } = await supabase
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Vous devez être connecté');
+        return;
+      }
+
+      console.log('🔄 Updating submission:', editingSubmissionId);
+      console.log('👤 User ID:', user.id);
+      console.log('📝 Updates:', { title: productData.title, category: productData.category, tags: productData.tags });
+
+      const { data, error } = await supabase
         .from('content_submissions')
         .update({
           title: productData.title,
@@ -429,15 +440,28 @@ const ProductManagement = () => {
           tags: productData.tags,
           updated_at: new Date().toISOString()
         })
-        .eq('id', editingSubmissionId);
+        .eq('id', editingSubmissionId)
+        .eq('creator_id', user.id) // Security: ensure user owns this submission
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Update error:', error);
+        if (error.code === 'PGRST116') {
+          toast.error('Produit non trouvé ou vous n\'avez pas les droits pour le modifier');
+        } else {
+          toast.error(`Erreur: ${error.message}`);
+        }
+        return;
+      }
 
+      console.log('✅ Submission updated successfully:', data);
       toast.success('Produit mis à jour avec succès');
       sessionStorage.removeItem('editingSubmission');
+      sessionStorage.removeItem('pendingUploadedFiles');
       navigate('/dashboard');
     } catch (error) {
-      console.error('Error updating submission:', error);
+      console.error('💥 Error updating submission:', error);
       toast.error('Erreur lors de la mise à jour du produit');
     }
   };
