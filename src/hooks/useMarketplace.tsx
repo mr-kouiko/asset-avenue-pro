@@ -39,13 +39,25 @@ export const useMarketplace = () => {
         return;
       }
 
+      console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
+      
       // Fetch content files for each submission to get URLs
       const contentWithFiles = await Promise.all(
-        (marketplaceData || []).map(async (item: any) => {
-          const { data: files } = await supabase
+        (marketplaceData || []).map(async (item: any, index: number) => {
+          console.log(`📦 [MARKETPLACE] Processing item ${index + 1}:`, item.title);
+          const filesStart = Date.now();
+          const { data: files, error: filesError } = await supabase
             .from('content_files')
             .select('*')
             .eq('submission_id', item.id);
+          
+          const filesTime = Date.now() - filesStart;
+          console.log(`  📁 [MARKETPLACE] Files query for "${item.title}" completed in ${filesTime}ms`);
+          console.log(`  📁 [MARKETPLACE] Found ${files?.length || 0} files`);
+          
+          if (filesError) {
+            console.error(`  ❌ [MARKETPLACE] Error loading files for "${item.title}":`, filesError);
+          }
 
           // Determine thumbnail URL and video/audio URL with robust fallbacks
           const originalFile = files?.find(f => f.is_original);
@@ -84,13 +96,14 @@ export const useMarketplace = () => {
               mediaUrl = previewFile.preview_path.startsWith('http')
                 ? previewFile.preview_path
                 : buildPublicUrl('previews', previewFile.preview_path);
+              console.log(`  🎬 [MARKETPLACE] Video preview for "${item.title}":`, mediaUrl);
             }
-            // Fallback: if no preview exists yet, use the original file (watermarked originals)
+            // Fallback: if no preview exists yet, use the original file
             if (!mediaUrl && originalFile?.file_path) {
               mediaUrl = originalFile.file_path.startsWith('http')
                 ? originalFile.file_path
                 : buildPublicUrl('uploads', originalFile.file_path);
-              console.warn('⚠️ No video preview found, using original file as fallback for listing preview:', mediaUrl);
+              console.warn(`  ⚠️ [MARKETPLACE] No video preview found for "${item.title}", using original as fallback:`, mediaUrl);
             }
           } else if (item.content_type === 'audio') {
             // For audio: Use original file path directly
