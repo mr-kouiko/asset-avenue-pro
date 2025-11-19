@@ -17,6 +17,7 @@ interface UploadedFileData {
   type: string;
   size: number;
   previewUrl?: string;
+  thumbnailUrl?: string;
   isWatermarked?: boolean;
 }
 
@@ -65,9 +66,52 @@ const FileUpload = () => {
     loadExistingFiles();
   }, []);
 
-  const handleFilesUploaded = (files: UploadedFileData[]) => {
-    setUploadedFiles(prev => [...prev, ...files]);
-    toast.success(`${files.length} fichier(s) uploadé(s) avec succès`);
+  const handleFilesUploaded = async (files: UploadedFileData[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Vous devez être connecté pour uploader des fichiers");
+        return;
+      }
+
+      // Save files to uploaded_files table
+      const filesToInsert = files.map(file => ({
+        user_id: user.id,
+        file_name: file.name,
+        file_type: file.type,
+        file_url: file.url,
+        file_size: file.size,
+        preview_url: file.previewUrl,
+        thumbnail_url: file.thumbnailUrl,
+        is_watermarked: file.isWatermarked || false,
+        status: 'completed'
+      }));
+
+      const { data: insertedFiles, error } = await supabase
+        .from('uploaded_files')
+        .insert(filesToInsert)
+        .select();
+
+      if (error) {
+        console.error('Error saving files to database:', error);
+        toast.error("Erreur lors de l'enregistrement des fichiers");
+        return;
+      }
+
+      console.log('✅ Files saved to database:', insertedFiles);
+      
+      // Update state with database IDs
+      const filesWithDbIds = files.map((file, index) => ({
+        ...file,
+        id: insertedFiles?.[index]?.id || file.id
+      }));
+
+      setUploadedFiles(prev => [...prev, ...filesWithDbIds]);
+      toast.success(`${files.length} fichier(s) uploadé(s) avec succès`);
+    } catch (error) {
+      console.error('Error in handleFilesUploaded:', error);
+      toast.error("Erreur lors du traitement des fichiers");
+    }
   };
 
   const handleContinueToProducts = () => {
