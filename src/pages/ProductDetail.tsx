@@ -93,6 +93,23 @@ const ProductDetail = () => {
     selectedLicense
   });
 
+  // SEO Configuration - Must be called before any conditional returns
+  const activeProduct = product || fallbackProduct;
+  const productImage = activeProduct?.thumbnail || activeProduct?.previewUrl || '';
+  const productPrice = isVideo ? basePrice : (activeProduct?.price || 0);
+  
+  useSEO({
+    title: activeProduct?.title || 'Product',
+    description: activeProduct?.description || 'View product details',
+    image: productImage,
+    type: 'product',
+    author: activeProduct?.author,
+    publishedTime: activeProduct?.uploadDate,
+    tags: activeProduct?.tags || [],
+    price: productPrice,
+    currency: isVideo ? 'USD' : 'EUR'
+  });
+
   // Protection contre le téléchargement et l'inspection
   useEffect(() => {
     // Empêcher le clic droit
@@ -368,23 +385,8 @@ const ProductDetail = () => {
     }, selectedLicense);
   };
 
-  // Generate SEO-optimized URL and metadata
+  // Generate product URL for social sharing (productImage already declared at top)
   const productUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const productImage = product.thumbnail || product.previewUrl || '';
-  const productPrice = isVideo ? basePrice : (product.price || 0);
-
-  // SEO Configuration
-  useSEO({
-    title: product.title,
-    description: product.description,
-    image: productImage,
-    type: 'product',
-    author: product.author,
-    publishedTime: product.uploadDate,
-    tags: product.tags,
-    price: productPrice,
-    currency: isVideo ? 'USD' : 'EUR'
-  });
 
   return (
     <div className="min-h-screen bg-background">
