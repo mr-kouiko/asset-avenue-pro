@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -58,8 +58,12 @@ const ProductManagement = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
+  const hasInitializedRef = useRef(false);
   
   useEffect(() => {
+    // Prevent multiple initializations
+    if (hasInitializedRef.current) return;
+    
     console.log('🔍 ProductManagement useEffect triggered');
     
     // Check if we're in edit mode
@@ -182,7 +186,8 @@ const ProductManagement = () => {
         setSelectedFileId(files[0].id);
       }
       
-      // Clear session storage
+      // Mark as initialized and clear session storage
+      hasInitializedRef.current = true;
       sessionStorage.removeItem('pendingUploadedFiles');
     } else {
       // No files found, redirect to upload page
