@@ -87,13 +87,13 @@ const Dashboard = () => {
 
       if (submissionError) {
         console.error('❌ [DASHBOARD] RLS ERROR on content_submissions:', submissionError);
-        toast.error("Impossible de charger cette soumission");
+        toast.error("Unable to load this submission");
         return;
       }
 
       if (!submission) {
         console.error('❌ [DASHBOARD] No submission found with ID:', normalizedId);
-        toast.error("Soumission introuvable");
+        toast.error("Submission not found");
         return;
       }
 
@@ -120,7 +120,7 @@ const Dashboard = () => {
 
       if (!contentFiles || contentFiles.length === 0) {
         console.warn('⚠️ [DASHBOARD] No files found for submission');
-        toast.error('Aucun fichier trouvé pour ce produit');
+        toast.error('No files found for this product');
         return;
       }
 
@@ -161,10 +161,10 @@ const Dashboard = () => {
 
       // Navigate to product management
       navigate('/product-management');
-      toast.success('Chargement du produit pour modification...');
+      toast.success('Loading product for editing...');
     } catch (error) {
       console.error('❌ Error loading submission for edit:', error);
-      toast.error('Erreur lors du chargement du produit');
+      toast.error('Error loading product');
     }
   };
   const [uploadedFiles, setUploadedFiles] = useState<Array<{
@@ -192,17 +192,17 @@ const Dashboard = () => {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Configuration Stripe requise</AlertTitle>
+        <AlertTitle>Stripe Configuration Required</AlertTitle>
         <AlertDescription className="flex items-center justify-between">
           <span>
-            Vous devez configurer votre compte Stripe Connect pour recevoir des paiements.
+            You need to configure your Stripe Connect account to receive payments.
           </span>
           <Button 
             variant="outline" 
             size="sm"
             onClick={() => setActiveTab("stripe")}
           >
-            Configurer maintenant
+            Configure Now
           </Button>
         </AlertDescription>
       </Alert>
@@ -215,12 +215,12 @@ const Dashboard = () => {
         <Header />
         <div className="container py-16 text-center">
           <AlertCircle className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
-          <h1 className="text-3xl font-bold mb-4">Accès non autorisé</h1>
+          <h1 className="text-3xl font-bold mb-4">Unauthorized Access</h1>
           <p className="text-muted-foreground mb-8">
-            Vous devez être connecté pour accéder au dashboard vendeur
+            You must be logged in to access the seller dashboard
           </p>
           <Button size="lg" asChild>
-            <Link to="/auth">Se connecter</Link>
+            <Link to="/auth">Sign In</Link>
           </Button>
         </div>
       </div>
@@ -243,13 +243,13 @@ const Dashboard = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'Approuvé';
+        return 'Approved';
       case 'pending':
-        return 'En attente';
+        return 'Pending';
       case 'rejected':
-        return 'Rejeté';
+        return 'Rejected';
       default:
-        return 'Inconnu';
+        return 'Unknown';
     }
   };
 
@@ -264,12 +264,12 @@ const Dashboard = () => {
     previewUrl?: string;
   }>) => {
     setUploadedFiles(prev => [...prev, ...files]);
-    toast.success(`${files.length} fichier(s) uploadé(s) avec succès`);
+    toast.success(`${files.length} file(s) uploaded successfully`);
   };
 
   const handleContinueToProducts = () => {
     if (uploadedFiles.length === 0) {
-      toast.error("Veuillez uploader au moins un fichier avant de continuer");
+      toast.error("Please upload at least one file before continuing");
       return;
     }
 
@@ -301,7 +301,7 @@ const Dashboard = () => {
         
         if (error) {
           console.error('Error generating signed URL:', error);
-          toast.error('Erreur lors de la génération de l\'URL d\'aperçu');
+          toast.error('Error generating preview URL');
           return;
         } else if (data?.signedUrl) {
           console.log('✅ Signed URL generated:', data.signedUrl);
@@ -317,7 +317,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Error processing audio URL:', error);
-        toast.error('Erreur lors du traitement du fichier audio');
+        toast.error('Error processing audio file');
         return;
       }
     }
@@ -335,9 +335,9 @@ const Dashboard = () => {
       <div className="container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Tableau de bord vendeur</h1>
+            <h1 className="text-3xl font-bold">Seller Dashboard</h1>
             <p className="text-muted-foreground">
-              Gérez votre contenu et suivez vos performances
+              Manage your content and track your performance
             </p>
           </div>
           <Button 
@@ -346,18 +346,18 @@ const Dashboard = () => {
           >
             <Link to="/file-upload">
               <Plus className="h-4 w-4" />
-              Ajouter du contenu
+              Add Content
             </Link>
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-            <TabsTrigger value="content">Mon contenu</TabsTrigger>
-            <TabsTrigger value="analytics">Statistiques</TabsTrigger>
-            <TabsTrigger value="stripe">Paiements</TabsTrigger>
-            <TabsTrigger value="upload">Uploader</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="content">My Content</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="stripe">Payments</TabsTrigger>
+            <TabsTrigger value="upload">Upload</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -369,52 +369,52 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Revenus estimés</CardTitle>
+                  <CardTitle className="text-sm font-medium">Estimated Revenue</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalRevenue?.toFixed(2) || '0.00'}€</div>
                   <p className="text-xs text-muted-foreground">
-                    Basé sur les contenus approuvés
+                    Based on approved content
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Téléchargements</CardTitle>
+                  <CardTitle className="text-sm font-medium">Downloads</CardTitle>
                   <Download className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalDownloads || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Nombre total de téléchargements
+                    Total number of downloads
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Contenus approuvés</CardTitle>
+                  <CardTitle className="text-sm font-medium">Approved Content</CardTitle>
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.approvedSubmissions || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Sur {stats.totalSubmissions || 0} soumis
+                    Out of {stats.totalSubmissions || 0} submitted
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">En attente</CardTitle>
+                  <CardTitle className="text-sm font-medium">Pending</CardTitle>
                   <Clock className="h-4 w-4 text-yellow-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.pendingSubmissions || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Contenus en cours de validation
+                    Content under review
                   </p>
                 </CardContent>
               </Card>
@@ -423,25 +423,25 @@ const Dashboard = () => {
             {/* Recent Activity */}
             <Card>
               <CardHeader>
-                <CardTitle>Contenus récents</CardTitle>
+                <CardTitle>Recent Content</CardTitle>
                 <CardDescription>
-                  Vos derniers uploads et leur statut
+                  Your latest uploads and their status
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-muted-foreground mt-2">Chargement...</p>
+                    <p className="text-muted-foreground mt-2">Loading...</p>
                   </div>
                 ) : submissions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="mb-4">Aucun contenu uploadé pour le moment</p>
+                    <p className="mb-4">No content uploaded yet</p>
                     <Button asChild>
                       <Link to="/file-upload">
                         <Plus className="h-4 w-4 mr-2" />
-                        Uploader votre premier contenu
+                        Upload Your First Content
                       </Link>
                     </Button>
                   </div>
@@ -452,13 +452,13 @@ const Dashboard = () => {
                         <div className="flex-1">
                           <h4 className="font-medium">{submission.title}</h4>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                            <span>{submission.content_files?.length || 0} fichier(s)</span>
-                            <span>{submission.price ? `${submission.price}€` : 'Gratuit'}</span>
+                            <span>{submission.content_files?.length || 0} file(s)</span>
+                            <span>{submission.price ? `$${submission.price}` : 'Free'}</span>
                             <span>{new Date(submission.created_at).toLocaleDateString()}</span>
                           </div>
                           {submission.rejection_reason && (
                             <p className="text-sm text-red-600 mt-1">
-                              Raison du rejet: {submission.rejection_reason}
+                              Rejection reason: {submission.rejection_reason}
                             </p>
                           )}
                         </div>
