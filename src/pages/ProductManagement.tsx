@@ -64,139 +64,124 @@ const ProductManagement = () => {
     // Prevent multiple initializations
     if (hasInitializedRef.current) return;
     
-    console.log('🔍 ProductManagement useEffect triggered');
-    
     // Check if we're in edit mode
     const editingData = sessionStorage.getItem('editingSubmission');
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
     
-    console.log('📦 editingData from sessionStorage:', editingData);
-    console.log('📦 storedFiles from sessionStorage:', storedFiles);
+    if (!storedFiles) {
+      // No files found, redirect to upload page
+      toast.error("No files found. Please upload your files first.");
+      navigate('/file-upload');
+      return;
+    }
+    
+    // Mark as initialized immediately to prevent re-runs
+    hasInitializedRef.current = true;
     
     if (editingData) {
       const editData = JSON.parse(editingData);
       setIsEditMode(true);
       setEditingSubmissionId(editData.submissionId);
-      console.log('📝 Edit mode activated for submission:', editData.submissionId);
     }
     
-    if (storedFiles) {
-      const files = JSON.parse(storedFiles);
-      console.log('✅ Files parsed successfully:', files);
-      setUploadedFiles(files);
-      console.log('📂 Loaded files:', files.length);
-      
-      // Initialize products data
-      const initialData: Record<string, ProductData> = {};
-      
-      // If in edit mode, load existing data
-      if (editingData) {
-        const editData = JSON.parse(editingData);
-        files.forEach((file: UploadedFileData) => {
-          initialData[file.id] = {
-            fileId: file.id,
-            title: editData.title || '',
-            description: editData.description || '',
-            category: editData.category || '',
-            tags: editData.tags || [],
-            currentTag: '',
-            status: editData.status || 'draft',
-            coverUrl: file.thumbnailUrl
-          };
-        });
-        console.log('✅ Loaded existing product data:', initialData);
-      } else {
-        // Auto-detect category for new uploads
-        files.forEach((file: UploadedFileData) => {
-          // Auto-detect category based on file type
-          let autoCategory = '';
-          const fileType = file.type?.toLowerCase() || '';
-          const fileName = file.name?.toLowerCase() || '';
-          
-          console.log(`🔍 Auto-detecting category for ${file.name}:`, { fileType, fileName });
-          
-          if (fileType.startsWith('video/') || 
-              fileName.includes('.mp4') || 
-              fileName.includes('.mov') || 
-              fileName.includes('.avi') || 
-              fileName.includes('.webm') || 
-              fileName.includes('.mkv')) {
-            // Find video category ID from available categories
-            const videoCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('video') || 
-              cat.name.toLowerCase().includes('vidéo')
-            );
-            autoCategory = videoCategory?.id || '';
-            console.log('✅ Video category detected:', autoCategory);
-          }
-          else if (fileType.startsWith('image/')) {
-            // Find photo category ID from available categories
-            const photoCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('photo') ||
-              cat.name.toLowerCase().includes('image')
-            );
-            autoCategory = photoCategory?.id || '';
-            console.log('✅ Photo category detected:', autoCategory);
-          }
-          else if (fileType.startsWith('audio/')) {
-            // Find audio category ID from available categories
-            const audioCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('audio') ||
-              cat.name.toLowerCase().includes('son') ||
-              cat.name.toLowerCase().includes('musique')
-            );
-            autoCategory = audioCategory?.id || '';
-            console.log('✅ Audio category detected:', autoCategory);
-          }
-          else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
-            // Find ebook/document category ID from available categories
-            const ebookCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('ebook') ||
-              cat.name.toLowerCase().includes('document') ||
-              cat.name.toLowerCase().includes('livre')
-            );
-            autoCategory = ebookCategory?.id || '';
-            console.log('✅ Ebook category detected:', autoCategory);
-          }
-          else {
-            // Find illustration category for other files
-            const illustrationCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('illustration')
-            );
-            autoCategory = illustrationCategory?.id || '';
-            console.log('✅ Illustration category detected (fallback):', autoCategory);
-          }
-          
-          initialData[file.id] = {
-            fileId: file.id,
-            title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-            description: '',
-            category: autoCategory, // Auto-detected category
-            tags: [],
-            currentTag: '',
-            status: 'draft'
-          };
-        });
-      }
-      
-      setProductsData(initialData);
-      
-      // Select first file by default
-      if (files.length > 0) {
-        setSelectedFileId(files[0].id);
-      }
-      
-      // Mark as initialized and clear session storage
-      hasInitializedRef.current = true;
-      sessionStorage.removeItem('pendingUploadedFiles');
+    const files = JSON.parse(storedFiles);
+    setUploadedFiles(files);
+    
+    // Initialize products data
+    const initialData: Record<string, ProductData> = {};
+    
+    // If in edit mode, load existing data
+    if (editingData) {
+      const editData = JSON.parse(editingData);
+      files.forEach((file: UploadedFileData) => {
+        initialData[file.id] = {
+          fileId: file.id,
+          title: editData.title || '',
+          description: editData.description || '',
+          category: editData.category || '',
+          tags: editData.tags || [],
+          currentTag: '',
+          status: editData.status || 'draft',
+          coverUrl: file.thumbnailUrl
+        };
+      });
     } else {
-      // No files found, redirect to upload page
-      console.error('❌ No files found in sessionStorage!');
-      console.log('📍 Current sessionStorage keys:', Object.keys(sessionStorage));
-      toast.error("No files found. Please upload your files first.");
-      navigate('/file-upload');
+      // Auto-detect category for new uploads
+      files.forEach((file: UploadedFileData) => {
+        // Auto-detect category based on file type
+        let autoCategory = '';
+        const fileType = file.type?.toLowerCase() || '';
+        const fileName = file.name?.toLowerCase() || '';
+        
+        if (fileType.startsWith('video/') ||
+            fileName.includes('.mp4') || 
+            fileName.includes('.mov') || 
+            fileName.includes('.avi') || 
+            fileName.includes('.webm') || 
+            fileName.includes('.mkv')) {
+          // Find video category ID from available categories
+          const videoCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('video') || 
+            cat.name.toLowerCase().includes('vidéo')
+          );
+          autoCategory = videoCategory?.id || '';
+        }
+        else if (fileType.startsWith('image/')) {
+          // Find photo category ID from available categories
+          const photoCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('photo') ||
+            cat.name.toLowerCase().includes('image')
+          );
+          autoCategory = photoCategory?.id || '';
+        }
+        else if (fileType.startsWith('audio/')) {
+          // Find audio category ID from available categories
+          const audioCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('audio') ||
+            cat.name.toLowerCase().includes('son') ||
+            cat.name.toLowerCase().includes('musique')
+          );
+          autoCategory = audioCategory?.id || '';
+        }
+        else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
+          // Find ebook/document category ID from available categories
+          const ebookCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('ebook') ||
+            cat.name.toLowerCase().includes('document') ||
+            cat.name.toLowerCase().includes('livre')
+          );
+          autoCategory = ebookCategory?.id || '';
+        }
+        else {
+          // Find illustration category for other files
+          const illustrationCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('illustration')
+          );
+          autoCategory = illustrationCategory?.id || '';
+        }
+        
+        initialData[file.id] = {
+          fileId: file.id,
+          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+          description: '',
+          category: autoCategory, // Auto-detected category
+          tags: [],
+          currentTag: '',
+          status: 'draft'
+        };
+      });
     }
-  }, [categories, navigate]);
+    
+    setProductsData(initialData);
+    
+    // Select first file by default
+    if (files.length > 0) {
+      setSelectedFileId(files[0].id);
+    }
+    
+    // Clear session storage after successful load
+    sessionStorage.removeItem('pendingUploadedFiles');
+  }, [navigate]);
 
   const selectedFile = uploadedFiles.find(f => f.id === selectedFileId);
   const selectedProductData = selectedFileId ? productsData[selectedFileId] : null;
