@@ -1082,6 +1082,7 @@ export type Database = {
           exists_in_uploaded: boolean
         }[]
       }
+      clean_for_slug: { Args: { text_input: string }; Returns: string }
       create_secure_download_token: {
         Args: { content_file_id_param: string; user_id_param?: string }
         Returns: {
@@ -1092,6 +1093,10 @@ export type Database = {
       deduct_user_credit: {
         Args: { cost_param?: number; user_id_param: string }
         Returns: boolean
+      }
+      generate_product_slug: {
+        Args: { tags_input: string[]; title_input: string }
+        Returns: string
       }
       get_admin_profiles_safe: {
         Args: never
@@ -1252,6 +1257,7 @@ export type Database = {
         Args: { token_param: string }
         Returns: boolean
       }
+      unaccent: { Args: { "": string }; Returns: string }
       user_can_access_profile: {
         Args: { profile_user_id: string }
         Returns: boolean
