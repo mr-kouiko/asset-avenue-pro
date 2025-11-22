@@ -203,6 +203,7 @@ export type Database = {
           original_language: string | null
           price: number | null
           rejection_reason: string | null
+          slug: string | null
           status: string
           tags: string[] | null
           title: string
@@ -221,6 +222,7 @@ export type Database = {
           original_language?: string | null
           price?: number | null
           rejection_reason?: string | null
+          slug?: string | null
           status?: string
           tags?: string[] | null
           title: string
@@ -239,6 +241,7 @@ export type Database = {
           original_language?: string | null
           price?: number | null
           rejection_reason?: string | null
+          slug?: string | null
           status?: string
           tags?: string[] | null
           title?: string

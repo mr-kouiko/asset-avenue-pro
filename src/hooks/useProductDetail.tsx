@@ -41,15 +41,17 @@ export const useProductDetail = (productId: string) => {
 
   // Normalize route param to handle IDs with extra slugs (e.g., 
   // "/product/<uuid>-some-title" → extract the UUID). Also strips query/hash.
+  // Also check if it's a slug (no UUID found)
   const normalizeId = (raw: string) => {
-    if (!raw) return raw;
+    if (!raw) return { id: raw, isSlug: false };
     const uuidMatch = raw.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
-    if (uuidMatch) return uuidMatch[0];
+    if (uuidMatch) return { id: uuidMatch[0], isSlug: false };
     const clean = raw.split('?')[0].split('#')[0];
-    return clean;
+    // If no UUID found, assume it's a slug
+    return { id: clean, isSlug: true };
   };
-  const normalizedId = normalizeId(productId);
-  console.log('🆔 useProductDetail IDs', { originalId: productId, normalizedId });
+  const { id: normalizedId, isSlug } = normalizeId(productId);
+  console.log('🆔 useProductDetail IDs', { originalId: productId, normalizedId, isSlug });
 
   useEffect(() => {
     let isMounted = true;
@@ -109,27 +111,75 @@ export const useProductDetail = (productId: string) => {
         let productInfo: any | null = null;
         
           try {
-            console.log('📊 [PRODUCT-DETAIL] Calling RPC get_product_detail...');
+            console.log('📊 [PRODUCT-DETAIL] Fetching product...', { isSlug, normalizedId });
             const rpcStart = Date.now();
-            const rpcPromise = supabase.rpc('get_product_detail', { product_id: normalizedId });
-            const result = await Promise.race([rpcPromise, createTimeout(8000)]);
-            const { data: productDetails, error: productError } = result as any;
             
-            const rpcTime = Date.now() - rpcStart;
-            console.log(`📦 [PRODUCT-DETAIL] RPC get_product_detail completed in ${rpcTime}ms`);
-            console.log('📦 [PRODUCT-DETAIL] Product data:', productDetails);
-            
-            if (productError) {
-              console.error('❌ [PRODUCT-DETAIL] RPC ERROR get_product_detail:', productError);
-              throw productError;
-            }
-            const count = Array.isArray(productDetails) ? productDetails.length : 0;
-            console.log('📥 [PRODUCT-DETAIL] RPC result count:', count);
-            if (count > 0) {
-              productInfo = productDetails[0];
-              console.log('✅ [PRODUCT-DETAIL] Product loaded:', productInfo.title);
+            // If it's a slug, fetch by slug first, otherwise use UUID
+            let result;
+            if (isSlug) {
+              console.log('🔗 [PRODUCT-DETAIL] Fetching by slug:', normalizedId);
+              // Fetch by slug
+              const slugPromise = supabase
+                .from('content_submissions')
+                .select(`
+                  id,
+                  title,
+                  description,
+                  created_at,
+                  price,
+                  tags,
+                  category_id,
+                  slug
+                `)
+                .eq('slug', normalizedId)
+                .eq('status', 'approved')
+                .single();
+              
+              result = await Promise.race([slugPromise, createTimeout(8000)]);
+              const { data: slugData, error: slugError } = result as any;
+              
+              if (slugError) {
+                console.error('❌ [PRODUCT-DETAIL] Slug lookup error:', slugError);
+                throw slugError;
+              }
+              
+              if (slugData) {
+                // Now fetch creator info
+                const { data: creatorData } = await supabase
+                  .from('profiles')
+                  .select('store_name')
+                  .eq('user_id', (slugData as any).creator_id)
+                  .single();
+                
+                productInfo = {
+                  ...slugData,
+                  creator_store_name: creatorData?.store_name || 'Anonymous Store',
+                };
+                // Update normalizedId to use the UUID for file fetching
+                (normalizedId as any) = slugData.id;
+                console.log('✅ [PRODUCT-DETAIL] Product loaded by slug');
+              }
             } else {
-              console.warn('⚠️ [PRODUCT-DETAIL] RPC returned empty array for id:', normalizedId);
+              // Use existing UUID-based RPC call
+              const rpcPromise = supabase.rpc('get_product_detail', { product_id: normalizedId });
+              result = await Promise.race([rpcPromise, createTimeout(8000)]);
+              const { data: productDetails, error: productError } = result as any;
+              
+              const rpcTime = Date.now() - rpcStart;
+              console.log(`📦 [PRODUCT-DETAIL] RPC get_product_detail completed in ${rpcTime}ms`);
+              
+              if (productError) {
+                console.error('❌ [PRODUCT-DETAIL] RPC ERROR get_product_detail:', productError);
+                throw productError;
+              }
+              const count = Array.isArray(productDetails) ? productDetails.length : 0;
+              console.log('📥 [PRODUCT-DETAIL] RPC result count:', count);
+              if (count > 0) {
+                productInfo = productDetails[0];
+                console.log('✅ [PRODUCT-DETAIL] Product loaded:', productInfo.title);
+              } else {
+                console.warn('⚠️ [PRODUCT-DETAIL] RPC returned empty array for id:', normalizedId);
+              }
             }
           } catch (err: any) {
             const isTimeout = typeof err?.message === 'string' && err.message.toLowerCase().includes('timeout');
