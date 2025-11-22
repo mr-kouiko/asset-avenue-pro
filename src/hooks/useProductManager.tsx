@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateSlug, ensureUniqueSlug } from '@/utils/slugGenerator';
 
 interface ProductFile {
   id: string;
@@ -123,7 +124,24 @@ export const useProductManager = () => {
       // Automatically set price to $3.99 USD for eBooks (PDF files)
       const productPrice = submission.file.type === 'application/pdf' ? 3.99 : null;
 
-      // Create content submission
+      // Generate SEO-friendly slug
+      const baseSlug = generateSlug(
+        submission.productData.title, 
+        submission.productData.tags || []
+      );
+      
+      // Check for existing slugs to ensure uniqueness
+      const { data: existingSlugs } = await supabase
+        .from('content_submissions')
+        .select('slug')
+        .not('slug', 'is', null);
+      
+      const slugList = existingSlugs?.map(s => s.slug).filter(Boolean) as string[] || [];
+      const uniqueSlug = ensureUniqueSlug(baseSlug, slugList);
+      
+      console.log('🔗 Generated SEO slug:', uniqueSlug);
+
+      // Create content submission with slug
       const { data: submissionData, error: submissionError } = await supabase
         .from('content_submissions')
         .insert({
@@ -133,6 +151,7 @@ export const useProductManager = () => {
           category_id: submission.productData.category_id || null,
           tags: submission.productData.tags,
           price: productPrice,
+          slug: uniqueSlug,
           status: 'approved' // Auto-approve for now
         })
         .select()
