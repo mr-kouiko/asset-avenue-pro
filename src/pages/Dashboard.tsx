@@ -489,10 +489,10 @@ const Dashboard = () => {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-yellow-500" />
-                    <CardTitle>Fichiers non soumis ({unsubmittedFiles.length})</CardTitle>
+                    <CardTitle>Unsubmitted Files ({unsubmittedFiles.length})</CardTitle>
                   </div>
                   <CardDescription>
-                    Ces fichiers ont été uploadés mais n'ont pas encore été soumis à validation
+                    These files have been uploaded but not yet submitted for validation
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -533,7 +533,7 @@ const Dashboard = () => {
                           }}
                         >
                           <ArrowRight className="h-4 w-4 mr-1" />
-                          Soumettre
+                          Submit
                         </Button>
                       </div>
                     ))}
@@ -557,7 +557,7 @@ const Dashboard = () => {
                         }}
                       >
                         <Check className="h-4 w-4 mr-2" />
-                        Soumettre tous les fichiers ({unsubmittedFiles.length})
+                        Submit All Files ({unsubmittedFiles.length})
                       </Button>
                     </div>
                   </div>
@@ -569,15 +569,15 @@ const Dashboard = () => {
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Contenu soumis</CardTitle>
+                  <CardTitle>Submitted Content</CardTitle>
                   <CardDescription>
-                    Gérez vos créations et suivez leur statut
+                    Manage your creations and track their status
                   </CardDescription>
                 </div>
                 <Button asChild>
                   <Link to="/file-upload">
                     <Plus className="h-4 w-4 mr-2" />
-                    Nouveau contenu
+                    New Content
                   </Link>
                 </Button>
               </CardHeader>
@@ -585,24 +585,24 @@ const Dashboard = () => {
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-muted-foreground mt-2">Chargement...</p>
+                    <p className="text-muted-foreground mt-2">Loading...</p>
                   </div>
                 ) : submissions.length === 0 && (!unsubmittedFiles || unsubmittedFiles.length === 0) ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Upload className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-medium mb-2">Aucun contenu</h3>
-                    <p className="mb-4">Commencez par créer votre premier contenu</p>
+                    <h3 className="text-lg font-medium mb-2">No Content</h3>
+                    <p className="mb-4">Start by creating your first content</p>
                     <Button asChild>
                       <Link to="/file-upload">
                         <Plus className="h-4 w-4 mr-2" />
-                        Créer du contenu
+                        Create Content
                       </Link>
                     </Button>
                   </div>
                 ) : submissions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>Aucun contenu soumis pour le moment</p>
-                    <p className="text-sm mt-2">Soumettez les fichiers ci-dessus pour les voir apparaître ici</p>
+                    <p>No submitted content yet</p>
+                    <p className="text-sm mt-2">Submit the files above to see them here</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -624,9 +624,9 @@ const Dashboard = () => {
                             </div>
                             <p className="text-muted-foreground mb-2">{submission.description}</p>
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{submission.content_files?.length || 0} fichier(s)</span>
-                              <span>{submission.price ? `${submission.price}€` : 'Gratuit'}</span>
-                              <span>Créé le {new Date(submission.created_at).toLocaleDateString()}</span>
+                              <span>{submission.content_files?.length || 0} file(s)</span>
+                              <span>{submission.price ? `$${submission.price}` : 'Free'}</span>
+                              <span>Created on {new Date(submission.created_at).toLocaleDateString()}</span>
                             </div>
                             {submission.tags && submission.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
@@ -639,7 +639,7 @@ const Dashboard = () => {
                             )}
                             {submission.rejection_reason && (
                               <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                                <p className="text-sm text-destructive font-medium">Raison du rejet:</p>
+                                <p className="text-sm text-destructive font-medium">Rejection reason:</p>
                                 <p className="text-sm text-destructive">{submission.rejection_reason}</p>
                               </div>
                             )}
@@ -648,25 +648,25 @@ const Dashboard = () => {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Ouvrir le menu</span>
+                                <span className="sr-only">Open menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleEditSubmission(submission.id)}>
                                 <Edit className="h-4 w-4 mr-2" />
-                                Modifier
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => {
-                                  if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contenu ? Cette action est irréversible.')) {
+                                  if (window.confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
                                     deleteSubmission(submission.id);
                                   }
                                 }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Supprimer
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -675,7 +675,7 @@ const Dashboard = () => {
                         {/* Files Grid */}
                         {submission.content_files && submission.content_files.length > 0 && (
                           <div className="border-t pt-4">
-                            <h5 className="font-medium mb-3">Fichiers associés ({submission.content_files.length})</h5>
+                            <h5 className="font-medium mb-3">Associated Files ({submission.content_files.length})</h5>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {submission.content_files.slice(0, 4).map((file) => (
                                 <div key={file.id} className="relative bg-muted rounded-lg p-3 group">
@@ -706,7 +706,7 @@ const Dashboard = () => {
                                   <div className="text-center">
                                     <Plus className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
                                     <p className="text-xs text-muted-foreground">
-                                      +{submission.content_files.length - 4} autres
+                                      +{submission.content_files.length - 4} more
                                     </p>
                                   </div>
                                 </div>
@@ -729,12 +729,12 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <TrendingUp className="h-5 w-5 mr-2" />
-                    Performance générale
+                    Overall Performance
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Taux d'approbation</span>
+                    <span className="text-sm text-muted-foreground">Approval Rate</span>
                     <span className="font-medium">
                       {stats.totalSubmissions > 0 
                         ? `${((stats.approvedSubmissions / stats.totalSubmissions) * 100).toFixed(1)}%`
@@ -743,11 +743,11 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Revenus par contenu</span>
+                    <span className="text-sm text-muted-foreground">Revenue per Content</span>
                     <span className="font-medium">
                       {stats.approvedSubmissions > 0 
-                        ? `${(stats.totalRevenue / stats.approvedSubmissions).toFixed(2)}€`
-                        : '0€'
+                        ? `$${(stats.totalRevenue / stats.approvedSubmissions).toFixed(2)}`
+                        : '$0'
                       }
                     </span>
                   </div>
@@ -758,12 +758,12 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Eye className="h-5 w-5 mr-2" />
-                    Popularité
+                    Popularity
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Téléchargements par contenu</span>
+                    <span className="text-sm text-muted-foreground">Downloads per Content</span>
                     <span className="font-medium">
                       {stats.approvedSubmissions > 0 
                         ? `${Math.round(stats.totalDownloads / stats.approvedSubmissions)}`
@@ -781,9 +781,9 @@ const Dashboard = () => {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Configuration Stripe</CardTitle>
+                  <CardTitle>Stripe Configuration</CardTitle>
                   <CardDescription>
-                    Configurez votre compte Stripe pour recevoir vos paiements
+                    Configure your Stripe account to receive payments
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -800,15 +800,15 @@ const Dashboard = () => {
             <div className="mb-6">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
                 <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
-                <span>Upload des fichiers</span>
+                <span>File Upload</span>
                 <ArrowRight className="h-4 w-4" />
                 <span className="px-3 py-1 rounded-full bg-muted">2</span>
-                <span>Gestion des produits</span>
+                <span>Product Management</span>
               </div>
               
-              <h2 className="text-2xl font-bold mb-2">Uploader vos fichiers</h2>
+              <h2 className="text-2xl font-bold mb-2">Upload Your Files</h2>
               <p className="text-muted-foreground">
-                Commencez par uploader tous vos fichiers numériques. Vous pourrez ensuite configurer chaque produit individuellement.
+                Start by uploading all your digital files. You can then configure each product individually.
               </p>
             </div>
 
@@ -817,10 +817,10 @@ const Dashboard = () => {
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <Upload className="h-5 w-5 text-primary" />
-                  <h3 className="text-xl font-semibold">Zone d'upload</h3>
+                  <h3 className="text-xl font-semibold">Upload Zone</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Déposez ou sélectionnez vos fichiers. Les images seront automatiquement filigranées pour la marketplace.
+                  Drop or select your files. Images will be automatically watermarked for the marketplace.
                 </p>
               </div>
               
@@ -837,7 +837,7 @@ const Dashboard = () => {
                 <div className="flex items-center space-x-2 mb-4">
                   <Check className="h-5 w-5 text-green-500" />
                   <h3 className="text-lg font-semibold">
-                    Fichiers uploadés ({uploadedFiles.length})
+                    Uploaded Files ({uploadedFiles.length})
                   </h3>
                 </div>
                 
@@ -867,7 +867,7 @@ const Dashboard = () => {
                   {uploadedFiles.length > 6 && (
                     <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">
-                        +{uploadedFiles.length - 6} autres fichiers
+                        +{uploadedFiles.length - 6} more files
                       </p>
                     </div>
                   )}
@@ -880,7 +880,7 @@ const Dashboard = () => {
                     className="flex-1"
                   >
                     <ArrowRight className="h-4 w-4 mr-2" />
-                    Continuer vers la gestion des produits
+                    Continue to Product Management
                   </Button>
                   
                   <Button 
@@ -888,7 +888,7 @@ const Dashboard = () => {
                     size="lg"
                     onClick={() => setUploadedFiles([])}
                   >
-                    Annuler
+                    Cancel
                   </Button>
                 </div>
               </Card>
@@ -896,12 +896,12 @@ const Dashboard = () => {
 
             {/* Instructions */}
             <Card className="p-6 bg-muted/50">
-              <h3 className="font-semibold mb-2">Prochaines étapes</h3>
+              <h3 className="font-semibold mb-2">Next Steps</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Uploadez tous vos fichiers en une fois</li>
-                <li>• Passez ensuite à l'étape de configuration des produits</li>
-                <li>• Chaque fichier aura son propre formulaire de métadonnées</li>
-                <li>• Vous pourrez sauvegarder en brouillon ou publier directement</li>
+                <li>• Upload all your files at once</li>
+                <li>• Then proceed to the product configuration step</li>
+                <li>• Each file will have its own metadata form</li>
+                <li>• You can save as draft or publish directly</li>
               </ul>
             </Card>
           </TabsContent>
@@ -918,7 +918,7 @@ const Dashboard = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Aperçu Audio - {previewFile.name}</h3>
+                <h3 className="text-lg font-semibold">Audio Preview - {previewFile.name}</h3>
                 <Button variant="ghost" size="sm" onClick={closePreview}>
                   <X className="h-4 w-4" />
                 </Button>
