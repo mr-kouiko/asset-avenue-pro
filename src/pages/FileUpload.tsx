@@ -115,14 +115,28 @@ const FileUpload = () => {
   };
 
   const handleContinueToProducts = () => {
+    console.log('🔘 Button clicked! Uploaded files count:', uploadedFiles.length);
+    console.log('📦 Files to transfer:', uploadedFiles);
+    
     if (uploadedFiles.length === 0) {
+      console.log('❌ No files found, showing error');
       toast.error("Veuillez uploader au moins un fichier avant de continuer");
       return;
     }
 
     // Store uploaded files in session storage for the next step
-    sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(uploadedFiles));
-    navigate('/product-management');
+    try {
+      const filesData = JSON.stringify(uploadedFiles);
+      console.log('💾 Storing files in sessionStorage:', filesData.length, 'characters');
+      sessionStorage.setItem('pendingUploadedFiles', filesData);
+      console.log('✅ SessionStorage set successfully');
+      
+      console.log('🚀 Navigating to /product-management...');
+      navigate('/product-management');
+    } catch (error) {
+      console.error('❌ Error in handleContinueToProducts:', error);
+      toast.error('Erreur lors de la navigation');
+    }
   };
 
   const formatFileSize = (bytes: number) => {
