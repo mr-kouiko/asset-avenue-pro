@@ -179,8 +179,7 @@ const ProductManagement = () => {
       setSelectedFileId(files[0].id);
     }
     
-    // Clear session storage after successful load
-    sessionStorage.removeItem('pendingUploadedFiles');
+    // Don't clear sessionStorage here - keep it until save/cancel
   }, [navigate]);
 
   const selectedFile = uploadedFiles.find(f => f.id === selectedFileId);
@@ -311,6 +310,8 @@ const ProductManagement = () => {
       
       // If no more files, redirect to portfolio
       if (updatedFiles.length === 0) {
+        sessionStorage.removeItem('pendingUploadedFiles');
+        sessionStorage.removeItem('editingSubmission');
         toast.success("All products have been published! Redirecting to your portfolio...");
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
@@ -445,6 +446,8 @@ const ProductManagement = () => {
       
       // If no more files, redirect to portfolio
       if (updatedFiles.length === 0) {
+        sessionStorage.removeItem('pendingUploadedFiles');
+        sessionStorage.removeItem('editingSubmission');
         toast.success("All products have been published! Redirecting to your portfolio...");
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
