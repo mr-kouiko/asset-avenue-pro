@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,6 +61,27 @@ const Dashboard = () => {
   
   const { accountStatus, isAccountReady } = useStripeConnect();
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Refresh dashboard data when returning to this page
+  useEffect(() => {
+    // Refresh when component mounts or becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refreshData();
+      }
+    };
+
+    // Refresh on mount
+    refreshData();
+
+    // Also refresh when tab becomes visible again
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+  
   const handleEditSubmission = async (submissionId: string) => {
     try {
       console.log('📝 [DASHBOARD] Starting edit for submission:', submissionId);
