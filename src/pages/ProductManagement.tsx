@@ -180,7 +180,7 @@ const ProductManagement = () => {
       sessionStorage.removeItem('pendingUploadedFiles');
     } else {
       // No files found, redirect to upload page
-      toast.error("Aucun fichier trouvé. Veuillez d'abord uploader vos fichiers.");
+      toast.error("No files found. Please upload your files first.");
       navigate('/file-upload');
     }
   }, [categories, navigate]);
@@ -240,7 +240,7 @@ const ProductManagement = () => {
     if (!productData || !file) return;
 
     if (!productData.title.trim()) {
-      toast.error("Le titre est obligatoire pour sauvegarder");
+      toast.error("Title is required to save");
       return;
     }
 
@@ -273,14 +273,14 @@ const ProductManagement = () => {
     if (!productData || !file) return;
 
     if (!productData.title.trim() || !productData.description.trim()) {
-      toast.error("Le titre et la description sont obligatoires pour publier");
+      toast.error("Title and description are required to publish");
       return;
     }
 
     // For ebooks, check if cover is present
     const isPDF = file.type === 'application/pdf';
     if (isPDF && !productData.coverUrl) {
-      toast.error("Une image de couverture est obligatoire pour publier un ebook");
+      toast.error("A cover image is required to publish an ebook");
       return;
     }
 
@@ -313,7 +313,7 @@ const ProductManagement = () => {
       
       // If no more files, redirect to portfolio
       if (updatedFiles.length === 0) {
-        toast.success("Tous les produits ont été publiés! Redirection vers votre portfolio...");
+        toast.success("All products have been published! Redirecting to your portfolio...");
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
         // Select the first remaining file
@@ -328,19 +328,19 @@ const ProductManagement = () => {
     try {
       const productData = productsData[fileId];
       if (!productData) {
-        toast.error('Aucune donnée de produit à sauvegarder');
+        toast.error('No product data to save');
         return;
       }
 
       if (!productData.title.trim() || !productData.description.trim()) {
-        toast.error("Le titre et la description sont obligatoires");
+        toast.error("Title and description are required");
         return;
       }
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('Vous devez être connecté');
+        toast.error('You must be logged in');
         return;
       }
 
@@ -365,7 +365,7 @@ const ProductManagement = () => {
       if (error) {
         console.error('❌ Update error:', error);
         if (error.code === 'PGRST116') {
-          toast.error('Produit non trouvé ou vous n\'avez pas les droits pour le modifier');
+          toast.error('Product not found or you do not have permission to edit it');
         } else {
           toast.error(`Erreur: ${error.message}`);
         }
@@ -373,13 +373,13 @@ const ProductManagement = () => {
       }
 
       console.log('✅ Submission updated successfully:', data);
-      toast.success('Produit mis à jour avec succès');
+      toast.success('Product updated successfully');
       sessionStorage.removeItem('editingSubmission');
       sessionStorage.removeItem('pendingUploadedFiles');
       navigate('/dashboard');
     } catch (error) {
       console.error('💥 Error updating submission:', error);
-      toast.error('Erreur lors de la mise à jour du produit');
+      toast.error('Error updating product');
     }
   };
 
@@ -389,7 +389,7 @@ const ProductManagement = () => {
     );
     
     if (validProducts.length === 0) {
-      toast.error("Aucun produit prêt à publier. Vérifiez les titres et descriptions.");
+      toast.error("No products ready to publish. Check titles and descriptions.");
       return;
     }
 
@@ -429,7 +429,7 @@ const ProductManagement = () => {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} produit(s) publié(s) avec succès !`);
+      toast.success(`${successCount} product(s) published successfully!`);
       
       // Remove all published files from the list
       const updatedFiles = uploadedFiles.filter(f => !publishedFileIds.includes(f.id));
@@ -447,7 +447,7 @@ const ProductManagement = () => {
       
       // If no more files, redirect to portfolio
       if (updatedFiles.length === 0) {
-        toast.success("Tous les produits ont été publiés! Redirection vers votre portfolio...");
+        toast.success("All products have been published! Redirecting to your portfolio...");
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
         // Select the first remaining file

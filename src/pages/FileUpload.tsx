@@ -70,7 +70,7 @@ const FileUpload = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("Vous devez être connecté pour uploader des fichiers");
+        toast.error("You must be logged in to upload files");
         return;
       }
 
@@ -94,7 +94,7 @@ const FileUpload = () => {
 
       if (error) {
         console.error('Error saving files to database:', error);
-        toast.error("Erreur lors de l'enregistrement des fichiers");
+        toast.error("Error saving files");
         return;
       }
 
@@ -107,10 +107,10 @@ const FileUpload = () => {
       }));
 
       setUploadedFiles(prev => [...prev, ...filesWithDbIds]);
-      toast.success(`${files.length} fichier(s) uploadé(s) avec succès`);
+      toast.success(`${files.length} file(s) uploaded successfully`);
     } catch (error) {
       console.error('Error in handleFilesUploaded:', error);
-      toast.error("Erreur lors du traitement des fichiers");
+      toast.error("Error processing files");
     }
   };
 
@@ -120,7 +120,7 @@ const FileUpload = () => {
     
     if (uploadedFiles.length === 0) {
       console.log('❌ No files found, showing error');
-      toast.error("Veuillez uploader au moins un fichier avant de continuer");
+      toast.error("Please upload at least one file before continuing");
       return;
     }
 
@@ -135,7 +135,7 @@ const FileUpload = () => {
       navigate('/product-management');
     } catch (error) {
       console.error('❌ Error in handleContinueToProducts:', error);
-      toast.error('Erreur lors de la navigation');
+      toast.error('Navigation error');
     }
   };
 
@@ -150,7 +150,7 @@ const FileUpload = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="Cette page est réservée aux vendeurs. Seuls les créateurs peuvent uploader du contenu."
+      fallbackMessage="This page is reserved for sellers. Only creators can upload content."
     >
       <div className="min-h-screen bg-background">
         <Header />
@@ -160,15 +160,15 @@ const FileUpload = () => {
           <div className="mb-8">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
               <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
-              <span>Upload des fichiers</span>
+              <span>File Upload</span>
               <ArrowRight className="h-4 w-4" />
               <span className="px-3 py-1 rounded-full bg-muted">2</span>
-              <span>Gestion des produits</span>
+              <span>Product Management</span>
             </div>
             
-            <h1 className="text-3xl font-bold mb-2">Uploader vos fichiers</h1>
+            <h1 className="text-3xl font-bold mb-2">Upload Your Files</h1>
             <p className="text-muted-foreground">
-              Commencez par uploader tous vos fichiers numériques. Vous pourrez ensuite configurer chaque produit individuellement.
+              Start by uploading all your digital files. You can then configure each product individually.
             </p>
           </div>
 
@@ -178,10 +178,10 @@ const FileUpload = () => {
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <UploadIcon className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Zone d'upload</h2>
+                  <h2 className="text-xl font-semibold">Upload Zone</h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Déposez ou sélectionnez vos fichiers. Les images seront automatiquement filigranées pour la marketplace.
+                  Drop or select your files. Images will be automatically watermarked for the marketplace.
                 </p>
               </div>
               
@@ -198,7 +198,7 @@ const FileUpload = () => {
                 <div className="flex items-center space-x-2 mb-4">
                   <Check className="h-5 w-5 text-green-500" />
                   <h3 className="text-lg font-semibold">
-                    Fichiers uploadés ({uploadedFiles.length})
+                    Uploaded Files ({uploadedFiles.length})
                   </h3>
                 </div>
                 
@@ -228,7 +228,7 @@ const FileUpload = () => {
                   {uploadedFiles.length > 6 && (
                     <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">
-                        +{uploadedFiles.length - 6} autres fichiers
+                        +{uploadedFiles.length - 6} more files
                       </p>
                     </div>
                   )}
@@ -241,7 +241,7 @@ const FileUpload = () => {
                     className="flex-1"
                   >
                     <ArrowRight className="h-4 w-4 mr-2" />
-                    Continuer vers la gestion des produits
+                    Continue to Product Management
                   </Button>
                   
                   <Button 
@@ -249,7 +249,7 @@ const FileUpload = () => {
                     size="lg" 
                     asChild
                   >
-                    <Link to="/seller-dashboard">Annuler</Link>
+                    <Link to="/seller-dashboard">Cancel</Link>
                   </Button>
                 </div>
               </Card>
@@ -257,12 +257,12 @@ const FileUpload = () => {
 
             {/* Instructions */}
             <Card className="p-6 bg-muted/50">
-              <h3 className="font-semibold mb-2">Prochaines étapes</h3>
+              <h3 className="font-semibold mb-2">Next Steps</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Uploadez tous vos fichiers en une fois</li>
-                <li>• Passez ensuite à l'étape de configuration des produits</li>
-                <li>• Chaque fichier aura son propre formulaire de métadonnées</li>
-                <li>• Vous pourrez sauvegarder en brouillon ou publier directement</li>
+                <li>• Upload all your files at once</li>
+                <li>• Then proceed to the product configuration step</li>
+                <li>• Each file will have its own metadata form</li>
+                <li>• You can save as draft or publish directly</li>
               </ul>
             </Card>
           </div>

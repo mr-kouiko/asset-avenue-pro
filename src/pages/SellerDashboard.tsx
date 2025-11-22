@@ -5,7 +5,7 @@ const SellerDashboard = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="Cette page est réservée aux vendeurs. Seuls les créateurs peuvent accéder au tableau de bord vendeur."
+      fallbackMessage="This page is reserved for sellers. Only creators can access the seller dashboard."
     >
       <Dashboard />
     </ProtectedRoute>
