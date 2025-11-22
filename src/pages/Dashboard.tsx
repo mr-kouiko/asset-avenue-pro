@@ -519,9 +519,6 @@ const Dashboard = () => {
                         <Button
                           size="sm"
                           onClick={() => {
-                            console.log('🔘 Submit button clicked for file:', file.file_name);
-                            console.log('📦 File data:', file);
-                            
                             const fileData = [{
                               id: file.id,
                               url: file.file_url,
@@ -533,14 +530,7 @@ const Dashboard = () => {
                               isWatermarked: file.is_watermarked
                             }];
                             
-                            console.log('💾 Setting sessionStorage with:', fileData);
                             sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(fileData));
-                            
-                            // Verify it was set
-                            const stored = sessionStorage.getItem('pendingUploadedFiles');
-                            console.log('✅ Verified sessionStorage:', stored);
-                            
-                            console.log('🚀 Navigating to /product-management');
                             navigate('/product-management');
                           }}
                         >
@@ -554,9 +544,6 @@ const Dashboard = () => {
                         variant="outline"
                         className="w-full"
                         onClick={() => {
-                          console.log('🔘 Submit All button clicked. Total files:', unsubmittedFiles.length);
-                          console.log('📦 All files data:', unsubmittedFiles);
-                          
                           const allFiles = unsubmittedFiles.map(file => ({
                             id: file.id,
                             url: file.file_url,
@@ -568,14 +555,7 @@ const Dashboard = () => {
                             isWatermarked: file.is_watermarked
                           }));
                           
-                          console.log('💾 Setting sessionStorage with all files:', allFiles);
                           sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(allFiles));
-                          
-                          // Verify it was set
-                          const stored = sessionStorage.getItem('pendingUploadedFiles');
-                          console.log('✅ Verified sessionStorage:', stored);
-                          
-                          console.log('🚀 Navigating to /product-management');
                           navigate('/product-management');
                         }}
                       >
