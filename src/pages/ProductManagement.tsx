@@ -60,9 +60,14 @@ const ProductManagement = () => {
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   
   useEffect(() => {
+    console.log('🔍 ProductManagement useEffect triggered');
+    
     // Check if we're in edit mode
     const editingData = sessionStorage.getItem('editingSubmission');
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
+    
+    console.log('📦 editingData from sessionStorage:', editingData);
+    console.log('📦 storedFiles from sessionStorage:', storedFiles);
     
     if (editingData) {
       const editData = JSON.parse(editingData);
@@ -73,6 +78,7 @@ const ProductManagement = () => {
     
     if (storedFiles) {
       const files = JSON.parse(storedFiles);
+      console.log('✅ Files parsed successfully:', files);
       setUploadedFiles(files);
       console.log('📂 Loaded files:', files.length);
       
@@ -180,6 +186,8 @@ const ProductManagement = () => {
       sessionStorage.removeItem('pendingUploadedFiles');
     } else {
       // No files found, redirect to upload page
+      console.error('❌ No files found in sessionStorage!');
+      console.log('📍 Current sessionStorage keys:', Object.keys(sessionStorage));
       toast.error("No files found. Please upload your files first.");
       navigate('/file-upload');
     }
