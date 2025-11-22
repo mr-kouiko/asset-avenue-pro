@@ -12,6 +12,7 @@ import WaveSurfer from "wavesurfer.js";
 
 interface AudioContentCardProps {
   id: string;
+  slug?: string; // SEO-friendly URL slug
   title: string;
   author: string;
   price: number;
@@ -26,6 +27,7 @@ interface AudioContentCardProps {
 
 export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   id,
+  slug,
   title,
   author,
   price,
@@ -173,7 +175,9 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   };
 
   const handleCardClick = () => {
-    navigate(`/product/${id}`);
+    // Use slug if available, otherwise fall back to ID
+    const urlPath = slug || id;
+    navigate(`/product/${urlPath}`);
   };
 
   return (

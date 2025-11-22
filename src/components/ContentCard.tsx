@@ -14,6 +14,7 @@ import { AudioContentCard } from "./AudioContentCard";
 
 interface ContentCardProps {
   id: string;
+  slug?: string; // SEO-friendly URL slug
   title: string;
   author: string;
   price: number;
@@ -31,6 +32,7 @@ interface ContentCardProps {
 
 export const ContentCard: React.FC<ContentCardProps> = ({
   id,
+  slug,
   title,
   author,
   price,
@@ -50,6 +52,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     return (
       <AudioContentCard
         id={id}
+        slug={slug}
         title={title}
         author={author}
         price={price}
@@ -117,7 +120,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   }
 
   const handleCardClick = () => {
-    navigate(`/product/${id}`);
+    // Use slug if available, otherwise fall back to ID
+    const urlPath = slug || id;
+    navigate(`/product/${urlPath}`);
   };
 
   return (
@@ -170,7 +175,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/product/${id}`);
+                const urlPath = slug || id;
+                navigate(`/product/${urlPath}`);
               }}
             >
               Aperçu

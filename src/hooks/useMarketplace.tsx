@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface MarketplaceContent {
   id: string;
+  slug?: string; // SEO-friendly URL slug
   title: string;
   author: string;
   price: number;
@@ -30,9 +31,21 @@ export const useMarketplace = () => {
     try {
       setLoading(true);
       
-      // Use the new get_marketplace_content function for automatic content type detection and filtering
+      // Fetch marketplace content with slugs
       const { data: marketplaceData, error } = await supabase
-        .rpc('get_marketplace_content');
+        .from('content_submissions')
+        .select(`
+          id,
+          title,
+          description,
+          price,
+          tags,
+          created_at,
+          category_id,
+          slug,
+          creator_id
+        `)
+        .eq('status', 'approved');
 
       if (error) {
         console.error('Error fetching marketplace content:', error);
@@ -41,6 +54,39 @@ export const useMarketplace = () => {
 
       console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
       
+      // Fetch creator info for all items
+      const creatorIds = [...new Set((marketplaceData || []).map((item: any) => item.creator_id))];
+      const { data: creators } = await supabase
+        .from('profiles')
+        .select('user_id, store_name')
+        .in('user_id', creatorIds);
+      
+      const creatorMap = new Map(creators?.map(c => [c.user_id, c.store_name]) || []);
+
+      // Determine content types by checking files
+      const contentTypesMap = new Map<string, string>();
+      for (const item of marketplaceData || []) {
+        const { data: files } = await supabase
+          .from('content_files')
+          .select('file_type, file_format')
+          .eq('submission_id', item.id)
+          .eq('is_original', true)
+          .limit(1)
+          .single();
+        
+        let contentType = 'photo';
+        if (files) {
+          const fileType = files.file_type?.toLowerCase() || '';
+          const fileFormat = files.file_format?.toLowerCase() || '';
+          
+          if (fileType.includes('video')) contentType = 'video';
+          else if (fileType.includes('audio')) contentType = 'audio';
+          else if (fileType === 'document' || fileFormat === 'application/pdf') contentType = 'document';
+          else if (fileType.includes('vector') || fileFormat === 'svg') contentType = 'illustration';
+        }
+        contentTypesMap.set(item.id, contentType);
+      }
+
       // Fetch content files for each submission to get URLs
       const contentWithFiles = await Promise.all(
         (marketplaceData || []).map(async (item: any, index: number) => {
@@ -144,32 +190,34 @@ export const useMarketplace = () => {
           }
 
           // Map content types including PDFs
+          const detectedType = contentTypesMap.get(item.id) || 'photo';
           let contentType: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook' = 'photo';
           
           // Explicit mapping for all content types
-          if (item.content_type === 'video') {
+          if (detectedType === 'video') {
             contentType = 'video';
-          } else if (item.content_type === 'audio') {
+          } else if (detectedType === 'audio') {
             contentType = 'audio';
-          } else if (item.content_type === 'illustration') {
+          } else if (detectedType === 'illustration') {
             contentType = 'illustration';
-          } else if (item.content_type === 'document' || item.content_type === 'pdf') {
+          } else if (detectedType === 'document') {
             contentType = 'ebook';
-          } else if (item.content_type === 'photo' || item.content_type === 'image') {
+          } else {
             contentType = 'photo';
           }
           
-          console.log(`📊 Content type mapping: ${item.content_type} → ${contentType} for "${item.title}"`);
+          console.log(`📊 Content type mapping: ${detectedType} → ${contentType} for "${item.title}"`);
 
           const contentItem: MarketplaceContent = {
             id: item.id,
+            slug: item.slug,
             title: item.title || 'Untitled',
-            author: item.creator_store_name || 'Boutique anonyme',
+            author: creatorMap.get(item.creator_id) || 'Boutique anonyme',
             price: item.price || 0,
             type: contentType,
             thumbnail: thumbnailUrl,
-            videoUrl: item.content_type === 'video' ? mediaUrl : undefined,
-            audioUrl: item.content_type === 'audio' ? mediaUrl : undefined,
+            videoUrl: contentType === 'video' ? mediaUrl : undefined,
+            audioUrl: contentType === 'audio' ? mediaUrl : undefined,
             coverUrl: coverUrl || (contentType === 'ebook' ? thumbnailUrl : undefined),
             likes: Math.floor(Math.random() * 2000), // Would need to implement likes system
             downloads: Math.floor(Math.random() * 1000), // Would need to implement download tracking
