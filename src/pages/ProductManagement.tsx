@@ -8,13 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, Sparkles, Zap, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
-import { useAIMetadata } from "@/hooks/useAIMetadata";
 import { supabase } from '@/integrations/supabase/client';
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import AudioPlayer from 'react-h5-audio-player';
@@ -49,17 +48,14 @@ const ProductManagement = () => {
   const { 
     saveProductDraft, 
     publishProduct, 
-    generateProductMetadata,
     loading 
   } = useProductManager();
-  const { generateBatchMetadata, loading: batchAILoading } = useAIMetadata();
   
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [productsData, setProductsData] = useState<Record<string, ProductData>>({});
   const [previewFile, setPreviewFile] = useState<UploadedFileData | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [aiAutoGenerate, setAiAutoGenerate] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   
@@ -175,46 +171,6 @@ const ProductManagement = () => {
       
       setProductsData(initialData);
       
-      // Auto-generate AI metadata if enabled (only for new uploads, not edits)
-      if (!editingData && aiAutoGenerate && files.length > 0) {
-        // Check if AI auto-generation is enabled globally
-        setTimeout(async () => {
-          try {
-            const { data: platformSettings } = await supabase
-              .from('platform_settings')
-              .select('ai_auto_generate_enabled')
-              .single();
-
-            if (platformSettings?.ai_auto_generate_enabled) {
-              const requests = files.map((file: UploadedFileData) => ({
-                fileName: file.name,
-                fileType: file.type,
-                language: 'fr' as const
-              }));
-
-              const results = await generateBatchMetadata(requests);
-              
-              results.forEach((metadata, index) => {
-                if (metadata) {
-                  const file = files[index];
-                  setProductsData(prev => ({
-                    ...prev,
-                    [file.id]: {
-                      ...prev[file.id],
-                      title: metadata.title,
-                      description: metadata.description,
-                      tags: metadata.tags
-                    }
-                  }));
-                }
-              });
-            }
-          } catch (error) {
-            console.error('Error checking AI settings:', error);
-          }
-        }, 1000); // Small delay to let UI render first
-      }
-      
       // Select first file by default
       if (files.length > 0) {
         setSelectedFileId(files[0].id);
@@ -227,7 +183,7 @@ const ProductManagement = () => {
       toast.error("Aucun fichier trouvé. Veuillez d'abord uploader vos fichiers.");
       navigate('/file-upload');
     }
-  }, [categories, navigate, aiAutoGenerate, generateBatchMetadata]);
+  }, [categories, navigate]);
 
   const selectedFile = uploadedFiles.find(f => f.id === selectedFileId);
   const selectedProductData = selectedFileId ? productsData[selectedFileId] : null;
@@ -275,45 +231,6 @@ const ProductManagement = () => {
         tags: productData.tags.filter(t => t !== tag)
       });
     }
-  };
-
-  const handleGenerateAIMetadata = async (fileId: string) => {
-    const file = uploadedFiles.find(f => f.id === fileId);
-    const currentData = productsData[fileId];
-    
-    if (!file) return;
-
-    const metadata = await generateProductMetadata(file, currentData?.description);
-    
-    if (metadata) {
-      updateProductData(fileId, {
-        title: metadata.title,
-        description: metadata.description,
-        tags: metadata.tags
-      });
-    }
-  };
-
-  const handleBatchGenerateAI = async () => {
-    const requests = uploadedFiles.map(file => ({
-      fileName: file.name,
-      fileType: file.type,
-      sellerDescription: productsData[file.id]?.description,
-      language: 'fr' as const
-    }));
-
-    const results = await generateBatchMetadata(requests);
-    
-    results.forEach((metadata, index) => {
-      if (metadata) {
-        const file = uploadedFiles[index];
-        updateProductData(file.id, {
-          title: metadata.title,
-          description: metadata.description,
-          tags: metadata.tags
-        });
-      }
-    });
   };
 
   const handleSaveDraft = async (fileId: string) => {
@@ -733,10 +650,9 @@ const ProductManagement = () => {
                       productData={selectedProductData}
                       categories={categories}
                       onUpdateProductData={(updates) => updateProductData(selectedFileId!, updates)}
-                      onGenerateAI={() => handleGenerateAIMetadata(selectedFileId!)}
                       onSaveDraft={() => handleSaveDraft(selectedFileId!)}
                       onPublish={() => handlePublish(selectedFileId!)}
-                      loading={loading || batchAILoading}
+                      loading={loading}
                     />
                   ) : (
                     /* Formulaire standard pour les autres types de fichiers */
@@ -768,20 +684,8 @@ const ProductManagement = () => {
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Label htmlFor="title">Titre *</Label>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleGenerateAIMetadata(selectedFileId!)}
-                              disabled={loading || batchAILoading}
-                              className="h-6 px-2 text-xs"
-                            >
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              IA
-                            </Button>
-                          </div>
-                          <Input 
+                          <Label htmlFor="title">Titre *</Label>
+                          <Input
                             id="title"
                             value={selectedProductData.title}
                             onChange={(e) => updateProductData(selectedFileId!, { title: e.target.value })}
@@ -812,9 +716,6 @@ const ProductManagement = () => {
                             rows={4}
                             required
                           />
-                          <p className="text-xs text-muted-foreground">
-                            💡 Conseil: Une description détaillée améliore la génération IA des métadonnées
-                          </p>
                         </div>
                        
                         <div className="md:col-span-2">
@@ -901,18 +802,6 @@ const ProductManagement = () => {
                 <p className="text-sm text-muted-foreground">
                   {readyToPublish} produit(s) prêt(s) à publier
                 </p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <input
-                    type="checkbox"
-                    id="ai-auto-generate"
-                    checked={aiAutoGenerate}
-                    onChange={(e) => setAiAutoGenerate(e.target.checked)}
-                    className="rounded"
-                  />
-                  <Label htmlFor="ai-auto-generate" className="text-sm">
-                    Génération IA automatique
-                  </Label>
-                </div>
               </div>
               
               <div className="flex space-x-4">
@@ -925,15 +814,6 @@ const ProductManagement = () => {
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   {isEditMode ? 'Annuler les modifications' : 'Retour aux uploads'}
-                </Button>
-                
-                <Button 
-                  onClick={handleBatchGenerateAI}
-                  disabled={loading || batchAILoading || uploadedFiles.length === 0}
-                  variant="outline"
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Générer tout avec IA
                 </Button>
                 
                 {!isEditMode && (

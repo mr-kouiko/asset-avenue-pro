@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X, Image, FileText, Sparkles } from "lucide-react";
+import { Upload, X, Image, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,7 +28,7 @@ interface EbookFormProps {
   };
   categories: Array<{ id: string; name: string; }>;
   onUpdateProductData: (updates: any) => void;
-  onGenerateAI: () => void;
+  onGenerateAI?: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
   loading?: boolean;
@@ -168,16 +168,6 @@ export const EbookForm = ({
           <p className="text-sm text-muted-foreground">{fileData.name}</p>
           <p className="text-xs text-muted-foreground">{formatFileSize(fileData.size)}</p>
         </div>
-
-        <Button 
-          onClick={onGenerateAI} 
-          disabled={loading}
-          variant="outline"
-          size="sm"
-        >
-          <Sparkles className="h-4 w-4 mr-2" />
-          Générer avec IA
-        </Button>
       </div>
 
       {/* Upload de couverture - Obligatoire */}
