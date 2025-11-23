@@ -11,7 +11,7 @@ import { Camera, Video, Music, Palette, Zap, Shield, Globe, Heart } from "lucide
 import { Link } from "react-router-dom";
 
 const IndexEN = () => {
-  const { content, loading } = useMarketplace();
+  const { content, loading } = useMarketplace(6);
   const { stats } = useContentStats();
 
   // Get first 6 items for featured section
