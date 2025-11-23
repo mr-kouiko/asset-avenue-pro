@@ -12,6 +12,7 @@ interface WatermarkedVideoThumbnailProps {
 /**
  * Static watermarked thumbnail for video previews in listings
  * Adds hover auto-play preview of the actual video
+ * Optimized: video element only mounted on hover to save bandwidth
  */
 export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = ({
   thumbnail,
@@ -21,7 +22,6 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
-  const [playError, setPlayError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -50,42 +50,20 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     thumbnail !== '/placeholder.svg' && 
     !thumbnail.includes('placeholder');
 
-  const shouldUseCrossOrigin = React.useMemo(() => {
-    if (!videoUrl) return false;
-    try {
-      const host = new URL(videoUrl).hostname;
-      // Only use CORS for Supabase-hosted assets; omit for external CDN to avoid blocked requests
-      return host.includes('supabase.co');
-    } catch {
-      return false;
-    }
-  }, [videoUrl]);
-
+  // Auto-play video on hover
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    
     if (isHovered && videoUrl) {
-      console.log('[HoverPreview] mouseenter, trying to play', { src: videoUrl });
       v.muted = true;
-      const playPromise = v.play();
-      if (playPromise && typeof playPromise.then === 'function') {
-        playPromise
-          .then(() => {
-            console.log('[HoverPreview] play() resolved');
-            setIsVideoReady(true);
-          })
-            .catch((err) => {
-              console.warn('[HoverPreview] play() failed', err);
-              setIsVideoReady(false);
-              setPlayError(err instanceof Error ? err.message : 'play_failed');
-            });
-      }
+      v.play()
+        .then(() => setIsVideoReady(true))
+        .catch((err) => console.warn('[HoverPreview] play failed', err));
     } else {
-      try { v.pause(); } catch {}
-      try { v.currentTime = 0; } catch {}
-      console.log('[HoverPreview] mouseleave, paused and reset');
+      v.pause();
+      v.currentTime = 0;
       setIsVideoReady(false);
-      setPlayError(null);
     }
   }, [isHovered, videoUrl]);
 
@@ -94,7 +72,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       ref={containerRef}
       className={`relative ${className}`}
       onMouseEnter={() => videoUrl && setIsHovered(true)}
-      onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); setPlayError(null); }}
+      onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); }}
     >
       {/* Loading skeleton */}
       {!isVisible && (
@@ -103,30 +81,19 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       
       {isVisible && (
         <>
-      {/* Video preview on hover */}
+      {/* Video preview on hover - only mounted when hovering */}
       {isHovered && videoUrl && (
         <video
-          key={videoUrl}
           ref={videoRef}
-          className={`absolute inset-0 z-10 w-full h-full object-cover transition-opacity duration-200 ${
+          className={`absolute inset-0 z-10 w-full h-full object-cover transition-opacity duration-300 ${
             isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
           src={videoUrl}
-          poster={thumbnail}
           muted
           loop
-          autoPlay
           playsInline
-          preload="metadata"
-          crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
-          onLoadedData={() => { console.log('[HoverPreview] loadeddata'); setIsVideoReady(true); }}
-          onLoadedMetadata={() => {
-            console.log('[HoverPreview] loadedmetadata');
-            try { if (videoRef.current && videoRef.current.currentTime === 0) videoRef.current.currentTime = 0.05; } catch {}
-          }}
-          onCanPlay={() => { console.log('[HoverPreview] canplay'); setIsVideoReady(true); }}
-          onPlay={() => console.log('[HoverPreview] playing')}
-          onError={(e) => { console.error('[HoverPreview] video error', e); setIsVideoReady(false); setPlayError('video_error'); }}
+          preload="none"
+          onCanPlay={() => setIsVideoReady(true)}
         />
       )}
       
@@ -163,28 +130,6 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       <div className="pointer-events-none">
         <VideoWatermark size="thumbnail" />
       </div>
-      
-      {/* Fallback CTA when autoplay fails */}
-      {playError && videoUrl && (
-        <button
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 text-white text-xs font-medium"
-          onClick={(e) => {
-            e.stopPropagation();
-            setPlayError(null);
-            const v = videoRef.current;
-            if (v) {
-              v.muted = true;
-              v.play().then(() => setIsVideoReady(true)).catch((err) => {
-                console.warn('[HoverPreview] manual play failed', err);
-                setPlayError('play_failed');
-              });
-            }
-          }}
-          aria-label="Lancer l’aperçu vidéo"
-        >
-          Cliquer pour lancer l’aperçu
-        </button>
-      )}
       
       {/* Video play indicator */}
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
