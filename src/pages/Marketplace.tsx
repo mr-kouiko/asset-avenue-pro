@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
@@ -37,11 +36,7 @@ const Marketplace = () => {
     { value: "all", label: "Toutes les catégories", count: "0" }
   ]);
   const [searchParams] = useSearchParams();
-  const { content: marketplaceContent, loading } = useMarketplace();
-  
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const { content: marketplaceContent, loading, hasMore, loadMore } = useMarketplace();
   
   // Audio filter states
   const [isAudioFilterOpen, setIsAudioFilterOpen] = useState(false);
@@ -62,10 +57,7 @@ const Marketplace = () => {
     if (searchParam) {
       setSearchQuery(searchParam);
     }
-    
-    // Reset to page 1 when filters change
-    setCurrentPage(1);
-  }, [searchParams, selectedCategory, searchQuery, sortBy]);
+  }, [searchParams]);
 
   // Récupérer les catégories depuis la base
   useEffect(() => {
@@ -389,85 +381,22 @@ const Marketplace = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {sortedContent
-                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                .map((content) => (
-                  <ContentCard key={content.id} {...content} />
-                ))}
+              {sortedContent.map((content) => (
+                <ContentCard key={content.id} {...content} />
+              ))}
             </div>
 
-            {/* Pagination - Only show if more than one page */}
-            {Math.ceil(sortedContent.length / itemsPerPage) > 1 && (
+            {/* Load More Button */}
+            {hasMore && (
               <div className="flex justify-center mt-12">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage > 1) {
-                            setCurrentPage(currentPage - 1);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }
-                        }}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                      />
-                    </PaginationItem>
-
-                    {Array.from({ length: Math.ceil(sortedContent.length / itemsPerPage) }, (_, i) => i + 1).map((page) => {
-                      const totalPages = Math.ceil(sortedContent.length / itemsPerPage);
-                      
-                      // Show first page, last page, current page, and pages around current
-                      if (
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setCurrentPage(page);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }}
-                              isActive={currentPage === page}
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      } else if (page === currentPage - 2 || page === currentPage + 2) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        );
-                      }
-                      return null;
-                    })}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage < Math.ceil(sortedContent.length / itemsPerPage)) {
-                            setCurrentPage(currentPage + 1);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }
-                        }}
-                        className={
-                          currentPage === Math.ceil(sortedContent.length / itemsPerPage)
-                            ? 'pointer-events-none opacity-50'
-                            : ''
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                <Button
+                  onClick={loadMore}
+                  disabled={loading}
+                  size="lg"
+                  variant="outline"
+                >
+                  {loading ? 'Chargement...' : 'Charger plus de contenu'}
+                </Button>
               </div>
             )}
           </>

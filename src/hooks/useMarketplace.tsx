@@ -23,15 +23,18 @@ export interface MarketplaceContent {
   original_language?: string; // Original language of the content
 }
 
-export const useMarketplace = () => {
+export const useMarketplace = (initialLimit = 50) => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
 
-  const fetchMarketplaceContent = async () => {
+  const fetchMarketplaceContent = async (reset = false) => {
     try {
       setLoading(true);
+      const currentOffset = reset ? 0 : offset;
       
-      // Fetch marketplace content with slugs
+      // Fetch marketplace content with slugs - LIMITED to 50 items
       const { data: marketplaceData, error } = await supabase
         .from('content_submissions')
         .select(`
@@ -45,13 +48,18 @@ export const useMarketplace = () => {
           slug,
           creator_id
         `)
-        .eq('status', 'approved');
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .range(currentOffset, currentOffset + initialLimit - 1);
 
       if (error) {
         console.error('Error fetching marketplace content:', error);
         return;
       }
 
+      // Check if there are more items to load
+      setHasMore(marketplaceData && marketplaceData.length === initialLimit);
+      
       console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
       
       // Fetch creator info for all items
@@ -238,10 +246,14 @@ export const useMarketplace = () => {
         })
       );
 
-      // Randomize the order of content for the homepage
-      const shuffledContent = [...contentWithFiles].sort(() => Math.random() - 0.5);
-
-      setContent(shuffledContent);
+      // If resetting, replace content; otherwise append
+      if (reset) {
+        setContent(contentWithFiles);
+        setOffset(initialLimit);
+      } else {
+        setContent(prev => [...prev, ...contentWithFiles]);
+        setOffset(prev => prev + initialLimit);
+      }
     } catch (error) {
       console.error('Error in fetchMarketplaceContent:', error);
     } finally {
@@ -249,13 +261,20 @@ export const useMarketplace = () => {
     }
   };
 
+  const loadMore = () => {
+    if (!loading && hasMore) {
+      fetchMarketplaceContent(false);
+    }
+  };
+
   useEffect(() => {
-    fetchMarketplaceContent();
+    fetchMarketplaceContent(true);
     
     // Listen for marketplace refresh events
     const handleRefresh = () => {
       console.log('Refreshing marketplace content after deletion');
-      fetchMarketplaceContent();
+      setOffset(0);
+      fetchMarketplaceContent(true);
     };
     
     window.addEventListener('refreshMarketplace', handleRefresh);
@@ -268,6 +287,8 @@ export const useMarketplace = () => {
   return {
     content,
     loading,
-    refreshContent: fetchMarketplaceContent
+    hasMore,
+    loadMore,
+    refreshContent: () => fetchMarketplaceContent(true)
   };
 };
