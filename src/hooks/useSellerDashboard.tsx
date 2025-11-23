@@ -559,8 +559,9 @@ export const useSellerDashboard = () => {
       // Step 3: Update stats and trigger refresh events
       toast.success(`Contenu "${submission.title}" supprimé définitivement`);
       
-      // Update stats immediately
+      // Update stats and submissions list immediately
       await fetchStats();
+      await fetchSubmissions();
 
       // Trigger global refresh events for other components
       try {
