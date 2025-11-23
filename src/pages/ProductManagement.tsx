@@ -366,7 +366,7 @@ const ProductManagement = () => {
         if (error.code === 'PGRST116') {
           toast.error('Product not found or you do not have permission to edit it');
         } else {
-          toast.error(`Erreur: ${error.message}`);
+          toast.error(`Error: ${error.message}`);
         }
         return;
       }
@@ -488,7 +488,7 @@ const ProductManagement = () => {
           
           if (error) {
             console.error('Error generating signed URL:', error);
-            toast.error('Erreur lors de la génération de l\'URL d\'aperçu');
+            toast.error('Error generating preview URL');
           } else if (data?.signedUrl) {
             console.log('✅ Signed URL generated:', data.signedUrl);
             setPreviewFile({ ...file, previewUrl: data.signedUrl });
@@ -521,7 +521,7 @@ const ProductManagement = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="Cette page est réservée aux vendeurs."
+      fallbackMessage="This page is reserved for sellers."
     >
       <div className="min-h-screen bg-background">
         <Header />
@@ -535,17 +535,17 @@ const ProductManagement = () => {
                 className="flex items-center space-x-1 hover:text-primary transition-colors"
               >
                 <span className="px-3 py-1 rounded-full bg-muted">1</span>
-                <span>Upload des fichiers</span>
+                <span>File Upload</span>
               </Link>
               <ArrowRight className="h-4 w-4" />
               <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">2</span>
-              <span>Gestion des produits</span>
+              <span>Product Management</span>
             </div>
             
-            <h1 className="text-3xl font-bold mb-2">Gérer vos produits</h1>
+            <h1 className="text-3xl font-bold mb-2">Manage your products</h1>
             <p className="text-muted-foreground">
-              Configurez individuellement chaque produit avec ses métadonnées. 
-              Progression: {completedProducts}/{uploadedFiles.length} produits configurés
+              Configure each product individually with its metadata. 
+              Progress: {completedProducts}/{uploadedFiles.length} products configured
             </p>
           </div>
 
@@ -553,7 +553,7 @@ const ProductManagement = () => {
             {/* Left Panel - File List */}
             <Card className="lg:col-span-1 p-4">
               <h3 className="font-semibold mb-4">
-                Fichiers uploadés ({uploadedFiles.length})
+                Uploaded Files ({uploadedFiles.length})
               </h3>
               
               <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -624,14 +624,14 @@ const ProductManagement = () => {
                              <Eye className="h-4 w-4" />
                            </Button>
                            
-                           <div className="flex flex-col items-end space-y-1">
-                             {productData?.status === 'published' && (
-                               <Badge className="text-xs">Publié</Badge>
-                             )}
-                             {productData?.status === 'draft' && productData.title && (
-                               <Badge variant="outline" className="text-xs">Brouillon</Badge>
-                             )}
-                           </div>
+                            <div className="flex flex-col items-end space-y-1">
+                              {productData?.status === 'published' && (
+                                <Badge className="text-xs">Published</Badge>
+                              )}
+                              {productData?.status === 'draft' && productData.title && (
+                                <Badge variant="outline" className="text-xs">Draft</Badge>
+                              )}
+                            </div>
                          </div>
                        </div>
                     </div>
@@ -675,7 +675,7 @@ const ProductManagement = () => {
                         )}
                         <div>
                           <h3 className="text-xl font-semibold">
-                            Configuration du produit
+                            Product Configuration
                           </h3>
                           <p className="text-sm text-muted-foreground">
                             {selectedFile.name} • {formatFileSize(selectedFile.size)}
@@ -685,24 +685,24 @@ const ProductManagement = () => {
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="title">Titre *</Label>
+                          <Label htmlFor="title">Title *</Label>
                           <Input
                             id="title"
                             value={selectedProductData.title}
                             onChange={(e) => updateProductData(selectedFileId!, { title: e.target.value })}
-                            placeholder="Titre de votre création"
+                            placeholder="Title of your creation"
                             required
                           />
                         </div>
                        
                         <div>
-                          <Label>Catégorie</Label>
+                          <Label>Category</Label>
                           <div className="flex items-center space-x-2 h-10 px-3 border rounded-md bg-muted/50">
                             <Badge variant="secondary">
-                              {categories.find(c => c.id === selectedProductData.category)?.name || 'Détectée automatiquement'}
+                              {categories.find(c => c.id === selectedProductData.category)?.name || 'Auto-detected'}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              (Basée sur le type de fichier)
+                              (Based on file type)
                             </span>
                           </div>
                         </div>
@@ -713,7 +713,7 @@ const ProductManagement = () => {
                             id="description"
                             value={selectedProductData.description}
                             onChange={(e) => updateProductData(selectedFileId!, { description: e.target.value })}
-                            placeholder="Décrivez votre création..."
+                            placeholder="Describe your creation..."
                             rows={4}
                             required
                           />
@@ -725,7 +725,7 @@ const ProductManagement = () => {
                             <Input 
                               value={selectedProductData.currentTag}
                               onChange={(e) => handleTagInputChange(selectedFileId!, e.target.value)}
-                              placeholder="Séparez les tags par virgule, point-virgule ou Entrée"
+                              placeholder="Separate tags by comma, semicolon or Enter"
                               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(selectedFileId!))}
                             />
                             <Button 
@@ -761,7 +761,7 @@ const ProductManagement = () => {
                           disabled={loading}
                         >
                           <Save className="h-4 w-4 mr-2" />
-                          Sauvegarder brouillon
+                          Save draft
                         </Button>
                         
                         <Button 
@@ -771,12 +771,12 @@ const ProductManagement = () => {
                           {isEditMode ? (
                             <>
                               <Save className="h-4 w-4 mr-2" />
-                              Mettre à jour le produit
+                              Update product
                             </>
                           ) : (
                             <>
                               <Eye className="h-4 w-4 mr-2" />
-                              Publier ce produit
+                              Publish this product
                             </>
                           )}
                         </Button>
@@ -788,7 +788,7 @@ const ProductManagement = () => {
                 <div className="text-center py-12">
                   <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Sélectionnez un fichier pour configurer le produit
+                    Select a file to configure the product
                   </p>
                 </div>
               )}
@@ -799,9 +799,9 @@ const ProductManagement = () => {
           <Card className="mt-6 p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="font-semibold">Actions globales</h3>
+                <h3 className="font-semibold">Global Actions</h3>
                 <p className="text-sm text-muted-foreground">
-                  {readyToPublish} produit(s) prêt(s) à publier
+                  {readyToPublish} product(s) ready to publish
                 </p>
               </div>
               
@@ -814,7 +814,7 @@ const ProductManagement = () => {
                   }}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {isEditMode ? 'Annuler les modifications' : 'Retour aux uploads'}
+                  {isEditMode ? 'Cancel changes' : 'Back to uploads'}
                 </Button>
                 
                 {!isEditMode && (
@@ -824,12 +824,12 @@ const ProductManagement = () => {
                     size="lg"
                   >
                     <Upload className="h-4 w-4 mr-2" />
-                    Publier tous les produits prêts ({readyToPublish})
+                    Publish all ready products ({readyToPublish})
                   </Button>
                 )}
                 
                 <Button variant="outline" asChild>
-                  <Link to="/seller-dashboard">Aller au tableau de bord</Link>
+                  <Link to="/seller-dashboard">Go to dashboard</Link>
                 </Button>
               </div>
             </div>
@@ -847,7 +847,7 @@ const ProductManagement = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Aperçu - {previewFile.name}</h3>
+                <h3 className="text-lg font-semibold">Preview - {previewFile.name}</h3>
                 <Button variant="ghost" size="sm" onClick={closePreview}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -900,7 +900,7 @@ const ProductManagement = () => {
               
               <div className="mt-4 p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  Taille: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
+                  Size: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
                 </p>
               </div>
             </div>
