@@ -22,7 +22,28 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Lazy loading with Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   // Check if thumbnail is missing or is placeholder
   const hasValidThumbnail = thumbnail && 
@@ -70,10 +91,18 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
 
   return (
     <div 
+      ref={containerRef}
       className={`relative ${className}`}
       onMouseEnter={() => videoUrl && setIsHovered(true)}
       onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); setPlayError(null); }}
     >
+      {/* Loading skeleton */}
+      {!isVisible && (
+        <div className="absolute inset-0 bg-muted animate-pulse" />
+      )}
+      
+      {isVisible && (
+        <>
       {/* Video preview on hover */}
       {isHovered && videoUrl && (
         <video
@@ -161,6 +190,8 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
         Vidéo
       </div>
+      </>
+      )}
     </div>
   );
 };
