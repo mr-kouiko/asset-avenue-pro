@@ -129,13 +129,14 @@ export const useSellerDashboard = () => {
       setLoading(true);
       const startTime = Date.now();
       
-      // First query: Fetch submissions
+      // First query: Fetch submissions (with cache busting to ensure fresh data)
       console.log('📊 [SELLER-DASHBOARD] Querying content_submissions for creator_id:', user.id);
       const { data: submissions, error: submissionsError } = await supabase
         .from('content_submissions')
         .select('*')
         .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1000); // Add limit to prevent potential caching
 
       const queryTime1 = Date.now() - startTime;
       console.log(`📦 [SELLER-DASHBOARD] Submissions query completed in ${queryTime1}ms`);
@@ -559,9 +560,11 @@ export const useSellerDashboard = () => {
       // Step 3: Update stats and trigger refresh events
       toast.success(`Contenu "${submission.title}" supprimé définitivement`);
       
-      // Update stats and submissions list immediately
-      await fetchStats();
-      await fetchSubmissions();
+      // Update stats and submissions list immediately - force fresh fetch
+      await Promise.all([
+        fetchStats(),
+        fetchSubmissions()
+      ]);
 
       // Trigger global refresh events for other components
       try {

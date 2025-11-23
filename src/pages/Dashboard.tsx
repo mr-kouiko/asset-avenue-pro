@@ -682,9 +682,9 @@ const Dashboard = () => {
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => {
+                                onClick={async () => {
                                   if (window.confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
-                                    deleteSubmission(submission.id);
+                                    await deleteSubmission(submission.id);
                                   }
                                 }}
                                 className="text-red-600"
