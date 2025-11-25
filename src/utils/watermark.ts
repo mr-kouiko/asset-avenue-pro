@@ -352,53 +352,8 @@ export const createWebPreviewWithWatermark = async (
 // Default watermark logo from Supabase storage
 const DEFAULT_LOGO_URL = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
 
-// Helper function to create placeholder thumbnail for unsupported video formats
-const createVideoPlaceholderThumbnail = (
-  canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
-  videoFileName: string
-): void => {
-  // Set canvas size
-  canvas.width = 400;
-  canvas.height = 225; // 16:9 aspect ratio
-  
-  // Draw gradient background
-  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  gradient.addColorStop(0, 'rgba(59, 130, 246, 0.1)'); // stock-blue/10
-  gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)'); // stock-blue/20
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // Draw video icon (Film icon approximation)
-  ctx.fillStyle = 'rgba(59, 130, 246, 0.6)'; // stock-blue/60
-  const iconSize = 48;
-  const iconX = (canvas.width - iconSize) / 2;
-  const iconY = (canvas.height - iconSize) / 2 - 20;
-  
-  // Simple film strip icon
-  ctx.fillRect(iconX, iconY, iconSize, iconSize * 0.75);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-  ctx.fillRect(iconX + 8, iconY + 6, iconSize - 16, iconSize * 0.75 - 12);
-  
-  // Draw text
-  ctx.fillStyle = 'rgba(17, 24, 39, 0.7)'; // stock-dark/70
-  ctx.font = 'bold 14px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Aperçu vidéo', canvas.width / 2, iconY + iconSize * 0.75 + 30);
-  
-  // Draw filename hint (truncated if too long)
-  ctx.font = '12px sans-serif';
-  ctx.fillStyle = 'rgba(17, 24, 39, 0.5)';
-  const maxFileNameLength = 30;
-  const displayName = videoFileName.length > maxFileNameLength 
-    ? videoFileName.substring(0, maxFileNameLength) + '...' 
-    : videoFileName;
-  ctx.fillText(displayName, canvas.width / 2, iconY + iconSize * 0.75 + 50);
-};
-
 // Generate video thumbnail by extracting frame at 1 second
 // Returns clean thumbnail WITHOUT watermark - watermark is added by VideoWatermark component
-// Falls back to placeholder thumbnail for unsupported formats like .mov
 export const generateVideoThumbnail = async (
   videoFile: File,
   options: ThumbnailOptions = {}
@@ -419,23 +374,15 @@ export const generateVideoThumbnail = async (
       return;
     }
     
-    // Timeout for video loading (5 seconds)
+    // Extended timeout for .mov files (15 seconds) as they may take longer to decode
+    const isMov = videoFile.name.toLowerCase().endsWith('.mov');
+    const timeout = isMov ? 15000 : 8000;
+    
     const loadTimeout = setTimeout(() => {
-      console.warn(`Video loading timeout for ${videoFile.name}, creating placeholder thumbnail`);
+      console.error(`Video loading timeout for ${videoFile.name} after ${timeout}ms`);
       URL.revokeObjectURL(video.src);
-      
-      // Create placeholder thumbnail
-      createVideoPlaceholderThumbnail(canvas, ctx, videoFile.name);
-      
-      // Convert placeholder to blob
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to create placeholder thumbnail'));
-        }
-      }, format, quality);
-    }, 5000);
+      reject(new Error('Video loading timeout - try converting to MP4 format for better compatibility'));
+    }, timeout);
     
     video.onloadedmetadata = () => {
       clearTimeout(loadTimeout);
@@ -472,24 +419,20 @@ export const generateVideoThumbnail = async (
     
     video.onerror = (e) => {
       clearTimeout(loadTimeout);
-      console.warn(`Video loading failed for ${videoFile.name}, creating placeholder thumbnail:`, e);
+      console.error('Video thumbnail generation error:', e);
       URL.revokeObjectURL(video.src);
-      
-      // Create placeholder thumbnail instead of rejecting
-      createVideoPlaceholderThumbnail(canvas, ctx, videoFile.name);
-      
-      // Convert placeholder to blob
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to create placeholder thumbnail'));
-        }
-      }, format, quality);
+      reject(new Error('Failed to load video for thumbnail - file may be corrupted or in unsupported format'));
     };
     
     // Create object URL and load video
-    video.src = URL.createObjectURL(videoFile);
+    const videoUrl = URL.createObjectURL(videoFile);
+    video.src = videoUrl;
+    
+    // For .mov files, log for debugging
+    if (isMov) {
+      console.log(`Loading .mov file for thumbnail extraction: ${videoFile.name}`);
+    }
+    
     video.load();
   });
 };
