@@ -170,11 +170,18 @@ const FileUpload = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {uploadedFiles.slice(0, 6).map((file) => (
                     <div key={file.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
-                      {file.previewUrl && file.type.startsWith('image/') ? (
+                      {file.type.startsWith('image/') && file.previewUrl ? (
                         <img 
                           src={file.previewUrl} 
                           alt={file.name}
                           className="w-12 h-12 object-cover rounded"
+                        />
+                      ) : file.type.startsWith('video/') && (file.url || file.previewUrl) ? (
+                        <video 
+                          src={file.url || file.previewUrl} 
+                          className="w-12 h-12 object-cover rounded"
+                          muted
+                          playsInline
                         />
                       ) : (
                         <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center">
