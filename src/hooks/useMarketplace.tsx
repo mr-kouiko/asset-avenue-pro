@@ -272,8 +272,10 @@ export const useMarketplace = (initialLimit = 50) => {
     
     // Listen for marketplace refresh events
     const handleRefresh = () => {
-      console.log('Refreshing marketplace content after deletion');
+      console.log('🔄 [MARKETPLACE] Received refresh event - reloading content');
+      setContent([]); // Clear existing content immediately
       setOffset(0);
+      setHasMore(true);
       fetchMarketplaceContent(true);
     };
     
