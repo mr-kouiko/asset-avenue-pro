@@ -153,12 +153,8 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
   ): Promise<string> => {
     console.log(`Processing video: ${file.name}, MIME type: ${file.type}`);
     
-    // Support all common video formats
-    const supportedVideoFormats = [
-      'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 
-      'video/x-matroska', 'video/x-ms-wmv', 'video/x-flv', 'video/3gpp', 
-      'video/x-ms-asf', 'video/ogg'
-    ];
+    // Only MP4 videos are accepted
+    const supportedVideoFormats = ['video/mp4'];
     const videoMimeType = file.type || detectMimeType(file, file);
     
     if (!supportedVideoFormats.includes(videoMimeType)) {
