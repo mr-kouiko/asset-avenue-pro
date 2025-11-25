@@ -23,6 +23,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -101,23 +102,16 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       )}
       
       {/* Thumbnail image or video icon fallback */}
-      {hasValidThumbnail ? (
+      {!thumbnailError && hasValidThumbnail ? (
         <img
           src={thumbnail}
           alt={title}
           className={`w-full h-full object-cover transition-opacity duration-200 ${
             isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
           }`}
-          onError={(e) => {
-            // Replace with video icon on error
-            const parent = e.currentTarget.parentElement;
-            if (parent) {
-              e.currentTarget.style.display = 'none';
-              const fallback = document.createElement('div');
-              fallback.className = 'w-full h-full bg-gradient-to-br from-stock-blue/10 to-stock-blue/20 flex items-center justify-center';
-              fallback.innerHTML = '<div class="text-center"><svg class="h-12 w-12 mx-auto mb-2 text-stock-blue/60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg><span class="text-xs text-stock-dark/70 font-medium">Vidéo</span></div>';
-              parent.insertBefore(fallback, e.currentTarget);
-            }
+          onError={() => {
+            console.warn(`Thumbnail failed to load for ${title}, showing fallback`);
+            setThumbnailError(true);
           }}
         />
       ) : (
