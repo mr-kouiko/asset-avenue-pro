@@ -88,13 +88,16 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           className={`absolute inset-0 z-10 w-full h-full object-cover transition-opacity duration-300 ${
             isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
-          src={videoUrl}
           muted
           loop
           playsInline
           preload="none"
           onCanPlay={() => setIsVideoReady(true)}
-        />
+        >
+          <source src={videoUrl} type={videoUrl.endsWith('.mov') ? 'video/quicktime' : 'video/mp4'} />
+          {/* Fallback for .mov files - try as MP4 if QuickTime fails */}
+          {videoUrl.endsWith('.mov') && <source src={videoUrl} type="video/mp4" />}
+        </video>
       )}
       
       {/* Thumbnail image or video icon fallback */}
