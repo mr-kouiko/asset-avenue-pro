@@ -46,7 +46,8 @@ export const SimpleFileUpload = ({
 
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
-    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/ogg',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 
+    'video/x-ms-wmv', 'video/x-flv', 'video/3gpp', 'video/x-ms-asf', 'video/ogg',
     'audio/mpeg', // Only MP3 audio files allowed
     'application/pdf',
     'model/*'
