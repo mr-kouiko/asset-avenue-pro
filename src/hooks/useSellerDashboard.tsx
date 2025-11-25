@@ -566,8 +566,12 @@ export const useSellerDashboard = () => {
         fetchSubmissions()
       ]);
 
+      // Wait a moment to ensure database transaction is fully committed
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Trigger global refresh events for other components
       try {
+        console.log('🔄 Dispatching marketplace refresh event after deletion');
         // Refresh marketplace
         const marketplaceRefreshEvent = new CustomEvent('refreshMarketplace');
         window.dispatchEvent(marketplaceRefreshEvent);
@@ -583,7 +587,7 @@ export const useSellerDashboard = () => {
         console.log('Could not dispatch refresh events - continuing with normal flow');
       }
 
-      console.log('Deletion completed successfully');
+      console.log('✅ Deletion completed successfully and refresh events dispatched');
       return true;
     } catch (error) {
       console.error('Unexpected error during deletion:', error);
