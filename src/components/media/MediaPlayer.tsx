@@ -450,6 +450,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           controls={false}
         >
           <source src={src} type={mimeType} />
+          {/* Fallback for .mov files - try as MP4 if QuickTime fails */}
+          {mimeType === 'video/quicktime' && <source src={src} type="video/mp4" />}
         </video>
       ) : (
         <audio
