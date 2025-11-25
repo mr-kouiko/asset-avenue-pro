@@ -23,14 +23,15 @@ serve(async (req) => {
       }
     );
 
-    console.log('🔍 Fetching video files without thumbnails...');
+    console.log('🔍 Fetching video files without thumbnails or with broken thumbnails...');
 
-    // Find all video content_files that don't have thumbnails
+    // Find all video content_files that either:
+    // 1. Don't have thumbnails (thumbnail_path IS NULL)
+    // 2. Have thumbnail_path but file doesn't exist in storage (we'll check this)
     const { data: videoFiles, error: fetchError } = await supabaseClient
       .from('content_files')
       .select('*')
-      .eq('file_type', 'video')
-      .is('thumbnail_path', null);
+      .eq('file_type', 'video');
 
     if (fetchError) {
       throw new Error(`Failed to fetch video files: ${fetchError.message}`);
@@ -40,18 +41,60 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'No videos found without thumbnails',
+          message: 'No video files found',
           processed: 0
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`📹 Found ${videoFiles.length} video(s) without thumbnails`);
+    console.log(`📹 Found ${videoFiles.length} video file(s) to check`);
+
+    // Filter to only process videos that need thumbnails
+    const videosNeedingThumbnails = [];
+    for (const video of videoFiles) {
+      // Skip if no thumbnail_path
+      if (!video.thumbnail_path) {
+        videosNeedingThumbnails.push(video);
+        continue;
+      }
+      
+      // Check if thumbnail actually exists in storage
+      try {
+        const thumbnailPath = video.thumbnail_path.replace(/^https:\/\/[^\/]+\/storage\/v1\/object\/public\/thumbnails\//, '');
+        const { data: existsData, error: existsError } = await supabaseClient
+          .storage
+          .from('thumbnails')
+          .download(thumbnailPath);
+        
+        if (existsError || !existsData) {
+          console.log(`❌ Thumbnail missing for ${video.file_name}: ${video.thumbnail_path}`);
+          videosNeedingThumbnails.push(video);
+        }
+      } catch (e) {
+        // If check fails, assume thumbnail is missing
+        console.log(`⚠️ Could not verify thumbnail for ${video.file_name}, will regenerate`);
+        videosNeedingThumbnails.push(video);
+      }
+    }
+
+    if (videosNeedingThumbnails.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'All videos already have valid thumbnails',
+          checked: videoFiles.length,
+          processed: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`🔧 ${videosNeedingThumbnails.length} video(s) need thumbnail generation`);
 
     const results = [];
 
-    for (const videoFile of videoFiles) {
+    for (const videoFile of videosNeedingThumbnails) {
       try {
         console.log(`Processing video: ${videoFile.file_name}`);
 
@@ -62,44 +105,86 @@ serve(async (req) => {
         const fileName = pathParts[pathParts.length - 1];
         const fileId = fileName.split('_')[0];
 
-        // For now, we'll create a placeholder thumbnail path
-        // In a real implementation, you would:
-        // 1. Download the video
-        // 2. Extract a frame at 1 second
-        // 3. Upload the frame as a thumbnail
+        // Extract storage path from file_path (remove bucket prefix if present)
+        let storagePath = videoFile.file_path;
+        if (storagePath.startsWith('https://')) {
+          // Extract path from full URL
+          const url = new URL(storagePath);
+          const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/uploads\/(.+)/);
+          if (pathMatch) {
+            storagePath = pathMatch[1];
+          }
+        } else if (storagePath.startsWith('uploads/')) {
+          storagePath = storagePath.substring('uploads/'.length);
+        }
         
         const thumbnailPath = `${userId}/thumbnails/${fileId}_thumbnail.jpg`;
         
-        console.log(`📸 Thumbnail path will be: ${thumbnailPath}`);
+        console.log(`📸 Generating thumbnail for: ${videoFile.file_name}`);
+        console.log(`   Video path: ${storagePath}`);
+        console.log(`   Thumbnail path: ${thumbnailPath}`);
 
-        // Update the content_files record with the thumbnail path
-        const { error: updateError } = await supabaseClient
-          .from('content_files')
-          .update({ 
-            thumbnail_path: thumbnailPath,
-            metadata: {
-              ...videoFile.metadata,
-              thumbnail_generated: true,
-              thumbnail_generated_at: new Date().toISOString()
+        // Call the generate-video-thumbnail edge function
+        try {
+          const { data: thumbnailData, error: thumbnailError } = await supabaseClient.functions.invoke(
+            'generate-video-thumbnail',
+            {
+              body: {
+                videoPath: storagePath,
+                outputPath: thumbnailPath,
+                timeOffset: 1
+              }
             }
-          })
-          .eq('id', videoFile.id);
+          );
 
-        if (updateError) {
-          console.error(`Failed to update video ${videoFile.id}:`, updateError);
+          if (thumbnailError) {
+            throw new Error(`Thumbnail generation failed: ${thumbnailError.message}`);
+          }
+
+          if (!thumbnailData?.thumbnailUrl) {
+            throw new Error('No thumbnail URL returned');
+          }
+
+          console.log(`✅ Thumbnail generated: ${thumbnailData.thumbnailUrl}`);
+
+          // Update the content_files record with the actual thumbnail URL
+          const { error: updateError } = await supabaseClient
+            .from('content_files')
+            .update({ 
+              thumbnail_path: thumbnailData.thumbnailUrl,
+              metadata: {
+                ...(videoFile.metadata || {}),
+                thumbnail_generated: true,
+                thumbnail_generated_at: new Date().toISOString(),
+                thumbnail_method: 'ffmpeg_server_side'
+              }
+            })
+            .eq('id', videoFile.id);
+
+          if (updateError) {
+            console.error(`Failed to update video ${videoFile.id}:`, updateError);
+            results.push({
+              id: videoFile.id,
+              file_name: videoFile.file_name,
+              success: false,
+              error: updateError.message
+            });
+          } else {
+            console.log(`✅ Updated database for video ${videoFile.file_name}`);
+            results.push({
+              id: videoFile.id,
+              file_name: videoFile.file_name,
+              success: true,
+              thumbnail_url: thumbnailData.thumbnailUrl
+            });
+          }
+        } catch (thumbnailError) {
+          console.error(`Thumbnail generation error for ${videoFile.file_name}:`, thumbnailError);
           results.push({
             id: videoFile.id,
             file_name: videoFile.file_name,
             success: false,
-            error: updateError.message
-          });
-        } else {
-          console.log(`✅ Updated video ${videoFile.file_name} with thumbnail path`);
-          results.push({
-            id: videoFile.id,
-            file_name: videoFile.file_name,
-            success: true,
-            thumbnail_path: thumbnailPath
+            error: thumbnailError instanceof Error ? thumbnailError.message : 'Thumbnail generation failed'
           });
         }
       } catch (error) {
@@ -119,8 +204,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Processed ${videoFiles.length} videos. Success: ${successCount}, Failed: ${failCount}`,
-        processed: videoFiles.length,
+        message: `Processed ${videosNeedingThumbnails.length} videos. Success: ${successCount}, Failed: ${failCount}`,
+        checked: videoFiles.length,
+        processed: videosNeedingThumbnails.length,
         successful: successCount,
         failed: failCount,
         results

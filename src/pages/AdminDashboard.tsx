@@ -312,6 +312,54 @@ const AdminDashboard = () => {
                 </p>
               </CardContent>
             </Card>
+            
+            {/* Maintenance Tools */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Outils de maintenance
+                </CardTitle>
+                <CardDescription>
+                  Tâches de maintenance et réparation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium mb-1">Régénérer les miniatures vidéo</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Génère des miniatures pour toutes les vidéos qui n'en ont pas ou dont la miniature est invalide. 
+                      Utilise FFmpeg côté serveur pour extraire une vraie image de chaque vidéo.
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        toast.loading('Génération des miniatures en cours...');
+                        const { data, error } = await supabase.functions.invoke('backfill-video-thumbnails', {
+                          body: {}
+                        });
+                        
+                        if (error) throw error;
+                        
+                        toast.success(data.message || `${data.successful} miniature(s) générée(s) avec succès`);
+                        
+                        if (data.failed > 0) {
+                          toast.warning(`${data.failed} échec(s) de génération`);
+                        }
+                      } catch (error) {
+                        console.error('Error regenerating thumbnails:', error);
+                        toast.error('Erreur lors de la génération des miniatures');
+                      }
+                    }}
+                  >
+                    Régénérer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

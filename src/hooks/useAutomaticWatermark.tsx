@@ -271,16 +271,53 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           
           // Generate and upload thumbnail with watermark
           try {
-            const thumbnailBlob = await generateThumbnail(file, {
-              maxSize: 400,
-              quality: 0.8,
-              format: 'image/jpeg'
-            });
-            
-            const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.jpg`;
-            thumbnailUrl = await uploadToSupabase(thumbnailBlob, thumbnailPath, 'thumbnails', undefined, 'image/jpeg', (progress) => {
-              onProgress?.(fileId, 60 + progress * 0.2);
-            });
+            // For video files, try server-side thumbnail generation first (more reliable for .mov)
+            if (file.type.startsWith('video/')) {
+              console.log(`🎬 Generating server-side thumbnail for video: ${file.name}`);
+              
+              try {
+                const { data, error } = await supabase.functions.invoke('generate-video-thumbnail', {
+                  body: {
+                    videoPath: filePath,
+                    outputPath: `${user.id}/thumbnails/${fileId}_thumbnail.jpg`,
+                    timeOffset: 1
+                  }
+                });
+
+                if (error) throw error;
+                if (data?.thumbnailUrl) {
+                  thumbnailUrl = data.thumbnailUrl;
+                  console.log(`✅ Server-side thumbnail generated: ${thumbnailUrl}`);
+                } else {
+                  throw new Error('No thumbnail URL returned from server');
+                }
+              } catch (serverError) {
+                console.warn('Server-side thumbnail failed, trying browser fallback:', serverError);
+                // Fall through to browser-based thumbnail generation
+                const thumbnailBlob = await generateThumbnail(file, {
+                  maxSize: 400,
+                  quality: 0.8,
+                  format: 'image/jpeg'
+                });
+                
+                const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.jpg`;
+                thumbnailUrl = await uploadToSupabase(thumbnailBlob, thumbnailPath, 'thumbnails', undefined, 'image/jpeg', (progress) => {
+                  onProgress?.(fileId, 60 + progress * 0.2);
+                });
+              }
+            } else {
+              // For non-video files, use browser-based thumbnail generation
+              const thumbnailBlob = await generateThumbnail(file, {
+                maxSize: 400,
+                quality: 0.8,
+                format: 'image/jpeg'
+              });
+              
+              const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.jpg`;
+              thumbnailUrl = await uploadToSupabase(thumbnailBlob, thumbnailPath, 'thumbnails', undefined, 'image/jpeg', (progress) => {
+                onProgress?.(fileId, 60 + progress * 0.2);
+              });
+            }
             
             console.log(`✅ Thumbnail generated and uploaded: ${thumbnailUrl}`);
           } catch (thumbError) {
