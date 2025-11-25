@@ -26,44 +26,9 @@ const FileUpload = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load existing uploaded files from database on mount
+  // Initialize with empty state - this is a fresh upload session
   useEffect(() => {
-    const loadExistingFiles = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Get files from uploaded_files table
-        const { data: uploadedFilesData, error } = await supabase
-          .from('uploaded_files')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (uploadedFilesData && uploadedFilesData.length > 0) {
-          const formattedFiles: UploadedFileData[] = uploadedFilesData.map(file => ({
-            id: file.id,
-            url: file.file_url,
-            name: file.file_name,
-            type: file.file_type,
-            size: file.file_size,
-            previewUrl: file.preview_url || undefined,
-            isWatermarked: file.is_watermarked || false
-          }));
-          setUploadedFiles(formattedFiles);
-          console.log('📂 Loaded existing files from database:', formattedFiles.length);
-        }
-      } catch (error) {
-        console.error('Error loading existing files:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadExistingFiles();
+    setIsLoading(false);
   }, []);
 
   const handleFilesUploaded = async (files: UploadedFileData[]) => {
