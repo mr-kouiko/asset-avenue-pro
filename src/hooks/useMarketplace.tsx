@@ -113,6 +113,12 @@ export const useMarketplace = (initialLimit = 50) => {
             console.error(`  ❌ [MARKETPLACE] Error loading files for "${item.title}":`, filesError);
           }
 
+          // CRITICAL: Skip submissions with no files (deleted/orphaned submissions)
+          if (!files || files.length === 0) {
+            console.warn(`  ⚠️ [MARKETPLACE] Skipping "${item.title}" - no files found (orphaned submission)`);
+            return null;
+          }
+
           // Determine thumbnail URL and video/audio URL with robust fallbacks
           const originalFile = files?.find(f => f.is_original);
 
@@ -246,12 +252,16 @@ export const useMarketplace = (initialLimit = 50) => {
         })
       );
 
+      // Filter out null entries (submissions with no files)
+      const validContent = contentWithFiles.filter((item): item is MarketplaceContent => item !== null);
+      console.log(`✅ [MARKETPLACE] Showing ${validContent.length} valid items (filtered out ${contentWithFiles.length - validContent.length} orphaned submissions)`);
+
       // If resetting, replace content; otherwise append
       if (reset) {
-        setContent(contentWithFiles);
+        setContent(validContent);
         setOffset(initialLimit);
       } else {
-        setContent(prev => [...prev, ...contentWithFiles]);
+        setContent(prev => [...prev, ...validContent]);
         setOffset(prev => prev + initialLimit);
       }
     } catch (error) {
