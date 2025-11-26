@@ -53,6 +53,9 @@ export const useProductDetail = (productId: string) => {
   const { id: normalizedId, isSlug } = normalizeId(productId);
   console.log('🆔 useProductDetail IDs', { originalId: productId, normalizedId, isSlug });
 
+  // Store the actual UUID for file fetching (may differ from normalizedId if we looked up by slug)
+  const [productUuid, setProductUuid] = useState<string>(normalizedId);
+
   useEffect(() => {
     let isMounted = true;
     const fetchProductDetail = async () => {
@@ -155,9 +158,9 @@ export const useProductDetail = (productId: string) => {
                   ...slugData,
                   creator_store_name: creatorData?.store_name || 'Anonymous Store',
                 };
-                // Update normalizedId to use the UUID for file fetching
-                (normalizedId as any) = slugData.id;
-                console.log('✅ [PRODUCT-DETAIL] Product loaded by slug');
+                // Store the UUID for file fetching (crucial fix!)
+                setProductUuid(slugData.id);
+                console.log('✅ [PRODUCT-DETAIL] Product loaded by slug, UUID:', slugData.id);
               }
             } else {
               // Use existing UUID-based RPC call
@@ -199,12 +202,12 @@ export const useProductDetail = (productId: string) => {
           return;
         }
 
-        // Fetch content files for the product using secure RPC
-        console.log('📁 [PRODUCT-DETAIL] Fetching files for product:', normalizedId);
+        // Fetch content files for the product using secure RPC (use productUuid which may have been updated from slug lookup)
+        console.log('📁 [PRODUCT-DETAIL] Fetching files for product UUID:', productUuid);
         const filesStartTime = Date.now();
         
         const { data: files, error: filesError } = await supabase
-          .rpc('get_product_files', { content_id: normalizedId });
+          .rpc('get_product_files', { content_id: productUuid });
 
         const filesFetchTime = Date.now() - filesStartTime;
         console.log(`📁 [PRODUCT-DETAIL] Files fetch completed in ${filesFetchTime}ms`);
