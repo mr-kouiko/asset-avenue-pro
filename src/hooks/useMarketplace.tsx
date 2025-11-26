@@ -71,47 +71,34 @@ export const useMarketplace = (initialLimit = 50) => {
       
       const creatorMap = new Map(creators?.map(c => [c.user_id, c.store_name]) || []);
 
-      // Determine content types by checking files
-      const contentTypesMap = new Map<string, string>();
-      for (const item of marketplaceData || []) {
-        const { data: files } = await supabase
-          .from('content_files')
-          .select('file_type, file_format')
-          .eq('submission_id', item.id)
-          .eq('is_original', true)
-          .limit(1)
-          .single();
-        
-        let contentType = 'photo';
-        if (files) {
-          const fileType = files.file_type?.toLowerCase() || '';
-          const fileFormat = files.file_format?.toLowerCase() || '';
-          
-          if (fileType.includes('video')) contentType = 'video';
-          else if (fileType.includes('audio')) contentType = 'audio';
-          else if (fileType === 'document' || fileFormat === 'application/pdf') contentType = 'document';
-          else if (fileType.includes('vector') || fileFormat === 'svg') contentType = 'illustration';
-        }
-        contentTypesMap.set(item.id, contentType);
+      // PERFORMANCE: Fetch ALL files for ALL submissions in ONE query instead of N queries
+      const submissionIds = (marketplaceData || []).map((item: any) => item.id);
+      const filesStart = Date.now();
+      const { data: allFiles, error: filesError } = await supabase
+        .from('content_files')
+        .select('*')
+        .in('submission_id', submissionIds);
+      
+      const filesTime = Date.now() - filesStart;
+      console.log(`⚡ [MARKETPLACE] Fetched ALL files in ONE query: ${filesTime}ms (${allFiles?.length || 0} files)`);
+      
+      if (filesError) {
+        console.error('❌ [MARKETPLACE] Error loading files:', filesError);
       }
 
-      // Fetch content files for each submission to get URLs
-      const contentWithFiles = await Promise.all(
-        (marketplaceData || []).map(async (item: any, index: number) => {
+      // Group files by submission_id for fast lookup
+      const filesBySubmission = new Map<string, any[]>();
+      (allFiles || []).forEach(file => {
+        const existing = filesBySubmission.get(file.submission_id) || [];
+        filesBySubmission.set(file.submission_id, [...existing, file]);
+      });
+
+      // Process all items synchronously (no more async map!)
+      const contentWithFiles = (marketplaceData || []).map((item: any, index: number) => {
           console.log(`📦 [MARKETPLACE] Processing item ${index + 1}:`, item.title);
-          const filesStart = Date.now();
-          const { data: files, error: filesError } = await supabase
-            .from('content_files')
-            .select('*')
-            .eq('submission_id', item.id);
           
-          const filesTime = Date.now() - filesStart;
-          console.log(`  📁 [MARKETPLACE] Files query for "${item.title}" completed in ${filesTime}ms`);
-          console.log(`  📁 [MARKETPLACE] Found ${files?.length || 0} files`);
-          
-          if (filesError) {
-            console.error(`  ❌ [MARKETPLACE] Error loading files for "${item.title}":`, filesError);
-          }
+          const files = filesBySubmission.get(item.id) || [];
+          console.log(`  📁 [MARKETPLACE] Found ${files.length} files for "${item.title}"`)
 
           // CRITICAL: Skip submissions with no files (deleted/orphaned submissions)
           if (!files || files.length === 0) {
@@ -147,9 +134,29 @@ export const useMarketplace = (initialLimit = 50) => {
             thumbnailUrl = '/placeholder.svg';
           }
 
+          // Determine content type from files
+          let contentType: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook' = 'photo';
+          
+          if (originalFile) {
+            const fileType = originalFile.file_type?.toLowerCase() || '';
+            const fileFormat = originalFile.file_format?.toLowerCase() || '';
+            
+            if (fileType.includes('video')) {
+              contentType = 'video';
+            } else if (fileType.includes('audio')) {
+              contentType = 'audio';
+            } else if (fileType === 'document' || fileFormat === 'application/pdf') {
+              contentType = 'ebook';
+            } else if (fileType.includes('vector') || fileFormat === 'svg') {
+              contentType = 'illustration';
+            }
+          }
+          
+          console.log(`📊 Content type: ${contentType} for "${item.title}"`);
+
           // Determine media (video/audio) URL
           let mediaUrl: string | undefined;
-          if (item.content_type === 'video') {
+          if (contentType === 'video') {
             // For video, prefer the PREVIEW (watermarked) version
             const previewFile = files?.find(f => f.is_preview === true && f.preview_path);
             if (previewFile?.preview_path) {
@@ -165,7 +172,7 @@ export const useMarketplace = (initialLimit = 50) => {
                 : buildPublicUrl('uploads', originalFile.file_path);
               console.warn(`  ⚠️ [MARKETPLACE] No video preview found for "${item.title}", using original as fallback:`, mediaUrl);
             }
-          } else if (item.content_type === 'audio') {
+          } else if (contentType === 'audio') {
             // For audio: Use original file path directly
             // TODO: Implement audio watermarking system (periodic beep or voice overlay)
             if (originalFile?.file_path) {
@@ -178,7 +185,7 @@ export const useMarketplace = (initialLimit = 50) => {
 
           // For PDFs/ebooks, use thumbnail as cover if available
           let coverUrl: string | undefined;
-          if (item.content_type === 'document' || item.content_type === 'pdf') {
+          if (contentType === 'ebook') {
             console.log(`📚 Ebook detected: ${item.title}, thumbnailUrl: ${thumbnailUrl}`);
             // First priority: use the thumbnail_path (this is the uploaded cover)
             if (thumbnailUrl && thumbnailUrl !== '/placeholder.svg') {
@@ -203,24 +210,6 @@ export const useMarketplace = (initialLimit = 50) => {
             }
           }
 
-          // Map content types including PDFs
-          const detectedType = contentTypesMap.get(item.id) || 'photo';
-          let contentType: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook' = 'photo';
-          
-          // Explicit mapping for all content types
-          if (detectedType === 'video') {
-            contentType = 'video';
-          } else if (detectedType === 'audio') {
-            contentType = 'audio';
-          } else if (detectedType === 'illustration') {
-            contentType = 'illustration';
-          } else if (detectedType === 'document') {
-            contentType = 'ebook';
-          } else {
-            contentType = 'photo';
-          }
-          
-          console.log(`📊 Content type mapping: ${detectedType} → ${contentType} for "${item.title}"`);
 
           const contentItem: MarketplaceContent = {
             id: item.id,
@@ -247,10 +236,9 @@ export const useMarketplace = (initialLimit = 50) => {
               : undefined,
           };
 
-          console.log(`Content: ${item.title}, Type: ${item.content_type}, Thumbnail: ${thumbnailUrl}, Media: ${mediaUrl}`);
+          console.log(`Content: ${item.title}, Type: ${contentType}, Thumbnail: ${thumbnailUrl}, Media: ${mediaUrl}`);
           return contentItem;
-        })
-      );
+        });
 
       // Filter out null entries (submissions with no files)
       const validContent = contentWithFiles.filter((item): item is MarketplaceContent => item !== null);
