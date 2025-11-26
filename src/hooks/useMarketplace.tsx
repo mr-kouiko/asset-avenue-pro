@@ -268,7 +268,14 @@ export const useMarketplace = (initialLimit = 50) => {
   };
 
   useEffect(() => {
+    // Always fetch fresh data on mount
     fetchMarketplaceContent(true);
+    
+    // Poll for updates every 30 seconds to catch any missed events
+    const pollInterval = setInterval(() => {
+      console.log('🔄 [MARKETPLACE] Polling for updates');
+      fetchMarketplaceContent(true);
+    }, 30000);
     
     // Listen for marketplace refresh events
     const handleRefresh = () => {
@@ -279,10 +286,19 @@ export const useMarketplace = (initialLimit = 50) => {
       fetchMarketplaceContent(true);
     };
     
+    // Listen for window focus to refresh (user switching back to tab)
+    const handleFocus = () => {
+      console.log('🔄 [MARKETPLACE] Tab focused - refreshing content');
+      fetchMarketplaceContent(true);
+    };
+    
     window.addEventListener('refreshMarketplace', handleRefresh);
+    window.addEventListener('focus', handleFocus);
     
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('refreshMarketplace', handleRefresh);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
