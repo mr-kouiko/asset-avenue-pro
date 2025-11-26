@@ -548,14 +548,14 @@ export const useSellerDashboard = () => {
         .eq('creator_id', user.id); // Double-check ownership
 
       if (submissionError) {
-        console.error('Error deleting submission:', submissionError);
-        toast.error('Erreur lors de la suppression du contenu principal');
+        console.error('❌ [DELETE] Error deleting submission:', submissionError.message, submissionError.details, submissionError.hint);
+        toast.error('Erreur lors de la suppression du contenu: ' + submissionError.message);
         // Restore UI if deletion failed
         await fetchSubmissions();
         return false;
       }
 
-      console.log('Submission deleted successfully');
+      console.log('✅ [DELETE] Submission deleted successfully:', id);
 
       // Step 3: Update stats and trigger refresh events
       toast.success(`Contenu "${submission.title}" supprimé définitivement`);
