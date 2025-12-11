@@ -29,10 +29,13 @@ serve(async (req) => {
 
     console.log(`Processing video watermark: ${videoPath}, MIME: ${mimeType || 'unknown'}`);
 
-    // Validate video MIME type
-    const supportedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    if (mimeType && !supportedVideoTypes.includes(mimeType)) {
-      console.warn(`Unsupported video MIME type: ${mimeType}`);
+    // Validate video MIME type - only MP4 allowed
+    if (mimeType && mimeType !== 'video/mp4') {
+      console.error(`Rejected video - only MP4 allowed: ${mimeType}`);
+      return new Response(
+        JSON.stringify({ error: 'Only MP4 video format is accepted', mimeType }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     // Get the video file from Supabase Storage

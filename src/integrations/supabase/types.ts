@@ -1118,7 +1118,7 @@ export type Database = {
       }
       get_creator_profiles_public:
         | {
-            Args: { creator_ids: string[] }
+            Args: never
             Returns: {
               avatar_url: string
               creator_hash: string
@@ -1128,7 +1128,7 @@ export type Database = {
             }[]
           }
         | {
-            Args: never
+            Args: { creator_ids: string[] }
             Returns: {
               avatar_url: string
               creator_hash: string

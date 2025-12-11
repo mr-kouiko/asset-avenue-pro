@@ -72,7 +72,7 @@ function detectMimeType(fileName: string): string {
   return detectedType || "application/octet-stream";
 }
 
-// MIME type validation with comprehensive video support
+// MIME type validation - only MP4 for videos
 function validateMimeType(fileName: string): boolean {
   const allowedMimeTypes = [
     // Images
@@ -83,13 +83,8 @@ function validateMimeType(fileName: string): boolean {
     'image/bmp',
     'image/tiff',
     'image/svg+xml',
-    // Videos - all requested formats
+    // Videos - ONLY MP4 allowed
     'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/ogg',
-    'video/x-matroska',
     // Audio
     'audio/mpeg',
     'audio/mp4',
@@ -105,6 +100,13 @@ function validateMimeType(fileName: string): boolean {
   ];
   
   const detectedMimeType = detectMimeType(fileName);
+  
+  // Reject non-MP4 video files
+  if (detectedMimeType.startsWith('video/') && detectedMimeType !== 'video/mp4') {
+    console.log(`❌ Video rejected - Only MP4 allowed. File: ${fileName}, Type: ${detectedMimeType}`);
+    return false;
+  }
+  
   const isAllowed = allowedMimeTypes.includes(detectedMimeType);
   
   console.log(`🔒 MIME validation - File: ${fileName}, Type: ${detectedMimeType}, Allowed: ${isAllowed}`);
