@@ -86,8 +86,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   useAudioWatermark({ 
     isPlaying: type === 'audio' ? isPlaying : false, 
     mainVolume: volume, 
-    isMuted,
-    audioRef: type === 'audio' ? (mediaRef as React.RefObject<HTMLAudioElement>) : undefined
+    isMuted
   });
 
   const handleDownloadPreview = useCallback(async () => {
