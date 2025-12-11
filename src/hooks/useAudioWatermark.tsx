@@ -38,21 +38,32 @@ export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted }: UseAudioWa
   // Function to play the watermark (backgrounded, no ducking)
   const playWatermark = useCallback(async () => {
     const watermark = watermarkRef.current;
-    if (!watermark || isMuted) return;
+    console.log('🎯 playWatermark called', { hasWatermark: !!watermark, isMuted, mainVolume });
+    
+    if (!watermark) {
+      console.error('❌ No watermark audio element!');
+      return;
+    }
+    if (isMuted) {
+      console.log('🔇 Skipping watermark - muted');
+      return;
+    }
 
     const now = Date.now();
     // Avoid playing too frequently
     if (now - lastPlayTimeRef.current < 8000) {
+      console.log('⏳ Skipping watermark - too soon since last play');
       return;
     }
 
     try {
       watermark.currentTime = 0;
-      // Keep watermark at -12dB lower than main track (-10dB to -15dB range)
-      watermark.volume = Math.min(1, Math.max(0, WATERMARK_RELATIVE_VOLUME * mainVolume));
+      const targetVolume = Math.min(1, Math.max(0, WATERMARK_RELATIVE_VOLUME * mainVolume));
+      watermark.volume = targetVolume;
+      console.log('🔊 Attempting to play watermark at volume:', targetVolume);
       await watermark.play();
       lastPlayTimeRef.current = now;
-      console.log('🔊 Audio watermark played (backgrounded at -12dB)');
+      console.log('✅ Audio watermark played successfully!');
     } catch (error) {
       console.error('❌ Error playing watermark:', error);
     }
