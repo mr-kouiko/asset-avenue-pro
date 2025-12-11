@@ -380,11 +380,20 @@ const Marketplace = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {sortedContent.map((content) => (
-                <ContentCard key={content.id} {...content} />
-              ))}
-            </div>
+            {/* Conditional layout: vertical stack for audio, grid for other content */}
+            {selectedCategory === "audio" ? (
+              <div className="flex flex-col gap-4 w-full">
+                {sortedContent.map((content) => (
+                  <ContentCard key={content.id} {...content} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {sortedContent.map((content) => (
+                  <ContentCard key={content.id} {...content} />
+                ))}
+              </div>
+            )}
 
             {/* Load More Button */}
             {hasMore && (
