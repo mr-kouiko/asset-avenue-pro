@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Heart, Download, ShoppingCart, Play, Pause } from "lucide-react";
+import { Heart, Download, Play, Pause, Bookmark, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
@@ -12,7 +10,7 @@ import WaveSurfer from "wavesurfer.js";
 
 interface AudioContentCardProps {
   id: string;
-  slug?: string; // SEO-friendly URL slug
+  slug?: string;
   title: string;
   author: string;
   price: number;
@@ -64,26 +62,23 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
     console.log('🎵 AudioContentCard: Initializing WaveSurfer', { title, audioUrl });
 
-    // Initialize WaveSurfer with MediaElement backend to avoid CORS issues
-    // Optimized settings for faster loading, especially for WAV files
     const wavesurfer = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: 'rgba(203, 213, 225, 0.8)',
-      progressColor: 'rgba(99, 102, 241, 0.9)',
-      cursorColor: 'rgba(99, 102, 241, 0.9)',
+      waveColor: '#9CA3AF',
+      progressColor: '#4F46E5',
+      cursorColor: '#4F46E5',
       cursorWidth: 1,
-      barWidth: 3, // Slightly wider bars = fewer bars = faster rendering
+      barWidth: 3,
       barGap: 2,
       barRadius: 2,
-      height: 70,
-      normalize: false, // Disable normalization for faster processing
-      backend: 'MediaElement', // Use MediaElement to avoid CORS issues
+      height: 48,
+      normalize: false,
+      backend: 'MediaElement',
       interact: true,
       hideScrollbar: true,
       fillParent: true,
     });
 
-    // Load audio with error handling
     wavesurfer.load(audioUrl);
     console.log('📡 Loading audio from:', audioUrl);
 
@@ -97,8 +92,6 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
     wavesurfer.on('error', (error) => {
       console.error('❌ WaveSurfer error for:', title, error);
-      console.error('❌ Audio URL:', audioUrl);
-      console.error('❌ Error details:', JSON.stringify(error));
     });
 
     wavesurfer.on('finish', () => {
@@ -112,10 +105,6 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
       setCurrentTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
     });
 
-    wavesurfer.on('loading', (percent) => {
-      console.log(`📥 Loading audio: ${percent}%`);
-    });
-
     wavesurferRef.current = wavesurfer;
 
     return () => {
@@ -124,7 +113,6 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     };
   }, [audioUrl, pause, title]);
 
-  // Sync playback with global player state
   useEffect(() => {
     if (!wavesurferRef.current) return;
 
@@ -137,7 +125,6 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('🎵 Play/Pause clicked', { playing, id, title, hasWavesurfer: !!wavesurferRef.current });
     if (playing) {
       pause();
     } else {
@@ -162,114 +149,90 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     });
   };
 
-  const handleDirectPurchase = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await createDirectPayment({
-      submission_id: id,
-      title,
-      author,
-      price,
-      type: 'audio',
-      thumbnail
-    }, 'standard');
-  };
-
   const handleCardClick = () => {
-    // Use SEO-friendly slug URL, with UUID fallback for legacy links
     const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
     navigate(urlPath);
   };
 
   return (
-    <Card 
-      className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg cursor-pointer bg-gray-50/50 border border-gray-200/60 shadow-sm"
+    <div 
+      className="flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md"
+      style={{ backgroundColor: '#F9FAFB' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
-      {/* Horizontal Layout - Arabstock Style */}
-      <div className="flex items-center gap-4 p-5">
-        
-        {/* Play/Pause Button - Large Circle on Left */}
+      {/* Left Section: Play Button */}
+      <Button
+        variant="default"
+        size="icon"
+        onClick={handlePlayPause}
+        className="h-12 w-12 rounded-full flex-shrink-0 shadow-md transition-transform hover:scale-105"
+        style={{ backgroundColor: '#4F46E5' }}
+      >
+        {playing ? (
+          <Pause className="h-5 w-5 text-white" fill="white" />
+        ) : (
+          <Play className="h-5 w-5 text-white ml-0.5" fill="white" />
+        )}
+      </Button>
+
+      {/* Left Section: Meta Data */}
+      <div className="flex flex-col min-w-[120px] flex-shrink-0">
+        <h3 className="font-medium text-sm line-clamp-1" style={{ color: '#374151' }}>
+          {title}
+        </h3>
+        <p className="text-xs" style={{ color: '#9CA3AF' }}>Music</p>
+      </div>
+
+      {/* Center Section: Timer */}
+      <span className="text-xs flex-shrink-0 whitespace-nowrap" style={{ color: '#6B7280' }}>
+        {currentTime} / {audioDuration || "0:00"}
+      </span>
+
+      {/* Center Section: Waveform */}
+      <div 
+        ref={waveformRef} 
+        className="flex-1 h-12 cursor-pointer min-w-[100px]"
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Right Section: BPM */}
+      {bpm && (
+        <span className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>
+          {bpm} BPM
+        </span>
+      )}
+
+      {/* Right Section: Action Group */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Bookmark/Save Icon */}
+        <button
+          onClick={(e) => e.stopPropagation()}
+          className="p-2 rounded-full transition-colors hover:bg-gray-200"
+        >
+          <Bookmark className="h-5 w-5" style={{ color: '#6B7280' }} />
+        </button>
+
+        {/* Circle/Contrast Icon */}
+        <button
+          onClick={(e) => e.stopPropagation()}
+          className="p-2 rounded-full transition-colors hover:bg-gray-200"
+        >
+          <Circle className="h-5 w-5" style={{ color: '#6B7280' }} />
+        </button>
+
+        {/* Download Button */}
         <Button
           variant="default"
-          size="lg"
-          onClick={handlePlayPause}
-          className="h-14 w-14 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-md flex-shrink-0 transition-all"
+          size="icon"
+          onClick={handleAddToCart}
+          className="h-10 w-10 rounded-full shadow-sm transition-transform hover:scale-105"
+          style={{ backgroundColor: '#10B981' }}
         >
-          {playing ? (
-            <Pause className="h-6 w-6 text-white" fill="currentColor" />
-          ) : (
-            <Play className="h-6 w-6 text-white ml-0.5" fill="currentColor" />
-          )}
+          <Download className="h-4 w-4 text-white" />
         </Button>
-
-        {/* Title, Category and Time Display */}
-        <div className="flex flex-col gap-1 min-w-[140px] flex-shrink-0">
-          <h3 className="font-medium text-sm text-gray-900 line-clamp-1">
-            {title}
-          </h3>
-          <p className="text-xs text-gray-400">Music</p>
-          <span className="text-xs text-gray-600 font-medium mt-0.5">
-            {currentTime} / {audioDuration || "0:00"}
-          </span>
-        </div>
-
-        {/* Waveform - Takes Most Space */}
-        <div 
-          ref={waveformRef} 
-          className="flex-1 h-[70px] cursor-pointer min-w-0 mx-3"
-          onClick={(e) => e.stopPropagation()}
-        />
-
-        {/* BPM Badge */}
-        {bpm && (
-          <Badge 
-            variant="outline" 
-            className="text-xs border-gray-300 text-gray-600 bg-white px-3 py-1.5 flex-shrink-0 font-normal"
-          >
-            {bpm} BPM
-          </Badge>
-        )}
-
-        {/* Action Buttons - Right Side */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          {/* Favorite Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            className="h-10 w-10 p-0 hover:bg-gray-100 rounded-full border border-gray-300 bg-white transition-colors"
-          >
-            <Heart 
-              className={`h-4 w-4 ${isLiked ? "text-red-500" : "text-gray-700"}`}
-              fill={isLiked ? "currentColor" : "none"}
-            />
-          </Button>
-
-          {/* Info/Details Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCardClick}
-            className="h-10 w-10 p-0 hover:bg-gray-100 rounded-full border border-gray-300 bg-white transition-colors"
-          >
-            <ShoppingCart className="h-4 w-4 text-gray-700" />
-          </Button>
-
-          {/* Download/Add to Cart Button */}
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleAddToCart}
-            className="h-10 w-10 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-sm transition-all"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
-    </Card>
+    </div>
   );
 };
