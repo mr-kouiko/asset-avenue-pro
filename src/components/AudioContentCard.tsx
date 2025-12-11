@@ -175,9 +175,9 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   };
 
   const handleCardClick = () => {
-    // Use slug if available and not empty, otherwise fall back to ID
-    const urlPath = slug?.trim() || id;
-    navigate(`/product/${urlPath}`);
+    // Use SEO-friendly slug URL, with UUID fallback for legacy links
+    const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
+    navigate(urlPath);
   };
 
   return (
