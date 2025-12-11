@@ -120,9 +120,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   }
 
   const handleCardClick = () => {
-    // Use slug if available and not empty, otherwise fall back to ID
-    const urlPath = slug?.trim() || id;
-    navigate(`/product/${urlPath}`);
+    // Use SEO-friendly slug URL, with UUID fallback for legacy links
+    const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
+    navigate(urlPath);
   };
 
   return (
@@ -175,8 +175,8 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                const urlPath = slug?.trim() || id;
-                navigate(`/product/${urlPath}`);
+                const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
+                navigate(urlPath);
               }}
             >
               Aperçu

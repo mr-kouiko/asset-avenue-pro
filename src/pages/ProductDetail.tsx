@@ -33,8 +33,10 @@ import { useSEO } from "@/hooks/useSEO";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
-  const { product, loading: productLoading, error } = useProductDetail(id || '');
+  // Support both new /products/:slug and legacy /product/:id routes
+  const { slug, id } = useParams<{ slug?: string; id?: string }>();
+  const productIdentifier = slug || id || '';
+  const { product, loading: productLoading, error } = useProductDetail(productIdentifier);
   const { content: marketplaceContent } = useMarketplace();
   const [isLiked, setIsLiked] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState("standard");
@@ -46,15 +48,21 @@ const ProductDetail = () => {
   // Create a minimal fallback product from marketplace if detailed fetch fails
   const fallbackProduct = useMemo(() => {
     const normalizeId = (raw?: string) => {
-      if (!raw) return '';
+      if (!raw) return { id: '', isSlug: false };
       const match = raw.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
-      if (match) return match[0];
-      return raw.split('?')[0].split('#')[0];
+      if (match) return { id: match[0], isSlug: false };
+      const clean = raw.split('?')[0].split('#')[0];
+      return { id: clean, isSlug: true };
     };
-    const normalized = normalizeId(id);
+    const { id: normalized, isSlug } = normalizeId(productIdentifier);
     if (!normalized) return null;
-    const item = marketplaceContent.find((i) => i.id === normalized);
+    
+    // Find by UUID or by slug
+    const item = isSlug 
+      ? marketplaceContent.find((i) => i.slug === normalized)
+      : marketplaceContent.find((i) => i.id === normalized);
     if (!item) return null;
+    
     return {
       id: item.id,
       title: item.title,
@@ -73,7 +81,7 @@ const ProductDetail = () => {
       files: [],
       category: item.category_id ? { id: item.category_id, name: '' } : undefined,
     } as const;
-  }, [marketplaceContent, id]);
+  }, [marketplaceContent, productIdentifier]);
 
   // Create watermarked preview for images (use product or fallback)
   const { watermarkedUrl, isProcessing } = useWatermarkedPreview({

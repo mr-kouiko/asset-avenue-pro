@@ -59,6 +59,8 @@ const App = () => (
                   {/* English Routes - Now at root */}
                   <Route path="/" element={<IndexEN />} />
                   <Route path="/marketplace" element={<Marketplace />} />
+                  <Route path="/products/:slug" element={<ProductDetail />} />
+                  {/* Legacy route for backward compatibility with UUID-based URLs */}
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/seller" element={<Auth userType="seller" />} />
