@@ -3,7 +3,7 @@ import { useEffect, useRef, useCallback } from 'react';
 const WATERMARK_URL = "https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0MS1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NjEzMDg2NzYsImV4cCI6NDkxNDkwODY3Nn0.mEg3fksa-Pmh5eakM_7DKigJg_tizxOY-ehgzDnYbo0";
 const WATERMARK_INTERVAL = 15000; // 15 seconds between watermarks
 // -12dB = 10^(-12/20) ≈ 0.25 - audible but backgrounded
-const WATERMARK_RELATIVE_VOLUME = 0.25;
+const WATERMARK_RELATIVE_VOLUME = 1.0; // 4x previous volume (was 0.25)
 
 interface UseAudioWatermarkProps {
   isPlaying: boolean;
