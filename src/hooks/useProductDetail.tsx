@@ -18,6 +18,7 @@ interface ProductDetailData {
   views: number;
   price: number | null;
   original_language?: string;
+  slug?: string;
   files: Array<{
     id: string;
     file_name: string;
@@ -180,6 +181,16 @@ export const useProductDetail = (productId: string) => {
               if (count > 0) {
                 productInfo = productDetails[0];
                 console.log('✅ [PRODUCT-DETAIL] Product loaded:', productInfo.title);
+                
+                // RPC doesn't return slug, so fetch it separately for redirects
+                const { data: slugData } = await supabase
+                  .from('content_submissions')
+                  .select('slug')
+                  .eq('id', normalizedId)
+                  .single();
+                if (slugData?.slug) {
+                  productInfo.slug = slugData.slug;
+                }
               } else {
                 console.warn('⚠️ [PRODUCT-DETAIL] RPC returned empty array for id:', normalizedId);
               }
@@ -379,6 +390,7 @@ export const useProductDetail = (productId: string) => {
           views: 0, // Would need to implement views tracking
           price: productInfo.price,
           original_language: productInfo.original_language || 'en',
+          slug: productInfo.slug,
           files: filesList.map((file: any) => ({
             id: file.id,
             file_name: file.file_name,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -35,6 +35,8 @@ import mockPhoto1 from "@/assets/mock-photo1.jpg";
 const ProductDetail = () => {
   // Support both new /products/:slug and legacy /product/:id routes
   const { slug, id } = useParams<{ slug?: string; id?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const productIdentifier = slug || id || '';
   const { product, loading: productLoading, error } = useProductDetail(productIdentifier);
   const { content: marketplaceContent } = useMarketplace();
@@ -44,6 +46,15 @@ const ProductDetail = () => {
   // Hooks for cart and direct purchase
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
+
+  // Redirect from legacy /product/:uuid to SEO-friendly /products/:slug
+  useEffect(() => {
+    // Only redirect if we're on the legacy /product/:id route (not /products/:slug)
+    if (id && !slug && product?.slug) {
+      // Replace current URL with SEO-friendly version (301-like behavior for SPA)
+      navigate(`/products/${product.slug}`, { replace: true });
+    }
+  }, [id, slug, product?.slug, navigate]);
 
   // Create a minimal fallback product from marketplace if detailed fetch fails
   const fallbackProduct = useMemo(() => {
