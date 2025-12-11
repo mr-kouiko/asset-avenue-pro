@@ -52,7 +52,7 @@ export const SimpleFileUpload = ({
     'model/*'
   ];
 
-  const acceptAttribute = 'image/*,video/*,.mp3,audio/mpeg,.pdf,application/pdf';
+  const acceptAttribute = 'image/*,video/mp4,.mp4,.mp3,audio/mpeg,.pdf,application/pdf';
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image className="h-4 w-4" />;
@@ -130,12 +130,16 @@ export const SimpleFileUpload = ({
       return `File exceeds ${maxFileSize}MB limit`;
     }
 
-    // Validate file type - videos skip image processing entirely
+    // Validate file type
     const detectedMimeType = detectMimeType(file);
     
-    // Videos are validated separately and bypass image pipelines
+    // Videos: ONLY MP4 allowed
     if (detectedMimeType.startsWith('video/')) {
-      console.log(`✅ Video file validated - File: ${file.name}, Type: ${detectedMimeType}`);
+      if (detectedMimeType !== 'video/mp4') {
+        console.error(`❌ Video format rejected - File: ${file.name}, Type: ${detectedMimeType}. Only MP4 allowed.`);
+        return `Only MP4 video format is accepted (detected: ${detectedMimeType})`;
+      }
+      console.log(`✅ MP4 video validated - File: ${file.name}`);
       return null;
     }
     
@@ -326,7 +330,7 @@ export const SimpleFileUpload = ({
             Drop files here or click to browse
           </p>
           <p className="text-sm text-muted-foreground">
-            Supported: Images, Videos, Audio (MP3 only), PDF/Ebooks, 3D Models (max {formatFileSize(maxFileSize * 1024 * 1024)} each)
+            Supported: Images, Videos (MP4 only), Audio (MP3 only), PDF/Ebooks, 3D Models (max {formatFileSize(maxFileSize * 1024 * 1024)} each)
           </p>
           <p className="text-xs text-muted-foreground">
             Maximum {maxFiles} files • All files automatically watermarked & optimized
