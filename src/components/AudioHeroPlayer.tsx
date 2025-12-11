@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import WaveSurfer from 'wavesurfer.js';
+import { useAudioWatermark } from '@/hooks/useAudioWatermark';
 
 interface AudioHeroPlayerProps {
   src: string;
@@ -21,6 +22,13 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState(false);
+
+  // Audio watermark - plays at -12dB in background, every 15 seconds
+  useAudioWatermark({
+    isPlaying,
+    mainVolume: volume,
+    isMuted
+  });
 
   // Format time in MM:SS
   const formatTime = (seconds: number) => {
