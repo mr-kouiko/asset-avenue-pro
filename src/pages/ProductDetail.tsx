@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
 import { MediaPlayer } from "@/components/media/MediaPlayer";
+import { AudioHeroPlayer } from "@/components/AudioHeroPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
@@ -234,18 +235,12 @@ const ProductDetail = () => {
                     watermarkSize="thumbnail"
                   />
                 ) : fp.type === 'audio' ? (
-                  <div className="w-full h-full flex flex-col justify-center p-6">
-                    <MediaPlayer 
-                      src={fp.previewUrl || ''}
-                      type="audio"
-                      title={fp.title}
-                      className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
-                      autoPlay={false}
-                      controls={true}
-                      muted={false}
-                      watermarkSize="normal"
-                    />
-                  </div>
+                  <AudioHeroPlayer
+                    src={fp.previewUrl || ''}
+                    title={fp.title}
+                    author={fp.author}
+                    category="Music"
+                  />
                 ) : (
                   <img
                     src={watermarkedUrl || fp.thumbnail}
@@ -449,21 +444,12 @@ const ProductDetail = () => {
             )}
           </div>
         ) : product.type === 'audio' ? (
-          <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl overflow-hidden">
-            {/* Universal Audio Player Container */}
-            <div className="w-full h-full flex flex-col justify-center p-6">
-              <MediaPlayer 
-                src={product.previewUrl || ''}
-                type="audio"
-                title={product.title}
-                className="bg-white/80 backdrop-blur-sm border shadow-lg rounded-lg"
-                autoPlay={false}
-                controls={true}
-                muted={false}
-                watermarkSize="normal"
-              />
-            </div>
-          </div>
+          <AudioHeroPlayer
+            src={product.previewUrl || ''}
+            title={product.title}
+            author={product.author}
+            category={product.category?.name || 'Music'}
+          />
         ) : (
           <div className="relative">
             <img
