@@ -54,9 +54,6 @@ export const useProductDetail = (productId: string) => {
   const { id: normalizedId, isSlug } = normalizeId(productId);
   console.log('🆔 useProductDetail IDs', { originalId: productId, normalizedId, isSlug });
 
-  // Store the actual UUID for file fetching (may differ from normalizedId if we looked up by slug)
-  const [productUuid, setProductUuid] = useState<string>(normalizedId);
-
   useEffect(() => {
     let isMounted = true;
     const fetchProductDetail = async () => {
@@ -113,6 +110,8 @@ export const useProductDetail = (productId: string) => {
         console.log('🆔 [PRODUCT-DETAIL] Normalized product ID:', normalizedId);
 
         let productInfo: any | null = null;
+        // Track the actual UUID for file fetching (may differ from normalizedId if we looked up by slug)
+        let actualProductUuid = normalizedId;
         
           try {
             console.log('📊 [PRODUCT-DETAIL] Fetching product...', { isSlug, normalizedId });
@@ -133,7 +132,8 @@ export const useProductDetail = (productId: string) => {
                   price,
                   tags,
                   category_id,
-                  slug
+                  slug,
+                  creator_id
                 `)
                 .eq('slug', normalizedId)
                 .eq('status', 'approved')
@@ -148,20 +148,21 @@ export const useProductDetail = (productId: string) => {
               }
               
               if (slugData) {
+                // Update actualProductUuid with the real UUID from slug lookup
+                actualProductUuid = slugData.id;
+                console.log('✅ [PRODUCT-DETAIL] Product loaded by slug, UUID:', actualProductUuid);
+                
                 // Now fetch creator info
                 const { data: creatorData } = await supabase
                   .from('profiles')
                   .select('store_name')
-                  .eq('user_id', (slugData as any).creator_id)
+                  .eq('user_id', slugData.creator_id)
                   .single();
                 
                 productInfo = {
                   ...slugData,
                   creator_store_name: creatorData?.store_name || 'Anonymous Store',
                 };
-                // Store the UUID for file fetching (crucial fix!)
-                setProductUuid(slugData.id);
-                console.log('✅ [PRODUCT-DETAIL] Product loaded by slug, UUID:', slugData.id);
               }
             } else {
               // Use existing UUID-based RPC call
@@ -204,6 +205,9 @@ export const useProductDetail = (productId: string) => {
         // If RPC failed, use marketplace fallback
         if (!productInfo) {
           productInfo = await fetchMarketplaceFallback();
+          if (productInfo) {
+            actualProductUuid = productInfo.id;
+          }
         }
 
         // If still no product info, set error but don't block render (ProductDetail has UI fallback)
@@ -213,19 +217,19 @@ export const useProductDetail = (productId: string) => {
           return;
         }
 
-        // Fetch content files for the product using secure RPC (use productUuid which may have been updated from slug lookup)
-        console.log('📁 [PRODUCT-DETAIL] Fetching files for product UUID:', productUuid);
+        // Fetch content files for the product using the actual UUID (not the slug!)
+        console.log('📁 [PRODUCT-DETAIL] Fetching files for product UUID:', actualProductUuid);
         const filesStartTime = Date.now();
         
         const { data: files, error: filesError } = await supabase
-          .rpc('get_product_files', { content_id: productUuid });
+          .rpc('get_product_files', { content_id: actualProductUuid });
 
         const filesFetchTime = Date.now() - filesStartTime;
         console.log(`📁 [PRODUCT-DETAIL] Files fetch completed in ${filesFetchTime}ms`);
         
         if (filesError) {
           console.error('❌ [PRODUCT-DETAIL] Error fetching files:', filesError);
-          console.error('   Product ID:', normalizedId);
+          console.error('   Product ID:', actualProductUuid);
           console.error('   Error details:', JSON.stringify(filesError, null, 2));
         } else {
           console.log(`✅ [PRODUCT-DETAIL] Files fetched: ${files?.length || 0} files`);
