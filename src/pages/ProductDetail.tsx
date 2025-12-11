@@ -282,6 +282,14 @@ const ProductDetail = () => {
   const originalFile = product.files?.find(f => f.is_original);
   const fileSize = originalFile ? `${(originalFile.file_size / (1024 * 1024)).toFixed(1)} MB` : 'N/A';
   const fileFormat = originalFile?.file_name?.split('.').pop()?.toUpperCase() || product.type?.toUpperCase() || 'N/A';
+
+  // Detect if this is an MP3 file by checking file URL extension (more reliable than type field)
+  const isAudioByExtension = (() => {
+    const previewUrl = product.previewUrl?.toLowerCase() || '';
+    const fileUrl = originalFile?.file_path?.toLowerCase() || '';
+    const fileName = originalFile?.file_name?.toLowerCase() || '';
+    return previewUrl.endsWith('.mp3') || fileUrl.endsWith('.mp3') || fileName.endsWith('.mp3') || product.type === 'audio';
+  })();
   
   // For now, dimensions will be extracted from actual metadata when available
   const dimensions = 'À déterminer'; // Will be updated when metadata is properly structured
@@ -443,7 +451,7 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
-        ) : product.type === 'audio' ? (
+        ) : isAudioByExtension ? (
           <AudioHeroPlayer
             src={product.previewUrl || ''}
             title={product.title}
