@@ -135,9 +135,11 @@ const Marketplace = () => {
   const filteredContent = marketplaceContent.filter(content => {
     const matchesSearch = (content.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (content.author || '').toLowerCase().includes(searchQuery.toLowerCase());
+    // Map category URL param to database file_type (photo -> image)
+    const typeToMatch = selectedCategory === "photo" ? "image" : selectedCategory;
     const matchesCategory = selectedCategory === "all" || 
                            content.category_id === selectedCategory ||
-                           content.type === selectedCategory;
+                           content.type === typeToMatch;
     return matchesSearch && matchesCategory;
   });
 
