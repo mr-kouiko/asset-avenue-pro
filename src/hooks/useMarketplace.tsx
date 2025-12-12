@@ -23,8 +23,7 @@ export interface MarketplaceContent {
   original_language?: string; // Original language of the content
 }
 
-export const useMarketplace = (initialLimit = 50, categoryFilter?: string) => {
-  const limit = categoryFilter === 'audio' ? 15 : initialLimit;
+export const useMarketplace = (initialLimit = 50) => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -51,7 +50,7 @@ export const useMarketplace = (initialLimit = 50, categoryFilter?: string) => {
         `)
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
-        .range(currentOffset, currentOffset + limit - 1);
+        .range(currentOffset, currentOffset + initialLimit - 1);
 
       if (error) {
         console.error('Error fetching marketplace content:', error);
@@ -59,7 +58,7 @@ export const useMarketplace = (initialLimit = 50, categoryFilter?: string) => {
       }
 
       // Check if there are more items to load
-      setHasMore(marketplaceData && marketplaceData.length === limit);
+      setHasMore(marketplaceData && marketplaceData.length === initialLimit);
       
       console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
       
@@ -248,10 +247,10 @@ export const useMarketplace = (initialLimit = 50, categoryFilter?: string) => {
       // If resetting, replace content; otherwise append
       if (reset) {
         setContent(validContent);
-        setOffset(limit);
+        setOffset(initialLimit);
       } else {
         setContent(prev => [...prev, ...validContent]);
-        setOffset(prev => prev + limit);
+        setOffset(prev => prev + initialLimit);
       }
     } catch (error) {
       console.error('Error in fetchMarketplaceContent:', error);
@@ -299,7 +298,7 @@ export const useMarketplace = (initialLimit = 50, categoryFilter?: string) => {
       window.removeEventListener('refreshMarketplace', handleRefresh);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [categoryFilter, limit]);
+  }, []);
 
   return {
     content,

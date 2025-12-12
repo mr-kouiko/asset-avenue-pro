@@ -36,7 +36,7 @@ const Marketplace = () => {
     { value: "all", label: "Toutes les catégories", count: "0" }
   ]);
   const [searchParams] = useSearchParams();
-  const { content: marketplaceContent, loading, hasMore, loadMore } = useMarketplace(50, selectedCategory);
+  const { content: marketplaceContent, loading, hasMore, loadMore } = useMarketplace();
   
   // Audio filter states
   const [isAudioFilterOpen, setIsAudioFilterOpen] = useState(false);
