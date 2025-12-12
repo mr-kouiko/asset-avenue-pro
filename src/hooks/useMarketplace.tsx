@@ -23,7 +23,8 @@ export interface MarketplaceContent {
   original_language?: string; // Original language of the content
 }
 
-export const useMarketplace = (initialLimit = 50) => {
+export const useMarketplace = (initialLimit = 50, categoryFilter?: string) => {
+  const limit = categoryFilter === 'audio' ? 15 : initialLimit;
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -50,7 +51,7 @@ export const useMarketplace = (initialLimit = 50) => {
         `)
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
-        .range(currentOffset, currentOffset + initialLimit - 1);
+        .range(currentOffset, currentOffset + limit - 1);
 
       if (error) {
         console.error('Error fetching marketplace content:', error);
@@ -58,7 +59,7 @@ export const useMarketplace = (initialLimit = 50) => {
       }
 
       // Check if there are more items to load
-      setHasMore(marketplaceData && marketplaceData.length === initialLimit);
+      setHasMore(marketplaceData && marketplaceData.length === limit);
       
       console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
       
@@ -247,10 +248,10 @@ export const useMarketplace = (initialLimit = 50) => {
       // If resetting, replace content; otherwise append
       if (reset) {
         setContent(validContent);
-        setOffset(initialLimit);
+        setOffset(limit);
       } else {
         setContent(prev => [...prev, ...validContent]);
-        setOffset(prev => prev + initialLimit);
+        setOffset(prev => prev + limit);
       }
     } catch (error) {
       console.error('Error in fetchMarketplaceContent:', error);
@@ -298,7 +299,7 @@ export const useMarketplace = (initialLimit = 50) => {
       window.removeEventListener('refreshMarketplace', handleRefresh);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [categoryFilter, limit]);
 
   return {
     content,
