@@ -135,11 +135,10 @@ const Marketplace = () => {
   const filteredContent = marketplaceContent.filter(content => {
     const matchesSearch = (content.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (content.author || '').toLowerCase().includes(searchQuery.toLowerCase());
-    // Map category URL param to database file_type (photo -> image)
-    const typeToMatch = selectedCategory === "photo" ? "image" : selectedCategory;
+    // content.type is already normalized to 'photo', 'video', 'audio', etc. by useMarketplace hook
     const matchesCategory = selectedCategory === "all" || 
                            content.category_id === selectedCategory ||
-                           content.type === typeToMatch;
+                           content.type === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
