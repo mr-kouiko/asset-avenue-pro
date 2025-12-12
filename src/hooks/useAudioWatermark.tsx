@@ -1,9 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-const WATERMARK_URL = "https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0MS1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NjEzMDg2NzYsImV4cCI6NDkxNDkwODY3Nn0.mEg3fksa-Pmh5eakM_7DKigJg_tizxOY-ehgzDnYbo0";
+// Use PUBLIC URL (not signed) for the watermark audio
+const WATERMARK_URL = "https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3";
 const WATERMARK_INTERVAL = 15000; // 15 seconds between watermarks
-// -12dB = 10^(-12/20) ≈ 0.25 - audible but backgrounded
-const WATERMARK_RELATIVE_VOLUME = 1.0; // 4x previous volume (was 0.25)
+const WATERMARK_RELATIVE_VOLUME = 1.0; // Full volume relative to main track
 
 interface UseAudioWatermarkProps {
   isPlaying: boolean;
@@ -15,16 +15,28 @@ export const useAudioWatermark = ({ isPlaying, mainVolume, isMuted }: UseAudioWa
   const watermarkRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastPlayTimeRef = useRef<number>(0);
+  const isLoadedRef = useRef<boolean>(false);
 
   // Create the watermark audio element
   useEffect(() => {
-    const watermarkAudio = new Audio(WATERMARK_URL);
+    console.log('🎵 Initializing audio watermark...');
+    const watermarkAudio = new Audio();
     watermarkAudio.preload = 'auto';
-    // Set watermark at -12dB relative to main volume (backgrounded, not shocking)
     watermarkAudio.volume = Math.min(1, Math.max(0, WATERMARK_RELATIVE_VOLUME * mainVolume));
     watermarkRef.current = watermarkAudio;
 
-    // Preload the watermark
+    // Add load event listeners
+    watermarkAudio.addEventListener('canplaythrough', () => {
+      console.log('✅ Watermark audio loaded and ready to play');
+      isLoadedRef.current = true;
+    });
+    
+    watermarkAudio.addEventListener('error', (e) => {
+      console.error('❌ Watermark audio failed to load:', e, watermarkAudio.error);
+    });
+
+    // Set source and load
+    watermarkAudio.src = WATERMARK_URL;
     watermarkAudio.load();
 
     return () => {
