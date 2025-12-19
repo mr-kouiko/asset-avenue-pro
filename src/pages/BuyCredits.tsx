@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Check, Zap } from 'lucide-react';
+import { Loader2, Sparkles, Check, Zap, Wallet } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
@@ -120,8 +120,8 @@ export default function BuyCredits() {
       loginDesc: "Veuillez vous connecter pour acheter des crédits.",
       paymentCanceled: "Paiement annulé",
       paymentCanceledDesc: "Votre paiement a été annulé. Aucun montant n'a été débité.",
-      paymentRedirect: "Redirection vers le paiement",
-      paymentRedirectDesc: "Une nouvelle fenêtre s'est ouverte pour finaliser votre achat.",
+      paymentRedirect: "Redirection vers PayPal",
+      paymentRedirectDesc: "Vous allez être redirigé vers PayPal pour finaliser votre achat.",
       error: "Erreur",
       errorDesc: "Impossible de créer la session de paiement.",
       whyBuy: "Pourquoi acheter des crédits ?",
@@ -132,7 +132,7 @@ export default function BuyCredits() {
       pricingTitle: "💰 Tarification transparente",
       pricingDesc: "Pas d'abonnement. Payez uniquement pour les crédits que vous utilisez. Plus vous achetez, plus vous économisez.",
       securityTitle: "🔒 Paiement sécurisé",
-      securityDesc: "Tous les paiements sont traités de manière sécurisée par Stripe, leader mondial des paiements en ligne."
+      securityDesc: "Tous les paiements sont traités de manière sécurisée par PayPal, avec protection acheteur."
     },
     en: {
       title: "Buy AI Credits",
@@ -147,8 +147,8 @@ export default function BuyCredits() {
       loginDesc: "Please log in to purchase credits.",
       paymentCanceled: "Payment Canceled",
       paymentCanceledDesc: "Your payment was canceled. No amount was charged.",
-      paymentRedirect: "Redirecting to payment",
-      paymentRedirectDesc: "A new window has opened to complete your purchase.",
+      paymentRedirect: "Redirecting to PayPal",
+      paymentRedirectDesc: "You will be redirected to PayPal to complete your purchase.",
       error: "Error",
       errorDesc: "Unable to create payment session.",
       whyBuy: "Why buy credits?",
@@ -159,7 +159,7 @@ export default function BuyCredits() {
       pricingTitle: "💰 Transparent Pricing",
       pricingDesc: "No subscription. Pay only for the credits you use. The more you buy, the more you save.",
       securityTitle: "🔒 Secure Payment",
-      securityDesc: "All payments are processed securely by Stripe, the global leader in online payments."
+      securityDesc: "All payments are processed securely by PayPal, with buyer protection."
     }
   };
   
@@ -224,25 +224,35 @@ export default function BuyCredits() {
     setIsLoading(packId);
 
     try {
-      console.log('Initiating payment for pack:', packId);
-      const { data, error } = await supabase.functions.invoke('create-credits-payment', {
-        body: { pack: packId }
+      const selectedPack = creditPacks.find(p => p.id === packId);
+      if (!selectedPack) throw new Error('Pack not found');
+
+      console.log('Initiating PayPal payment for pack:', packId);
+      const { data, error } = await supabase.functions.invoke('create-paypal-order', {
+        body: { 
+          order_type: 'credits',
+          pack: packId,
+          credits: selectedPack.credits,
+          amount: selectedPack.price,
+          success_url: `${window.location.origin}/payment-success?type=credits`,
+          cancel_url: `${window.location.origin}/buy-credits?canceled=true`
+        }
       });
 
       if (error) {
         throw error;
       }
 
-      if (data?.url) {
-        // Open Stripe Checkout in new tab
-        window.open(data.url, '_blank');
-        
+      if (data?.approval_url) {
         toast({
           title: t.paymentRedirect,
           description: t.paymentRedirectDesc
         });
+        
+        // Redirect to PayPal
+        window.location.href = data.approval_url;
       } else {
-        throw new Error('No checkout URL received');
+        throw new Error('No PayPal checkout URL received');
       }
     } catch (error: any) {
       console.error('Error creating payment:', error);
@@ -324,7 +334,7 @@ export default function BuyCredits() {
               
               <CardFooter>
                 <Button
-                  className="w-full"
+                  className={`w-full ${pack.popular ? 'bg-[#0070ba] hover:bg-[#003087]' : ''}`}
                   variant={pack.popular ? "default" : "outline"}
                   onClick={() => handlePurchase(pack.id)}
                   disabled={isLoading !== null}
@@ -335,7 +345,10 @@ export default function BuyCredits() {
                       {t.processing}
                     </>
                   ) : (
-                    t.buyNow
+                    <>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      {t.buyNow}
+                    </>
                   )}
                 </Button>
               </CardFooter>

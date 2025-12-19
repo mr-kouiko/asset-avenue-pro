@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Download, ArrowRight, Home, Loader2 } from 'lucide-react';
+import { CheckCircle, Download, ArrowRight, Home, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PurchasedItem {
@@ -15,17 +15,46 @@ interface PurchasedItem {
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get('session_id');
-  const purchaseType = searchParams.get('type') || 'content'; // 'content' or 'credits'
+  const token = searchParams.get('token');
+  const payerID = searchParams.get('PayerID');
+  const purchaseType = searchParams.get('type') || 'content';
   const [loading, setLoading] = useState(true);
   const [purchases, setPurchases] = useState<PurchasedItem[]>([]);
   const [creditsAdded, setCreditsAdded] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPurchases = async () => {
+    const capturePayPalOrder = async () => {
       try {
+        // Check if this is a PayPal return
+        const paypalOrderId = token || searchParams.get('order_id');
+        
+        if (paypalOrderId && payerID) {
+          console.log('Capturing PayPal order:', paypalOrderId);
+          setOrderId(paypalOrderId);
+          
+          // Capture the PayPal order
+          const { data, error: captureError } = await supabase.functions.invoke('capture-paypal-order', {
+            body: { order_id: paypalOrderId }
+          });
+
+          if (captureError) {
+            console.error('Error capturing PayPal order:', captureError);
+            setError('Erreur lors de la finalisation du paiement');
+            setLoading(false);
+            return;
+          }
+
+          console.log('PayPal order captured successfully:', data);
+          
+          if (data.order_type === 'credits') {
+            setCreditsAdded(data.credits || 0);
+          }
+        }
+
         // Fetch user's recent downloads (purchases)
-        const { data: downloads, error } = await supabase
+        const { data: downloads, error: fetchError } = await supabase
           .from('downloads')
           .select(`
             id,
@@ -38,7 +67,7 @@ const PaymentSuccess = () => {
           .order('created_at', { ascending: false })
           .limit(5);
 
-        if (!error && downloads) {
+        if (!fetchError && downloads) {
           const items: PurchasedItem[] = downloads.map((d: any) => ({
             id: d.submission_id,
             title: d.content_submissions?.title || 'Contenu acheté',
@@ -47,14 +76,15 @@ const PaymentSuccess = () => {
           setPurchases(items);
         }
       } catch (err) {
-        console.error('Error fetching purchases:', err);
+        console.error('Error processing payment:', err);
+        setError('Erreur lors du traitement du paiement');
       } finally {
         setTimeout(() => setLoading(false), 1500);
       }
     };
 
-    fetchPurchases();
-  }, []);
+    capturePayPalOrder();
+  }, [token, payerID, searchParams]);
 
   if (loading) {
     return (
@@ -62,15 +92,60 @@ const PaymentSuccess = () => {
         <Header />
         <Navigation />
         
-      <div className="container py-16">
-        <div className="max-w-2xl mx-auto text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-6" />
-          <h1 className="text-2xl font-bold mb-4">Confirmation du paiement...</h1>
-          <p className="text-muted-foreground">
-            Nous vérifions votre paiement. Veuillez patienter.
-          </p>
+        <div className="container py-16">
+          <div className="max-w-2xl mx-auto text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-6" />
+            <h1 className="text-2xl font-bold mb-4">Confirmation du paiement...</h1>
+            <p className="text-muted-foreground">
+              Nous vérifions votre paiement. Veuillez patienter.
+            </p>
+          </div>
         </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        
+        <div className="container py-16">
+          <div className="max-w-2xl mx-auto">
+            <Card className="text-center">
+              <CardHeader className="pb-6">
+                <div className="flex justify-center mb-6">
+                  <div className="h-20 w-20 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="h-12 w-12 text-red-600" />
+                  </div>
+                </div>
+                <CardTitle className="text-3xl text-red-600 mb-2">
+                  Erreur de paiement
+                </CardTitle>
+                <p className="text-muted-foreground text-lg">
+                  {error}
+                </p>
+              </CardHeader>
+              
+              <CardContent className="space-y-6">
+                <div className="flex gap-3 justify-center">
+                  <Button asChild>
+                    <Link to="/cart">
+                      Retourner au panier
+                    </Link>
+                  </Button>
+                  
+                  <Button variant="outline" asChild>
+                    <Link to="/support">
+                      Contacter le support
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -93,7 +168,7 @@ const PaymentSuccess = () => {
                 Paiement réussi !
               </CardTitle>
               <p className="text-muted-foreground text-lg">
-                Votre achat a été traité avec succès
+                Votre achat a été traité avec succès via PayPal
               </p>
             </CardHeader>
             
@@ -135,9 +210,9 @@ const PaymentSuccess = () => {
                   </div>
                 )}
                 
-                {sessionId && (
+                {orderId && (
                   <p className="text-xs text-green-600 mt-3 pt-3 border-t border-green-200">
-                    ID de transaction : {sessionId.slice(-8)}
+                    ID de transaction PayPal : {orderId.slice(-8)}
                   </p>
                 )}
               </div>

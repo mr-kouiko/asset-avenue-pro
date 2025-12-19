@@ -31,7 +31,7 @@ export const useMarketplacePayment = () => {
 
     try {
       setLoading(true);
-      console.log('Creating marketplace payment for', cartItems.length, 'items');
+      console.log('Creating PayPal payment for', cartItems.length, 'items');
       console.log('Cart items with prices:', cartItems.map(i => ({ id: i.id, price: i.price, license: i.licenseId })));
 
       // Convert cart items to the expected format with proper price handling
@@ -58,32 +58,30 @@ export const useMarketplacePayment = () => {
         };
       });
 
-      const { data, error } = await supabase.functions.invoke('create-marketplace-payment', {
+      const { data, error } = await supabase.functions.invoke('create-paypal-order', {
         body: {
           cart_items,
+          order_type: 'marketplace',
           success_url: successUrl || `${window.location.origin}/payment-success`,
           cancel_url: cancelUrl || `${window.location.origin}/cart`
-        },
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         }
       });
 
       if (error) {
-        console.error('Error creating payment:', error);
+        console.error('Error creating PayPal order:', error);
         toast.error('Erreur lors de la création du paiement');
         return null;
       }
 
-      console.log('Payment created:', data);
+      console.log('PayPal order created:', data);
 
-      if (data.checkout_url) {
+      if (data.approval_url) {
         // Clear cart before redirect
         clearCart();
-        toast.success('Redirection vers le paiement...');
+        toast.success('Redirection vers PayPal...');
         
-        // Redirect to Stripe Checkout in same window
-        window.location.href = data.checkout_url;
+        // Redirect to PayPal Checkout
+        window.location.href = data.approval_url;
       }
 
       return data;
@@ -91,6 +89,33 @@ export const useMarketplacePayment = () => {
     } catch (error) {
       console.error('Error in createPayment:', error);
       toast.error('Erreur lors du paiement');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const capturePayment = async (orderId: string) => {
+    try {
+      setLoading(true);
+      console.log('Capturing PayPal order:', orderId);
+
+      const { data, error } = await supabase.functions.invoke('capture-paypal-order', {
+        body: { order_id: orderId }
+      });
+
+      if (error) {
+        console.error('Error capturing PayPal order:', error);
+        toast.error('Erreur lors de la finalisation du paiement');
+        return null;
+      }
+
+      console.log('PayPal order captured:', data);
+      return data;
+
+    } catch (error) {
+      console.error('Error in capturePayment:', error);
+      toast.error('Erreur lors de la finalisation du paiement');
       return null;
     } finally {
       setLoading(false);
@@ -107,7 +132,6 @@ export const useMarketplacePayment = () => {
     }
 
     // Check for items with problematic prices
-    // Note: null/undefined prices will be replaced with license-based pricing
     const invalidItems = cartItems.filter(item => 
       (item.price !== null && item.price !== undefined && typeof item.price !== 'number') ||
       (typeof item.price === 'number' && item.price < 0)
@@ -145,6 +169,7 @@ export const useMarketplacePayment = () => {
   return {
     loading,
     createPayment,
+    capturePayment,
     validateCart,
     getTotalAmount,
     getCommissionAmount,
