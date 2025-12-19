@@ -36,10 +36,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
-import { StripeConnectOnboarding } from "@/components/StripeConnectOnboarding";
-import { StripeSettingsPanel } from "@/components/StripeSettingsPanel";
-import { useStripeConnect } from "@/hooks/useStripeConnect";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SimpleFileUpload } from "@/components/SimpleFileUpload";
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
@@ -59,7 +55,7 @@ const Dashboard = () => {
     refreshData 
   } = useSellerDashboard();
   
-  const { accountStatus, isAccountReady } = useStripeConnect();
+  
   const [activeTab, setActiveTab] = useState("overview");
   
   // Refresh dashboard data when returning to this page
@@ -207,28 +203,6 @@ const Dashboard = () => {
   } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const StripeConnectWarning = () => {
-    if (!accountStatus || isAccountReady()) return null;
-
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Stripe Configuration Required</AlertTitle>
-        <AlertDescription className="flex items-center justify-between">
-          <span>
-            You need to configure your Stripe Connect account to receive payments.
-          </span>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setActiveTab("stripe")}
-          >
-            Configure Now
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  };
 
   if (!user) {
     return (
@@ -373,18 +347,15 @@ const Dashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="content">My Content</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="stripe">Payments</TabsTrigger>
             <TabsTrigger value="upload">Upload</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Stripe Connect Warning */}
-            <StripeConnectWarning />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -800,24 +771,6 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* Stripe Tab */}
-          <TabsContent value="stripe">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Stripe Configuration</CardTitle>
-                  <CardDescription>
-                    Configure your Stripe account to receive payments
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <StripeConnectOnboarding />
-                </CardContent>
-              </Card>
-
-              <StripeSettingsPanel />
-            </div>
-          </TabsContent>
 
           {/* Upload Tab */}
           <TabsContent value="upload" className="space-y-6">
