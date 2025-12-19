@@ -35,12 +35,6 @@ file_size_limit = "2147483648"
 enabled = true
 port = 54321
 
-[functions.create-checkout]
-verify_jwt = true
-
-[functions.check-subscription]
-verify_jwt = true
-
 [functions.secure-download]
 verify_jwt = true
 
@@ -53,26 +47,8 @@ verify_jwt = false
 [functions.chunked-upload]
 verify_jwt = true
 
-[functions.create-connect-account]
-verify_jwt = true
-
-[functions.create-marketplace-payment]
-verify_jwt = true
-
-[functions.stripe-webhooks]
-verify_jwt = false
-
-[functions.update-account-status]
-verify_jwt = true
-
-[functions.get-account-status]
-verify_jwt = true
-
 [functions.watermark-video]
 verify_jwt = true
-
-[functions.translate-content]
-verify_jwt = false
 
 [functions.r2-upload]
 verify_jwt = true
@@ -80,8 +56,8 @@ verify_jwt = true
 [functions.generate-ai-image]
 verify_jwt = true
 
-[functions.create-credits-payment]
+[functions.create-paypal-order]
 verify_jwt = true
 
-[functions.credits-payment-webhook]
-verify_jwt = false
+[functions.capture-paypal-order]
+verify_jwt = true
