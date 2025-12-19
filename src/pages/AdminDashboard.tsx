@@ -17,7 +17,7 @@ import {
   X
 } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
-import { StripeSettingsPanel } from "@/components/StripeSettingsPanel";
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -134,11 +134,10 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="content">Modération</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="stripe">Stripe</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
 
@@ -292,10 +291,6 @@ const AdminDashboard = () => {
             <AdminTransactionsDashboard />
           </TabsContent>
 
-          {/* Stripe Tab */}
-          <TabsContent value="stripe">
-            <StripeSettingsPanel />
-          </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
