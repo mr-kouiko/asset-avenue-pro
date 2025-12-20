@@ -40,6 +40,9 @@ import NotFound from "./pages/NotFound";
 import AboutEN from "./pages/en/AboutEN";
 import AIImageGenerator from "./pages/AIImageGenerator";
 import BuyCredits from "./pages/BuyCredits";
+import BecomeSeller from "./pages/BecomeSeller";
+import SellerRegistrationSuccess from "./pages/SellerRegistrationSuccess";
+import SellerRegistrationCancelled from "./pages/SellerRegistrationCancelled";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +90,9 @@ const App = () => (
                   <Route path="/ai-image-generator" element={<AIImageGenerator />} />
                   <Route path="/buy-credits" element={<BuyCredits />} />
                   <Route path="/test-accounts" element={<TestAccounts />} />
+                  <Route path="/become-seller" element={<BecomeSeller />} />
+                  <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
+                  <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
                   <Route path="/admin" element={
                     <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
                       <AdminDashboard />

@@ -61,3 +61,9 @@ verify_jwt = true
 
 [functions.capture-paypal-order]
 verify_jwt = true
+
+[functions.seller-registration-payment]
+verify_jwt = true
+
+[functions.verify-seller-payment]
+verify_jwt = true
