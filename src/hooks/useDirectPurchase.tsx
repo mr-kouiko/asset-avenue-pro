@@ -58,29 +58,27 @@ export const useDirectPurchase = () => {
         license_id: selectedLicense
       }];
 
-      const { data, error } = await supabase.functions.invoke('create-marketplace-payment', {
+      const { data, error } = await supabase.functions.invoke('create-paypal-order', {
         body: {
           cart_items,
-          success_url: `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          order_type: 'marketplace',
+          success_url: `${window.location.origin}/payment-success`,
           cancel_url: `${window.location.origin}/product/${item.submission_id}?payment=cancelled`
-        },
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         }
       });
 
       if (error) {
-        console.error('Error creating direct payment:', error);
-        toast.error('Erreur lors de la création du paiement');
+        console.error('Error creating PayPal order:', error);
+        toast.error('Erreur lors de la création du paiement PayPal');
         return null;
       }
 
-      console.log('Direct payment created:', data);
+      console.log('PayPal order created:', data);
 
-      if (data.checkout_url) {
-        // Redirect to Stripe Checkout in same window
-        toast.success('Redirection vers le paiement...');
-        window.location.href = data.checkout_url;
+      if (data.approval_url) {
+        // Redirect to PayPal Checkout
+        toast.success('Redirection vers PayPal...');
+        window.location.href = data.approval_url;
       }
 
       return data;
