@@ -11,13 +11,13 @@ import { toast } from "sonner";
 
 const BecomeSeller = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const { isCreator, isAdmin } = useUserRole();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBecomeSeller = async () => {
     if (!user) {
-      toast.error("Vous devez être connecté pour devenir vendeur");
+      toast.error("You must be logged in to become a seller");
       navigate("/auth");
       return;
     }
@@ -38,9 +38,15 @@ const BecomeSeller = () => {
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Une erreur est survenue. Veuillez réessayer.");
+      toast.error("An error occurred. Please try again.");
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    await signInWithGoogle();
+    setIsLoading(false);
   };
 
   // Already a seller
@@ -52,14 +58,14 @@ const BecomeSeller = () => {
           <Card className="max-w-md w-full">
             <CardHeader className="text-center">
               <Check className="h-16 w-16 mx-auto text-green-500 mb-4" />
-              <CardTitle>Vous êtes déjà vendeur!</CardTitle>
+              <CardTitle>You're already a seller!</CardTitle>
               <CardDescription>
-                Accédez à votre tableau de bord pour gérer vos produits.
+                Access your dashboard to manage your products.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
               <Button onClick={() => navigate("/seller-dashboard")} className="w-full">
-                Accéder au tableau de bord
+                Go to Dashboard
               </Button>
             </CardContent>
           </Card>
@@ -74,9 +80,9 @@ const BecomeSeller = () => {
       <div className="container py-16">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4">Devenez Vendeur sur VisuStock</h1>
+            <h1 className="text-4xl font-bold mb-4">Become a Seller on VisuStock</h1>
             <p className="text-xl text-muted-foreground">
-              Vendez vos photos, vidéos et créations à des milliers d'acheteurs
+              Sell your photos, videos and creations to thousands of buyers
             </p>
           </div>
 
@@ -84,11 +90,11 @@ const BecomeSeller = () => {
             <Card>
               <CardHeader className="text-center">
                 <Upload className="h-12 w-12 mx-auto text-primary mb-2" />
-                <CardTitle className="text-lg">Uploadez vos créations</CardTitle>
+                <CardTitle className="text-lg">Upload Your Creations</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center">
-                  Partagez vos photos, vidéos, illustrations et fichiers audio
+                  Share your photos, videos, illustrations and audio files
                 </p>
               </CardContent>
             </Card>
@@ -96,11 +102,11 @@ const BecomeSeller = () => {
             <Card>
               <CardHeader className="text-center">
                 <Store className="h-12 w-12 mx-auto text-primary mb-2" />
-                <CardTitle className="text-lg">Créez votre boutique</CardTitle>
+                <CardTitle className="text-lg">Create Your Store</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center">
-                  Personnalisez votre profil et mettez en valeur votre travail
+                  Customize your profile and showcase your work
                 </p>
               </CardContent>
             </Card>
@@ -108,11 +114,11 @@ const BecomeSeller = () => {
             <Card>
               <CardHeader className="text-center">
                 <Wallet className="h-12 w-12 mx-auto text-primary mb-2" />
-                <CardTitle className="text-lg">Gagnez de l'argent</CardTitle>
+                <CardTitle className="text-lg">Earn Money</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center">
-                  Recevez des paiements pour chaque vente de vos créations
+                  Receive payments for every sale of your creations
                 </p>
               </CardContent>
             </Card>
@@ -121,62 +127,76 @@ const BecomeSeller = () => {
           <Card className="max-w-md mx-auto">
             <CardHeader className="text-center">
               <CreditCard className="h-12 w-12 mx-auto text-primary mb-4" />
-              <CardTitle>Frais d'inscription</CardTitle>
+              <CardTitle>Registration Fee</CardTitle>
               <CardDescription>
-                Un paiement unique pour accéder à toutes les fonctionnalités vendeur
+                A one-time payment to access all seller features
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center space-y-6">
               <div>
-                <span className="text-5xl font-bold">15€</span>
-                <span className="text-muted-foreground ml-2">paiement unique</span>
+                <span className="text-5xl font-bold">€15</span>
+                <span className="text-muted-foreground ml-2">one-time payment</span>
               </div>
               
               <ul className="text-left space-y-2">
                 <li className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500" />
-                  <span>Accès illimité à la plateforme vendeur</span>
+                  <span>Unlimited access to seller platform</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500" />
-                  <span>Upload de fichiers illimité</span>
+                  <span>Unlimited file uploads</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500" />
-                  <span>Tableau de bord analytique</span>
+                  <span>Analytics dashboard</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500" />
-                  <span>Support prioritaire</span>
+                  <span>Priority support</span>
                 </li>
               </ul>
 
-              <Button 
-                onClick={handleBecomeSeller} 
-                disabled={isLoading}
-                className="w-full"
-                size="lg"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redirection...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Devenir vendeur - 15€
-                  </>
-                )}
-              </Button>
-
-              {!user && (
-                <p className="text-sm text-muted-foreground">
-                  Vous devez être connecté pour vous inscrire.{" "}
-                  <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/auth")}>
-                    Se connecter
+              {user ? (
+                <Button 
+                  onClick={handleBecomeSeller} 
+                  disabled={isLoading}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Become a Seller - €15
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Sign in to continue with seller registration
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    {isLoading ? "Signing in..." : "Sign in with Google"}
                   </Button>
-                </p>
+                  <Button 
+                    variant="default" 
+                    onClick={() => navigate("/auth")}
+                    className="w-full"
+                  >
+                    Sign in with Email
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>

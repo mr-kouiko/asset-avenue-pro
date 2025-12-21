@@ -166,7 +166,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
         <div className="mb-6">
           <Link to="/" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour à l'accueil
+            Back to home
           </Link>
         </div>
 
@@ -181,17 +181,17 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Se connecter</TabsTrigger>
-            <TabsTrigger value="register">S'inscrire</TabsTrigger>
+            <TabsTrigger value="login">Sign In</TabsTrigger>
+            <TabsTrigger value="register">Sign Up</TabsTrigger>
           </TabsList>
 
           {/* Login Tab */}
           <TabsContent value="login">
             <Card>
               <CardHeader>
-                <CardTitle>Connexion</CardTitle>
+                <CardTitle>Sign In</CardTitle>
                 <CardDescription>
-                  Connectez-vous à votre compte VisuStock
+                  Sign in to your VisuStock account
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -203,7 +203,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="votre@email.com"
+                        placeholder="your@email.com"
                         className="pl-10"
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
@@ -213,7 +213,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password">Mot de passe</Label>
+                    <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -236,16 +236,16 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                         onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
                       />
                       <Label htmlFor="remember" className="text-sm">
-                        Se souvenir de moi
+                        Remember me
                       </Label>
                     </div>
                     <Button variant="link" className="p-0 text-sm">
-                      Mot de passe oublié ?
+                      Forgot password?
                     </Button>
                   </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Connexion..." : "Se connecter"}
+                    {loading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
 
@@ -255,7 +255,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      Ou continuer avec
+                      Or continue with
                     </span>
                   </div>
                 </div>
@@ -267,7 +267,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                     disabled={loading}
                     type="button"
                   >
-                    {loading ? "Connexion..." : "Se connecter avec Google"}
+                    {loading ? "Signing in..." : "Sign in with Google"}
                   </Button>
                 </div>
               </CardContent>
@@ -278,20 +278,42 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
           <TabsContent value="register">
             <Card>
               <CardHeader>
-                <CardTitle>{defaultUserType === "seller" ? "Devenir vendeur" : "Créer un compte"}</CardTitle>
+                <CardTitle>{defaultUserType === "seller" ? "Become a Seller" : "Create an Account"}</CardTitle>
                 <CardDescription>
                   {defaultUserType === "seller" 
-                    ? "Rejoignez notre communauté de créateurs et vendez vos œuvres"
-                    : "Rejoignez la communauté VisuStock"
+                    ? "Join our community of creators and sell your work"
+                    : "Join the VisuStock community"
                   }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Google Sign Up Button */}
+                <Button 
+                  variant="outline" 
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  type="button"
+                  className="w-full"
+                >
+                  {loading ? "Signing up..." : "Sign up with Google"}
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or register with email
+                    </span>
+                  </div>
+                </div>
+
                 <form onSubmit={handleRegister} className="space-y-4">
                   {/* User Type Selection - Only show if not predefined */}
                   {!defaultUserType && (
                     <div className="space-y-2">
-                      <Label>Type de compte</Label>
+                      <Label>Account Type</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <Button
                           type="button"
@@ -300,7 +322,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                           className="flex items-center justify-center gap-2"
                         >
                           <User className="h-4 w-4" />
-                          Client
+                          Buyer
                         </Button>
                         <Button
                           type="button"
@@ -309,7 +331,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                           className="flex items-center justify-center gap-2"
                         >
                           <Store className="h-4 w-4" />
-                          Vendeur
+                          Seller
                         </Button>
                       </div>
                     </div>
@@ -322,12 +344,12 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                         {defaultUserType === "seller" ? (
                           <>
                             <Store className="h-5 w-5" />
-                            Inscription vendeur
+                            Seller Registration
                           </>
                         ) : (
                           <>
                             <User className="h-5 w-5" />
-                            Inscription client
+                            Buyer Registration
                           </>
                         )}
                       </div>
@@ -336,7 +358,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Prénom</Label>
+                      <Label htmlFor="firstName">First Name</Label>
                       <Input 
                         id="firstName" 
                         placeholder="John" 
@@ -346,7 +368,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Nom</Label>
+                      <Label htmlFor="lastName">Last Name</Label>
                       <Input 
                         id="lastName" 
                         placeholder="Doe" 
@@ -364,7 +386,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                       <Input
                         id="registerEmail"
                         type="email"
-                        placeholder="votre@email.com"
+                        placeholder="your@email.com"
                         className="pl-10"
                         value={formData.registerEmail}
                         onChange={(e) => handleInputChange('registerEmail', e.target.value)}
@@ -375,10 +397,10 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
 
                   {userType === "seller" && (
                     <div className="space-y-2">
-                      <Label htmlFor="storeName">Nom de votre boutique</Label>
+                      <Label htmlFor="storeName">Store Name</Label>
                       <Input
                         id="storeName"
-                        placeholder="Ma boutique créative"
+                        placeholder="My Creative Store"
                         value={formData.storeName}
                         onChange={(e) => handleInputChange('storeName', e.target.value)}
                         required={userType === "seller"}
@@ -387,7 +409,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="registerPassword">Mot de passe (min. 6 caractères)</Label>
+                    <Label htmlFor="registerPassword">Password (min. 6 characters)</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -404,7 +426,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -418,26 +440,33 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                       />
                     </div>
                     {formData.confirmPassword && formData.registerPassword !== formData.confirmPassword && (
-                      <p className="text-sm text-destructive">Les mots de passe ne correspondent pas</p>
+                      <p className="text-sm text-destructive">Passwords do not match</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="country">Pays</Label>
+                    <Label htmlFor="country">Country</Label>
                     <Select 
                       value={formData.country} 
                       onValueChange={(value) => handleInputChange('country', value)}
                       required
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez votre pays" />
+                        <SelectValue placeholder="Select your country" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="us">United States</SelectItem>
+                        <SelectItem value="uk">United Kingdom</SelectItem>
+                        <SelectItem value="ca">Canada</SelectItem>
+                        <SelectItem value="au">Australia</SelectItem>
+                        <SelectItem value="de">Germany</SelectItem>
                         <SelectItem value="fr">France</SelectItem>
-                        <SelectItem value="ma">Maroc</SelectItem>
-                        <SelectItem value="dz">Algérie</SelectItem>
-                        <SelectItem value="tn">Tunisie</SelectItem>
-                        <SelectItem value="other">Autre</SelectItem>
+                        <SelectItem value="es">Spain</SelectItem>
+                        <SelectItem value="it">Italy</SelectItem>
+                        <SelectItem value="ma">Morocco</SelectItem>
+                        <SelectItem value="dz">Algeria</SelectItem>
+                        <SelectItem value="tn">Tunisia</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -450,49 +479,19 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                       required
                     />
                     <Label htmlFor="terms" className="text-sm">
-                      J'accepte les{" "}
-                      <Button variant="link" className="p-0 h-auto text-sm">
-                        conditions d'utilisation
-                      </Button>{" "}
-                      et la{" "}
-                      <Button variant="link" className="p-0 h-auto text-sm">
-                        politique de confidentialité
-                      </Button>
+                      I accept the <Link to="/en/terms" className="text-primary hover:underline">Terms of Service</Link> and{" "}
+                      <Link to="/en/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>
                     </Label>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    size="lg" 
-                    disabled={loading || formData.registerPassword !== formData.confirmPassword}
-                  >
-                    {loading 
-                      ? "Création en cours..." 
-                      : defaultUserType === "seller" 
-                        ? "Devenir vendeur VisuStock" 
-                        : "Créer mon compte"
-                    }
+                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                    {loading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-
-        <div className="text-center mt-6 text-sm text-muted-foreground">
-          En créant un compte, vous acceptez nos conditions d'utilisation
-          <br />
-          {defaultUserType === "seller" ? (
-            <Link to="/auth" className="text-primary hover:underline mt-2 inline-block">
-              Vous êtes client ? Inscrivez-vous ici
-            </Link>
-          ) : defaultUserType === "client" ? (
-            <Link to="/auth/seller" className="text-primary hover:underline mt-2 inline-block">
-              Vous voulez vendre ? Devenez vendeur
-            </Link>
-          ) : null}
-        </div>
       </div>
     </div>
   );
