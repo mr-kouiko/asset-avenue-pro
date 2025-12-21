@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Mail, Lock, User, Store } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -128,17 +128,17 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Se connecter</TabsTrigger>
-            <TabsTrigger value="register">S'inscrire</TabsTrigger>
+            <TabsTrigger value="login">Sign In</TabsTrigger>
+            <TabsTrigger value="register">Sign Up</TabsTrigger>
           </TabsList>
 
           {/* Login Tab */}
           <TabsContent value="login">
             <Card className="border-0 shadow-none">
               <CardHeader className="px-0">
-                <CardTitle className="text-lg">Connexion</CardTitle>
+                <CardTitle className="text-lg">Sign In</CardTitle>
                 <CardDescription>
-                  Connectez-vous à votre compte VisuStock
+                  Sign in to your VisuStock account
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-0 space-y-4">
@@ -150,7 +150,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="votre@email.com"
+                        placeholder="your@email.com"
                         className="pl-10"
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
@@ -160,7 +160,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password">Mot de passe</Label>
+                    <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -183,16 +183,16 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                         onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
                       />
                       <Label htmlFor="remember" className="text-sm">
-                        Se souvenir de moi
+                        Remember me
                       </Label>
                     </div>
                     <Button variant="link" className="p-0 text-sm">
-                      Mot de passe oublié ?
+                      Forgot password?
                     </Button>
                   </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Connexion..." : "Se connecter"}
+                    {loading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
 
@@ -202,7 +202,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      Ou continuer avec
+                      Or continue with
                     </span>
                   </div>
                 </div>
@@ -214,7 +214,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                     disabled={loading}
                     type="button"
                   >
-                    {loading ? "Connexion..." : "Se connecter avec Google"}
+                    {loading ? "Signing in..." : "Sign in with Google"}
                   </Button>
                 </div>
               </CardContent>
@@ -225,24 +225,46 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           <TabsContent value="register">
             <Card className="border-0 shadow-none">
               <CardHeader className="px-0">
-                <CardTitle className="text-lg">Créer un compte</CardTitle>
+                <CardTitle className="text-lg">Create an Account</CardTitle>
                 <CardDescription>
-                  Rejoignez la communauté VisuStock
+                  Join the VisuStock community
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-0 space-y-4">
+                {/* Google Sign Up Button */}
+                <Button 
+                  variant="outline" 
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  type="button"
+                  className="w-full"
+                >
+                  {loading ? "Signing up..." : "Sign up with Google"}
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or register with email
+                    </span>
+                  </div>
+                </div>
+
                 <form onSubmit={handleRegister} className="space-y-4">
                   {/* Role Selection */}
                   <div className="space-y-3">
-                    <Label>Type de compte *</Label>
+                    <Label>Account Type *</Label>
                     <RadioGroup value={userRole} onValueChange={(value: "client" | "creator") => setUserRole(value)}>
                       <div className="flex items-center space-x-2 p-3 border rounded-lg">
                         <RadioGroupItem value="client" id="client" />
                         <Label htmlFor="client" className="flex items-center gap-2 cursor-pointer flex-1">
                           <User className="h-4 w-4" />
                           <div>
-                            <div className="font-medium">Acheteur</div>
-                            <div className="text-sm text-muted-foreground">Acheter et télécharger du contenu</div>
+                            <div className="font-medium">Buyer</div>
+                            <div className="text-sm text-muted-foreground">Buy and download content</div>
                           </div>
                         </Label>
                       </div>
@@ -251,8 +273,8 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                         <Label htmlFor="creator" className="flex items-center gap-2 cursor-pointer flex-1">
                           <Store className="h-4 w-4" />
                           <div>
-                            <div className="font-medium">Vendeur</div>
-                            <div className="text-sm text-muted-foreground">Vendre vos créations</div>
+                            <div className="font-medium">Seller</div>
+                            <div className="text-sm text-muted-foreground">Sell your creations</div>
                           </div>
                         </Label>
                       </div>
@@ -261,7 +283,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Prénom *</Label>
+                      <Label htmlFor="firstName">First Name *</Label>
                       <Input 
                         id="firstName" 
                         placeholder="John" 
@@ -271,7 +293,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Nom *</Label>
+                      <Label htmlFor="lastName">Last Name *</Label>
                       <Input 
                         id="lastName" 
                         placeholder="Doe" 
@@ -289,7 +311,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                       <Input
                         id="registerEmail"
                         type="email"
-                        placeholder="votre@email.com"
+                        placeholder="your@email.com"
                         className="pl-10"
                         value={formData.registerEmail}
                         onChange={(e) => handleInputChange('registerEmail', e.target.value)}
@@ -300,10 +322,10 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
                   {userRole === "creator" && (
                     <div className="space-y-2">
-                      <Label htmlFor="storeName">Nom de votre boutique *</Label>
+                      <Label htmlFor="storeName">Store Name *</Label>
                       <Input
                         id="storeName"
-                        placeholder="Ma boutique créative"
+                        placeholder="My Creative Store"
                         value={formData.storeName}
                         onChange={(e) => handleInputChange('storeName', e.target.value)}
                         required
@@ -312,7 +334,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="registerPassword">Mot de passe (min. 6 caractères) *</Label>
+                    <Label htmlFor="registerPassword">Password (min. 6 characters) *</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -329,7 +351,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmer le mot de passe *</Label>
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -343,26 +365,33 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                       />
                     </div>
                     {formData.confirmPassword && formData.registerPassword !== formData.confirmPassword && (
-                      <p className="text-sm text-destructive">Les mots de passe ne correspondent pas</p>
+                      <p className="text-sm text-destructive">Passwords do not match</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="country">Pays *</Label>
+                    <Label htmlFor="country">Country *</Label>
                     <Select 
                       value={formData.country} 
                       onValueChange={(value) => handleInputChange('country', value)}
                       required
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez votre pays" />
+                        <SelectValue placeholder="Select your country" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="us">United States</SelectItem>
+                        <SelectItem value="uk">United Kingdom</SelectItem>
+                        <SelectItem value="ca">Canada</SelectItem>
+                        <SelectItem value="au">Australia</SelectItem>
+                        <SelectItem value="de">Germany</SelectItem>
                         <SelectItem value="fr">France</SelectItem>
-                        <SelectItem value="ma">Maroc</SelectItem>
-                        <SelectItem value="dz">Algérie</SelectItem>
-                        <SelectItem value="tn">Tunisie</SelectItem>
-                        <SelectItem value="other">Autre</SelectItem>
+                        <SelectItem value="es">Spain</SelectItem>
+                        <SelectItem value="it">Italy</SelectItem>
+                        <SelectItem value="ma">Morocco</SelectItem>
+                        <SelectItem value="dz">Algeria</SelectItem>
+                        <SelectItem value="tn">Tunisia</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -375,12 +404,13 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                       required
                     />
                     <Label htmlFor="terms" className="text-sm">
-                      J'accepte les conditions d'utilisation et la politique de confidentialité *
+                      I accept the <Link to="/en/terms" className="text-primary hover:underline">Terms of Service</Link> and{" "}
+                      <Link to="/en/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link> *
                     </Label>
                   </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Inscription..." : "Créer mon compte"}
+                    {loading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
               </CardContent>
