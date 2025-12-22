@@ -126,7 +126,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   };
 
   return (
-    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer bg-white border border-stock-border/50 hover:border-stock-blue/20"
+    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl active:scale-[0.98] cursor-pointer bg-white border border-stock-border/50 hover:border-stock-blue/20 touch-manipulation"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onClick={handleCardClick}
@@ -164,42 +164,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </Badge>
         </div>
         
-        {/* Premium hover actions - Adobe Stock Style */}
-        <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
-          isHovered ? 'opacity-0' : 'opacity-0'
-        } z-30`}>
-          <div className="flex gap-1.5">
-            <Button 
-              size="sm" 
-              variant="secondary"
-              className="bg-white/95 hover:bg-white text-stock-dark border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
-              onClick={(e) => {
-                e.stopPropagation();
-                const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
-                navigate(urlPath);
-              }}
-            >
-              Aperçu
-            </Button>
-            <Button 
-              size="sm"
-              className="bg-stock-blue hover:bg-stock-blue/90 text-white border-0 shadow-md text-xs px-3 py-1.5 h-8 font-medium"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDirectPurchase();
-              }}
-              disabled={directPurchaseLoading}
-            >
-              {directPurchaseLoading ? (
-                <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                'Licencier'
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {/* Heart button - Adobe Stock Style */}
+        {/* Heart button - Always visible on mobile, hover on desktop */}
         <div className="absolute top-2 right-2">
           <Button
             variant="ghost"
@@ -208,19 +173,19 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               e.stopPropagation();
               // Handle like action
             }}
-            className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+            className="h-8 w-8 md:h-7 md:w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
           >
             <Heart 
-              className="h-3.5 w-3.5" 
+              className="h-4 w-4 md:h-3.5 md:w-3.5" 
               fill={isLiked ? "hsl(var(--stock-blue))" : "none"}
               color={isLiked ? "hsl(var(--stock-blue))" : "hsl(var(--stock-dark))"}
             />
           </Button>
         </div>
 
-        {/* Quick add to cart - Bottom right corner */}
+        {/* Quick add to cart - Always visible on mobile, hover on desktop */}
         <div className={`absolute bottom-2 right-2 transition-all duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
+          isHovered ? 'opacity-100' : 'opacity-100 md:opacity-0'
         }`}>
           <Button
             variant="ghost"
@@ -229,24 +194,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               e.stopPropagation();
               handleAddToCart();
             }}
-            className="h-7 w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+            className="h-8 w-8 md:h-7 md:w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
           >
-            <ShoppingCart className="h-3.5 w-3.5 text-stock-dark" />
+            <ShoppingCart className="h-4 w-4 md:h-3.5 md:w-3.5 text-stock-dark" />
           </Button>
         </div>
       </div>
 
       {/* Metadata - Adobe Stock Style */}
-      <div className="p-3 space-y-2">
+      <div className="p-2.5 md:p-3 space-y-1.5 md:space-y-2">
         <div>
           <h3 className="font-medium text-sm text-stock-dark leading-tight line-clamp-2 min-h-[2.5rem]">
             {title}
           </h3>
-          <p className="text-xs text-stock-dark/60 mt-1 font-medium">{author}</p>
+          <p className="text-xs text-stock-dark/60 mt-1 font-medium truncate">{author}</p>
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-stock-dark/50">
+          <div className="flex items-center gap-2 md:gap-3 text-xs text-stock-dark/50">
             <span className="flex items-center gap-1">
               <Heart className="h-3 w-3" />
               {likes}

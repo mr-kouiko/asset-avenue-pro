@@ -134,12 +134,21 @@ All colors MUST be HSL.
   user-select: none;
 }
 
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Improve touch targets on mobile */
 @media (max-width: 768px) {
-  /* Ensure minimum touch target size */
-  button, [role="button"], [role="slider"] {
-    min-height: 44px;
-    min-width: 44px;
+  /* Adjust container padding for mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   
   /* Better spacing for mobile interactions */
@@ -149,7 +158,30 @@ All colors MUST be HSL.
   
   /* Smooth transitions for touch interactions */
   button:active, [role="button"]:active {
-    transform: scale(0.95);
+    transform: scale(0.97);
     transition: transform 0.1s ease;
+  }
+  
+  /* Reduce grid gap on mobile */
+  :root {
+    --grid-gap: 0.75rem;
+  }
+}
+
+/* Smooth scrolling for touch devices */
+@supports (-webkit-overflow-scrolling: touch) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Better tap highlight on iOS */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  a, button {
+    -webkit-tap-highlight-color: hsl(var(--primary) / 0.1);
   }
 }
