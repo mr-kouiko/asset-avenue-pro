@@ -58,7 +58,7 @@ export const HeroSection = () => {
     }
   };
   return (
-    <section className="relative py-20 overflow-hidden">
+    <section className="relative py-12 md:py-20 overflow-hidden min-h-[60vh] md:min-h-[70vh] flex items-center">
       {/* Background Video */}
       <video
         autoPlay
@@ -73,77 +73,77 @@ export const HeroSection = () => {
       {/* Fallback Background */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary-glow/5 to-primary/5"></div>
       
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40"></div>
+      {/* Overlay - Darker on mobile for better text readability */}
+      <div className="absolute inset-0 bg-black/50 md:bg-black/40"></div>
       
-      <div className="container relative z-10">
-        <div className="flex flex-col lg:flex-row items-center gap-12">
+      <div className="container relative z-10 px-4">
+        <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
           {/* Left Content */}
-          <div className="flex-1 space-y-6">
-            <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-lg leading-tight">
+          <div className="flex-1 space-y-5 md:space-y-6 text-center lg:text-left">
+            <div className="space-y-3 md:space-y-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight">
                 {t.title}{" "}
-                <span className="text-primary drop-shadow-lg">{t.titleHighlight}</span>
+                <span className="text-primary drop-shadow-lg block sm:inline">{t.titleHighlight}</span>
               </h1>
-              <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl drop-shadow-md">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-6 md:mb-8 max-w-3xl mx-auto lg:mx-0 drop-shadow-md">
                 {t.subtitle}
               </p>
             </div>
 
             {/* Search Bar */}
-            <div className="flex gap-3 max-w-lg">
+            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto lg:mx-0">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder={t.searchPlaceholder}
-                  className="pl-10 h-12 text-base"
+                  className="pl-10 h-12 text-base bg-white/95"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                 />
               </div>
-              <Button size="lg" className="px-8" onClick={handleSearch}>
+              <Button size="lg" className="px-6 sm:px-8 h-12 w-full sm:w-auto" onClick={handleSearch}>
                 {t.searchButton}
               </Button>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-8 pt-6">
-              <div>
-                <div className="text-2xl font-bold text-white drop-shadow-md">
+            {/* Stats - Grid on mobile */}
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-6 md:gap-8 pt-4 md:pt-6 max-w-lg mx-auto lg:mx-0 lg:max-w-none">
+              <div className="text-center lg:text-left">
+                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.photos.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.photos}</div>
+                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.photos}</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white drop-shadow-md">
+              <div className="text-center lg:text-left">
+                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.videos.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.videos}</div>
+                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.videos}</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white drop-shadow-md">
+              <div className="text-center lg:text-left">
+                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.illustrations.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.illustrations}</div>
+                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.illustrations}</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white drop-shadow-md">
+              <div className="text-center lg:text-left hidden sm:block">
+                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.audios.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.audio}</div>
+                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.audio}</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white drop-shadow-md">
+              <div className="text-center lg:text-left hidden sm:block">
+                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
                   {loading ? "..." : stats.ebooks.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80 drop-shadow-sm">{t.statsLabels.ebooks}</div>
+                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.ebooks}</div>
               </div>
             </div>
           </div>
 
-          {/* Right Image */}
-          <div className="flex-1 max-w-lg">
+          {/* Right Image - Hidden on mobile and tablet */}
+          <div className="hidden xl:flex flex-1 max-w-lg">
             <div className="relative">
               <img
                 src={heroImage}

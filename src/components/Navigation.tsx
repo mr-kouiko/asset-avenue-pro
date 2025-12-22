@@ -19,22 +19,23 @@ export const Navigation = () => {
   ];
 
   return (
-    <nav className="border-b bg-surface">
-      <div className="container">
-        <div className="flex items-center space-x-1 py-3 overflow-x-auto">
+    <nav className="border-b bg-surface overflow-hidden">
+      <div className="container px-2 md:px-4">
+        <div className="flex items-center gap-1 py-2 md:py-3 overflow-x-auto scrollbar-hide -mx-2 px-2">
           {categories.map((category) => {
             const Icon = category.icon;
             return (
               <Button
                 key={category.name}
                 variant="ghost"
-                className="flex items-center space-x-2 whitespace-nowrap hover:bg-primary/10"
+                size="sm"
+                className="flex items-center gap-1.5 md:gap-2 whitespace-nowrap hover:bg-primary/10 px-2.5 md:px-3 h-9 md:h-10 shrink-0"
                 asChild
               >
                 <Link to={`/marketplace?category=${category.category}`}>
                   <Icon className="h-4 w-4" />
-                  <span>{category.name}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm">{category.name}</span>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
                     {category.count}
                   </span>
                 </Link>
