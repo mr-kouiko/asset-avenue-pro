@@ -45,7 +45,8 @@ const BecomeSeller = () => {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signInWithGoogle();
+    // Pass 'creator' role to indicate seller intent
+    await signInWithGoogle('creator');
     setIsLoading(false);
   };
 

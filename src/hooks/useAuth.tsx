@@ -9,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithGoogle: (intendedRole?: 'client' | 'creator') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   getUserRole: () => Promise<string | null>;
 }
@@ -214,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (intendedRole?: 'client' | 'creator') => {
     try {
       cleanupAuthState();
       try {
@@ -223,7 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Continue even if this fails
       }
 
-      const redirectUrl = `${window.location.origin}/`;
+      // Store intended role before OAuth redirect so we can use it after callback
+      if (intendedRole) {
+        localStorage.setItem('visustock_intended_role', intendedRole);
+      }
+
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -233,20 +238,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        localStorage.removeItem('visustock_intended_role');
         toast({
           variant: "destructive",
-          title: "Erreur de connexion Google",
-          description: "Impossible de se connecter avec Google."
+          title: "Google Sign-In Error",
+          description: "Unable to sign in with Google."
         });
         return { error };
       }
 
       return { error: null };
     } catch (error: any) {
+      localStorage.removeItem('visustock_intended_role');
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Une erreur inattendue est survenue."
+        title: "Error",
+        description: "An unexpected error occurred."
       });
       return { error };
     }
