@@ -24,6 +24,7 @@ interface SellerNotificationRequest {
   items: SaleItem[];
   total_amount: number;
   currency: string;
+  test_email?: string; // Override email for testing
 }
 
 Deno.serve(async (req) => {
@@ -141,10 +142,13 @@ Deno.serve(async (req) => {
       })
     )
 
-    // Send email
+    // Send email (use test_email override if provided)
+    const recipientEmail = payload.test_email || sellerProfile.email
+    console.log('Sending to:', recipientEmail, payload.test_email ? '(test override)' : '')
+    
     const { data, error } = await resend.emails.send({
       from: 'VisuStock <noreply@visustock.com>',
-      to: [sellerProfile.email],
+      to: [recipientEmail],
       subject: `🎉 You made a sale! +€${sellerEarnings.toFixed(2)} earned`,
       html,
       reply_to: 'support@visustock.com',
