@@ -333,20 +333,15 @@ const ProductDetail = () => {
     }
   ];
 
-  // Fonction pour calculer et formater le prix
+  // Calculate and format price display for each license option
   const getPriceDisplay = (license: { id: string; price: number }) => {
-    if (product?.price === null || product?.price === 0) {
-      return 'Free';
-    }
-    
     if (isVideo) {
-      // Pour les vidéos, utiliser le nouveau système de tarification
-      const currentLicensePrice = license.id === selectedLicense ? licensePrice : license.price;
-      const currentTotal = basePrice + currentLicensePrice;
-      return `${currentTotal}$`;
+      // For videos: always use base price + license price
+      const currentTotal = basePrice + license.price;
+      return `$${currentTotal}`;
     } else {
-      // Pour les autres types, utiliser l'ancien système
-      return `${license.price}€`;
+      // For non-videos: show license price
+      return `€${license.price}`;
     }
   };
 
