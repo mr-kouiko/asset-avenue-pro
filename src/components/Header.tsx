@@ -57,11 +57,11 @@ export const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link to={`/${language}`} className="flex items-center space-x-2 shrink-0">
+        <Link to={`/${language}`} className="flex items-center shrink-0">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
             alt="VisuStock" 
-            className="h-8 md:h-10 w-auto"
+            className="h-8 md:h-10 w-auto max-w-[120px] md:max-w-none object-contain"
           />
         </Link>
 
