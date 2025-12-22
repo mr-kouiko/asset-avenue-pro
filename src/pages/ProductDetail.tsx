@@ -204,7 +204,7 @@ const ProductDetail = () => {
         <div className="container py-8 flex items-center justify-center">
           <div className="flex items-center gap-3">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Chargement du produit...</span>
+            <span>Loading product...</span>
           </div>
         </div>
       </div>
@@ -254,8 +254,8 @@ const ProductDetail = () => {
             </div>
             <div className="space-y-4">
               <h1 className="text-2xl font-bold text-stock-dark">{fp.title}</h1>
-              <div className="text-sm text-stock-dark/60">par {fp.author}</div>
-              <div className="text-sm text-muted-foreground">Affichage en mode réduit — détails complets indisponibles pour l’instant.</div>
+              <div className="text-sm text-stock-dark/60">by {fp.author}</div>
+              <div className="text-sm text-muted-foreground">Displaying in reduced mode - full details currently unavailable.</div>
             </div>
           </div>
         </div>
@@ -269,9 +269,9 @@ const ProductDetail = () => {
         <Header />
         <Navigation />
         <div className="container py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
+          <h1 className="text-2xl font-bold mb-4">Product not found</h1>
           <p className="text-muted-foreground">
-            {error || "Le produit que vous recherchez n'existe pas ou n'est plus disponible."}
+            {error || "The product you are looking for does not exist or is no longer available."}
           </p>
         </div>
       </div>
@@ -292,43 +292,43 @@ const ProductDetail = () => {
   })();
   
   // For now, dimensions will be extracted from actual metadata when available
-  const dimensions = 'À déterminer'; // Will be updated when metadata is properly structured
+  const dimensions = 'TBD'; // Will be updated when metadata is properly structured
 
   const licenses = [
     {
       id: "standard",
-      name: "Licence Standard",
+      name: "Standard License",
       price: 15,
-      description: "Usage commercial limité, jusqu'à 500,000 impressions",
+      description: "Limited commercial use, up to 500,000 impressions",
       features: [
-        "Usage web et print",
-        "Réseaux sociaux",
-        "Présentations",
-        "Usage commercial limité"
+        "Web and print usage",
+        "Social media",
+        "Presentations",
+        "Limited commercial use"
       ]
     },
     {
       id: "extended",
-      name: "Licence Étendue",
+      name: "Extended License",
       price: 45,
-      description: "Usage commercial illimité, revente autorisée",
+      description: "Unlimited commercial use, resale allowed",
       features: [
-        "Tous les droits de la licence standard",
-        "Usage commercial illimité",
-        "Revente de produits dérivés",
-        "Usage sur produits à la vente"
+        "All standard license rights",
+        "Unlimited commercial use",
+        "Resale of derivative products",
+        "Use on products for sale"
       ]
     },
     {
       id: "exclusive",
-      name: "Licence Exclusive",
+      name: "Exclusive License",
       price: 299,
-      description: "Droits exclusifs, image retirée de la vente",
+      description: "Exclusive rights, image removed from sale",
       features: [
-        "Tous les droits des licences précédentes",
-        "Droits exclusifs",
-        "Image retirée de la marketplace",
-        "Certificat d'exclusivité"
+        "All previous license rights",
+        "Exclusive rights",
+        "Image removed from marketplace",
+        "Certificate of exclusivity"
       ]
     }
   ];
@@ -336,7 +336,7 @@ const ProductDetail = () => {
   // Fonction pour calculer et formater le prix
   const getPriceDisplay = (license: { id: string; price: number }) => {
     if (product?.price === null || product?.price === 0) {
-      return 'Gratuit';
+      return 'Free';
     }
     
     if (isVideo) {
@@ -442,10 +442,10 @@ const ProductDetail = () => {
                   <div className="w-16 h-16 mx-auto mb-4 bg-primary/20 rounded-full flex items-center justify-center">
                     <FileVideo className="h-8 w-8 text-primary animate-pulse" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Vidéo en cours de traitement</h3>
+                  <h3 className="text-lg font-semibold mb-2">Video processing</h3>
                   <p className="text-white/70 text-sm">
-                    La vidéo est actuellement en cours de préparation.<br />
-                    Elle sera disponible sous peu.
+                    The video is currently being prepared.<br />
+                    It will be available shortly.
                   </p>
                 </div>
               </div>
@@ -473,7 +473,7 @@ const ProductDetail = () => {
               <div className="absolute inset-0 flex items-center justify-center bg-black/10">
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">Application du filigrane de protection...</span>
+                  <span className="text-sm">Applying protection watermark...</span>
                 </div>
               </div>
             )}
@@ -508,7 +508,7 @@ const ProductDetail = () => {
         {product.type === 'video' && (
           <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
             <FileVideo className="h-3 w-3" />
-            Vidéo {resolution || 'HD'}
+            Video {resolution || 'HD'}
           </div>
         )}
         
@@ -526,7 +526,7 @@ const ProductDetail = () => {
                   <div className="font-medium text-stock-dark">{fileFormat}</div>
                 </div>
                 <div>
-                  <div className="text-stock-dark/60 text-xs font-medium mb-1">TAILLE</div>
+                  <div className="text-stock-dark/60 text-xs font-medium mb-1">SIZE</div>
                   <div className="font-medium text-stock-dark">{fileSize}</div>
                 </div>
                 <div>
@@ -553,7 +553,7 @@ const ProductDetail = () => {
                   </div>
                   <div>
                     <div className="font-medium text-stock-dark">{product.author}</div>
-                    <div className="text-xs text-stock-dark/60">Créateur</div>
+                    <div className="text-xs text-stock-dark/60">Creator</div>
                   </div>
                 </div>
               </div>
@@ -563,17 +563,17 @@ const ProductDetail = () => {
                 <div className="flex items-center gap-1.5">
                   <Heart className="h-4 w-4" />
                   <span className="font-medium">{product.likes}</span>
-                  <span className="text-xs">j'aime</span>
+                  <span className="text-xs">likes</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Download className="h-4 w-4" />
                   <span className="font-medium">{product.downloads}</span>
-                  <span className="text-xs">téléchargements</span>
+                  <span className="text-xs">downloads</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Eye className="h-4 w-4" />
                   <span className="font-medium">{product.views}</span>
-                  <span className="text-xs">vues</span>
+                  <span className="text-xs">views</span>
                 </div>
               </div>
             </div>
@@ -590,7 +590,7 @@ const ProductDetail = () => {
 
             {/* Tags - Adobe Stock Style */}
             <div>
-              <h3 className="font-medium mb-3 text-stock-dark text-sm">MOTS-CLÉS</h3>
+              <h3 className="font-medium mb-3 text-stock-dark text-sm">KEYWORDS</h3>
               <div className="flex flex-wrap gap-2">
                 {product.tags.map((tag) => (
                   <Badge 
@@ -608,19 +608,19 @@ const ProductDetail = () => {
 
             {/* License Selection */}
             <div>
-              <h3 className="font-semibold mb-4">Choisir une licence</h3>
+              <h3 className="font-semibold mb-4">Choose a license</h3>
               {isVideo && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 text-blue-800 mb-2">
                     <FileVideo className="h-4 w-4" />
-                    <span className="font-medium">Tarification vidéo {resolution}</span>
+                    <span className="font-medium">Video pricing {resolution}</span>
                   </div>
                   <div className="text-sm text-blue-700">
-                    Prix de base {resolution}: <span className="font-semibold">{basePrice}$</span>
+                    Base price {resolution}: <span className="font-semibold">${basePrice}</span>
                     {licensePrice > 0 && (
                       <>
-                        <br />Licence sélectionnée: <span className="font-semibold">+{licensePrice}€</span>
-                        <br />Prix total: <span className="font-semibold text-lg">{totalPrice}$</span>
+                        <br />Selected license: <span className="font-semibold">+€{licensePrice}</span>
+                        <br />Total price: <span className="font-semibold text-lg">${totalPrice}</span>
                       </>
                     )}
                   </div>
@@ -680,7 +680,7 @@ const ProductDetail = () => {
                 disabled={directPurchaseLoading}
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                Ajouter au panier
+                Add to cart
               </Button>
               <Button 
                 size="lg" 
@@ -691,12 +691,12 @@ const ProductDetail = () => {
                 {directPurchaseLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Redirection...
+                    Redirecting...
                   </>
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Acheter maintenant
+                    Buy now
                   </>
                 )}
               </Button>
@@ -707,10 +707,10 @@ const ProductDetail = () => {
               <div className="flex items-start gap-3">
                 <Shield className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <h4 className="font-medium mb-1">Licence protégée</h4>
+                  <h4 className="font-medium mb-1">Protected license</h4>
                   <p className="text-sm text-muted-foreground">
-                    Tous nos contenus sont protégés par des licences claires et transparentes.
-                    Utilisez-les en toute confiance pour vos projets.
+                    All our content is protected by clear and transparent licenses.
+                    Use them with confidence for your projects.
                   </p>
                 </div>
               </div>
@@ -722,12 +722,12 @@ const ProductDetail = () => {
         <div className="mt-16">
           <Tabs defaultValue="related" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="related">Contenus similaires</TabsTrigger>
-              <TabsTrigger value="author">Plus de cet auteur</TabsTrigger>
+              <TabsTrigger value="related">Similar content</TabsTrigger>
+              <TabsTrigger value="author">More from this author</TabsTrigger>
             </TabsList>
             
             <TabsContent value="related" className="mt-8">
-              <h3 className="text-xl font-semibold mb-6">Contenus similaires</h3>
+              <h3 className="text-xl font-semibold mb-6">Similar content</h3>
               {relatedProducts.length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {relatedProducts.map((item) => (
@@ -739,13 +739,13 @@ const ProductDetail = () => {
                   <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
                     <Eye className="h-8 w-8" />
                   </div>
-                  <p>Aucun contenu similaire trouvé pour le moment.</p>
+                  <p>No similar content found at the moment.</p>
                 </div>
               )}
             </TabsContent>
             
             <TabsContent value="author" className="mt-8">
-              <h3 className="text-xl font-semibold mb-6">Plus de {product.author}</h3>
+              <h3 className="text-xl font-semibold mb-6">More from {product.author}</h3>
               {relatedProducts.filter(item => item.author === product.author).length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {relatedProducts
@@ -760,7 +760,7 @@ const ProductDetail = () => {
                   <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
                     <User className="h-8 w-8" />
                   </div>
-                  <p>Aucun autre contenu de cet auteur pour le moment.</p>
+                  <p>No other content from this author at the moment.</p>
                 </div>
               )}
             </TabsContent>
