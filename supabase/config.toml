@@ -67,3 +67,6 @@ verify_jwt = true
 
 [functions.verify-seller-payment]
 verify_jwt = true
+
+[functions.send-seller-notification]
+verify_jwt = false
