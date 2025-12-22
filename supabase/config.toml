@@ -76,3 +76,6 @@ verify_jwt = false
 
 [functions.detect-ai-video]
 verify_jwt = true
+
+[functions.detect-ai-image]
+verify_jwt = true
