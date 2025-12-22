@@ -145,9 +145,11 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (role?: 'client' | 'creator') => {
     setLoading(true);
-    await signInWithGoogle();
+    // Pass the intended role based on context (login = undefined, signup = userType)
+    const intendedRole = role || (userType === "seller" ? 'creator' : 'client');
+    await signInWithGoogle(intendedRole);
     setLoading(false);
   };
 
@@ -263,7 +265,7 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                 <div className="grid grid-cols-1 gap-3">
                   <Button 
                     variant="outline" 
-                    onClick={handleGoogleSignIn}
+                    onClick={() => handleGoogleSignIn(undefined)}
                     disabled={loading}
                     type="button"
                   >
@@ -290,12 +292,12 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
                 {/* Google Sign Up Button */}
                 <Button 
                   variant="outline" 
-                  onClick={handleGoogleSignIn}
+                  onClick={() => handleGoogleSignIn(userType === "seller" ? 'creator' : 'client')}
                   disabled={loading}
                   type="button"
                   className="w-full"
                 >
-                  {loading ? "Signing up..." : "Sign up with Google"}
+                  {loading ? "Signing up..." : `Sign up with Google as ${userType === "seller" ? "Seller" : "Buyer"}`}
                 </Button>
 
                 <div className="relative">

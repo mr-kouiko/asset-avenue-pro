@@ -104,9 +104,9 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (role?: 'client' | 'creator') => {
     setLoading(true);
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle(role);
     if (!result.error) {
       onClose();
     }
@@ -210,7 +210,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                 <div className="grid grid-cols-1 gap-3">
                   <Button 
                     variant="outline" 
-                    onClick={handleGoogleSignIn}
+                    onClick={() => handleGoogleSignIn(undefined)}
                     disabled={loading}
                     type="button"
                   >
@@ -234,12 +234,12 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                 {/* Google Sign Up Button */}
                 <Button 
                   variant="outline" 
-                  onClick={handleGoogleSignIn}
+                  onClick={() => handleGoogleSignIn(userRole)}
                   disabled={loading}
                   type="button"
                   className="w-full"
                 >
-                  {loading ? "Signing up..." : "Sign up with Google"}
+                  {loading ? "Signing up..." : `Sign up with Google as ${userRole === 'creator' ? 'Seller' : 'Buyer'}`}
                 </Button>
 
                 <div className="relative">

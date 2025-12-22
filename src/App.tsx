@@ -43,7 +43,7 @@ import BuyCredits from "./pages/BuyCredits";
 import BecomeSeller from "./pages/BecomeSeller";
 import SellerRegistrationSuccess from "./pages/SellerRegistrationSuccess";
 import SellerRegistrationCancelled from "./pages/SellerRegistrationCancelled";
-
+import AuthCallback from "./pages/AuthCallback";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -67,6 +67,7 @@ const App = () => (
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/seller" element={<Auth userType="seller" />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/dashboard" element={<DashboardRouter />} />
                   <Route path="/seller-dashboard" element={<SellerDashboard />} />
                   <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
