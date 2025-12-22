@@ -165,6 +165,65 @@ serve(async (req) => {
           timestamp: new Date().toISOString()
         }
       });
+
+      // Send seller notification emails for each unique seller
+      const sellerItems = new Map<string, { items: typeof cartItems, total: number }>();
+      
+      // Group items by seller
+      for (const item of cartItems) {
+        // Fetch seller_id from submission
+        const { data: submission } = await supabaseAdmin
+          .from('content_submissions')
+          .select('creator_id, price')
+          .eq('id', item.submission_id)
+          .single();
+        
+        if (submission?.creator_id) {
+          const sellerId = submission.creator_id;
+          const itemPrice = item.price || submission.price || 0;
+          
+          if (!sellerItems.has(sellerId)) {
+            sellerItems.set(sellerId, { items: [], total: 0 });
+          }
+          
+          const sellerData = sellerItems.get(sellerId)!;
+          sellerData.items.push({ ...item, price: itemPrice });
+          sellerData.total += itemPrice;
+        }
+      }
+
+      // Send notification to each seller
+      for (const [sellerId, data] of sellerItems) {
+        try {
+          const notificationPayload = {
+            seller_id: sellerId,
+            buyer_id: customData.user_id,
+            order_id: order_id,
+            items: data.items.map(item => ({
+              submission_id: item.submission_id,
+              license_id: item.license_id,
+              price: item.price,
+            })),
+            total_amount: data.total,
+            currency: purchaseUnit.amount.currency_code,
+          };
+
+          const response = await fetch(
+            `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-seller-notification`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(notificationPayload),
+            }
+          );
+
+          const result = await response.json();
+          console.log('Seller notification sent to:', sellerId, result);
+        } catch (emailError) {
+          console.error('Failed to send seller notification:', emailError);
+          // Don't throw - email failure shouldn't block purchase
+        }
+      }
     }
 
     return new Response(
