@@ -24,6 +24,7 @@ import {
   FileText,
   ArrowRight,
   Check,
+  Settings,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,6 +41,7 @@ import { SimpleFileUpload } from "@/components/SimpleFileUpload";
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { supabase } from '@/integrations/supabase/client';
+import { StoreSettingsCard } from '@/components/StoreSettingsCard';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -347,11 +349,15 @@ const Dashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="content">My Content</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="upload">Upload</TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="h-4 w-4 mr-1" />
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -881,6 +887,11 @@ const Dashboard = () => {
                 <li>• You can save as draft or publish directly</li>
               </ul>
             </Card>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <StoreSettingsCard />
           </TabsContent>
         </Tabs>
 
