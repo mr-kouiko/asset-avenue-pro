@@ -367,13 +367,13 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Estimated Revenue</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalRevenue?.toFixed(2) || '0.00'}€</div>
                   <p className="text-xs text-muted-foreground">
-                    Based on approved content
+                    Earnings from completed sales
                   </p>
                 </CardContent>
               </Card>
@@ -386,7 +386,7 @@ const Dashboard = () => {
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalDownloads || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Total number of downloads
+                    Content downloaded by buyers
                   </p>
                 </CardContent>
               </Card>

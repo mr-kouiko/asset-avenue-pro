@@ -83,18 +83,49 @@ export const useSellerDashboard = () => {
     isWatermarked?: boolean;
   }[]>([]);
 
-  // Fetch seller statistics
+  // Fetch seller statistics with REAL data from transactions and downloads
   const fetchStats = async () => {
     if (!user) return;
 
     try {
-      // Calculate stats manually from submissions for now
-      const { data: submissions, error } = await supabase
+      // 1. Get submissions stats
+      const { data: submissions, error: submissionsError } = await supabase
         .from('content_submissions')
-        .select('*')
+        .select('id, status, price')
         .eq('creator_id', user.id);
 
-      if (error) throw error;
+      if (submissionsError) throw submissionsError;
+
+      const submissionIds = submissions?.map(s => s.id) || [];
+
+      // 2. Get REAL revenue from completed transactions where this user is the seller
+      const { data: transactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('amount_seller, status')
+        .eq('seller_id', user.id)
+        .eq('status', 'completed');
+
+      if (transactionsError) {
+        console.error('Error fetching transactions:', transactionsError);
+      }
+
+      // Calculate real revenue (amount_seller is in cents, convert to euros)
+      const realRevenue = (transactions || []).reduce((sum, t) => sum + (t.amount_seller || 0), 0) / 100;
+
+      // 3. Get REAL downloads count for seller's content
+      let totalDownloads = 0;
+      if (submissionIds.length > 0) {
+        const { count, error: downloadsError } = await supabase
+          .from('downloads')
+          .select('*', { count: 'exact', head: true })
+          .in('submission_id', submissionIds);
+
+        if (downloadsError) {
+          console.error('Error fetching downloads:', downloadsError);
+        } else {
+          totalDownloads = count || 0;
+        }
+      }
 
       if (submissions) {
         const calculatedStats = {
@@ -102,16 +133,14 @@ export const useSellerDashboard = () => {
           approvedSubmissions: submissions.filter(s => s.status === 'approved').length,
           pendingSubmissions: submissions.filter(s => s.status === 'pending').length,
           rejectedSubmissions: submissions.filter(s => s.status === 'rejected').length,
-          totalDownloads: 0, // Would need to join with downloads table
-          totalRevenue: submissions
-            .filter(s => s.status === 'approved')
-            .reduce((sum, s) => sum + (s.price || 0), 0)
+          totalDownloads: totalDownloads,
+          totalRevenue: realRevenue
         };
         setStats(calculatedStats);
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
-      toast.error('Erreur lors du chargement des statistiques');
+      toast.error('Error loading statistics');
     }
   };
 
