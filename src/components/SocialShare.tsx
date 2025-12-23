@@ -34,16 +34,26 @@ export const SocialShare = ({
 
   const shareUrl = encodeURIComponent(url);
   const shareTitle = encodeURIComponent(title);
-  const shareDescription = encodeURIComponent(description);
-  const shareHashtags = hashtags.join(',');
+  
+  // Limit hashtags to 5 max for optimal reach
+  const limitedHashtags = hashtags.slice(0, 5);
+  const hashtagsForTwitter = limitedHashtags.join(',');
+  const hashtagsForText = limitedHashtags.length > 0 
+    ? ' ' + limitedHashtags.map(tag => `#${tag.replace(/\s+/g, '')}`).join(' ') 
+    : '';
+  
+  // Build full share text with description, URL and hashtags
+  const fullShareText = `${title}${description ? ` - ${description}` : ''}`;
+  const shareTextWithHashtags = encodeURIComponent(`${fullShareText}${hashtagsForText}`);
+  const shareTextWithUrl = encodeURIComponent(`${fullShareText}${hashtagsForText}\n\n${url}`);
 
   const socialLinks = {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`,
-    twitter: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}${shareHashtags ? `&hashtags=${shareHashtags}` : ''}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTextWithHashtags}`,
+    twitter: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${encodeURIComponent(fullShareText)}${hashtagsForTwitter ? `&hashtags=${hashtagsForTwitter}` : ''}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`,
-    whatsapp: `https://wa.me/?text=${shareTitle}%20${shareUrl}`,
+    whatsapp: `https://wa.me/?text=${shareTextWithUrl}`,
     pinterest: image 
-      ? `https://pinterest.com/pin/create/button/?url=${shareUrl}&media=${encodeURIComponent(image)}&description=${shareTitle}`
+      ? `https://pinterest.com/pin/create/button/?url=${shareUrl}&media=${encodeURIComponent(image)}&description=${shareTextWithHashtags}`
       : undefined,
   };
 
