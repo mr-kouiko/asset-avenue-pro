@@ -19,6 +19,7 @@ interface UploadedFileData {
   previewUrl?: string;
   thumbnailUrl?: string;
   isWatermarked?: boolean;
+  isAiGenerated?: boolean;
 }
 
 const FileUpload = () => {

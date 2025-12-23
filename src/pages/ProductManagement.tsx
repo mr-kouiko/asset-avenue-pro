@@ -171,7 +171,7 @@ const ProductManagement = () => {
           tags: [],
           currentTag: '',
           status: 'draft',
-          isAiGenerated: false
+          isAiGenerated: file.isAiGenerated || false
         };
       });
     }

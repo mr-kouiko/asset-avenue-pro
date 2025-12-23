@@ -29,6 +29,7 @@ interface SimpleFileUploadProps {
     isWatermarked?: boolean;
     thumbnailUrl?: string;
     previewUrl?: string;
+    isAiGenerated?: boolean;
   }[]) => void;
   maxFiles?: number;
   maxFileSize?: number; // in MB
