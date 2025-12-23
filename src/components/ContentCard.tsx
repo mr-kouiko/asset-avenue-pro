@@ -28,6 +28,7 @@ interface ContentCardProps {
   isLiked?: boolean;
   duration?: string;
   bpm?: number;
+  isAiGenerated?: boolean;
 }
 
 export const ContentCard: React.FC<ContentCardProps> = ({
@@ -46,6 +47,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   isLiked = false,
   duration,
   bpm,
+  isAiGenerated = false,
 }) => {
   // Use specialized AudioContentCard for audio content
   if (type === 'audio') {
@@ -153,7 +155,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         <div className="absolute inset-0 bg-stock-dark/0 group-hover:bg-stock-dark/5 transition-all duration-300 pointer-events-none" />
         
         {/* Type Badge - Adobe Stock Style */}
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex gap-1">
           <Badge 
             variant="secondary" 
             className="bg-white/95 text-stock-dark text-[10px] px-2 py-0.5 font-medium border-0 shadow-sm"
@@ -162,6 +164,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
              type === 'video' ? 'VIDÉO' : 
              type === 'illustration' ? 'VECTOR' : 'EBOOK'}
           </Badge>
+          {isAiGenerated && (
+            <Badge 
+              variant="secondary" 
+              className="bg-purple-500 text-white text-[10px] px-2 py-0.5 font-bold border-0 shadow-sm"
+            >
+              AI
+            </Badge>
+          )}
         </div>
         
         {/* Heart button - Always visible on mobile, hover on desktop */}
