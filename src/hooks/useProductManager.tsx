@@ -12,6 +12,7 @@ interface ProductFile {
   previewUrl?: string;
   thumbnailUrl?: string;
   isWatermarked?: boolean;
+  isAiGenerated?: boolean;
 }
 
 interface ProductMetadata {
@@ -183,7 +184,8 @@ export const useProductManager = () => {
           // For videos: use thumbnailUrl, for PDFs: use thumbnailUrl (cover), for images: use previewUrl
           thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
           metadata: {
-            isWatermarked: submission.file.isWatermarked || false
+            isWatermarked: submission.file.isWatermarked || false,
+            isAiGenerated: submission.file.isAiGenerated || false
           }
         });
 

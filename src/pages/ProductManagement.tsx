@@ -29,6 +29,7 @@ interface UploadedFileData {
   isWatermarked?: boolean;
   thumbnailUrl?: string;
   previewUrl?: string;
+  isAiGenerated?: boolean;
 }
 
 interface ProductData {
@@ -40,6 +41,7 @@ interface ProductData {
   currentTag: string;
   status: 'draft' | 'published' | 'pending';
   coverUrl?: string;
+  isAiGenerated?: boolean;
 }
 
 const ProductManagement = () => {
@@ -102,7 +104,8 @@ const ProductManagement = () => {
           tags: editData.tags || [],
           currentTag: '',
           status: editData.status || 'draft',
-          coverUrl: file.thumbnailUrl
+          coverUrl: file.thumbnailUrl,
+          isAiGenerated: editData.isAiGenerated || false
         };
       });
     } else {
@@ -167,7 +170,8 @@ const ProductManagement = () => {
           category: autoCategory, // Auto-detected category
           tags: [],
           currentTag: '',
-          status: 'draft'
+          status: 'draft',
+          isAiGenerated: false
         };
       });
     }
@@ -285,7 +289,8 @@ const ProductManagement = () => {
       file: {
         ...file,
         // For ebooks, use cover as thumbnail
-        thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl
+        thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl,
+        isAiGenerated: productData.isAiGenerated || false
       },
       productData: {
         title: productData.title,
@@ -410,7 +415,8 @@ const ProductManagement = () => {
           file: {
             ...file,
             // For ebooks, use cover as thumbnail
-            thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl
+            thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl,
+            isAiGenerated: productData.isAiGenerated || false
           },
           productData: {
             title: productData.title,
@@ -750,6 +756,28 @@ const ProductManagement = () => {
                               ))}
                             </div>
                           )}
+                        </div>
+
+                        {/* AI Generated Checkbox */}
+                        <div className="md:col-span-2">
+                          <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <input
+                              type="checkbox"
+                              id="isAiGenerated"
+                              checked={selectedProductData.isAiGenerated || false}
+                              onChange={(e) => updateProductData(selectedFileId!, { isAiGenerated: e.target.checked })}
+                              className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                            />
+                            <div className="flex-1">
+                              <Label htmlFor="isAiGenerated" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                                <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
+                                This content is AI-generated
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Check this box if the content was created using AI tools (Midjourney, Sora, DALL-E, etc.)
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 

@@ -21,6 +21,7 @@ export interface MarketplaceContent {
   bpm?: number; // Beats per minute for audio
   created_at?: string; // Upload date for sorting
   original_language?: string; // Original language of the content
+  isAiGenerated?: boolean; // AI-generated content flag
 }
 
 export const useMarketplace = (initialLimit = 50) => {
@@ -211,6 +212,10 @@ export const useMarketplace = (initialLimit = 50) => {
           }
 
 
+          // Check if content is AI-generated from metadata
+          const isAiGenerated = originalFile?.metadata && typeof originalFile.metadata === 'object' && 
+            ('isAiGenerated' in originalFile.metadata ? originalFile.metadata.isAiGenerated === true : false);
+
           const contentItem: MarketplaceContent = {
             id: item.id,
             slug: item.slug,
@@ -234,6 +239,7 @@ export const useMarketplace = (initialLimit = 50) => {
             bpm: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'bpm' in originalFile.metadata 
               ? originalFile.metadata.bpm as number 
               : undefined,
+            isAiGenerated: isAiGenerated,
           };
 
           console.log(`Content: ${item.title}, Type: ${contentType}, Thumbnail: ${thumbnailUrl}, Media: ${mediaUrl}`);
