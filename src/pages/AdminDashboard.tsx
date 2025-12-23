@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,16 +14,70 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  X
+  X,
+  Store,
+  ShoppingCart,
+  BarChart3,
+  Lock
 } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
+import { AdminUsersManagement } from "@/components/admin/AdminUsersManagement";
+import { AdminSecurityLogs } from "@/components/admin/AdminSecurityLogs";
+import { AdminVendorManagement } from "@/components/admin/AdminVendorManagement";
+import { AdminOrdersTracking } from "@/components/admin/AdminOrdersTracking";
+import { AdminSettings } from "@/components/admin/AdminSettings";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+
+const AUTHORIZED_ADMIN_EMAIL = "info@visitenow.ma";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Double-check admin authorization
+  useEffect(() => {
+    const checkAdminAuthorization = async () => {
+      if (!user) {
+        setCheckingAuth(false);
+        return;
+      }
+
+      // Verify the user email matches the authorized admin
+      if (user.email !== AUTHORIZED_ADMIN_EMAIL) {
+        toast.error("Accès non autorisé. Cette zone est réservée à l'administrateur.");
+        navigate("/");
+        return;
+      }
+
+      // Also verify in database
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (roleData?.role !== 'admin') {
+        toast.error("Accès non autorisé.");
+        navigate("/");
+        return;
+      }
+
+      setIsAuthorized(true);
+      setCheckingAuth(false);
+    };
+
+    if (!authLoading) {
+      checkAdminAuthorization();
+    }
+  }, [user, authLoading, navigate]);
 
   // Fetch admin stats using secure RPC
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -33,7 +87,6 @@ const AdminDashboard = () => {
       
       if (error) throw error;
       
-      // Convert to expected format
       return {
         totalUsers: Number(data[0]?.total_users || 0),
         totalSubmissions: Number(data[0]?.total_submissions || 0),
@@ -42,7 +95,8 @@ const AdminDashboard = () => {
         rejectedSubmissions: Number(data[0]?.rejected_submissions || 0),
         totalRevenue: Number(data[0]?.total_revenue || 0)
       };
-    }
+    },
+    enabled: isAuthorized
   });
 
   // Fetch recent submissions for review
@@ -66,7 +120,8 @@ const AdminDashboard = () => {
         
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: isAuthorized
   });
 
   const updateSubmissionStatus = async (id: string, status: string, rejectionReason?: string) => {
@@ -76,7 +131,7 @@ const AdminDashboard = () => {
         status, 
         rejection_reason: rejectionReason || null,
         approved_at: status === 'approved' ? new Date().toISOString() : null,
-        approved_by: status === 'approved' ? (await supabase.auth.getUser()).data.user?.id : null
+        approved_by: status === 'approved' ? user?.id : null
       })
       .eq('id', id);
 
@@ -115,6 +170,23 @@ const AdminDashboard = () => {
     }
   };
 
+  // Show loading while checking authorization
+  if (authLoading || checkingAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Lock className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
+          <p className="text-muted-foreground">Vérification des autorisations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authorized
+  if (!isAuthorized) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -124,27 +196,56 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold">Tableau de bord administrateur</h1>
             <p className="text-muted-foreground">
-              Gérez la plateforme et modérez les contenus
+              Contrôle total de la marketplace VisuStock
             </p>
           </div>
-          <Badge variant="destructive" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Admin
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="destructive" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Admin Exclusif
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {user?.email}
+            </Badge>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-            <TabsTrigger value="content">Modération</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="settings">Paramètres</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-7 mb-6">
+            <TabsTrigger value="overview" className="flex items-center gap-1">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Vue d'ensemble</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Utilisateurs</span>
+            </TabsTrigger>
+            <TabsTrigger value="vendors" className="flex items-center gap-1">
+              <Store className="h-4 w-4" />
+              <span className="hidden sm:inline">Vendeurs</span>
+            </TabsTrigger>
+            <TabsTrigger value="content" className="flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Modération</span>
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="flex items-center gap-1">
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Transactions</span>
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-1">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Commandes</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-1">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Sécurité</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
+              <Card className="border-l-4 border-l-primary">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Utilisateurs totaux</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -159,13 +260,13 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-green-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Revenus totaux</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-2xl font-bold text-green-600">
                     {statsLoading ? '...' : `${stats?.totalRevenue?.toFixed(2) || '0.00'}€`}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -174,24 +275,24 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-yellow-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Contenus en attente</CardTitle>
+                  <CardTitle className="text-sm font-medium">En attente</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-2xl font-bold text-yellow-600">
                     {statsLoading ? '...' : stats?.pendingSubmissions || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Nécessitent une modération
+                    Contenus à modérer
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Contenus approuvés</CardTitle>
+                  <CardTitle className="text-sm font-medium">Approuvés</CardTitle>
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
@@ -204,6 +305,62 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('users')}>
+                <CardContent className="flex items-center gap-4 p-6">
+                  <Users className="h-8 w-8 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Gérer les utilisateurs</h3>
+                    <p className="text-sm text-muted-foreground">Voir tous les comptes</p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('content')}>
+                <CardContent className="flex items-center gap-4 p-6">
+                  <FileText className="h-8 w-8 text-yellow-500" />
+                  <div>
+                    <h3 className="font-semibold">Modérer le contenu</h3>
+                    <p className="text-sm text-muted-foreground">{stats?.pendingSubmissions || 0} en attente</p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('security')}>
+                <CardContent className="flex items-center gap-4 p-6">
+                  <Shield className="h-8 w-8 text-red-500" />
+                  <div>
+                    <h3 className="font-semibold">Logs de sécurité</h3>
+                    <p className="text-sm text-muted-foreground">Surveiller l'activité</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Settings Quick Access */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Paramètres rapides
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AdminSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <AdminUsersManagement />
+          </TabsContent>
+
+          {/* Vendors Tab */}
+          <TabsContent value="vendors">
+            <AdminVendorManagement />
           </TabsContent>
 
           {/* Content Moderation Tab */}
@@ -291,70 +448,14 @@ const AdminDashboard = () => {
             <AdminTransactionsDashboard />
           </TabsContent>
 
+          {/* Orders Tab */}
+          <TabsContent value="orders">
+            <AdminOrdersTracking />
+          </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Paramètres de la plateforme</CardTitle>
-                <CardDescription>
-                  Configuration générale de la marketplace
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Paramètres en cours de développement...
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Maintenance Tools */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Outils de maintenance
-                </CardTitle>
-                <CardDescription>
-                  Tâches de maintenance et réparation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium mb-1">Régénérer les miniatures vidéo</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Génère des miniatures pour toutes les vidéos qui n'en ont pas ou dont la miniature est invalide. 
-                      Utilise FFmpeg côté serveur pour extraire une vraie image de chaque vidéo.
-                    </p>
-                  </div>
-                  <Button 
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        toast.loading('Génération des miniatures en cours...');
-                        const { data, error } = await supabase.functions.invoke('backfill-video-thumbnails', {
-                          body: {}
-                        });
-                        
-                        if (error) throw error;
-                        
-                        toast.success(data.message || `${data.successful} miniature(s) générée(s) avec succès`);
-                        
-                        if (data.failed > 0) {
-                          toast.warning(`${data.failed} échec(s) de génération`);
-                        }
-                      } catch (error) {
-                        console.error('Error regenerating thumbnails:', error);
-                        toast.error('Erreur lors de la génération des miniatures');
-                      }
-                    }}
-                  >
-                    Régénérer
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Security Tab */}
+          <TabsContent value="security">
+            <AdminSecurityLogs />
           </TabsContent>
         </Tabs>
       </div>
