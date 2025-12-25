@@ -3,16 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Check, CreditCard, Zap, Star } from "lucide-react";
+import { Check, CreditCard, Zap, Star, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
-
+import { usePayPalSubscription, SUBSCRIPTION_PLANS } from "@/hooks/usePayPalSubscription";
+import { useMarketplacePayment } from "@/hooks/useMarketplacePayment";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 const PackagesPricing = () => {
   const [isYearly, setIsYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { toast } = useToast();
   const { language } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { 
+    subscribed, 
+    subscription, 
+    loading: subscriptionLoading, 
+    createSubscription 
+  } = usePayPalSubscription();
+  const { createPayment } = useMarketplacePayment();
 
   // SEO Configuration
   useSEO({
@@ -146,16 +159,37 @@ const PackagesPricing = () => {
 
   const t = content[language];
 
-  const handleBuyCredits = (credits: number, price: number) => {
+  const handleBuyCredits = async (credits: number, price: number) => {
+    if (!user) {
+      toast({
+        title: language === 'en' ? 'Login Required' : 'Connexion Requise',
+        description: language === 'en' ? 'Please log in to purchase credits' : 'Veuillez vous connecter pour acheter des crédits',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
     toast({
       title: t.credits.toast.title,
       description: t.credits.toast.description(credits, price)
     });
-    // Redirect to payment for credits
-    window.open('https://buy.stripe.com/credits', '_blank');
+    
+    // Use PayPal for credit pack purchase
+    await createPayment();
   };
 
-  const handleSubscribe = (credits: number, monthlyPrice: number) => {
+  const handleSubscribe = async (planType: string, credits: number, monthlyPrice: number) => {
+    if (!user) {
+      toast({
+        title: language === 'en' ? 'Login Required' : 'Connexion Requise',
+        description: language === 'en' ? 'Please log in to subscribe' : 'Veuillez vous connecter pour vous abonner',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
     const yearlyPrice = Math.round(monthlyPrice * 12 * 0.84); // 16% discount
     const price = isYearly ? Math.round(yearlyPrice / 12) : monthlyPrice;
     
@@ -163,8 +197,14 @@ const PackagesPricing = () => {
       title: t.subscription.toast.title,
       description: t.subscription.toast.description(credits, price, isYearly)
     });
-    // Redirect to subscription payment
-    window.open('https://buy.stripe.com/subscription', '_blank');
+
+    setLoadingPlan(planType);
+    await createSubscription(planType, isYearly);
+    setLoadingPlan(null);
+  };
+
+  const isCurrentPlan = (planType: string) => {
+    return subscribed && subscription?.plan_type === planType;
   };
 
   const creditPackages = [
@@ -178,6 +218,7 @@ const PackagesPricing = () => {
 
   const subscriptionPackages = [
     { 
+      planType: 'monthly_30',
       credits: 30, 
       monthlyPrice: 206, 
       photos: 15, 
@@ -188,6 +229,7 @@ const PackagesPricing = () => {
       popular: true
     },
     { 
+      planType: 'monthly_60',
       credits: 60, 
       monthlyPrice: 379, 
       photos: 30, 
@@ -198,6 +240,7 @@ const PackagesPricing = () => {
       popular: false
     },
     { 
+      planType: 'monthly_100',
       credits: 100, 
       monthlyPrice: 599, 
       photos: 50, 
@@ -208,6 +251,7 @@ const PackagesPricing = () => {
       popular: false
     },
     { 
+      planType: 'monthly_200',
       credits: 200, 
       monthlyPrice: 1099, 
       photos: 100, 
@@ -326,10 +370,19 @@ const PackagesPricing = () => {
                 <Card 
                   key={index} 
                   className={`bg-white shadow-lg hover:shadow-xl transition-shadow relative ${
-                    pkg.popular ? 'ring-2 ring-primary' : ''
+                    isCurrentPlan(pkg.planType) 
+                      ? 'ring-2 ring-green-500' 
+                      : pkg.popular 
+                        ? 'ring-2 ring-primary' 
+                        : ''
                   }`}
                 >
-                  {pkg.popular && (
+                  {isCurrentPlan(pkg.planType) ? (
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1">
+                      <Check className="w-3 h-3 mr-1" />
+                      {language === 'en' ? 'Your Plan' : 'Votre Plan'}
+                    </Badge>
+                  ) : pkg.popular && (
                     <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1">
                       <Star className="w-3 h-3 mr-1" />
                       {t.subscription.bestValue}
@@ -355,14 +408,23 @@ const PackagesPricing = () => {
 
                       <Button 
                         className={`w-full ${
-                          pkg.popular 
-                            ? 'bg-primary hover:bg-primary/90' 
-                            : 'bg-secondary hover:bg-secondary/80'
+                          isCurrentPlan(pkg.planType)
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : pkg.popular 
+                              ? 'bg-primary hover:bg-primary/90' 
+                              : 'bg-secondary hover:bg-secondary/80'
                         }`}
-                        onClick={() => handleSubscribe(pkg.credits, pkg.monthlyPrice)}
+                        onClick={() => handleSubscribe(pkg.planType, pkg.credits, pkg.monthlyPrice)}
+                        disabled={loadingPlan === pkg.planType || isCurrentPlan(pkg.planType)}
                       >
-                        <Zap className="w-4 h-4 mr-2" />
-                        {t.subscription.subscribeNow}
+                        {loadingPlan === pkg.planType ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Zap className="w-4 h-4 mr-2" />
+                        )}
+                        {isCurrentPlan(pkg.planType) 
+                          ? (language === 'en' ? 'Your Current Plan' : 'Votre Plan Actuel')
+                          : t.subscription.subscribeNow}
                       </Button>
 
                       <p className="text-xs text-muted-foreground">

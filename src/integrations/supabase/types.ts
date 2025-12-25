@@ -964,6 +964,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          credits_per_month: number
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          is_yearly: boolean
+          monthly_price: number
+          next_billing_date: string | null
+          paypal_subscription_id: string
+          plan_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_per_month?: number
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          is_yearly?: boolean
+          monthly_price?: number
+          next_billing_date?: string | null
+          paypal_subscription_id: string
+          plan_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_per_month?: number
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          is_yearly?: boolean
+          monthly_price?: number
+          next_billing_date?: string | null
+          paypal_subscription_id?: string
+          plan_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       creator_profiles_public: {
