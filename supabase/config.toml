@@ -82,3 +82,9 @@ verify_jwt = false
 
 [functions.detect-ai-image]
 verify_jwt = true
+
+[functions.create-paypal-subscription]
+verify_jwt = true
+
+[functions.manage-paypal-subscription]
+verify_jwt = true

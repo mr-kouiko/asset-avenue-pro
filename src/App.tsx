@@ -44,6 +44,7 @@ import BecomeSeller from "./pages/BecomeSeller";
 import SellerRegistrationSuccess from "./pages/SellerRegistrationSuccess";
 import SellerRegistrationCancelled from "./pages/SellerRegistrationCancelled";
 import AuthCallback from "./pages/AuthCallback";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -94,6 +95,7 @@ const App = () => (
                   <Route path="/become-seller" element={<BecomeSeller />} />
                   <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
                   <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
+                  <Route path="/subscription-success" element={<SubscriptionSuccess />} />
                   <Route path="/admin" element={
                     <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
                       <AdminDashboard />
