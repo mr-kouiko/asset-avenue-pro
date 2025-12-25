@@ -17,7 +17,7 @@ const Portfolio = () => {
   const { user } = useAuth();
   const { submissions, stats, loading, refreshData } = useSellerDashboard();
 
-  // Filtrer seulement les submissions approuvées pour le portfolio public
+  // Filter only approved submissions for public portfolio
   const approvedSubmissions = submissions.filter(submission => submission.status === 'approved');
 
   // Listen for global refresh events to update portfolio when content is deleted
@@ -37,14 +37,14 @@ const Portfolio = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="Cette page est réservée aux vendeurs."
+      fallbackMessage="This page is reserved for sellers."
     >
       <div className="min-h-screen bg-background">
         <Header />
         <Navigation />
         
         <div className="container py-8">
-          {/* Header du Portfolio */}
+          {/* Portfolio Header */}
           <div className="mb-8">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
@@ -57,17 +57,17 @@ const Portfolio = () => {
                 
                 <div>
                   <h1 className="text-3xl font-bold">
-                    {user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'Mon Portfolio'}
+                    {user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'My Portfolio'}
                   </h1>
                   <p className="text-muted-foreground">
-                    Créateur VisuStock • Membre depuis {new Date(user?.created_at || '').getFullYear()}
+                    VisuStock Creator • Member since {new Date(user?.created_at || '').getFullYear()}
                   </p>
                   <div>
                     <Badge variant="secondary">
-                      {approvedSubmissions.length} contenus publiés
+                      {approvedSubmissions.length} published contents
                     </Badge>
                     <Badge variant="outline">
-                      {stats?.totalDownloads || 0} téléchargements
+                      {stats?.totalDownloads || 0} downloads
                     </Badge>
                   </div>
                 </div>
@@ -77,26 +77,26 @@ const Portfolio = () => {
                 <Button asChild>
                   <Link to="/file-upload">
                     <Plus className="h-4 w-4 mr-2" />
-                    Nouveau contenu
+                    New content
                   </Link>
                 </Button>
                 <Button variant="outline" asChild>
                   <Link to="/seller-dashboard">
-                    Tableau de bord
+                    Dashboard
                   </Link>
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* Statistiques Rapides */}
+          {/* Quick Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <Card className="p-4">
               <div className="flex items-center space-x-2">
                 <Upload className="h-4 w-4 text-primary" />
                 <div>
                   <div className="text-2xl font-bold">{stats?.totalSubmissions || 0}</div>
-                  <div className="text-sm text-muted-foreground">Contenus total</div>
+                  <div className="text-sm text-muted-foreground">Total contents</div>
                 </div>
               </div>
             </Card>
@@ -106,7 +106,7 @@ const Portfolio = () => {
                 <TrendingUp className="h-4 w-4 text-green-500" />
                 <div>
                   <div className="text-2xl font-bold">{stats?.approvedSubmissions || 0}</div>
-                  <div className="text-sm text-muted-foreground">Approuvés</div>
+                  <div className="text-sm text-muted-foreground">Approved</div>
                 </div>
               </div>
             </Card>
@@ -116,7 +116,7 @@ const Portfolio = () => {
                 <Download className="h-4 w-4 text-blue-500" />
                 <div>
                   <div className="text-2xl font-bold">{stats?.totalDownloads || 0}</div>
-                  <div className="text-sm text-muted-foreground">Téléchargements</div>
+                  <div className="text-sm text-muted-foreground">Downloads</div>
                 </div>
               </div>
             </Card>
@@ -126,33 +126,33 @@ const Portfolio = () => {
                 <Heart className="h-4 w-4 text-red-500" />
                 <div>
                   <div className="text-2xl font-bold">€{stats?.totalRevenue?.toFixed(2) || '0.00'}</div>
-                  <div className="text-sm text-muted-foreground">Revenus</div>
+                  <div className="text-sm text-muted-foreground">Revenue</div>
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Contenus */}
+          {/* Contents */}
           <Tabs defaultValue="published" className="space-y-6">
             <TabsList>
-              <TabsTrigger value="published">Contenus publiés ({approvedSubmissions.length})</TabsTrigger>
-              <TabsTrigger value="all">Tous mes contenus ({submissions.length})</TabsTrigger>
+              <TabsTrigger value="published">Published contents ({approvedSubmissions.length})</TabsTrigger>
+              <TabsTrigger value="all">All my contents ({submissions.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="published" className="space-y-6">
               {loading ? (
                 <div className="flex justify-center py-12">
-                  <div className="text-muted-foreground">Chargement...</div>
+                  <div className="text-muted-foreground">Loading...</div>
                 </div>
               ) : approvedSubmissions.length === 0 ? (
                 <Card className="p-12 text-center">
                   <div className="text-muted-foreground mb-4">
-                    Vous n'avez encore aucun contenu publié
+                    You don't have any published content yet
                   </div>
                   <Button asChild>
                     <Link to="/file-upload">
                       <Plus className="h-4 w-4 mr-2" />
-                      Uploader votre premier contenu
+                      Upload your first content
                     </Link>
                   </Button>
                 </Card>
@@ -167,7 +167,7 @@ const Portfolio = () => {
                         key={submission.id}
                         id={submission.id}
                         title={submission.title}
-                        author={user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'Vous'}
+                        author={user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'You'}
                         price={submission.price || 0}
                         type="photo"
                         thumbnail={previewFile?.file_path || thumbnailFile?.thumbnail_path || '/placeholder.svg'}
@@ -183,17 +183,17 @@ const Portfolio = () => {
             <TabsContent value="all" className="space-y-6">
               {loading ? (
                 <div className="flex justify-center py-12">
-                  <div className="text-muted-foreground">Chargement...</div>
+                  <div className="text-muted-foreground">Loading...</div>
                 </div>
               ) : submissions.length === 0 ? (
                 <Card className="p-12 text-center">
                   <div className="text-muted-foreground mb-4">
-                    Vous n'avez encore créé aucun contenu
+                    You haven't created any content yet
                   </div>
                   <Button asChild>
                     <Link to="/file-upload">
                       <Plus className="h-4 w-4 mr-2" />
-                      Créer votre premier contenu
+                      Create your first content
                     </Link>
                   </Button>
                 </Card>
@@ -227,9 +227,9 @@ const Portfolio = () => {
                                 submission.status === 'pending' ? 'secondary' : 
                                 'destructive'
                               }>
-                                {submission.status === 'approved' ? 'Publié' : 
-                                 submission.status === 'pending' ? 'En attente' : 
-                                 'Rejeté'}
+                                {submission.status === 'approved' ? 'Published' : 
+                                 submission.status === 'pending' ? 'Pending' : 
+                                 'Rejected'}
                               </Badge>
                               {submission.price && (
                                 <Badge variant="outline">€{submission.price}</Badge>
@@ -240,7 +240,7 @@ const Portfolio = () => {
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" asChild>
                               <Link to={`/seller-dashboard?tab=content`}>
-                                Modifier
+                                Edit
                               </Link>
                             </Button>
                           </div>
