@@ -130,12 +130,28 @@ const ProductManagement = () => {
           autoCategory = videoCategory?.id || '';
         }
         else if (fileType.startsWith('image/')) {
-          // Find photo category ID from available categories
-          const photoCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('photo') ||
-            cat.name.toLowerCase().includes('image')
-          );
-          autoCategory = photoCategory?.id || '';
+          // Check if filename suggests it's an illustration
+          const isIllustration = fileName.includes('illustration') || 
+            fileName.includes('illust') ||
+            fileName.includes('drawing') ||
+            fileName.includes('artwork') ||
+            fileName.includes('art-') ||
+            fileName.includes('vector') ||
+            fileName.includes('design');
+          
+          if (isIllustration) {
+            const illustrationCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('illustration')
+            );
+            autoCategory = illustrationCategory?.id || '';
+          } else {
+            // Default to photo category for other images
+            const photoCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('photo') ||
+              cat.name.toLowerCase().includes('image')
+            );
+            autoCategory = photoCategory?.id || '';
+          }
         }
         else if (fileType.startsWith('audio/')) {
           // Find audio category ID from available categories
