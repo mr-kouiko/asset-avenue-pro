@@ -92,21 +92,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const handleDownloadPreview = useCallback(async () => {
     if (type !== 'video' || !src) return;
     try {
-      toast({ title: 'Génération de l’aperçu…', description: 'Création d’une version basse résolution.', duration: 2000 });
-      const blob = await generate({ url: src, durationSec: 6, targetWidth: 426, fps: 12, videoBitsPerSecond: 280000 });
+      toast({ title: 'Generating preview…', description: 'Creating full resolution version.', duration: 2000 });
+      const blob = await generate({ url: src, durationSec: 6, fps: 24, videoBitsPerSecond: 4000000 });
       const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
       const a = document.createElement('a');
       const href = URL.createObjectURL(blob);
       a.href = href;
-      a.download = `${filenameBase}_preview_lowres.webm`;
+      a.download = `${filenameBase}_preview.webm`;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(href);
       a.remove();
-      toast({ title: 'Aperçu prêt', description: 'Version basse résolution téléchargée.', duration: 2500 });
+      toast({ title: 'Preview ready', description: 'Full resolution version downloaded.', duration: 2500 });
     } catch (err) {
       console.error('Preview generation failed:', err);
-      toast({ title: 'Échec de génération', description: 'Impossible de créer l’aperçu.', variant: 'destructive' });
+      toast({ title: 'Generation failed', description: 'Unable to create preview.', variant: 'destructive' });
     }
   }, [src, type, title, generate, toast]);
 
@@ -602,7 +602,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             ) : (
                               <Download className="h-4 w-4 mr-2" />
                             )}
-                            Télécharger l’aperçu (basse résolution)
+                            Download preview (full resolution)
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
