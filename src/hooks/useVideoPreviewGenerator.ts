@@ -20,9 +20,9 @@ export function useVideoPreviewGenerator() {
   const generate = useCallback(async ({
     url,
     durationSec = 6,
-    targetWidth = 426, // ~240p
-    fps = 12,
-    videoBitsPerSecond = 280_000, // ~280 kbps
+    targetWidth, // undefined = use original resolution
+    fps = 24,
+    videoBitsPerSecond = 4_000_000, // ~4 Mbps for full resolution
   }: PreviewOptions): Promise<Blob> => {
     setIsGenerating(true);
 
@@ -42,12 +42,12 @@ export function useVideoPreviewGenerator() {
       video.addEventListener('error', onErr, { once: true });
     });
 
-    // Compute canvas dimensions preserving aspect ratio
+    // Use original video dimensions if targetWidth not specified
     const aspect = video.videoWidth > 0 && video.videoHeight > 0
       ? video.videoWidth / video.videoHeight
       : 16 / 9;
-    const width = Math.round(targetWidth);
-    const height = Math.round(width / aspect);
+    const width = targetWidth ? Math.round(targetWidth) : video.videoWidth;
+    const height = targetWidth ? Math.round(width / aspect) : video.videoHeight;
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
