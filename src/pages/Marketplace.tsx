@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { SlidersHorizontal, ChevronDown } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
+import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
+import { fuzzySearch, type SearchableContent, type ScoredResult } from "@/utils/fuzzySearch";
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
@@ -131,16 +132,47 @@ const Marketplace = () => {
     );
   };
 
-  // Filter content based on search and category
-  const filteredContent = marketplaceContent.filter(content => {
-    const matchesSearch = (content.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (content.author || '').toLowerCase().includes(searchQuery.toLowerCase());
-    // content.type is already normalized to 'photo', 'video', 'audio', etc. by useMarketplace hook
-    const matchesCategory = selectedCategory === "all" || 
-                           content.category_id === selectedCategory ||
-                           content.type === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Convert marketplace content to searchable format
+  const searchableContent: SearchableContent[] = useMemo(() => 
+    marketplaceContent.map(item => ({
+      id: item.id,
+      title: item.title || '',
+      tags: item.tags || [],
+      author: item.author || '',
+      type: item.type || '',
+      price: item.price || 0,
+      downloads: item.downloads || 0,
+      likes: item.likes || 0
+    })), 
+    [marketplaceContent]
+  );
+
+  // Filter content based on search and category using fuzzy search
+  const filteredContent = useMemo(() => {
+    let results = marketplaceContent;
+    
+    // Apply fuzzy search if there's a query
+    if (searchQuery.trim()) {
+      const fuzzyResults = fuzzySearch(searchableContent, searchQuery, { minScore: 3 });
+      const matchedIds = new Set(fuzzyResults.map(r => r.item.id));
+      
+      // Create a score map for sorting
+      const scoreMap = new Map(fuzzyResults.map(r => [r.item.id, r.score]));
+      
+      results = marketplaceContent
+        .filter(content => matchedIds.has(content.id))
+        .sort((a, b) => (scoreMap.get(b.id) || 0) - (scoreMap.get(a.id) || 0));
+    }
+    
+    // Apply category filter
+    if (selectedCategory !== "all") {
+      results = results.filter(content => 
+        content.category_id === selectedCategory || content.type === selectedCategory
+      );
+    }
+    
+    return results;
+  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory]);
 
   // Sort the filtered content
   const sortedContent = [...filteredContent].sort((a, b) => {
@@ -179,17 +211,14 @@ const Marketplace = () => {
         {/* Search and Filters Header */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
-            {/* Search Bar */}
+            {/* Search Bar with Suggestions */}
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher dans la marketplace..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+              <SearchWithSuggestions
+                items={searchableContent}
+                placeholder={language === 'fr' ? "Rechercher dans la marketplace..." : "Search the marketplace..."}
+                onSearch={setSearchQuery}
+                initialValue={searchQuery}
+              />
             </div>
 
             {/* Filters */}

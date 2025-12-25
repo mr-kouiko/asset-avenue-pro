@@ -1,17 +1,26 @@
-import { Search, Play, TrendingUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { useSearch } from "@/hooks/useSearch";
+import { Play, TrendingUp } from "lucide-react";
 import { useContentStats } from "@/hooks/useContentStats";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
+import { useMarketplace } from "@/hooks/useMarketplace";
+import { useMemo } from "react";
 import heroImage from "@/assets/hero-image.jpg";
 
 export const HeroSection = () => {
-  const [searchInput, setSearchInput] = useState("");
-  const { performSearch } = useSearch();
   const { stats, loading } = useContentStats();
   const { language } = useLanguage();
+  const { content: marketplaceContent } = useMarketplace();
+
+  // Convert to searchable format for suggestions
+  const searchableItems = useMemo(() => 
+    marketplaceContent.map(item => ({
+      id: item.id,
+      title: item.title || '',
+      tags: item.tags || [],
+      type: item.type || ''
+    })),
+    [marketplaceContent]
+  );
 
   const content = {
     fr: {
@@ -19,7 +28,6 @@ export const HeroSection = () => {
       titleHighlight: "contenus créatifs",
       subtitle: "Photos, vidéos, illustrations, sons et bien plus. Trouvez le contenu parfait pour vos projets créatifs et professionnels.",
       searchPlaceholder: "Rechercher...",
-      searchButton: "Rechercher",
       statsLabels: {
         photos: "Photos",
         videos: "Vidéos", 
@@ -33,7 +41,6 @@ export const HeroSection = () => {
       titleHighlight: "creative content",
       subtitle: "Photos, videos, illustrations, audio and more. Find the perfect content for your creative and professional projects.",
       searchPlaceholder: "Search...",
-      searchButton: "Search",
       statsLabels: {
         photos: "Photos",
         videos: "Videos",
@@ -45,18 +52,6 @@ export const HeroSection = () => {
   };
 
   const t = content[language];
-
-  const handleSearch = () => {
-    if (searchInput.trim()) {
-      performSearch(searchInput.trim());
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
   return (
     <section className="relative py-12 md:py-20 overflow-hidden min-h-[60vh] md:min-h-[70vh] flex items-center">
       {/* Background Video */}
@@ -90,21 +85,14 @@ export const HeroSection = () => {
               </p>
             </div>
 
-            {/* Search Bar */}
-            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto lg:mx-0">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t.searchPlaceholder}
-                  className="pl-10 h-12 text-base bg-white/95"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                />
-              </div>
-              <Button size="lg" className="px-6 sm:px-8 h-12 w-full sm:w-auto" onClick={handleSearch}>
-                {t.searchButton}
-              </Button>
+            {/* Search Bar with Suggestions */}
+            <div className="max-w-lg mx-auto lg:mx-0 w-full">
+              <SearchWithSuggestions
+                items={searchableItems}
+                placeholder={t.searchPlaceholder}
+                onSearch={() => {}}
+                variant="hero"
+              />
             </div>
 
             {/* Stats - Grid on mobile */}
