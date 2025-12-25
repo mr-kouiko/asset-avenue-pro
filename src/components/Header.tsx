@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Search, ShoppingCart, User, LogOut, Shield, Sparkles } from "lucide-react";
+import { useState, useEffect, useMemo } from 'react';
+import { ShoppingCart, User, LogOut, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +9,14 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { AuthModal } from "@/components/AuthModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MobileMenu } from "@/components/MobileMenu";
+import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
+import { useMarketplace } from "@/hooks/useMarketplace";
 
 export const Header = () => {
   const { user, signOut, loading, getUserRole } = useAuth();
@@ -23,6 +24,19 @@ export const Header = () => {
   const { language, setLanguage, t } = useLanguage();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { content: marketplaceContent } = useMarketplace();
+
+  // Convert to searchable format for suggestions
+  const searchableItems = useMemo(() => 
+    marketplaceContent.map(item => ({
+      id: item.id,
+      title: item.title || '',
+      tags: item.tags || [],
+      type: item.type || ''
+    })),
+    [marketplaceContent]
+  );
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -65,25 +79,14 @@ export const Header = () => {
           />
         </Link>
 
-        {/* Search Bar - Hidden on mobile */}
+        {/* Search Bar with Suggestions - Hidden on mobile */}
         <div className="hidden md:flex flex-1 max-w-lg mx-6">
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target as HTMLFormElement);
-            const query = formData.get('search') as string;
-            if (query?.trim()) {
-              window.location.href = `/${language}/marketplace?search=${encodeURIComponent(query.trim())}`;
-            }
-          }} className="w-full">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="search"
-                placeholder={t('search.placeholder')}
-                className="pl-10 pr-4"
-              />
-            </div>
-          </form>
+          <SearchWithSuggestions
+            items={searchableItems}
+            placeholder={t('search.placeholder')}
+            onSearch={() => {}}
+            className="w-full"
+          />
         </div>
 
         {/* Navigation & Actions */}
