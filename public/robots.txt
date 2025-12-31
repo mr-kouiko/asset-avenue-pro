@@ -1,5 +1,36 @@
-# Allow all robots to access the site
 User-agent: *
+Allow: /
+
+# OpenAI / ChatGPT
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+
+# Google / Gemini
+User-agent: Google-Extended
+Allow: /
+
+# Anthropic / Claude
+User-agent: anthropic-ai
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Claude-Web
+Allow: /
+
+# xAI / Grok (less common, but documented)
+User-agent: GrokBot
+Allow: /
+User-agent: xAI-Grok
+Allow: /
+
+# Other common ones (Perplexity, CommonCrawl used by many AIs)
+User-agent: PerplexityBot
+Allow: /
+User-agent: CCBot
 Allow: /
 
 # Disallow admin and private areas
@@ -10,6 +41,3 @@ Disallow: /cart
 
 # Sitemap location
 Sitemap: https://visustock.com/sitemap.xml
-
-# Crawl delay for courtesy
-Crawl-delay: 0
