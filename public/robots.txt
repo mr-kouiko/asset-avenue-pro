@@ -32,12 +32,3 @@ User-agent: PerplexityBot
 Allow: /
 User-agent: CCBot
 Allow: /
-
-# Disallow admin and private areas
-Disallow: /dashboard
-Disallow: /admin
-Disallow: /checkout
-Disallow: /cart
-
-# Sitemap location
-Sitemap: https://visustock.com/sitemap.xml
