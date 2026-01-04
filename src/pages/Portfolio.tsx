@@ -161,6 +161,22 @@ const Portfolio = () => {
                   {approvedSubmissions.map((submission) => {
                     const previewFile = submission.content_files?.find(file => file.is_preview);
                     const thumbnailFile = submission.content_files?.find(file => file.thumbnail_path);
+                    const originalFile = submission.content_files?.find(file => file.is_original);
+                    
+                    // Determine content type from file type
+                    const getContentType = (): "photo" | "video" | "audio" | "illustration" | "pdf" | "ebook" => {
+                      const fileType = originalFile?.file_type || previewFile?.file_type || '';
+                      if (fileType.startsWith('video/')) return 'video';
+                      if (fileType.startsWith('audio/')) return 'audio';
+                      if (fileType === 'application/pdf') return 'pdf';
+                      if (fileType.includes('epub') || fileType.includes('ebook')) return 'ebook';
+                      // Check filename for illustration keywords
+                      const fileName = (originalFile?.file_name || '').toLowerCase();
+                      if (fileName.includes('illustration') || fileName.includes('vector') || fileName.includes('drawing')) {
+                        return 'illustration';
+                      }
+                      return 'photo';
+                    };
                     
                     return (
                       <ContentCard
@@ -169,8 +185,9 @@ const Portfolio = () => {
                         title={submission.title}
                         author={user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'You'}
                         price={submission.price || 0}
-                        type="photo"
+                        type={getContentType()}
                         thumbnail={previewFile?.file_path || thumbnailFile?.thumbnail_path || '/placeholder.svg'}
+                        videoUrl={getContentType() === 'video' ? originalFile?.file_path : undefined}
                         likes={Math.floor(Math.random() * 200)}
                         downloads={Math.floor(Math.random() * 100)}
                       />
