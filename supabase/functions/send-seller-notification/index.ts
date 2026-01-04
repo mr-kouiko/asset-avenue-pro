@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Calculate commission (15%)
-    const commissionRate = 0.15
+    // Calculate commission (20%)
+    const commissionRate = 0.20
     const commissionAmount = payload.total_amount * commissionRate
     const sellerEarnings = payload.total_amount - commissionAmount
 
