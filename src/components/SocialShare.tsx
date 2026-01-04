@@ -18,7 +18,14 @@ interface SocialShareProps {
   variant?: "default" | "secondary" | "ghost" | "outline";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  productSlug?: string; // Optional: for SSR meta tags via edge function
 }
+
+// Get Supabase URL for edge function
+const getOgUrl = (slug: string): string => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ndymiqfyxzypurveutop.supabase.co';
+  return `${supabaseUrl}/functions/v1/og-product?slug=${encodeURIComponent(slug)}`;
+};
 
 export const SocialShare = ({
   url,
@@ -29,11 +36,17 @@ export const SocialShare = ({
   variant = "secondary",
   size = "sm",
   className = "",
+  productSlug,
 }: SocialShareProps) => {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = encodeURIComponent(url);
-  const shareTitle = encodeURIComponent(title);
+  // Extract slug from URL if not provided directly
+  const extractedSlug = productSlug || url.match(/\/products\/([^/?#]+)/)?.[1];
+  
+  // Use OG edge function URL for social platforms (SSR meta tags)
+  // Fall back to direct URL if no slug available
+  const socialShareUrl = extractedSlug ? getOgUrl(extractedSlug) : url;
+  const shareUrl = encodeURIComponent(socialShareUrl);
   
   // Limit hashtags to 5 max for optimal reach
   const limitedHashtags = hashtags.slice(0, 5);
@@ -45,7 +58,7 @@ export const SocialShare = ({
   // Build full share text with description, URL and hashtags
   const fullShareText = `${title}${description ? ` - ${description}` : ''}`;
   const shareTextWithHashtags = encodeURIComponent(`${fullShareText}${hashtagsForText}`);
-  const shareTextWithUrl = encodeURIComponent(`${fullShareText}${hashtagsForText}\n\n${url}`);
+  const shareTextWithUrl = encodeURIComponent(`${fullShareText}${hashtagsForText}\n\n${socialShareUrl}`);
 
   const socialLinks = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTextWithHashtags}`,
