@@ -46,6 +46,7 @@ interface SocialShareLazyProps {
   variant?: "default" | "secondary" | "ghost" | "outline";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  productSlug?: string;
 }
 
 export const SocialShareLazy = (props: SocialShareLazyProps) => {
