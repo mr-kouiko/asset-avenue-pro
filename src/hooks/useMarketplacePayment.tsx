@@ -158,11 +158,11 @@ export const useMarketplacePayment = () => {
     return cartItems.reduce((total, item) => total + (item.price || 0), 0);
   };
 
-  const getCommissionAmount = (commissionRate: number = 0.15) => {
+  const getCommissionAmount = (commissionRate: number = 0.20) => {
     return getTotalAmount() * commissionRate;
   };
 
-  const getSellerAmount = (commissionRate: number = 0.15) => {
+  const getSellerAmount = (commissionRate: number = 0.20) => {
     return getTotalAmount() - getCommissionAmount(commissionRate);
   };
 
