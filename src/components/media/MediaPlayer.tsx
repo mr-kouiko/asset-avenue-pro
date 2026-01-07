@@ -98,7 +98,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       const a = document.createElement('a');
       const href = URL.createObjectURL(blob);
       a.href = href;
-      a.download = `${filenameBase}_preview.webm`;
+      const ext = blob.type === 'video/mp4' ? 'mp4' : 'webm';
+      a.download = `${filenameBase}_preview.${ext}`;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(href);
