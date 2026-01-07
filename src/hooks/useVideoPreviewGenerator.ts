@@ -94,8 +94,25 @@ export function useVideoPreviewGenerator() {
     }
 
     const chunks: BlobPart[] = [];
+    
+    // Try MP4 first (Safari, newer Chrome), fallback to WebM
+    const mimeTypes = [
+      'video/mp4;codecs=avc1',
+      'video/mp4',
+      'video/webm;codecs=vp9',
+      'video/webm'
+    ];
+    
+    let selectedMimeType = 'video/webm';
+    for (const mime of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mime)) {
+        selectedMimeType = mime;
+        break;
+      }
+    }
+    
     const recorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9',
+      mimeType: selectedMimeType,
       videoBitsPerSecond,
     });
     recorderRef.current = recorder;
@@ -150,7 +167,8 @@ export function useVideoPreviewGenerator() {
     recorder.stop();
     await recordPromise;
 
-    const blob = new Blob(chunks, { type: 'video/webm' });
+    const outputMimeType = selectedMimeType.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
+    const blob = new Blob(chunks, { type: outputMimeType });
     setIsGenerating(false);
     return blob;
   }, []);
