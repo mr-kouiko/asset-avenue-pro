@@ -20,8 +20,8 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
           maxWidth: '80%',
           maxHeight: '80%',
           objectFit: 'contain' as const,
-          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
-          opacity: 0.9
+          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
+          opacity: 1
         };
       case 'large':
         // 2x size for enlarged previews
@@ -31,8 +31,8 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
           maxWidth: '60%',
           maxHeight: '60%',
           objectFit: 'contain' as const,
-          filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.4))',
-          opacity: 0.85
+          filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.5))',
+          opacity: 1
         };
       case 'normal':
       default:
@@ -43,8 +43,8 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
           maxWidth: '40%',
           maxHeight: '40%',
           objectFit: 'contain' as const,
-          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
-          opacity: 0.8
+          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))',
+          opacity: 0.96
         };
     }
   };
