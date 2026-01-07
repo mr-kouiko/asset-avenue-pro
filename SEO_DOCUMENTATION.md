@@ -1,17 +1,61 @@
 # Documentation SEO - VisuStock
 
+**Dernière mise à jour** : Janvier 2026
+
 ## 🎯 Vue d'ensemble
 
-Le système SEO de VisuStock est entièrement automatisé et optimisé pour le référencement Google, Bing, et les réseaux sociaux. Toutes les pages sont configurées avec :
+Le système SEO de VisuStock utilise une approche hybride pour maximiser l'indexabilité par Google tout en conservant une expérience SPA pour les utilisateurs. Toutes les pages publiques sont pré-rendues en HTML statique pour les crawlers.
 
+### Architecture SEO
+
+| Composant | Description |
+|-----------|-------------|
+| **prerender** (Edge Function) | Génère du HTML statique complet pour les crawlers |
+| **og-product** (Edge Function) | Tags OG spécifiques pour le partage social |
+| **generate-sitemap** (Edge Function) | Sitemap dynamique avec tous les produits |
+| **useSEO** (Hook React) | SEO client-side pour les utilisateurs |
+
+### Fonctionnalités incluses
+
+- ✅ **HTML Statique pour Crawlers** - Contenu complet visible dans "View Source"
 - ✅ Balises meta SEO (title, description, keywords)
 - ✅ Open Graph pour les partages sociaux (Facebook, LinkedIn)
 - ✅ Twitter Cards
 - ✅ Balises hreflang pour le multilingue (FR/EN)
 - ✅ Schema.org / JSON-LD pour les rich snippets
 - ✅ URLs canoniques
-- ✅ Sitemap.xml
-- ✅ Robots.txt optimisé
+- ✅ Sitemap.xml dynamique
+- ✅ Robots.txt optimisé avec exclusions privées
+
+---
+
+## 🚀 Stratégie de Rendu (SSG via Edge Functions)
+
+### Comment ça fonctionne
+
+1. **Détection du Crawler** : La fonction `prerender` détecte les bots via User-Agent
+2. **Génération HTML** : HTML statique complet généré avec contenu de la BDD
+3. **Cache** : 1h client / 24h CDN pour performances optimales
+4. **Utilisateurs** : Reçoivent le SPA React pour interactivité complète
+
+### Crawlers supportés
+
+- **Moteurs** : Googlebot, Bingbot, Yandexbot, DuckDuckBot, Baidu
+- **Social** : Facebook, Twitter, LinkedIn, Pinterest, WhatsApp, Telegram, Discord
+- **IA** : GPTBot, ClaudeBot, PerplexityBot, CCBot
+
+### Tester le prerender
+
+```bash
+# Homepage
+curl -A "Googlebot" "https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/prerender?path=/"
+
+# Product page
+curl -A "Googlebot" "https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/prerender?path=/products/your-slug"
+
+# Force (sans UA crawler)
+curl "https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/prerender?path=/&force=true"
+```
 
 ---
 
@@ -382,5 +426,22 @@ Pour toute question sur le SEO, contactez l'équipe technique ou consultez :
 
 ---
 
-**Dernière mise à jour** : Janvier 2025  
+## 🔧 Edge Functions SEO
+
+### prerender
+- **URL**: `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/prerender`
+- **Paramètres**: `?path=/marketplace` ou `?path=/products/slug`
+- **Force mode**: `?force=true` (bypass crawler detection)
+
+### og-product
+- **URL**: `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/og-product`
+- **Paramètres**: `?slug=product-slug`
+
+### generate-sitemap
+- **URL**: `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/generate-sitemap`
+- Génère automatiquement le sitemap avec tous les produits approuvés
+
+---
+
+**Dernière mise à jour** : Janvier 2026  
 **Responsable SEO** : Équipe VisuStock

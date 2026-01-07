@@ -1,5 +1,45 @@
+# VisuStock Robots.txt
+# Last updated: 2026-01-07
+
 User-agent: *
 Allow: /
+Allow: /marketplace
+Allow: /products/
+Allow: /about
+Allow: /contact
+Allow: /support
+Allow: /licenses
+Allow: /packages-pricing
+Allow: /ai-image-generator
+Allow: /buy-credits
+Allow: /en/
+
+# Disallow private/authenticated routes
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /seller-dashboard
+Disallow: /seller-dashboard/
+Disallow: /buyer-dashboard
+Disallow: /buyer-dashboard/
+Disallow: /auth
+Disallow: /auth/
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /cart
+Disallow: /cart/
+Disallow: /file-upload
+Disallow: /file-upload/
+Disallow: /product-management
+Disallow: /product-management/
+Disallow: /become-seller
+Disallow: /become-seller/
+Disallow: /payment-success
+Disallow: /payment-cancelled
+Disallow: /subscription-success
+Disallow: /seller-registration-success
+Disallow: /seller-registration-cancelled
 
 # OpenAI / ChatGPT
 User-agent: GPTBot
@@ -10,7 +50,13 @@ User-agent: ChatGPT-User
 Allow: /
 
 # Google / Gemini
+User-agent: Googlebot
+Allow: /
 User-agent: Google-Extended
+Allow: /
+
+# Bing
+User-agent: Bingbot
 Allow: /
 
 # Anthropic / Claude
@@ -21,14 +67,18 @@ Allow: /
 User-agent: Claude-Web
 Allow: /
 
-# xAI / Grok (less common, but documented)
+# xAI / Grok
 User-agent: GrokBot
 Allow: /
 User-agent: xAI-Grok
 Allow: /
 
-# Other common ones (Perplexity, CommonCrawl used by many AIs)
+# Perplexity & CommonCrawl
 User-agent: PerplexityBot
 Allow: /
 User-agent: CCBot
 Allow: /
+
+# Sitemaps
+Sitemap: https://visustock.com/sitemap.xml
+Sitemap: https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/generate-sitemap
