@@ -94,3 +94,15 @@ verify_jwt = false
 
 [functions.og-product]
 verify_jwt = false
+
+[functions.sitemap-index]
+verify_jwt = false
+
+[functions.sitemap-static]
+verify_jwt = false
+
+[functions.sitemap-categories]
+verify_jwt = false
+
+[functions.sitemap-products]
+verify_jwt = false
