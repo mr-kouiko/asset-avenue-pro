@@ -262,21 +262,52 @@ export const useSellerDashboard = () => {
         return;
       }
 
-      // Get all content_files to check which uploaded files are already in submissions
-      const { data: contentFiles, error: contentError } = await supabase
-        .from('content_files')
-        .select('file_path')
-        .in('file_path', uploadedFiles.map(f => f.file_url));
+      // Get ALL content_files for this user's submissions to properly filter
+      // First get the user's submission IDs
+      const { data: userSubmissions, error: submissionsError } = await supabase
+        .from('content_submissions')
+        .select('id')
+        .eq('creator_id', user.id);
 
-      if (contentError) {
-        console.error('❌ [SELLER-DASHBOARD] Error checking content_files:', contentError);
+      if (submissionsError) {
+        console.error('❌ [SELLER-DASHBOARD] Error fetching user submissions:', submissionsError);
       }
 
-      // Filter out files that are already in content_files
-      const submittedUrls = new Set(contentFiles?.map(cf => cf.file_path) || []);
-      const unsubmitted = uploadedFiles.filter(file => !submittedUrls.has(file.file_url));
+      const submissionIds = userSubmissions?.map(s => s.id) || [];
+      
+      // Get all content_files for user's submissions
+      let submittedFilePaths = new Set<string>();
+      let submittedFileNames = new Set<string>();
+      
+      if (submissionIds.length > 0) {
+        const { data: contentFiles, error: contentError } = await supabase
+          .from('content_files')
+          .select('file_path, file_name')
+          .in('submission_id', submissionIds);
 
-      console.log('📂 [SELLER-DASHBOARD] Unsubmitted files:', unsubmitted.length);
+        if (contentError) {
+          console.error('❌ [SELLER-DASHBOARD] Error checking content_files:', contentError);
+        } else if (contentFiles) {
+          // Create sets for both file paths and file names for robust matching
+          submittedFilePaths = new Set(contentFiles.map(cf => cf.file_path));
+          submittedFileNames = new Set(contentFiles.map(cf => cf.file_name.toLowerCase()));
+        }
+      }
+
+      // Filter out files that are already linked to any submission
+      // Check by both file_url (path) AND file_name for robust matching
+      const unsubmitted = uploadedFiles.filter(file => {
+        const isSubmittedByPath = submittedFilePaths.has(file.file_url);
+        const isSubmittedByName = submittedFileNames.has(file.file_name.toLowerCase());
+        
+        // File is unsubmitted only if it's NOT in either set
+        return !isSubmittedByPath && !isSubmittedByName;
+      });
+
+      console.log('📂 [SELLER-DASHBOARD] Total uploaded files:', uploadedFiles.length);
+      console.log('📂 [SELLER-DASHBOARD] Submitted file paths:', submittedFilePaths.size);
+      console.log('📂 [SELLER-DASHBOARD] Submitted file names:', submittedFileNames.size);
+      console.log('📂 [SELLER-DASHBOARD] Unsubmitted files after filter:', unsubmitted.length);
       setUnsubmittedFiles(unsubmitted);
     } catch (error) {
       console.error('❌ [SELLER-DASHBOARD] Error in fetchUnsubmittedFiles:', error);
