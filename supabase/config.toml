@@ -88,3 +88,9 @@ verify_jwt = true
 
 [functions.manage-paypal-subscription]
 verify_jwt = true
+
+[functions.prerender]
+verify_jwt = false
+
+[functions.og-product]
+verify_jwt = false
