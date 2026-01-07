@@ -40,6 +40,23 @@ Disallow: /payment-cancelled
 Disallow: /subscription-success
 Disallow: /seller-registration-success
 Disallow: /seller-registration-cancelled
+Disallow: /portfolio
+Disallow: /test-accounts
+Disallow: /create-test-accounts
+
+# Block low-value filter combinations (crawl trap prevention)
+# Only category facets are allowed for indexing
+Disallow: /marketplace?*price=*
+Disallow: /marketplace?*format=*
+Disallow: /marketplace?*license=*
+Disallow: /marketplace?*orientation=*
+Disallow: /marketplace?*duration=*
+Disallow: /marketplace?*search=*
+Disallow: /marketplace?*sort=*
+Disallow: /marketplace?*page=*
+
+# Allow high-value category facets
+Allow: /marketplace?category=*
 
 # OpenAI / ChatGPT
 User-agent: GPTBot
@@ -79,6 +96,6 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-# Sitemaps
+# Sitemaps (split by type for scalability)
 Sitemap: https://visustock.com/sitemap.xml
-Sitemap: https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/generate-sitemap
+Sitemap: https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/sitemap-index

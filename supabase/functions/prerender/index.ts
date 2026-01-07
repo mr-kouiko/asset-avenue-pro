@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const SITE_URL = "https://visustock.com";
 
-const CRAWLERS = ["googlebot", "bingbot", "yandexbot", "facebookexternalhit", "twitterbot", "linkedinbot", "discordbot"];
+const CRAWLERS = ["googlebot", "bingbot", "yandexbot", "facebookexternalhit", "twitterbot", "linkedinbot", "discordbot", "applebot", "gptbot", "claudebot"];
 
 function isCrawler(ua: string): boolean {
   return CRAWLERS.some((c) => ua.toLowerCase().includes(c));
@@ -17,8 +17,98 @@ function esc(t: string): string {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function html(title: string, desc: string, h1: string, url: string, img: string, body: string): string {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${url}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${img}"><meta property="og:type" content="website"><meta name="twitter:card" content="summary_large_image"></head><body><h1>${esc(h1)}</h1>${body}<p><a href="${SITE_URL}">VisuStock</a></p></body></html>`;
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface Product {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  price?: number;
+  tags?: string[];
+  category_id?: string;
+  creator_id?: string;
+}
+
+function buildHtml(opts: {
+  title: string;
+  desc: string;
+  h1: string;
+  url: string;
+  canonical: string;
+  img: string;
+  type: string;
+  body: string;
+  breadcrumbs?: Array<{ name: string; url: string }>;
+  schema?: object;
+}): string {
+  const breadcrumbHtml = opts.breadcrumbs?.map((b, i) => 
+    `<span><a href="${b.url}">${esc(b.name)}</a>${i < opts.breadcrumbs!.length - 1 ? ' &gt; ' : ''}</span>`
+  ).join('') || '';
+
+  const schemaScript = opts.schema ? `<script type="application/ld+json">${JSON.stringify(opts.schema)}</script>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${esc(opts.title)}</title>
+  <meta name="description" content="${esc(opts.desc)}">
+  <link rel="canonical" href="${opts.canonical}">
+  <meta property="og:title" content="${esc(opts.title)}">
+  <meta property="og:description" content="${esc(opts.desc)}">
+  <meta property="og:url" content="${opts.url}">
+  <meta property="og:image" content="${opts.img}">
+  <meta property="og:type" content="${opts.type}">
+  <meta property="og:site_name" content="VisuStock">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${esc(opts.title)}">
+  <meta name="twitter:description" content="${esc(opts.desc)}">
+  <meta name="twitter:image" content="${opts.img}">
+  ${schemaScript}
+</head>
+<body>
+  <nav aria-label="Breadcrumb">${breadcrumbHtml}</nav>
+  <h1>${esc(opts.h1)}</h1>
+  ${opts.body}
+  <footer>
+    <nav>
+      <a href="${SITE_URL}">Home</a> |
+      <a href="${SITE_URL}/marketplace">Marketplace</a> |
+      <a href="${SITE_URL}/about">About</a> |
+      <a href="${SITE_URL}/contact">Contact</a>
+    </nav>
+    <p>&copy; ${new Date().getFullYear()} VisuStock</p>
+  </footer>
+</body>
+</html>`;
+}
+
+function buildCategoryLinks(categories: Category[]): string {
+  return categories.map(c => 
+    `<li><a href="${SITE_URL}/marketplace?category=${c.id}">${esc(c.name)}</a></li>`
+  ).join('\n');
+}
+
+function buildProductLinks(products: Product[]): string {
+  return products.map(p => 
+    `<article itemscope itemtype="https://schema.org/Product">
+      <h3 itemprop="name"><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>
+      ${p.price ? `<span itemprop="offers" itemscope itemtype="https://schema.org/Offer"><span itemprop="price" content="${p.price}">€${p.price}</span><meta itemprop="priceCurrency" content="EUR"></span>` : ''}
+    </article>`
+  ).join('\n');
+}
+
+function buildRelatedLinks(products: Product[]): string {
+  if (!products.length) return '';
+  return `<section><h2>Related Products</h2><ul>${products.map(p => 
+    `<li><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></li>`
+  ).join('')}</ul></section>`;
 }
 
 Deno.serve(async (req) => {
@@ -31,7 +121,7 @@ Deno.serve(async (req) => {
     const path = url.searchParams.get("path") || "/";
     const ua = req.headers.get("user-agent") || "";
 
-    console.log(`[PRERENDER] Request for path: ${path}, UA: ${ua.substring(0, 50)}`);
+    console.log(`[PRERENDER] Path: ${path}, UA: ${ua.substring(0, 50)}`);
 
     if (!isCrawler(ua)) {
       return new Response(JSON.stringify({ prerender: false, reason: "not-crawler" }), {
@@ -45,41 +135,172 @@ Deno.serve(async (req) => {
 
     const logo = `${SITE_URL}/lovable-uploads/visustock-logo-no-bg.png`;
 
-    // Homepage
+    // Fetch categories for internal linking
+    const { data: categories } = await supabase
+      .from("categories")
+      .select("id, name, slug")
+      .order("name");
+
+    const cats: Category[] = categories || [];
+
+    // ===== HOMEPAGE =====
     if (path === "/" || path === "/en") {
-      const { data: products } = await supabase
+      const { data: featuredProducts } = await supabase
         .from("content_submissions")
-        .select("title, slug")
+        .select("id, title, slug, price, category_id")
         .eq("status", "approved")
         .not("slug", "is", null)
-        .limit(10);
+        .order("created_at", { ascending: false })
+        .limit(12);
 
-      const list = products?.map((p: any) => `<li><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></li>`).join("") || "";
-      
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": `${SITE_URL}/#website`,
+            url: SITE_URL,
+            name: "VisuStock",
+            description: "Premium stock photos, videos, audio and illustrations marketplace",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: `${SITE_URL}/marketplace?search={search_term_string}`,
+              "query-input": "required name=search_term_string",
+            },
+          },
+          {
+            "@type": "Organization",
+            "@id": `${SITE_URL}/#organization`,
+            name: "VisuStock",
+            url: SITE_URL,
+            logo: logo,
+            sameAs: [],
+          },
+        ],
+      };
+
+      const body = `
+        <section>
+          <h2>Browse by Category</h2>
+          <ul>${buildCategoryLinks(cats)}</ul>
+        </section>
+        <section>
+          <h2>Featured Content</h2>
+          ${buildProductLinks(featuredProducts || [])}
+        </section>
+        <section>
+          <h2>Why VisuStock?</h2>
+          <ul>
+            <li>High-quality curated content from professional creators</li>
+            <li>Flexible licensing options for every project</li>
+            <li>Lightning-fast downloads with secure delivery</li>
+          </ul>
+        </section>`;
+
       return new Response(
-        html("VisuStock - Premium Stock Photos, Videos & Audio", "Discover high-quality stock content from talented creators.", "Premium Creative Content Marketplace", SITE_URL, logo, `<ul>${list}</ul>`),
+        buildHtml({
+          title: "VisuStock - Premium Stock Photos, Videos, Audio & Illustrations",
+          desc: "Discover and download high-quality stock photos, videos, audio tracks, and illustrations from talented creators worldwide.",
+          h1: "Premium Creative Content Marketplace",
+          url: SITE_URL,
+          canonical: SITE_URL,
+          img: logo,
+          type: "website",
+          body,
+          breadcrumbs: [{ name: "Home", url: SITE_URL }],
+          schema,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } }
       );
     }
 
-    // Marketplace
-    if (path === "/marketplace") {
-      const { data: products } = await supabase
-        .from("content_submissions")
-        .select("title, slug, price")
-        .eq("status", "approved")
-        .not("slug", "is", null)
-        .limit(30);
+    // ===== MARKETPLACE / CATEGORY =====
+    if (path === "/marketplace" || path.startsWith("/marketplace?")) {
+      const urlObj = new URL(`${SITE_URL}${path}`);
+      const categoryId = urlObj.searchParams.get("category");
+      const search = urlObj.searchParams.get("search");
 
-      const list = products?.map((p: any) => `<li><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a>${p.price ? ` - €${p.price}` : ""}</li>`).join("") || "";
+      // Canonical URL: base marketplace without filters (except category)
+      let canonicalUrl = `${SITE_URL}/marketplace`;
+      if (categoryId) {
+        canonicalUrl = `${SITE_URL}/marketplace?category=${categoryId}`;
+      }
+
+      let query = supabase
+        .from("content_submissions")
+        .select("id, title, slug, price, description, category_id")
+        .eq("status", "approved")
+        .not("slug", "is", null);
+
+      if (categoryId) {
+        query = query.eq("category_id", categoryId);
+      }
+
+      const { data: products } = await query.order("created_at", { ascending: false }).limit(50);
+
+      const currentCat = cats.find(c => c.id === categoryId);
+      const pageTitle = currentCat 
+        ? `${currentCat.name} - Stock Content | VisuStock`
+        : "Marketplace - Browse Creative Content | VisuStock";
+      const pageDesc = currentCat
+        ? `Browse professional ${currentCat.name.toLowerCase()} content. Find the perfect creative assets for your projects.`
+        : "Browse thousands of professional photos, videos, audio tracks and illustrations.";
+      const pageH1 = currentCat ? `${currentCat.name} Collection` : "Creative Content Marketplace";
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Marketplace", url: `${SITE_URL}/marketplace` },
+      ];
+      if (currentCat) {
+        breadcrumbs.push({ name: currentCat.name, url: canonicalUrl });
+      }
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": `${canonicalUrl}#collection`,
+        name: pageH1,
+        url: canonicalUrl,
+        description: pageDesc,
+        breadcrumb: {
+          "@type": "BreadcrumbList",
+          itemListElement: breadcrumbs.map((b, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: b.name,
+            item: b.url,
+          })),
+        },
+      };
+
+      const body = `
+        <section>
+          <h2>Categories</h2>
+          <ul>${buildCategoryLinks(cats)}</ul>
+        </section>
+        <section>
+          <h2>Available Content (${products?.length || 0} items)</h2>
+          ${buildProductLinks(products || [])}
+        </section>`;
 
       return new Response(
-        html("Marketplace - VisuStock", "Browse professional stock photos, videos and audio.", "Creative Content Marketplace", `${SITE_URL}/marketplace`, logo, `<ul>${list}</ul>`),
+        buildHtml({
+          title: pageTitle,
+          desc: pageDesc,
+          h1: pageH1,
+          url: `${SITE_URL}${path}`,
+          canonical: canonicalUrl,
+          img: logo,
+          type: "website",
+          body,
+          breadcrumbs,
+          schema,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
 
-    // Product pages
+    // ===== PRODUCT PAGES =====
     if (path.startsWith("/products/")) {
       const slug = path.replace("/products/", "");
       const uuid = slug.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
@@ -87,7 +308,7 @@ Deno.serve(async (req) => {
       let product = null;
       const { data: bySlug } = await supabase
         .from("content_submissions")
-        .select("id, title, description, slug, price, content_files(thumbnail_path)")
+        .select("id, title, description, slug, price, tags, category_id, creator_id, content_files(thumbnail_path, file_type)")
         .eq("slug", slug)
         .eq("status", "approved")
         .single();
@@ -96,7 +317,7 @@ Deno.serve(async (req) => {
       if (!product && uuid) {
         const { data: byId } = await supabase
           .from("content_submissions")
-          .select("id, title, description, slug, price, content_files(thumbnail_path)")
+          .select("id, title, description, slug, price, tags, category_id, creator_id, content_files(thumbnail_path, file_type)")
           .eq("id", uuid)
           .eq("status", "approved")
           .single();
@@ -104,40 +325,158 @@ Deno.serve(async (req) => {
       }
 
       if (!product) {
-        return new Response(html("Not Found - VisuStock", "Page not found", "Not Found", SITE_URL, logo, "<p>This page doesn't exist.</p>"), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
-        });
+        return new Response(
+          buildHtml({
+            title: "Not Found - VisuStock",
+            desc: "Page not found",
+            h1: "Not Found",
+            url: `${SITE_URL}${path}`,
+            canonical: SITE_URL,
+            img: logo,
+            type: "website",
+            body: "<p>This page doesn't exist.</p>",
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } }
+        );
       }
 
       const thumb = product.content_files?.[0]?.thumbnail_path;
       const img = thumb?.startsWith("http") ? thumb : thumb ? `${supabaseUrl}/storage/v1/object/public/content-files/${thumb}` : logo;
       const pUrl = `${SITE_URL}/products/${product.slug || slug}`;
+      const currentCat = cats.find(c => c.id === product.category_id);
+
+      // Fetch related products (same category, exclude current)
+      let relatedProducts: Product[] = [];
+      if (product.category_id) {
+        const { data: related } = await supabase
+          .from("content_submissions")
+          .select("id, title, slug, price")
+          .eq("status", "approved")
+          .eq("category_id", product.category_id)
+          .neq("id", product.id)
+          .not("slug", "is", null)
+          .limit(6);
+        relatedProducts = related || [];
+      }
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Marketplace", url: `${SITE_URL}/marketplace` },
+      ];
+      if (currentCat) {
+        breadcrumbs.push({ name: currentCat.name, url: `${SITE_URL}/marketplace?category=${currentCat.id}` });
+      }
+      breadcrumbs.push({ name: product.title, url: pUrl });
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Product",
+            "@id": `${pUrl}#product`,
+            name: product.title,
+            description: product.description,
+            image: img,
+            url: pUrl,
+            brand: { "@type": "Brand", name: "VisuStock" },
+            ...(product.price && {
+              offers: {
+                "@type": "Offer",
+                price: product.price,
+                priceCurrency: "EUR",
+                availability: "https://schema.org/InStock",
+                url: pUrl,
+              },
+            }),
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: b.name,
+              item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const tagsHtml = product.tags?.length 
+        ? `<p>Tags: ${product.tags.map((t: string) => `<a href="${SITE_URL}/marketplace?search=${encodeURIComponent(t)}">${esc(t)}</a>`).join(", ")}</p>` 
+        : '';
+
+      const body = `
+        <article itemscope itemtype="https://schema.org/Product">
+          <img src="${img}" alt="${esc(product.title)}" itemprop="image" width="800" height="600">
+          <p itemprop="description">${esc(product.description || '')}</p>
+          ${product.price ? `<div itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+            <span>Price: </span><span itemprop="price" content="${product.price}">€${product.price}</span>
+            <meta itemprop="priceCurrency" content="EUR">
+            <link itemprop="availability" href="https://schema.org/InStock">
+          </div>` : ''}
+          ${tagsHtml}
+          ${currentCat ? `<p>Category: <a href="${SITE_URL}/marketplace?category=${currentCat.id}">${esc(currentCat.name)}</a></p>` : ''}
+        </article>
+        ${buildRelatedLinks(relatedProducts)}
+        <nav><a href="${SITE_URL}/marketplace">← Back to Marketplace</a></nav>`;
 
       return new Response(
-        html(`${product.title} - VisuStock`, product.description?.substring(0, 155) || "Premium content", product.title, pUrl, img, `<p>${esc(product.description || "")}</p>${product.price ? `<p>Price: €${product.price}</p>` : ""}`),
+        buildHtml({
+          title: `${product.title} | VisuStock`,
+          desc: product.description?.substring(0, 155) || "Premium digital content on VisuStock",
+          h1: product.title,
+          url: pUrl,
+          canonical: pUrl,
+          img,
+          type: "product",
+          body,
+          breadcrumbs,
+          schema,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
 
-    // Static pages
-    const pages: Record<string, [string, string, string]> = {
-      "/about": ["About VisuStock", "Learn about VisuStock marketplace", "About Us"],
-      "/en/about": ["About VisuStock", "Learn about VisuStock marketplace", "About Us"],
-      "/contact": ["Contact VisuStock", "Get in touch with our team", "Contact Us"],
-      "/en/contact": ["Contact VisuStock", "Get in touch with our team", "Contact Us"],
-      "/licenses": ["Licensing - VisuStock", "Content licensing information", "Licensing"],
-      "/terms": ["Terms of Service - VisuStock", "Terms and conditions", "Terms of Service"],
-      "/en/terms": ["Terms of Service - VisuStock", "Terms and conditions", "Terms of Service"],
-      "/privacy": ["Privacy Policy - VisuStock", "How we handle your data", "Privacy Policy"],
-      "/en/privacy": ["Privacy Policy - VisuStock", "How we handle your data", "Privacy Policy"],
-      "/packages-pricing": ["Pricing - VisuStock", "Subscription plans and pricing", "Pricing"],
+    // ===== STATIC PAGES =====
+    const staticPages: Record<string, { title: string; desc: string; h1: string }> = {
+      "/about": { title: "About VisuStock", desc: "Learn about VisuStock marketplace", h1: "About Us" },
+      "/en/about": { title: "About VisuStock", desc: "Learn about VisuStock marketplace", h1: "About Us" },
+      "/contact": { title: "Contact VisuStock", desc: "Get in touch with our team", h1: "Contact Us" },
+      "/en/contact": { title: "Contact VisuStock", desc: "Get in touch with our team", h1: "Contact Us" },
+      "/licenses": { title: "Licensing - VisuStock", desc: "Content licensing information", h1: "Licensing" },
+      "/packages-pricing": { title: "Pricing - VisuStock", desc: "Subscription plans and pricing", h1: "Pricing & Packages" },
+      "/terms": { title: "Terms of Service - VisuStock", desc: "Terms and conditions", h1: "Terms of Service" },
+      "/en/terms": { title: "Terms of Service - VisuStock", desc: "Terms and conditions", h1: "Terms of Service" },
+      "/privacy": { title: "Privacy Policy - VisuStock", desc: "How we handle your data", h1: "Privacy Policy" },
+      "/en/privacy": { title: "Privacy Policy - VisuStock", desc: "How we handle your data", h1: "Privacy Policy" },
+      "/cookie-policy": { title: "Cookie Policy - VisuStock", desc: "Cookie usage information", h1: "Cookie Policy" },
+      "/en/cookie-policy": { title: "Cookie Policy - VisuStock", desc: "Cookie usage information", h1: "Cookie Policy" },
+      "/license-agreement": { title: "License Agreement - VisuStock", desc: "Content license agreement", h1: "License Agreement" },
+      "/en/license-agreement": { title: "License Agreement - VisuStock", desc: "Content license agreement", h1: "License Agreement" },
+      "/ai-image-generator": { title: "AI Image Generator - VisuStock", desc: "Generate unique images with AI", h1: "AI Image Generator" },
+      "/buy-credits": { title: "Buy Credits - VisuStock", desc: "Purchase credits for downloads", h1: "Buy Credits" },
+      "/support": { title: "Support - VisuStock", desc: "Get help and support", h1: "Support" },
     };
 
-    const page = pages[path];
+    const page = staticPages[path];
     if (page) {
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: page.h1, url: `${SITE_URL}${path}` },
+      ];
+
       return new Response(
-        html(page[0], page[1], page[2], `${SITE_URL}${path}`, logo, ""),
+        buildHtml({
+          title: page.title,
+          desc: page.desc,
+          h1: page.h1,
+          url: `${SITE_URL}${path}`,
+          canonical: `${SITE_URL}${path}`,
+          img: logo,
+          type: "website",
+          body: `<section><p>${esc(page.desc)}</p></section>`,
+          breadcrumbs,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
       );
     }

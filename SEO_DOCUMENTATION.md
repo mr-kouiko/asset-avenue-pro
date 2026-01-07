@@ -1,21 +1,23 @@
-# Documentation SEO - VisuStock
+# VisuStock SEO Documentation
 
-**Dernière mise à jour** : Janvier 2026
+**Last updated**: January 2026
 
-## 🎯 Vue d'ensemble
+## Overview
 
-Le système SEO de VisuStock utilise une approche hybride pour maximiser l'indexabilité par Google tout en conservant une expérience SPA pour les utilisateurs. Toutes les pages publiques sont pré-rendues en HTML statique pour les crawlers.
+VisuStock uses **Static HTML Snapshots** via Edge Functions for SEO, serving fully rendered HTML to crawlers while users get the React SPA.
 
-### Architecture SEO
+### Architecture
 
-| Composant | Description |
+| Component | Description |
 |-----------|-------------|
-| **prerender** (Edge Function) | Génère du HTML statique complet pour les crawlers |
-| **og-product** (Edge Function) | Tags OG spécifiques pour le partage social |
-| **generate-sitemap** (Edge Function) | Sitemap dynamique avec tous les produits |
-| **useSEO** (Hook React) | SEO client-side pour les utilisateurs |
+| **prerender** | Full HTML for crawlers with Schema.org, breadcrumbs, internal links |
+| **og-product** | Social sharing meta tags |
+| **sitemap-index** | Master sitemap pointing to split sitemaps |
+| **sitemap-static** | Static pages |
+| **sitemap-categories** | Category pages (only with products) |
+| **sitemap-products** | All approved products with image extensions |
 
-### Fonctionnalités incluses
+### Key Features
 
 - ✅ **HTML Statique pour Crawlers** - Contenu complet visible dans "View Source"
 - ✅ Balises meta SEO (title, description, keywords)
