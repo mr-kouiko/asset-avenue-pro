@@ -14,13 +14,14 @@ interface UploadFile {
   id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'uploading' | 'processing' | 'detecting-ai' | 'completed' | 'error';
+  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'detecting-ai' | 'completed' | 'error';
   url?: string;
   error?: string;
   isWatermarked?: boolean;
   isAiGenerated?: boolean;
   aiConfidence?: number;
   estimatedTimeRemaining?: number; // in seconds
+  fileHash?: string;
 }
 
 interface SimpleFileUploadProps {
@@ -168,13 +169,74 @@ export const SimpleFileUpload = ({
     return null;
   };
 
+  // Calculate SHA-256 hash of file for duplicate detection
+  const calculateFileHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
+
+  // Check if file is a duplicate using database function
+  const checkDuplicate = async (fileHash: string): Promise<{ isDuplicate: boolean; fileName?: string }> => {
+    try {
+      const { data, error } = await supabase.rpc('check_file_duplicate', { hash_value: fileHash });
+      
+      if (error) {
+        console.error('Duplicate check error:', error);
+        return { isDuplicate: false };
+      }
+      
+      if (data && data.length > 0) {
+        const result = data[0];
+        if (result.exists_in_content || result.exists_in_uploaded) {
+          return { 
+            isDuplicate: true, 
+            fileName: result.duplicate_file_name 
+          };
+        }
+      }
+      
+      return { isDuplicate: false };
+    } catch (error) {
+      console.error('Duplicate check failed:', error);
+      return { isDuplicate: false };
+    }
+  };
+
   const uploadFile = async (uploadFileData: UploadFile): Promise<void> => {
     const startTime = Date.now();
     
     try {
+      // Step 1: Check for duplicates first
+      setFiles(prev => prev.map(f => 
+        f.id === uploadFileData.id ? { ...f, status: 'checking-duplicate', progress: 0 } : f
+      ));
+
+      console.log(`🔍 [DUPLICATE] Calculating hash for: ${uploadFileData.file.name}`);
+      const fileHash = await calculateFileHash(uploadFileData.file);
+      console.log(`🔍 [DUPLICATE] Hash: ${fileHash.substring(0, 16)}...`);
+
+      const { isDuplicate, fileName } = await checkDuplicate(fileHash);
+      
+      if (isDuplicate) {
+        console.warn(`🚫 [DUPLICATE] File rejected: ${uploadFileData.file.name} matches ${fileName}`);
+        setFiles(prev => prev.map(f => 
+          f.id === uploadFileData.id ? { 
+            ...f, 
+            status: 'error', 
+            error: `Doublon détecté: Ce fichier existe déjà${fileName ? ` (${fileName})` : ''}`,
+            fileHash
+          } : f
+        ));
+        toast.error(`🚫 Doublon rejeté: ${uploadFileData.file.name}`);
+        return;
+      }
+
       // Update status to uploading
       setFiles(prev => prev.map(f => 
-        f.id === uploadFileData.id ? { ...f, status: 'uploading', progress: 0 } : f
+        f.id === uploadFileData.id ? { ...f, status: 'uploading', progress: 0, fileHash } : f
       ));
 
       // Enhanced progress callback with estimated time
@@ -445,6 +507,15 @@ export const SimpleFileUpload = ({
                     {formatFileSize(file.file.size)} • {file.file.type}
                   </p>
                   
+                  {file.status === 'checking-duplicate' && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Vérification des doublons...
+                      </p>
+                    </div>
+                  )}
+
                   {(file.status === 'uploading' || file.status === 'processing') && (
                     <div className="mt-2 space-y-1">
                       <Progress value={file.progress} className="h-2" />
@@ -455,7 +526,7 @@ export const SimpleFileUpload = ({
                         {file.estimatedTimeRemaining && file.estimatedTimeRemaining > 0 && (
                           <p className="text-xs text-muted-foreground">
                             ~{file.estimatedTimeRemaining > 60 
-                              ? `${Math.round(file.estimatedTimeRemaining / 60)} min` 
+                              ? `${Math.round(file.estimatedTimeRemaining / 60)} min`
                               : `${file.estimatedTimeRemaining} sec`} restant
                           </p>
                         )}
