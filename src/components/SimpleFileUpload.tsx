@@ -216,22 +216,31 @@ export const SimpleFileUpload = ({
         ));
         
         try {
-          const urlToAnalyze = processedFile.watermarkedUrl || processedFile.thumbnailUrl!;
-          console.log(`🤖 [AI-DETECTION] Analyzing ${isImage ? 'image' : 'video'}: ${uploadFileData.file.name}`);
+          // For images: use watermarked or thumbnail URL
+          // For videos: use the ORIGINAL video URL (not thumbnail) for proper AI detection
+          const urlToAnalyze = isVideo 
+            ? (processedFile.watermarkedUrl || processedFile.thumbnailUrl || processedFile.previewUrl)
+            : (processedFile.watermarkedUrl || processedFile.thumbnailUrl!);
           
-          if (isImage) {
-            const result = await detectImage(urlToAnalyze);
-            if (result) {
-              isAiGenerated = result.isAiGenerated;
-              aiConfidence = result.confidence;
-              console.log(`🤖 [AI-DETECTION] Image result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
-            }
-          } else if (isVideo) {
-            const result = await detectVideo(urlToAnalyze);
-            if (result) {
-              isAiGenerated = result.isAiGenerated;
-              aiConfidence = result.confidence;
-              console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+          if (!urlToAnalyze) {
+            console.warn(`🤖 [AI-DETECTION] No URL available for ${uploadFileData.file.name}, skipping detection`);
+          } else {
+            console.log(`🤖 [AI-DETECTION] Analyzing ${isImage ? 'image' : 'video'}: ${uploadFileData.file.name}, URL: ${urlToAnalyze}`);
+            
+            if (isImage) {
+              const result = await detectImage(urlToAnalyze);
+              if (result) {
+                isAiGenerated = result.isAiGenerated;
+                aiConfidence = result.confidence;
+                console.log(`🤖 [AI-DETECTION] Image result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+              }
+            } else if (isVideo) {
+              const result = await detectVideo(urlToAnalyze);
+              if (result) {
+                isAiGenerated = result.isAiGenerated;
+                aiConfidence = result.confidence;
+                console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+              }
             }
           }
           
