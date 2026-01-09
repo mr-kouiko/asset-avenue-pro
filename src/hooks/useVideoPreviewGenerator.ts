@@ -12,6 +12,7 @@ export interface PreviewOptions {
  * Generate a lightweight, low-resolution WebM preview from a video URL in the browser.
  * - Uses a canvas + MediaRecorder on a canvas captureStream for wide compatibility
  * - No external dependencies, fast for short previews
+ * - Handles CORS issues gracefully with fallback options
  */
 export function useVideoPreviewGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -25,29 +26,55 @@ export function useVideoPreviewGenerator() {
     videoBitsPerSecond = 4_000_000, // ~4 Mbps for full resolution
   }: PreviewOptions): Promise<Blob> => {
     setIsGenerating(true);
+    console.log('[VideoPreview] Starting generation for:', url);
 
-    // Create video element
+    // Create video element - try without crossOrigin first if same-origin or Supabase
     const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
     video.preload = 'auto';
+    
+    // Check if URL is from Supabase storage (which supports CORS)
+    const isSupabaseUrl = url.includes('supabase.co') || url.includes('supabase.in');
+    
+    // For Supabase URLs, use crossOrigin; for others, try without first
+    if (isSupabaseUrl) {
+      video.crossOrigin = 'anonymous';
+    }
+    
     video.src = url;
 
-    // Wait metadata
+    // Wait metadata with timeout
     await new Promise<void>((resolve, reject) => {
-      const onLoaded = () => resolve();
-      const onErr = (e: Event) => reject(new Error('Failed to load video for preview'));
+      const timeout = setTimeout(() => reject(new Error('Video load timeout')), 30000);
+      const onLoaded = () => {
+        clearTimeout(timeout);
+        console.log('[VideoPreview] Video metadata loaded:', video.videoWidth, 'x', video.videoHeight);
+        resolve();
+      };
+      const onErr = (e: Event) => {
+        clearTimeout(timeout);
+        const videoEl = e.target as HTMLVideoElement;
+        const error = videoEl?.error;
+        console.error('[VideoPreview] Video load error:', error?.code, error?.message);
+        reject(new Error(`Failed to load video: ${error?.message || 'unknown error'}`));
+      };
       video.addEventListener('loadedmetadata', onLoaded, { once: true });
       video.addEventListener('error', onErr, { once: true });
     });
 
+    // Validate video dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setIsGenerating(false);
+      throw new Error('Invalid video dimensions');
+    }
+
     // Use original video dimensions if targetWidth not specified
-    const aspect = video.videoWidth > 0 && video.videoHeight > 0
-      ? video.videoWidth / video.videoHeight
-      : 16 / 9;
+    const aspect = video.videoWidth / video.videoHeight;
     const width = targetWidth ? Math.round(targetWidth) : video.videoWidth;
     const height = targetWidth ? Math.round(width / aspect) : video.videoHeight;
+
+    console.log('[VideoPreview] Canvas dimensions:', width, 'x', height);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -63,23 +90,26 @@ export function useVideoPreviewGenerator() {
     watermarkLogo.crossOrigin = 'anonymous';
     const watermarkUrl = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
     
-    await new Promise<void>((resolve, reject) => {
-      watermarkLogo.onload = () => resolve();
+    let watermarkLoaded = false;
+    await new Promise<void>((resolve) => {
+      watermarkLogo.onload = () => {
+        watermarkLoaded = true;
+        resolve();
+      };
       watermarkLogo.onerror = () => {
-        console.warn('Watermark logo failed to load, continuing without it');
-        resolve(); // Continue even if watermark fails
+        console.warn('[VideoPreview] Watermark logo failed to load, continuing without it');
+        resolve();
       };
       watermarkLogo.src = watermarkUrl;
     });
 
-    // Calculate watermark size - 2.5x larger than VideoWatermark 'normal' size
-    // 50% width (20% * 2.5) with max 100% constraints (40% * 2.5)
-    let watermarkWidth = Math.min(width * 0.5, width * 1.0);
-    let watermarkHeight = (watermarkLogo.height / watermarkLogo.width) * watermarkWidth;
+    // Calculate watermark size - 50% width for high visibility
+    let watermarkWidth = width * 0.5;
+    let watermarkHeight = watermarkLoaded ? (watermarkLogo.height / watermarkLogo.width) * watermarkWidth : 0;
     
-    // Ensure height doesn't exceed 100% of canvas height (40% * 2.5)
-    if (watermarkHeight > height * 1.0) {
-      watermarkHeight = height * 1.0;
+    // Ensure height doesn't exceed canvas height
+    if (watermarkHeight > height * 0.8) {
+      watermarkHeight = height * 0.8;
       watermarkWidth = (watermarkLogo.width / watermarkLogo.height) * watermarkHeight;
     }
     
@@ -107,6 +137,7 @@ export function useVideoPreviewGenerator() {
     for (const mime of mimeTypes) {
       if (MediaRecorder.isTypeSupported(mime)) {
         selectedMimeType = mime;
+        console.log('[VideoPreview] Using MIME type:', selectedMimeType);
         break;
       }
     }
@@ -118,14 +149,24 @@ export function useVideoPreviewGenerator() {
     recorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) chunks.push(e.data);
+      if (e.data && e.data.size > 0) {
+        chunks.push(e.data);
+        console.log('[VideoPreview] Chunk received:', e.data.size, 'bytes');
+      }
     };
 
     const recordPromise = new Promise<void>((resolve) => {
-      recorder.onstop = () => resolve();
+      recorder.onstop = () => {
+        console.log('[VideoPreview] Recording stopped, total chunks:', chunks.length);
+        resolve();
+      };
     });
 
-    recorder.start();
+    recorder.start(1000); // Request data every second
+
+    // Track if we successfully drew any frames
+    let framesDrawn = 0;
+    let drawErrors = 0;
 
     // Draw loop with watermark
     let raf = 0;
@@ -133,33 +174,46 @@ export function useVideoPreviewGenerator() {
       try {
         // Draw video frame
         ctx.drawImage(video, 0, 0, width, height);
+        framesDrawn++;
         
-        // Draw watermark if loaded (matching VideoWatermark 'normal' style)
-        if (watermarkLogo.complete && watermarkLogo.naturalWidth > 0) {
+        // Draw watermark if loaded
+        if (watermarkLoaded && watermarkLogo.complete && watermarkLogo.naturalWidth > 0) {
           ctx.save();
           
-          // Add drop shadow effect (matching filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)))
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-          ctx.shadowBlur = 8;
+          // Strong drop shadow for visibility
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+          ctx.shadowBlur = 12;
           ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 2;
+          ctx.shadowOffsetY = 4;
           
-          ctx.globalAlpha = 0.8; // 80% opacity
+          ctx.globalAlpha = 0.95; // High opacity for protection
           ctx.drawImage(watermarkLogo, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
           ctx.restore();
         }
-      } catch (_) {
-        // Cross-origin taint or not ready; ignore frame
+      } catch (err) {
+        // Cross-origin taint or not ready
+        drawErrors++;
+        if (drawErrors === 1) {
+          console.warn('[VideoPreview] Canvas draw error (CORS taint?):', err);
+        }
       }
       raf = requestAnimationFrame(draw);
     };
 
     // Start playback and drawing
-    await video.play().catch(() => {});
+    console.log('[VideoPreview] Starting video playback...');
+    try {
+      await video.play();
+      console.log('[VideoPreview] Video playing');
+    } catch (playErr) {
+      console.warn('[VideoPreview] Play failed:', playErr);
+    }
+    
     draw();
 
     // Stop after duration or when video ends (whichever first)
     const stopAfter = Math.min(durationSec, isFinite(video.duration) ? video.duration : durationSec);
+    console.log('[VideoPreview] Recording for', stopAfter, 'seconds');
     await new Promise<void>((resolve) => setTimeout(resolve, stopAfter * 1000));
 
     cancelAnimationFrame(raf);
@@ -167,8 +221,25 @@ export function useVideoPreviewGenerator() {
     recorder.stop();
     await recordPromise;
 
+    console.log('[VideoPreview] Frames drawn:', framesDrawn, 'Draw errors:', drawErrors);
+
+    // Check if we got any data
+    if (chunks.length === 0) {
+      setIsGenerating(false);
+      throw new Error('No video data recorded - possible CORS issue');
+    }
+
     const outputMimeType = selectedMimeType.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
     const blob = new Blob(chunks, { type: outputMimeType });
+    
+    console.log('[VideoPreview] Generated blob:', blob.size, 'bytes, type:', blob.type);
+    
+    // Validate blob size (should be at least a few KB for real video)
+    if (blob.size < 1000) {
+      setIsGenerating(false);
+      throw new Error('Generated preview too small - likely empty frames due to CORS');
+    }
+    
     setIsGenerating(false);
     return blob;
   }, []);
