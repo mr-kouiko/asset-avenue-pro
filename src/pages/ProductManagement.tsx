@@ -774,23 +774,40 @@ const ProductManagement = () => {
                           )}
                         </div>
 
-                        {/* AI Generated Checkbox */}
+                        {/* AI Detection Status - Read-only (Automatically detected) */}
                         <div className="md:col-span-2">
-                          <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                            <input
-                              type="checkbox"
-                              id="isAiGenerated"
-                              checked={selectedProductData.isAiGenerated || false}
-                              onChange={(e) => updateProductData(selectedFileId!, { isAiGenerated: e.target.checked })}
-                              className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                            />
+                          <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                            selectedProductData.isAiGenerated 
+                              ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800' 
+                              : 'bg-muted/50 border-muted'
+                          }`}>
+                            <div className={`h-5 w-5 rounded flex items-center justify-center ${
+                              selectedProductData.isAiGenerated 
+                                ? 'bg-purple-500 text-white' 
+                                : 'bg-muted-foreground/20'
+                            }`}>
+                              {selectedProductData.isAiGenerated && (
+                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
                             <div className="flex-1">
-                              <Label htmlFor="isAiGenerated" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                                <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
-                                This content is AI-generated
-                              </Label>
+                              <div className="text-sm font-medium flex items-center gap-2">
+                                {selectedProductData.isAiGenerated ? (
+                                  <>
+                                    <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
+                                    Contenu IA détecté automatiquement
+                                  </>
+                                ) : (
+                                  <>
+                                    <Badge variant="outline" className="text-xs">Non-IA</Badge>
+                                    Contenu authentique
+                                  </>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground mt-1">
-                                Check this box if the content was created using AI tools (Midjourney, Sora, DALL-E, etc.)
+                                🤖 Détection automatique par SightEngine - {selectedProductData.isAiGenerated ? 'Ce contenu a été identifié comme généré par IA' : 'Aucun marqueur IA détecté'}
                               </p>
                             </div>
                           </div>

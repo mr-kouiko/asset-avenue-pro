@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Upload, X, FileText, Image, Film, Music, AlertCircle, Check } from "lucide-react";
+import { Upload, X, FileText, Image, Film, Music, AlertCircle, Check, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,15 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
+import { useAIImageDetection } from "@/hooks/useAIImageDetection";
+import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
 interface UploadFile {
   id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
+  status: 'pending' | 'uploading' | 'processing' | 'detecting-ai' | 'completed' | 'error';
   url?: string;
   error?: string;
   isWatermarked?: boolean;
+  isAiGenerated?: boolean;
+  aiConfidence?: number;
   estimatedTimeRemaining?: number; // in seconds
 }
 
@@ -44,6 +48,8 @@ export const SimpleFileUpload = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
+  const { detectImage } = useAIImageDetection();
+  const { detectVideo } = useAIVideoDetection();
 
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
@@ -162,13 +168,13 @@ export const SimpleFileUpload = ({
     return null;
   };
 
-  const uploadFile = async (uploadFile: UploadFile): Promise<void> => {
+  const uploadFile = async (uploadFileData: UploadFile): Promise<void> => {
     const startTime = Date.now();
     
     try {
       // Update status to uploading
       setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
+        f.id === uploadFileData.id ? { ...f, status: 'uploading', progress: 0 } : f
       ));
 
       // Enhanced progress callback with estimated time
@@ -178,7 +184,7 @@ export const SimpleFileUpload = ({
         const estimatedRemaining = estimatedTotal - elapsed;
         
         setFiles(prev => prev.map(f => 
-          f.id === uploadFile.id ? { 
+          f.id === uploadFileData.id ? { 
             ...f, 
             progress,
             estimatedTimeRemaining: Math.round(estimatedRemaining / 1000) // in seconds
@@ -186,52 +192,97 @@ export const SimpleFileUpload = ({
         ));
       };
 
-      const processedResults = await processFiles([uploadFile.file], onProgress);
+      const processedResults = await processFiles([uploadFileData.file], onProgress);
       const processedFile = processedResults[0];
 
       if (processedFile.status === 'error') {
         throw new Error(processedFile.error || 'Processing failed');
       }
 
-      // Update file as completed
+      // Get file type for AI detection
+      const detectedMimeType = detectMimeType(uploadFileData.file);
+      const isImage = detectedMimeType.startsWith('image/');
+      const isVideo = detectedMimeType.startsWith('video/');
+      const isPDF = detectedMimeType === 'application/pdf';
+      
+      // AUTOMATIC AI DETECTION - Only for images and videos
+      let isAiGenerated = false;
+      let aiConfidence = 0;
+      
+      if (isImage || isVideo) {
+        // Update status to detecting AI
+        setFiles(prev => prev.map(f => 
+          f.id === uploadFileData.id ? { ...f, status: 'detecting-ai', progress: 100 } : f
+        ));
+        
+        try {
+          const urlToAnalyze = processedFile.watermarkedUrl || processedFile.thumbnailUrl!;
+          console.log(`🤖 [AI-DETECTION] Analyzing ${isImage ? 'image' : 'video'}: ${uploadFileData.file.name}`);
+          
+          if (isImage) {
+            const result = await detectImage(urlToAnalyze);
+            if (result) {
+              isAiGenerated = result.isAiGenerated;
+              aiConfidence = result.confidence;
+              console.log(`🤖 [AI-DETECTION] Image result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+            }
+          } else if (isVideo) {
+            const result = await detectVideo(urlToAnalyze);
+            if (result) {
+              isAiGenerated = result.isAiGenerated;
+              aiConfidence = result.confidence;
+              console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+            }
+          }
+          
+          if (isAiGenerated) {
+            toast.info(`🤖 Contenu IA détecté: ${uploadFileData.file.name} (${Math.round(aiConfidence * 100)}% confiance)`);
+          }
+        } catch (aiError) {
+          console.error('🤖 [AI-DETECTION] Error:', aiError);
+          // Continue without AI detection on error - don't block upload
+        }
+      }
+
+      // Update file as completed with AI detection result
       setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { 
+        f.id === uploadFileData.id ? { 
           ...f, 
           status: 'completed', 
           progress: 100,
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
-          isWatermarked: !!processedFile.watermarkedUrl
+          isWatermarked: !!processedFile.watermarkedUrl,
+          isAiGenerated,
+          aiConfidence
         } : f
       ));
 
       // Get file size for storage location message
-      const fileSizeMB = uploadFile.file.size / (1024 * 1024);
+      const fileSizeMB = uploadFileData.file.size / (1024 * 1024);
       const storageLocation = fileSizeMB >= 100 ? 'R2 Cloudflare' : 'Supabase Storage';
-      toast.success(`✅ ${uploadFile.file.name} - Stocké dans ${storageLocation} (${fileSizeMB.toFixed(2)}MB)`);
+      const aiLabel = isAiGenerated ? ' 🤖 IA' : '';
+      toast.success(`✅ ${uploadFileData.file.name}${aiLabel} - Stocké dans ${storageLocation}`);
 
-      // Notify parent component with correct file type and separate thumbnail URL
+      // Notify parent component with correct file type and AI detection result
       if (onFilesUploaded) {
-        const detectedMimeType = detectMimeType(uploadFile.file);
-        const isVideo = detectedMimeType.startsWith('video/');
-        const isPDF = detectedMimeType === 'application/pdf';
-        
         onFilesUploaded([{
-          id: uploadFile.id,
+          id: uploadFileData.id,
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
-          name: uploadFile.file.name,
+          name: uploadFileData.file.name,
           type: detectedMimeType,
-          size: uploadFile.file.size,
+          size: uploadFileData.file.size,
           isWatermarked: !!processedFile.watermarkedUrl,
           // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
           thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
-          previewUrl: processedFile.previewUrl
+          previewUrl: processedFile.previewUrl,
+          isAiGenerated // AUTOMATIC - no user choice
         }]);
       }
 
     } catch (error) {
       console.error('Upload error:', error);
       setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { 
+        f.id === uploadFileData.id ? { 
           ...f, 
           status: 'error', 
           error: error instanceof Error ? error.message : 'Upload failed' 
@@ -385,7 +436,7 @@ export const SimpleFileUpload = ({
                     {formatFileSize(file.file.size)} • {file.file.type}
                   </p>
                   
-                  {file.status === 'uploading' || file.status === 'processing' ? (
+                  {(file.status === 'uploading' || file.status === 'processing') && (
                     <div className="mt-2 space-y-1">
                       <Progress value={file.progress} className="h-2" />
                       <div className="flex justify-between items-center">
@@ -404,7 +455,16 @@ export const SimpleFileUpload = ({
                         {Math.round(file.progress)}% • {formatFileSize((file.file.size * file.progress) / 100)} / {formatFileSize(file.file.size)}
                       </p>
                     </div>
-                  ) : null}
+                  )}
+                  
+                  {file.status === 'detecting-ai' && (
+                    <div className="mt-2 flex items-center space-x-2">
+                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      <p className="text-xs text-muted-foreground">
+                        🤖 Détection IA en cours...
+                      </p>
+                    </div>
+                  )}
                   
                   {file.error && (
                     <p className="text-xs text-destructive mt-1">{file.error}</p>
@@ -412,9 +472,18 @@ export const SimpleFileUpload = ({
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  {file.status === 'detecting-ai' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  )}
                   {file.status === 'completed' && (
                     <>
                       <Check className="h-4 w-4 text-green-500" />
+                      {file.isAiGenerated && (
+                        <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          IA
+                        </Badge>
+                      )}
                       {file.isWatermarked && (
                         <Badge variant="secondary" className="text-xs">
                           Watermarked
