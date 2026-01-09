@@ -278,11 +278,20 @@ export const SimpleFileUpload = ({
         ));
         
         try {
-          // For images: use watermarked or thumbnail URL
-          // For videos: use the ORIGINAL video URL (not thumbnail) for proper AI detection
-          const urlToAnalyze = isVideo 
-            ? (processedFile.watermarkedUrl || processedFile.thumbnailUrl || processedFile.previewUrl)
-            : (processedFile.watermarkedUrl || processedFile.thumbnailUrl!);
+          // For images: use watermarked or preview URL (these are IMAGES)
+          // For videos: use watermarkedUrl which is the ORIGINAL VIDEO file (NOT the thumbnail which is a JPEG)
+          // The SightEngine API requires the actual video file for video AI detection
+          let urlToAnalyze: string | undefined;
+          
+          if (isVideo) {
+            // CRITICAL: For video AI detection, we MUST use the actual video URL, not the thumbnail
+            // processedFile.watermarkedUrl contains the original video URL for videos
+            // processedFile.thumbnailUrl is a JPEG screenshot - NOT usable for video AI detection
+            urlToAnalyze = processedFile.watermarkedUrl;
+            console.log(`🎥 [AI-DETECTION] Video URL sources - watermarkedUrl: ${processedFile.watermarkedUrl}, thumbnailUrl: ${processedFile.thumbnailUrl}`);
+          } else {
+            urlToAnalyze = processedFile.watermarkedUrl || processedFile.thumbnailUrl!;
+          }
           
           if (!urlToAnalyze) {
             console.warn(`🤖 [AI-DETECTION] No URL available for ${uploadFileData.file.name}, skipping detection`);
@@ -297,11 +306,15 @@ export const SimpleFileUpload = ({
                 console.log(`🤖 [AI-DETECTION] Image result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
               }
             } else if (isVideo) {
+              console.log(`🎥 [AI-DETECTION] Calling detectVideo with URL: ${urlToAnalyze}`);
               const result = await detectVideo(urlToAnalyze);
+              console.log(`🎥 [AI-DETECTION] Video detection raw result:`, result);
               if (result) {
                 isAiGenerated = result.isAiGenerated;
                 aiConfidence = result.confidence;
                 console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+              } else {
+                console.warn(`🤖 [AI-DETECTION] Video detection returned null result`);
               }
             }
           }
