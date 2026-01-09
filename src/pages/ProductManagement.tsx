@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -532,6 +532,33 @@ const ProductManagement = () => {
     setPreviewFile(null);
   };
 
+  const handleDeleteFile = (fileId: string) => {
+    // Remove from uploadedFiles state
+    const updatedFiles = uploadedFiles.filter(f => f.id !== fileId);
+    setUploadedFiles(updatedFiles);
+    
+    // Update sessionStorage
+    if (updatedFiles.length === 0) {
+      sessionStorage.removeItem('pendingUploadedFiles');
+      toast.success("All files have been removed");
+      navigate('/file-upload');
+    } else {
+      sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
+      
+      // Remove product data for this file
+      const updatedProductsData = { ...productsData };
+      delete updatedProductsData[fileId];
+      setProductsData(updatedProductsData);
+      
+      // If the deleted file was selected, select the first remaining file
+      if (selectedFileId === fileId) {
+        setSelectedFileId(updatedFiles[0].id);
+      }
+      
+      toast.success("File removed from the list");
+    }
+  };
+
   const getFileIcon = (type: string) => {
     if (type.startsWith('video/')) return Video;
     if (type.startsWith('audio/')) return Music;
@@ -642,8 +669,23 @@ const ProductManagement = () => {
                                openPreview(file);
                              }}
                              className="h-8 w-8 p-0 hover:bg-primary/10"
+                             title="Preview"
                            >
                              <Eye className="h-4 w-4" />
+                           </Button>
+                           
+                           {/* Bouton supprimer */}
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               handleDeleteFile(file.id);
+                             }}
+                             className="h-8 w-8 p-0 hover:bg-destructive/10 text-destructive hover:text-destructive"
+                             title="Delete file"
+                           >
+                             <Trash2 className="h-4 w-4" />
                            </Button>
                            
                             <div className="flex flex-col items-end space-y-1">
