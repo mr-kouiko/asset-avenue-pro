@@ -10,6 +10,12 @@ interface CartItem {
   license_id?: string;
 }
 
+interface CreditPackPurchase {
+  packId: string;
+  credits: number;
+  price: number;
+}
+
 export const useMarketplacePayment = () => {
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
@@ -95,6 +101,55 @@ export const useMarketplacePayment = () => {
     }
   };
 
+  const createCreditPackPayment = async (
+    pack: CreditPackPurchase,
+    successUrl?: string,
+    cancelUrl?: string
+  ) => {
+    if (!user) {
+      toast.error('Vous devez être connecté pour acheter des crédits');
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Creating PayPal credit pack payment:', pack);
+
+      const { data, error } = await supabase.functions.invoke('create-paypal-order', {
+        body: {
+          order_type: 'credits',
+          pack: pack.packId,
+          credits: pack.credits,
+          amount: pack.price,
+          success_url: successUrl || `${window.location.origin}/payment-success?type=credits`,
+          cancel_url: cancelUrl || `${window.location.origin}/packages-pricing`
+        }
+      });
+
+      if (error) {
+        console.error('Error creating PayPal credit order:', error);
+        toast.error('Erreur lors de la création du paiement');
+        return null;
+      }
+
+      console.log('PayPal credit order created:', data);
+
+      if (data.approval_url) {
+        toast.success('Redirection vers PayPal...');
+        window.location.href = data.approval_url;
+      }
+
+      return data;
+
+    } catch (error) {
+      console.error('Error in createCreditPackPayment:', error);
+      toast.error('Erreur lors du paiement');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const capturePayment = async (orderId: string) => {
     try {
       setLoading(true);
@@ -169,6 +224,7 @@ export const useMarketplacePayment = () => {
   return {
     loading,
     createPayment,
+    createCreditPackPayment,
     capturePayment,
     validateCart,
     getTotalAmount,

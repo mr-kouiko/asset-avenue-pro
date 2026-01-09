@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 const PackagesPricing = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loadingCredits, setLoadingCredits] = useState<number | null>(null);
   const { toast } = useToast();
   const { language } = useLanguage();
   const { user } = useAuth();
@@ -25,7 +26,7 @@ const PackagesPricing = () => {
     loading: subscriptionLoading, 
     createSubscription 
   } = usePayPalSubscription();
-  const { createPayment } = useMarketplacePayment();
+  const { createCreditPackPayment, loading: paymentLoading } = useMarketplacePayment();
 
   // SEO Configuration
   useSEO({
@@ -159,7 +160,7 @@ const PackagesPricing = () => {
 
   const t = content[language];
 
-  const handleBuyCredits = async (credits: number, price: number) => {
+  const handleBuyCredits = async (credits: number, price: number, packIndex: number) => {
     if (!user) {
       toast({
         title: language === 'en' ? 'Login Required' : 'Connexion Requise',
@@ -170,13 +171,21 @@ const PackagesPricing = () => {
       return;
     }
 
+    setLoadingCredits(packIndex);
+    
     toast({
       title: t.credits.toast.title,
       description: t.credits.toast.description(credits, price)
     });
     
-    // Use PayPal for credit pack purchase
-    await createPayment();
+    // Use PayPal for credit pack purchase with proper parameters
+    await createCreditPackPayment({
+      packId: `credits_${credits}`,
+      credits,
+      price
+    });
+    
+    setLoadingCredits(null);
   };
 
   const handleSubscribe = async (planType: string, credits: number, monthlyPrice: number) => {
@@ -313,9 +322,14 @@ const PackagesPricing = () => {
 
                     <Button 
                       className="w-full bg-primary hover:bg-primary/90"
-                      onClick={() => handleBuyCredits(pkg.credits, pkg.price)}
+                      onClick={() => handleBuyCredits(pkg.credits, pkg.price, index)}
+                      disabled={loadingCredits === index || paymentLoading}
                     >
-                      <CreditCard className="w-4 h-4 mr-2" />
+                      {loadingCredits === index ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <CreditCard className="w-4 h-4 mr-2" />
+                      )}
                       {t.credits.buyNow}
                     </Button>
 
