@@ -77,6 +77,33 @@ serve(async (req) => {
 
     console.log('Capturing PayPal order:', order_id);
 
+    // ============ IDEMPOTENCY CHECK ============
+    // Check if this order has already been processed
+    const { data: existingOrder, error: checkError } = await supabaseAdmin
+      .from('paypal_orders')
+      .select('*')
+      .eq('paypal_order_id', order_id)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing order:', checkError);
+    }
+
+    if (existingOrder && existingOrder.status === 'completed') {
+      console.log('Order already processed, returning cached result:', order_id);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: order_id,
+          status: 'COMPLETED',
+          order_type: existingOrder.order_type,
+          already_processed: true,
+          credits: existingOrder.credits_amount,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get PayPal access token
     const accessToken = await getPayPalAccessToken();
 
@@ -88,6 +115,27 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
     });
+
+    // Handle already captured orders (PayPal returns 422 for duplicate captures)
+    if (captureResponse.status === 422) {
+      const errorData = await captureResponse.json();
+      console.log('PayPal 422 response:', JSON.stringify(errorData));
+      
+      // If already captured, treat as success if we have a record
+      if (existingOrder) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            order_id: order_id,
+            status: 'COMPLETED',
+            order_type: existingOrder.order_type,
+            already_processed: true,
+            credits: existingOrder.credits_amount,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     if (!captureResponse.ok) {
       const error = await captureResponse.text();
@@ -104,16 +152,46 @@ serve(async (req) => {
 
     // Parse custom data from the order
     const purchaseUnit = captureData.purchase_units[0];
-    const customData = JSON.parse(purchaseUnit.payments.captures[0].custom_id || purchaseUnit.custom_id || '{}');
+    const captureInfo = purchaseUnit.payments?.captures?.[0];
+    const customId = captureInfo?.custom_id || purchaseUnit.custom_id || '{}';
+    const customData = JSON.parse(customId);
     
     console.log('Order custom data:', customData);
+
+    const orderAmount = parseFloat(purchaseUnit.amount.value);
+    const currency = purchaseUnit.amount.currency_code;
+
+    // ============ RECORD ORDER BEFORE PROCESSING ============
+    // Insert or update order record to prevent duplicates
+    const { error: insertOrderError } = await supabaseAdmin
+      .from('paypal_orders')
+      .upsert({
+        paypal_order_id: order_id,
+        user_id: user.id,
+        order_type: customData.order_type || 'marketplace',
+        amount: orderAmount,
+        currency: currency,
+        status: 'processing',
+        credits_amount: customData.order_type === 'credits' ? parseInt(customData.credits) : null,
+        pack_type: customData.pack || null,
+        cart_items: customData.cart_items || null,
+      }, { 
+        onConflict: 'paypal_order_id',
+        ignoreDuplicates: false 
+      });
+
+    if (insertOrderError) {
+      console.error('Error inserting order record:', insertOrderError);
+      // Continue anyway - the order was captured successfully
+    }
 
     // Process based on order type
     if (customData.order_type === 'credits') {
       // Add credits to user
+      const creditsAmount = parseInt(customData.credits);
       const { data, error } = await supabaseAdmin.rpc('add_user_credits', {
-        user_id_param: customData.user_id,
-        amount_param: parseInt(customData.credits)
+        user_id_param: user.id,
+        amount_param: creditsAmount
       });
 
       if (error) {
@@ -121,47 +199,86 @@ serve(async (req) => {
         throw new Error('Failed to add credits');
       }
 
-      console.log('Credits added successfully');
+      console.log('Credits added successfully:', creditsAmount);
 
-      // Log transaction
+      // Update order status to completed
+      await supabaseAdmin
+        .from('paypal_orders')
+        .update({ 
+          status: 'completed',
+          processed_at: new Date().toISOString()
+        })
+        .eq('paypal_order_id', order_id);
+
+      // Log transaction to audit log
       await supabaseAdmin.from('security_audit_log').insert({
         event_type: 'credits_purchased_paypal',
-        user_id: customData.user_id,
+        user_id: user.id,
         target_table: 'user_credits',
         details: {
-          credits_amount: parseInt(customData.credits),
+          credits_amount: creditsAmount,
           pack_type: customData.pack,
           paypal_order_id: order_id,
-          amount_paid: purchaseUnit.amount.value,
-          currency: purchaseUnit.amount.currency_code,
+          amount_paid: orderAmount,
+          currency: currency,
           timestamp: new Date().toISOString()
         }
       });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: order_id,
+          status: captureData.status,
+          order_type: 'credits',
+          credits: creditsAmount,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     } else {
       // Marketplace purchase - create download records
       const cartItems = customData.cart_items || [];
       
       for (const item of cartItems) {
-        await supabaseAdmin.from('downloads').insert({
-          user_id: customData.user_id,
-          submission_id: item.submission_id,
-          license_id: item.license_id,
-          expires_at: null, // No expiration for purchased content
-        });
+        // Check if download already exists (additional idempotency)
+        const { data: existingDownload } = await supabaseAdmin
+          .from('downloads')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('submission_id', item.submission_id)
+          .maybeSingle();
+
+        if (!existingDownload) {
+          await supabaseAdmin.from('downloads').insert({
+            user_id: user.id,
+            submission_id: item.submission_id,
+            license_id: item.license_id,
+            expires_at: null, // No expiration for purchased content
+          });
+        }
       }
 
       console.log('Download records created for', cartItems.length, 'items');
 
-      // Log transaction
+      // Update order status to completed
+      await supabaseAdmin
+        .from('paypal_orders')
+        .update({ 
+          status: 'completed',
+          processed_at: new Date().toISOString()
+        })
+        .eq('paypal_order_id', order_id);
+
+      // Log transaction to audit log
       await supabaseAdmin.from('security_audit_log').insert({
         event_type: 'marketplace_purchase_paypal',
-        user_id: customData.user_id,
+        user_id: user.id,
         target_table: 'downloads',
         details: {
           items_count: cartItems.length,
           paypal_order_id: order_id,
-          amount_paid: purchaseUnit.amount.value,
-          currency: purchaseUnit.amount.currency_code,
+          amount_paid: orderAmount,
+          currency: currency,
           timestamp: new Date().toISOString()
         }
       });
@@ -197,7 +314,7 @@ serve(async (req) => {
         try {
           const notificationPayload = {
             seller_id: sellerId,
-            buyer_id: customData.user_id,
+            buyer_id: user.id,
             order_id: order_id,
             items: data.items.map(item => ({
               submission_id: item.submission_id,
@@ -205,7 +322,7 @@ serve(async (req) => {
               price: item.price,
             })),
             total_amount: data.total,
-            currency: purchaseUnit.amount.currency_code,
+            currency: currency,
           };
 
           const response = await fetch(
@@ -224,17 +341,17 @@ serve(async (req) => {
           // Don't throw - email failure shouldn't block purchase
         }
       }
-    }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        order_id: order_id,
-        status: captureData.status,
-        order_type: customData.order_type,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: order_id,
+          status: captureData.status,
+          order_type: 'marketplace',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
   } catch (error) {
     console.error('Error in capture-paypal-order:', error);
     return new Response(
