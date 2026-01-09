@@ -32,13 +32,16 @@ export const useAIImageDetection = (): UseAIImageDetectionReturn => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!session?.access_token) {
         toast.error('Please login to use AI detection');
         return null;
       }
 
       const { data, error } = await supabase.functions.invoke('detect-ai-image', {
-        body: { imageUrl }
+        body: { imageUrl },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) {
