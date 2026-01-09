@@ -686,6 +686,89 @@ export const useSellerDashboard = () => {
     }
   };
 
+  // Delete an uploaded file from the database (for unsubmitted files)
+  const deleteUploadedFile = async (fileId: string): Promise<boolean> => {
+    if (!user || !fileId) {
+      toast.error('Error: User not logged in or file ID missing');
+      return false;
+    }
+
+    try {
+      console.log('🗑️ [DELETE-FILE] Deleting uploaded file:', fileId);
+      
+      // First get the file to verify ownership and get file URL for storage cleanup
+      const { data: file, error: fetchError } = await supabase
+        .from('uploaded_files')
+        .select('*')
+        .eq('id', fileId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError || !file) {
+        console.error('❌ [DELETE-FILE] File not found or access denied:', fetchError);
+        toast.error('File not found or access denied');
+        return false;
+      }
+
+      console.log('📄 [DELETE-FILE] Found file:', file.file_name);
+
+      // Delete from database first
+      const { error: deleteError } = await supabase
+        .from('uploaded_files')
+        .delete()
+        .eq('id', fileId)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        console.error('❌ [DELETE-FILE] Error deleting from database:', deleteError);
+        toast.error('Error deleting file');
+        return false;
+      }
+
+      console.log('✅ [DELETE-FILE] File deleted from database');
+
+      // Update local state immediately
+      setUnsubmittedFiles(prev => prev.filter(f => f.id !== fileId));
+
+      // Optionally try to delete from storage (file_url contains the full URL)
+      // Extract path from URL if it's a Supabase storage URL
+      try {
+        if (file.file_url && file.file_url.includes('supabase.co/storage')) {
+          const urlParts = file.file_url.split('/storage/v1/object/public/');
+          if (urlParts.length === 2) {
+            const [bucket, ...pathParts] = urlParts[1].split('/');
+            const filePath = pathParts.join('/');
+            console.log('🗑️ [DELETE-FILE] Attempting storage cleanup:', { bucket, filePath });
+            
+            await supabase.storage.from(bucket).remove([filePath]);
+            console.log('✅ [DELETE-FILE] Storage file removed');
+          }
+        }
+        
+        // Also cleanup thumbnail if exists
+        if (file.thumbnail_url && file.thumbnail_url.includes('supabase.co/storage')) {
+          const urlParts = file.thumbnail_url.split('/storage/v1/object/public/');
+          if (urlParts.length === 2) {
+            const [bucket, ...pathParts] = urlParts[1].split('/');
+            const filePath = pathParts.join('/');
+            await supabase.storage.from(bucket).remove([filePath]);
+            console.log('✅ [DELETE-FILE] Thumbnail removed');
+          }
+        }
+      } catch (storageError) {
+        // Storage cleanup is optional, don't fail the operation
+        console.warn('⚠️ [DELETE-FILE] Storage cleanup failed (non-critical):', storageError);
+      }
+
+      toast.success(`File "${file.file_name}" deleted`);
+      return true;
+    } catch (error) {
+      console.error('💥 [DELETE-FILE] Unexpected error:', error);
+      toast.error('Unexpected error during deletion');
+      return false;
+    }
+  };
+
   // Initialize data
   useEffect(() => {
     const loadData = async () => {
@@ -713,6 +796,7 @@ export const useSellerDashboard = () => {
     createSubmission,
     updateSubmission,
     deleteSubmission,
+    deleteUploadedFile,
     addFilesToSubmission,
     addDraftFiles,
     clearDraftFiles,
