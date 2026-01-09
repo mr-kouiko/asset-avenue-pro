@@ -143,7 +143,7 @@ const BuyerDashboard = () => {
 
       if (error) {
         console.error('Error fetching purchases:', error);
-        toast.error('Erreur lors du chargement de vos achats');
+        toast.error('Error loading your purchases');
         return;
       }
 
@@ -163,7 +163,7 @@ const BuyerDashboard = () => {
 
     } catch (error) {
       console.error('Error fetching purchases:', error);
-      toast.error('Erreur lors du chargement des données');
+      toast.error('Error loading data');
     } finally {
       setLoading(false);
     }
@@ -238,22 +238,22 @@ const BuyerDashboard = () => {
 
   const refreshCredits = () => {
     fetchCreditsData();
-    toast.success('Données de crédits actualisées');
+    toast.success('Credit data refreshed');
   };
 
   const formatPackName = (packType: string | null) => {
-    if (!packType) return 'Pack crédit';
+    if (!packType) return 'Credit Pack';
     const names: Record<string, string> = {
-      starter: 'Pack Starter',
-      pro: 'Pack Pro',
-      premium: 'Pack Premium',
-      ultimate: 'Pack Ultimate',
+      starter: 'Starter Pack',
+      pro: 'Pro Pack',
+      premium: 'Premium Pack',
+      ultimate: 'Ultimate Pack',
     };
     return names[packType.toLowerCase()] || packType;
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -261,7 +261,7 @@ const BuyerDashboard = () => {
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -286,29 +286,29 @@ const BuyerDashboard = () => {
         <div className="container py-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold">Tableau de bord acheteur</h1>
+              <h1 className="text-3xl font-bold">Buyer Dashboard</h1>
               <p className="text-muted-foreground">
-                Gérez vos achats, téléchargements et crédits
+                Manage your purchases, downloads and credits
               </p>
             </div>
             <Button asChild>
               <Link to="/marketplace">
                 <ShoppingBag className="h-4 w-4 mr-2" />
-                Explorer le catalogue
+                Browse Catalog
               </Link>
             </Button>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="credits" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
-                Crédits
+                Credits
               </TabsTrigger>
-              <TabsTrigger value="purchases">Mes achats</TabsTrigger>
-              <TabsTrigger value="downloads">Téléchargements</TabsTrigger>
-              <TabsTrigger value="profile">Profil</TabsTrigger>
+              <TabsTrigger value="purchases">My Purchases</TabsTrigger>
+              <TabsTrigger value="downloads">Downloads</TabsTrigger>
+              <TabsTrigger value="profile">Profile</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -317,52 +317,52 @@ const BuyerDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total des achats</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Purchases</CardTitle>
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.totalPurchases}</div>
                     <p className="text-xs text-muted-foreground">
-                      Contenus achetés
+                      Content purchased
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Crédits IA</CardTitle>
+                    <CardTitle className="text-sm font-medium">AI Credits</CardTitle>
                     <Sparkles className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{creditStats.balance}</div>
                     <p className="text-xs text-muted-foreground">
-                      Crédits disponibles
+                      Credits available
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Montant dépensé</CardTitle>
+                    <CardTitle className="text-sm font-medium">Amount Spent</CardTitle>
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalSpent.toFixed(2)}€</div>
+                    <div className="text-2xl font-bold">${stats.totalSpent.toFixed(2)}</div>
                     <p className="text-xs text-muted-foreground">
-                      Total des achats
+                      Total purchases
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Images générées</CardTitle>
+                    <CardTitle className="text-sm font-medium">Images Generated</CardTitle>
                     <ImageIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{creditStats.totalUsed}</div>
                     <p className="text-xs text-muted-foreground">
-                      Via génération IA
+                      Via AI generation
                     </p>
                   </CardContent>
                 </Card>
@@ -371,23 +371,23 @@ const BuyerDashboard = () => {
               {/* Recent Purchases */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Achats récents</CardTitle>
+                  <CardTitle>Recent Purchases</CardTitle>
                   <CardDescription>
-                    Vos derniers téléchargements
+                    Your latest downloads
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
                     <div className="text-center py-8">
                       <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-muted-foreground mt-2">Chargement...</p>
+                      <p className="text-muted-foreground mt-2">Loading...</p>
                     </div>
                   ) : purchases.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucun achat effectué pour le moment</p>
+                      <p>No purchases made yet</p>
                       <Button className="mt-4" asChild>
-                        <Link to="/marketplace">Explorer le catalogue</Link>
+                        <Link to="/marketplace">Browse Catalog</Link>
                       </Button>
                     </div>
                   ) : (
@@ -397,13 +397,13 @@ const BuyerDashboard = () => {
                           <div className="flex-1">
                             <h4 className="font-medium">{purchase.content_submissions?.title}</h4>
                             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                              <span>{purchase.content_submissions?.content_files?.length || 0} fichier(s)</span>
-                              <span>{purchase.content_submissions?.price ? `${purchase.content_submissions.price}€` : 'Gratuit'}</span>
+                              <span>{purchase.content_submissions?.content_files?.length || 0} file(s)</span>
+                              <span>{purchase.content_submissions?.price ? `$${purchase.content_submissions.price}` : 'Free'}</span>
                               <span>{new Date(purchase.created_at).toLocaleDateString()}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant="default">Téléchargé</Badge>
+                            <Badge variant="default">Downloaded</Badge>
                           </div>
                         </div>
                       ))}
@@ -422,15 +422,15 @@ const BuyerDashboard = () => {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Coins className="h-5 w-5 text-primary" />
-                        Solde de crédits
+                        Credit Balance
                       </CardTitle>
                       <CardDescription>
-                        Vos crédits disponibles pour la génération d'images IA
+                        Your available credits for AI image generation
                       </CardDescription>
                     </div>
                     <Button variant="outline" size="sm" onClick={refreshCredits} disabled={creditsLoading}>
                       <RefreshCw className={`h-4 w-4 mr-2 ${creditsLoading ? 'animate-spin' : ''}`} />
-                      Actualiser
+                      Refresh
                     </Button>
                   </CardHeader>
                   <CardContent>
@@ -443,20 +443,20 @@ const BuyerDashboard = () => {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-5xl font-bold text-primary">{creditStats.balance}</div>
-                            <p className="text-muted-foreground">crédits disponibles</p>
+                            <p className="text-muted-foreground">credits available</p>
                           </div>
                           <Button asChild>
                             <Link to="/buy-credits">
                               <Sparkles className="h-4 w-4 mr-2" />
-                              Acheter des crédits
+                              Buy Credits
                             </Link>
                           </Button>
                         </div>
                         
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Utilisation totale</span>
-                            <span>{creditStats.totalUsed} / {creditStats.totalPurchased} crédits utilisés</span>
+                            <span className="text-muted-foreground">Total usage</span>
+                            <span>{creditStats.totalUsed} / {creditStats.totalPurchased} credits used</span>
                           </div>
                           <Progress value={usagePercentage} className="h-2" />
                         </div>
@@ -464,11 +464,11 @@ const BuyerDashboard = () => {
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                           <div className="text-center p-4 bg-muted/50 rounded-lg">
                             <div className="text-2xl font-bold text-green-600">{creditStats.totalPurchased}</div>
-                            <p className="text-sm text-muted-foreground">Total acheté</p>
+                            <p className="text-sm text-muted-foreground">Total purchased</p>
                           </div>
                           <div className="text-center p-4 bg-muted/50 rounded-lg">
                             <div className="text-2xl font-bold text-orange-600">{creditStats.totalUsed}</div>
-                            <p className="text-sm text-muted-foreground">Total utilisé</p>
+                            <p className="text-sm text-muted-foreground">Total used</p>
                           </div>
                         </div>
                       </div>
@@ -481,10 +481,10 @@ const BuyerDashboard = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Crown className="h-5 w-5 text-yellow-500" />
-                      Abonnement
+                      Subscription
                     </CardTitle>
                     <CardDescription>
-                      Votre plan actuel
+                      Your current plan
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -499,38 +499,38 @@ const BuyerDashboard = () => {
                             {subscription.plan_type}
                           </Badge>
                           {subscription.is_yearly && (
-                            <Badge variant="outline">Annuel</Badge>
+                            <Badge variant="outline">Yearly</Badge>
                           )}
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Crédits/mois</span>
+                            <span className="text-muted-foreground">Credits/month</span>
                             <span className="font-medium">{subscription.credits_per_month}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Prix</span>
-                            <span className="font-medium">{subscription.monthly_price}€/mois</span>
+                            <span className="text-muted-foreground">Price</span>
+                            <span className="font-medium">${subscription.monthly_price}/month</span>
                           </div>
                           {subscription.next_billing_date && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Renouvellement</span>
+                              <span className="text-muted-foreground">Renewal</span>
                               <span className="font-medium">{formatDate(subscription.next_billing_date)}</span>
                             </div>
                           )}
                         </div>
                         <Button variant="outline" className="w-full" asChild>
                           <Link to="/packages-pricing">
-                            Gérer l'abonnement
+                            Manage Subscription
                           </Link>
                         </Button>
                       </div>
                     ) : (
                       <div className="text-center py-4">
                         <Crown className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                        <p className="text-sm text-muted-foreground mb-4">Pas d'abonnement actif</p>
+                        <p className="text-sm text-muted-foreground mb-4">No active subscription</p>
                         <Button variant="outline" className="w-full" asChild>
                           <Link to="/packages-pricing">
-                            Voir les plans
+                            View Plans
                           </Link>
                         </Button>
                       </div>
@@ -544,10 +544,10 @@ const BuyerDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5" />
-                    Historique des achats de crédits
+                    Credit Purchase History
                   </CardTitle>
                   <CardDescription>
-                    Tous vos achats de packs de crédits
+                    All your credit pack purchases
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -558,9 +558,9 @@ const BuyerDashboard = () => {
                   ) : creditPurchases.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Coins className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucun achat de crédits pour le moment</p>
+                      <p>No credit purchases yet</p>
                       <Button className="mt-4" variant="outline" asChild>
-                        <Link to="/buy-credits">Acheter des crédits</Link>
+                        <Link to="/buy-credits">Buy Credits</Link>
                       </Button>
                     </div>
                   ) : (
@@ -580,7 +580,7 @@ const BuyerDashboard = () => {
                           </div>
                           <div className="text-right">
                             <div className="font-semibold text-green-600">
-                              +{purchase.credits_amount || 0} crédits
+                              +{purchase.credits_amount || 0} credits
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {purchase.amount.toFixed(2)} {purchase.currency}
@@ -598,10 +598,10 @@ const BuyerDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <History className="h-5 w-5" />
-                    Historique d'utilisation
+                    Usage History
                   </CardTitle>
                   <CardDescription>
-                    Vos dernières générations d'images IA (1 crédit par génération)
+                    Your recent AI image generations (1 credit per generation)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -612,11 +612,11 @@ const BuyerDashboard = () => {
                   ) : creditUsage.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucune image générée pour le moment</p>
+                      <p>No images generated yet</p>
                       <Button className="mt-4" variant="outline" asChild>
                         <Link to="/ai-image-generator">
                           <Sparkles className="h-4 w-4 mr-2" />
-                          Générer une image
+                          Generate an Image
                         </Link>
                       </Button>
                     </div>
@@ -649,7 +649,7 @@ const BuyerDashboard = () => {
                           </div>
                           <div className="text-right flex-shrink-0">
                             <Badge variant="outline" className="text-orange-600 border-orange-200">
-                              -1 crédit
+                              -1 credit
                             </Badge>
                           </div>
                         </div>
@@ -664,15 +664,15 @@ const BuyerDashboard = () => {
             <TabsContent value="purchases" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Mes achats</CardTitle>
+                  <CardTitle>My Purchases</CardTitle>
                   <CardDescription>
-                    Tous vos contenus achetés
+                    All your purchased content
                   </CardDescription>
                   <div className="flex items-center space-x-2">
                     <div className="relative flex-1 max-w-sm">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                       <Input
-                        placeholder="Rechercher dans vos achats..."
+                        placeholder="Search your purchases..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10"
@@ -684,12 +684,12 @@ const BuyerDashboard = () => {
                   {loading ? (
                     <div className="text-center py-8">
                       <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-muted-foreground mt-2">Chargement...</p>
+                      <p className="text-muted-foreground mt-2">Loading...</p>
                     </div>
                   ) : filteredPurchases.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucun achat trouvé</p>
+                      <p>No purchases found</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -709,11 +709,11 @@ const BuyerDashboard = () => {
                             </div>
                             <h3 className="font-medium mb-2">{purchase.content_submissions?.title}</h3>
                             <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                              <span>{purchase.content_submissions?.content_files?.length || 0} fichier(s)</span>
-                              <span>{purchase.content_submissions?.price ? `${purchase.content_submissions.price}€` : 'Gratuit'}</span>
+                              <span>{purchase.content_submissions?.content_files?.length || 0} file(s)</span>
+                              <span>{purchase.content_submissions?.price ? `$${purchase.content_submissions.price}` : 'Free'}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <Badge variant="default">Téléchargé</Badge>
+                              <Badge variant="default">Downloaded</Badge>
                               <span className="text-xs text-muted-foreground">
                                 {new Date(purchase.created_at).toLocaleDateString()}
                               </span>
@@ -731,15 +731,15 @@ const BuyerDashboard = () => {
             <TabsContent value="downloads" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Téléchargements</CardTitle>
+                  <CardTitle>Downloads</CardTitle>
                   <CardDescription>
-                    Gérez vos téléchargements et accédez à nouveau à vos fichiers
+                    Manage your downloads and access your files again
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-8 text-muted-foreground">
                     <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Fonctionnalité de re-téléchargement à venir</p>
+                    <p>Re-download feature coming soon</p>
                   </div>
                 </CardContent>
               </Card>
@@ -749,15 +749,15 @@ const BuyerDashboard = () => {
             <TabsContent value="profile" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Profil acheteur</CardTitle>
+                  <CardTitle>Buyer Profile</CardTitle>
                   <CardDescription>
-                    Gérez vos informations personnelles
+                    Manage your personal information
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-8 text-muted-foreground">
                     <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Gestion du profil à implémenter</p>
+                    <p>Profile management coming soon</p>
                   </div>
                 </CardContent>
               </Card>
