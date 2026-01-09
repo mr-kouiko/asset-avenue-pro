@@ -54,6 +54,7 @@ const Dashboard = () => {
     unsubmittedFiles,
     updateSubmission, 
     deleteSubmission,
+    deleteUploadedFile,
     refreshData 
   } = useSellerDashboard();
   
@@ -514,27 +515,41 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const fileData = [{
-                              id: file.id,
-                              url: file.file_url,
-                              name: file.file_name,
-                              type: file.file_type,
-                              size: file.file_size,
-                              thumbnailUrl: file.thumbnail_url,
-                              previewUrl: file.preview_url,
-                              isWatermarked: file.is_watermarked
-                            }];
-                            
-                            sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(fileData));
-                            navigate('/product-management');
-                          }}
-                        >
-                          <ArrowRight className="h-4 w-4 mr-1" />
-                          Submit
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={async () => {
+                              if (confirm(`Delete "${file.file_name}"? This cannot be undone.`)) {
+                                await deleteUploadedFile(file.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              const fileData = [{
+                                id: file.id,
+                                url: file.file_url,
+                                name: file.file_name,
+                                type: file.file_type,
+                                size: file.file_size,
+                                thumbnailUrl: file.thumbnail_url,
+                                previewUrl: file.preview_url,
+                                isWatermarked: file.is_watermarked
+                              }];
+                              
+                              sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(fileData));
+                              navigate('/product-management');
+                            }}
+                          >
+                            <ArrowRight className="h-4 w-4 mr-1" />
+                            Submit
+                          </Button>
+                        </div>
                       </div>
                     ))}
                     <div className="pt-2">

@@ -532,7 +532,28 @@ const ProductManagement = () => {
     setPreviewFile(null);
   };
 
-  const handleDeleteFile = (fileId: string) => {
+  const handleDeleteFile = async (fileId: string) => {
+    // First, try to delete from database (for files that came from uploaded_files table)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Delete from uploaded_files table
+        const { error } = await supabase
+          .from('uploaded_files')
+          .delete()
+          .eq('id', fileId)
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.warn('File not found in uploaded_files or already deleted:', error);
+        } else {
+          console.log('✅ File deleted from uploaded_files table:', fileId);
+        }
+      }
+    } catch (dbError) {
+      console.warn('Error deleting from database (non-critical):', dbError);
+    }
+
     // Remove from uploadedFiles state
     const updatedFiles = uploadedFiles.filter(f => f.id !== fileId);
     setUploadedFiles(updatedFiles);
@@ -555,7 +576,7 @@ const ProductManagement = () => {
         setSelectedFileId(updatedFiles[0].id);
       }
       
-      toast.success("File removed from the list");
+      toast.success("File removed permanently");
     }
   };
 
