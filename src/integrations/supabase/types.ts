@@ -544,6 +544,54 @@ export type Database = {
         }
         Relationships: []
       }
+      paypal_orders: {
+        Row: {
+          amount: number
+          cart_items: Json | null
+          created_at: string
+          credits_amount: number | null
+          currency: string
+          id: string
+          order_type: string
+          pack_type: string | null
+          paypal_order_id: string
+          processed_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          cart_items?: Json | null
+          created_at?: string
+          credits_amount?: number | null
+          currency?: string
+          id?: string
+          order_type: string
+          pack_type?: string | null
+          paypal_order_id: string
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          cart_items?: Json | null
+          created_at?: string
+          credits_amount?: number | null
+          currency?: string
+          id?: string
+          order_type?: string
+          pack_type?: string | null
+          paypal_order_id?: string
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           ai_auto_generate_enabled: boolean
