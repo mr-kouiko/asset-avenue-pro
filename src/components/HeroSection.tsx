@@ -54,13 +54,13 @@ export const HeroSection = () => {
   const t = content[language];
   return (
     <section className="relative py-12 md:py-20 overflow-hidden min-h-[60vh] md:min-h-[70vh] flex items-center">
-      {/* Background Video */}
+      {/* Background Video - Hidden on mobile for performance */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover"
+        className="hidden md:block absolute inset-0 w-full h-full object-cover"
       >
         <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
       </video>
