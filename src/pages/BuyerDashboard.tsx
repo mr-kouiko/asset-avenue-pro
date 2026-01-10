@@ -29,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { BuyerProfileCard } from "@/components/BuyerProfileCard";
 
 interface Purchase {
   id: string;
@@ -747,20 +748,7 @@ const BuyerDashboard = () => {
 
             {/* Profile Tab */}
             <TabsContent value="profile" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Buyer Profile</CardTitle>
-                  <CardDescription>
-                    Manage your personal information
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Profile management coming soon</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <BuyerProfileCard />
             </TabsContent>
           </Tabs>
         </div>
