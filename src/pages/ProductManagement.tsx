@@ -860,17 +860,17 @@ const ProductManagement = () => {
                                 {selectedProductData.isAiGenerated ? (
                                   <>
                                     <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
-                                    Contenu IA détecté automatiquement
+                                    AI content detected automatically
                                   </>
                                 ) : (
                                   <>
-                                    <Badge variant="outline" className="text-xs">Non-IA</Badge>
-                                    Contenu authentique
+                                    <Badge variant="outline" className="text-xs">Non-AI</Badge>
+                                    Authentic content
                                   </>
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">
-                                🤖 Détection automatique par SightEngine - {selectedProductData.isAiGenerated ? 'Ce contenu a été identifié comme généré par IA' : 'Aucun marqueur IA détecté'}
+                                🤖 Automatic detection by SightEngine - {selectedProductData.isAiGenerated ? 'This content was identified as AI-generated' : 'No AI markers detected'}
                               </p>
                             </div>
                           </div>
