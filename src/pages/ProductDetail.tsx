@@ -538,7 +538,17 @@ const ProductDetail = () => {
           <div className="space-y-6">
             {/* Title and Author */}
             <div className="pb-4 border-b border-stock-border">
-              <h1 className="text-2xl font-bold mb-3 text-stock-dark leading-tight">{product.title}</h1>
+              <div className="flex items-start gap-2 mb-3">
+                <h1 className="text-2xl font-bold text-stock-dark leading-tight">{product.title}</h1>
+                {product.isAiGenerated && (
+                  <Badge 
+                    variant="secondary" 
+                    className="bg-purple-100 text-purple-700 border-purple-200 text-xs shrink-0"
+                  >
+                    🤖 AI
+                  </Badge>
+                )}
+              </div>
               
               {/* Author Info */}
               <div className="flex items-center gap-3 mb-4">

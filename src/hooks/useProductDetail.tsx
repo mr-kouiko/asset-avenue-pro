@@ -19,6 +19,7 @@ interface ProductDetailData {
   price: number | null;
   original_language?: string;
   slug?: string;
+  isAiGenerated?: boolean;
   files: Array<{
     id: string;
     file_name: string;
@@ -28,6 +29,7 @@ interface ProductDetailData {
     thumbnail_path?: string;
     preview_path?: string;
     is_original: boolean;
+    metadata?: Record<string, any>;
   }>;
   category?: {
     id: string;
@@ -378,6 +380,11 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
+        // Check if any file has isAiGenerated flag in metadata
+        const isAiGenerated = filesList.some((file: any) => 
+          file.metadata?.isAiGenerated === true
+        );
+
         const productData: ProductDetailData = {
           id: productInfo.id,
           title: productInfo.title,
@@ -395,6 +402,7 @@ export const useProductDetail = (productId: string) => {
           price: productInfo.price,
           original_language: productInfo.original_language || 'en',
           slug: productInfo.slug,
+          isAiGenerated,
           files: filesList.map((file: any) => ({
             id: file.id,
             file_name: file.file_name,
@@ -403,7 +411,8 @@ export const useProductDetail = (productId: string) => {
             file_size: file.file_size,
             thumbnail_path: file.thumbnail_path,
             preview_path: file.preview_path,
-            is_original: file.is_original
+            is_original: file.is_original,
+            metadata: file.metadata
           })),
           category: productInfo.category_name ? {
             id: productInfo.category_id,
