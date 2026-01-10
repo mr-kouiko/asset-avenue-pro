@@ -674,6 +674,7 @@ export type Database = {
           display_name: string | null
           email: string
           id: string
+          paypal_email: string | null
           store_name: string | null
           subscribed: boolean
           subscription_end: string | null
@@ -688,6 +689,7 @@ export type Database = {
           display_name?: string | null
           email: string
           id?: string
+          paypal_email?: string | null
           store_name?: string | null
           subscribed?: boolean
           subscription_end?: string | null
@@ -702,6 +704,7 @@ export type Database = {
           display_name?: string | null
           email?: string
           id?: string
+          paypal_email?: string | null
           store_name?: string | null
           subscribed?: boolean
           subscription_end?: string | null

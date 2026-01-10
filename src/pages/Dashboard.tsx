@@ -42,6 +42,8 @@ import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { supabase } from '@/integrations/supabase/client';
 import { StoreSettingsCard } from '@/components/StoreSettingsCard';
+import { AvatarSettingsCard } from '@/components/AvatarSettingsCard';
+import { PayPalSettingsCard } from '@/components/PayPalSettingsCard';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -906,7 +908,9 @@ const Dashboard = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            <AvatarSettingsCard />
             <StoreSettingsCard />
+            <PayPalSettingsCard />
           </TabsContent>
         </Tabs>
 
