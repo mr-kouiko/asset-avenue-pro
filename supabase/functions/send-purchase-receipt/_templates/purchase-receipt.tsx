@@ -182,6 +182,83 @@ export const PurchaseReceiptEmail = ({
             </Text>
           </Section>
 
+          {/* License Summary Section */}
+          <Section style={licenseSummarySection}>
+            <Text style={sectionTitle}>📜 YOUR LICENSE RIGHTS</Text>
+            <Text style={licenseSummaryIntro}>
+              Here's a summary of what your license(s) allow:
+            </Text>
+            
+            {items.map((item, index) => {
+              const licenseType = item.license_type?.toLowerCase() || 'standard'
+              const isStandard = licenseType.includes('standard')
+              const isExtended = licenseType.includes('extended')
+              const isExclusive = licenseType.includes('exclusive')
+              
+              return (
+                <Section key={index} style={licenseCard}>
+                  <Text style={licenseCardTitle}>
+                    {item.title} - {item.license_type} License
+                  </Text>
+                  
+                  {isStandard && (
+                    <Section>
+                      <Text style={licenseRightsTitle}>✅ What you CAN do:</Text>
+                      <Text style={licenseRightItem}>• Personal projects & portfolios</Text>
+                      <Text style={licenseRightItem}>• Social media posts (non-commercial)</Text>
+                      <Text style={licenseRightItem}>• Educational materials</Text>
+                      <Text style={licenseRightItem}>• Up to 500,000 copies/views</Text>
+                      
+                      <Text style={licenseRestrictionsTitle}>❌ What you CANNOT do:</Text>
+                      <Text style={licenseRestrictionItem}>• Resell or redistribute the content</Text>
+                      <Text style={licenseRestrictionItem}>• Use in products for sale</Text>
+                      <Text style={licenseRestrictionItem}>• Transfer license to others</Text>
+                    </Section>
+                  )}
+                  
+                  {isExtended && (
+                    <Section>
+                      <Text style={licenseRightsTitle}>✅ What you CAN do:</Text>
+                      <Text style={licenseRightItem}>• All Standard license rights</Text>
+                      <Text style={licenseRightItem}>• Commercial advertising & marketing</Text>
+                      <Text style={licenseRightItem}>• Products for sale (merchandise, templates)</Text>
+                      <Text style={licenseRightItem}>• Unlimited copies/views</Text>
+                      <Text style={licenseRightItem}>• Broadcast & streaming</Text>
+                      
+                      <Text style={licenseRestrictionsTitle}>❌ What you CANNOT do:</Text>
+                      <Text style={licenseRestrictionItem}>• Resell the raw file</Text>
+                      <Text style={licenseRestrictionItem}>• Claim exclusive ownership</Text>
+                    </Section>
+                  )}
+                  
+                  {isExclusive && (
+                    <Section>
+                      <Text style={licenseRightsTitle}>✅ What you CAN do:</Text>
+                      <Text style={licenseRightItem}>• All Extended license rights</Text>
+                      <Text style={licenseRightItem}>• Exclusive usage (content removed from sale)</Text>
+                      <Text style={licenseRightItem}>• Full commercial rights</Text>
+                      <Text style={licenseRightItem}>• Unlimited usage in any project</Text>
+                      <Text style={licenseRightItem}>• Modify & create derivative works</Text>
+                      
+                      <Text style={licenseNote}>
+                        🎉 This content is now exclusively yours and has been removed from the marketplace.
+                      </Text>
+                    </Section>
+                  )}
+                </Section>
+              )
+            })}
+            
+            <Section style={licenseFooter}>
+              <Text style={licenseFooterText}>
+                For complete license terms and conditions, please review our{' '}
+                <Link href="https://visustock.com/en/license-agreement" style={licenseLink}>
+                  License Agreement
+                </Link>
+              </Text>
+            </Section>
+          </Section>
+
           {/* Download CTA */}
           <Section style={ctaSection}>
             <Link href="https://visustock.com/dashboard" style={ctaButton}>
@@ -524,4 +601,92 @@ const copyright = {
   color: '#9ca3af',
   fontSize: '12px',
   margin: '0',
+}
+
+// License Summary Styles
+const licenseSummarySection = {
+  padding: '24px',
+  backgroundColor: '#fefce8',
+  borderTop: '3px solid #eab308',
+}
+
+const licenseSummaryIntro = {
+  color: '#713f12',
+  fontSize: '14px',
+  margin: '0 0 16px',
+}
+
+const licenseCard = {
+  backgroundColor: '#ffffff',
+  borderRadius: '8px',
+  padding: '16px',
+  marginBottom: '12px',
+  border: '1px solid #fde68a',
+}
+
+const licenseCardTitle = {
+  color: '#1f2937',
+  fontSize: '15px',
+  fontWeight: 'bold',
+  margin: '0 0 12px',
+  paddingBottom: '8px',
+  borderBottom: '1px solid #e5e7eb',
+}
+
+const licenseRightsTitle = {
+  color: '#166534',
+  fontSize: '13px',
+  fontWeight: 'bold',
+  margin: '0 0 8px',
+}
+
+const licenseRightItem = {
+  color: '#166534',
+  fontSize: '13px',
+  margin: '0 0 4px',
+  paddingLeft: '4px',
+}
+
+const licenseRestrictionsTitle = {
+  color: '#991b1b',
+  fontSize: '13px',
+  fontWeight: 'bold',
+  margin: '12px 0 8px',
+}
+
+const licenseRestrictionItem = {
+  color: '#991b1b',
+  fontSize: '13px',
+  margin: '0 0 4px',
+  paddingLeft: '4px',
+}
+
+const licenseNote = {
+  color: '#4f46e5',
+  fontSize: '13px',
+  fontWeight: '500',
+  margin: '12px 0 0',
+  padding: '8px 12px',
+  backgroundColor: '#eef2ff',
+  borderRadius: '6px',
+}
+
+const licenseFooter = {
+  marginTop: '16px',
+  padding: '12px',
+  backgroundColor: '#ffffff',
+  borderRadius: '6px',
+  textAlign: 'center' as const,
+}
+
+const licenseFooterText = {
+  color: '#6b7280',
+  fontSize: '13px',
+  margin: '0',
+}
+
+const licenseLink = {
+  color: '#4f46e5',
+  textDecoration: 'underline',
+  fontWeight: '500',
 }
