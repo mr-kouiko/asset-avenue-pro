@@ -463,6 +463,11 @@ const AdminDashboard = () => {
           <TabsContent value="security">
             <AdminSecurityLogs />
           </TabsContent>
+
+          {/* SEO Co-Pilot Tab */}
+          <TabsContent value="seo">
+            <AdminSEOCoPilot />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
