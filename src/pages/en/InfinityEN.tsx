@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, Users, Camera, Video, Image, Music } from "lucide-react";
+import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, Users, Camera, Image } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,7 +33,7 @@ const InfinityEN = () => {
     {
       icon: Crown,
       title: "A massive library",
-      description: "High-quality authentic photos, videos, vectors and audio that match your creative work."
+      description: "High-quality authentic photos and vectors that match your creative work."
     },
     {
       icon: InfinityIcon,
@@ -49,9 +49,7 @@ const InfinityEN = () => {
 
   const contentSamples = [
     { icon: Camera, label: "Photos", count: "5M+" },
-    { icon: Video, label: "Videos", count: "800K+" },
-    { icon: Image, label: "Vectors", count: "2M+" },
-    { icon: Music, label: "Audio", count: "300K+" }
+    { icon: Image, label: "Vectors", count: "2M+" }
   ];
 
   return (
@@ -87,14 +85,6 @@ const InfinityEN = () => {
                 <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 px-4 py-2">
                   <Image className="w-4 h-4 mr-2" />
                   Vectors
-                </Badge>
-                <Badge variant="outline" className="bg-green-500/20 text-green-200 border-green-400/30 px-4 py-2">
-                  <Video className="w-4 h-4 mr-2" />
-                  Videos
-                </Badge>
-                <Badge variant="outline" className="bg-orange-500/20 text-orange-200 border-orange-400/30 px-4 py-2">
-                  <Music className="w-4 h-4 mr-2" />
-                  Audio
                 </Badge>
               </div>
             </div>
@@ -227,10 +217,6 @@ const InfinityEN = () => {
                 <Button variant="outline">
                   <Image className="w-4 h-4 mr-2" />
                   Vectors
-                </Button>
-                <Button variant="outline">
-                  <Video className="w-4 h-4 mr-2" />
-                  Videos
                 </Button>
               </div>
             </div>
