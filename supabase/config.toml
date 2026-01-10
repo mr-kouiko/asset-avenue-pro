@@ -106,3 +106,12 @@ verify_jwt = false
 
 [functions.sitemap-products]
 verify_jwt = false
+
+[functions.seo-analyze]
+verify_jwt = true
+
+[functions.seo-optimize]
+verify_jwt = true
+
+[functions.seo-apply]
+verify_jwt = true

@@ -815,6 +815,179 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_audit_log: {
+        Row: {
+          action_type: string
+          admin_id: string
+          after_state: Json | null
+          before_state: Json | null
+          changes_summary: string | null
+          created_at: string | null
+          credits_used: number | null
+          id: string
+          ip_address: unknown
+          page_id: string | null
+          page_path: string | null
+          scan_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          after_state?: Json | null
+          before_state?: Json | null
+          changes_summary?: string | null
+          created_at?: string | null
+          credits_used?: number | null
+          id?: string
+          ip_address?: unknown
+          page_id?: string | null
+          page_path?: string | null
+          scan_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          changes_summary?: string | null
+          created_at?: string | null
+          credits_used?: number | null
+          id?: string
+          ip_address?: unknown
+          page_id?: string | null
+          page_path?: string | null
+          scan_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seo_audit_log_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "seo_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seo_metadata: {
+        Row: {
+          created_at: string | null
+          faq_schema: Json | null
+          id: string
+          internal_links: Json | null
+          is_active: boolean | null
+          optimization_mode: string | null
+          optimized_by: string | null
+          page_id: string | null
+          page_path: string
+          page_type: string
+          previous_version: Json | null
+          seo_content: string | null
+          seo_description: string | null
+          seo_h1: string | null
+          seo_title: string | null
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          faq_schema?: Json | null
+          id?: string
+          internal_links?: Json | null
+          is_active?: boolean | null
+          optimization_mode?: string | null
+          optimized_by?: string | null
+          page_id?: string | null
+          page_path: string
+          page_type: string
+          previous_version?: Json | null
+          seo_content?: string | null
+          seo_description?: string | null
+          seo_h1?: string | null
+          seo_title?: string | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          faq_schema?: Json | null
+          id?: string
+          internal_links?: Json | null
+          is_active?: boolean | null
+          optimization_mode?: string | null
+          optimized_by?: string | null
+          page_id?: string | null
+          page_path?: string
+          page_type?: string
+          previous_version?: Json | null
+          seo_content?: string | null
+          seo_description?: string | null
+          seo_h1?: string | null
+          seo_title?: string | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: []
+      }
+      seo_scans: {
+        Row: {
+          admin_id: string
+          average_score: number | null
+          completed_at: string | null
+          created_at: string | null
+          credits_estimated: number | null
+          credits_used: number | null
+          error_message: string | null
+          id: string
+          issues_found: number | null
+          pages_scanned: number | null
+          results: Json | null
+          scan_type: string
+          scope: string
+          scope_filter: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          admin_id: string
+          average_score?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          credits_estimated?: number | null
+          credits_used?: number | null
+          error_message?: string | null
+          id?: string
+          issues_found?: number | null
+          pages_scanned?: number | null
+          results?: Json | null
+          scan_type: string
+          scope: string
+          scope_filter?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          admin_id?: string
+          average_score?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          credits_estimated?: number | null
+          credits_used?: number | null
+          error_message?: string | null
+          id?: string
+          issues_found?: number | null
+          pages_scanned?: number | null
+          results?: Json | null
+          scan_type?: string
+          scope?: string
+          scope_filter?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       stripe_accounts: {
         Row: {
           account_type: string
@@ -1330,6 +1503,17 @@ export type Database = {
           last_occurrence: string
           target_table: string
           unique_users: number
+        }[]
+      }
+      get_seo_metadata: {
+        Args: { path_param: string }
+        Returns: {
+          faq_schema: Json
+          internal_links: Json
+          seo_content: string
+          seo_description: string
+          seo_h1: string
+          seo_title: string
         }[]
       }
       has_role: {

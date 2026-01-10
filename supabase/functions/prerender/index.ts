@@ -34,6 +34,15 @@ interface Product {
   creator_id?: string;
 }
 
+interface SEOMetadata {
+  seo_title?: string;
+  seo_description?: string;
+  seo_h1?: string;
+  seo_content?: string;
+  internal_links?: Array<{ anchor: string; url: string; context: string }>;
+  faq_schema?: Array<{ question: string; answer: string }>;
+}
+
 function buildHtml(opts: {
   title: string;
   desc: string;
@@ -45,37 +54,83 @@ function buildHtml(opts: {
   body: string;
   breadcrumbs?: Array<{ name: string; url: string }>;
   schema?: object;
+  seoMetadata?: SEOMetadata;
 }): string {
+  // Apply SEO overrides if available
+  const title = opts.seoMetadata?.seo_title || opts.title;
+  const desc = opts.seoMetadata?.seo_description || opts.desc;
+  const h1 = opts.seoMetadata?.seo_h1 || opts.h1;
+
   const breadcrumbHtml = opts.breadcrumbs?.map((b, i) => 
     `<span><a href="${b.url}">${esc(b.name)}</a>${i < opts.breadcrumbs!.length - 1 ? ' &gt; ' : ''}</span>`
   ).join('') || '';
 
-  const schemaScript = opts.schema ? `<script type="application/ld+json">${JSON.stringify(opts.schema)}</script>` : '';
+  // Build enhanced body with SEO content
+  let enhancedBody = opts.body;
+  
+  if (opts.seoMetadata?.seo_content) {
+    enhancedBody = `<article class="seo-content">${markdownToHtml(opts.seoMetadata.seo_content)}</article>` + enhancedBody;
+  }
+
+  // Add internal links from SEO metadata
+  if (opts.seoMetadata?.internal_links?.length) {
+    const linksHtml = opts.seoMetadata.internal_links.map(link => 
+      `<p>${esc(link.context).replace(esc(link.anchor), `<a href="${SITE_URL}${link.url}">${esc(link.anchor)}</a>`)}</p>`
+    ).join('');
+    enhancedBody += `<nav aria-label="Related content">${linksHtml}</nav>`;
+  }
+
+  // Add FAQ section from SEO metadata
+  if (opts.seoMetadata?.faq_schema?.length) {
+    const faqHtml = opts.seoMetadata.faq_schema.map(faq => 
+      `<details><summary>${esc(faq.question)}</summary><p>${esc(faq.answer)}</p></details>`
+    ).join('');
+    enhancedBody += `<section aria-label="FAQ"><h2>Frequently Asked Questions</h2>${faqHtml}</section>`;
+  }
+
+  // Build schema with FAQ if present
+  let schemaScript = opts.schema ? `<script type="application/ld+json">${JSON.stringify(opts.schema)}</script>` : '';
+  
+  if (opts.seoMetadata?.faq_schema?.length) {
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: opts.seoMetadata.faq_schema.map(faq => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer
+        }
+      }))
+    };
+    schemaScript += `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`;
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${esc(opts.title)}</title>
-  <meta name="description" content="${esc(opts.desc)}">
+  <title>${esc(title)}</title>
+  <meta name="description" content="${esc(desc)}">
   <link rel="canonical" href="${opts.canonical}">
-  <meta property="og:title" content="${esc(opts.title)}">
-  <meta property="og:description" content="${esc(opts.desc)}">
+  <meta property="og:title" content="${esc(title)}">
+  <meta property="og:description" content="${esc(desc)}">
   <meta property="og:url" content="${opts.url}">
   <meta property="og:image" content="${opts.img}">
   <meta property="og:type" content="${opts.type}">
   <meta property="og:site_name" content="VisuStock">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${esc(opts.title)}">
-  <meta name="twitter:description" content="${esc(opts.desc)}">
+  <meta name="twitter:title" content="${esc(title)}">
+  <meta name="twitter:description" content="${esc(desc)}">
   <meta name="twitter:image" content="${opts.img}">
   ${schemaScript}
 </head>
 <body>
   <nav aria-label="Breadcrumb">${breadcrumbHtml}</nav>
-  <h1>${esc(opts.h1)}</h1>
-  ${opts.body}
+  <h1>${esc(h1)}</h1>
+  ${enhancedBody}
   <footer>
     <nav>
       <a href="${SITE_URL}">Home</a> |
@@ -87,6 +142,14 @@ function buildHtml(opts: {
   </footer>
 </body>
 </html>`;
+}
+
+function markdownToHtml(markdown: string): string {
+  return markdown
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/^(.+)$/gm, "<p>$1</p>");
 }
 
 function buildCategoryLinks(categories: Category[]): string {
@@ -134,6 +197,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const logo = `${SITE_URL}/lovable-uploads/visustock-logo-no-bg.png`;
+
+    // Fetch SEO metadata for this path
+    const { data: seoData } = await supabase
+      .rpc("get_seo_metadata", { path_param: path });
+    
+    const seoMetadata: SEOMetadata | undefined = seoData?.[0] || undefined;
 
     // Fetch categories for internal linking
     const { data: categories } = await supabase

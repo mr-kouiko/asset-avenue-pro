@@ -18,9 +18,11 @@ import {
   Store,
   ShoppingCart,
   BarChart3,
-  Lock
+  Lock,
+  Search
 } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
+import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
 import { AdminUsersManagement } from "@/components/admin/AdminUsersManagement";
 import { AdminSecurityLogs } from "@/components/admin/AdminSecurityLogs";
 import { AdminVendorManagement } from "@/components/admin/AdminVendorManagement";
@@ -211,7 +213,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsList className="grid w-full grid-cols-8 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Vue d'ensemble</span>
@@ -239,6 +241,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="security" className="flex items-center gap-1">
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Sécurité</span>
+            </TabsTrigger>
+            <TabsTrigger value="seo" className="flex items-center gap-1">
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">SEO Co-Pilot</span>
             </TabsTrigger>
           </TabsList>
 
