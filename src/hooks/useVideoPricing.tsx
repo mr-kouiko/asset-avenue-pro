@@ -25,8 +25,8 @@ interface PricingConfig {
 
 const PRICING_CONFIG: PricingConfig = {
   resolutions: {
-    HD: { basePrice: 60 }, // 60$ pour HD
-    '4K': { basePrice: 120 }, // 120$ pour 4K
+    HD: { basePrice: 10 }, // 10$ pour HD (AI videos)
+    '4K': { basePrice: 10 }, // 10$ pour 4K (AI videos)
   },
   licenses: {
     standard: { price: 15 }, // +15€ pour licence standard
