@@ -36,6 +36,7 @@ export const useMarketplace = (initialLimit = 50) => {
       const currentOffset = reset ? 0 : offset;
       
       // Fetch marketplace content with slugs - LIMITED to 50 items
+      // CRITICAL: Only select submissions that have at least one file (inner join)
       const { data: marketplaceData, error } = await supabase
         .from('content_submissions')
         .select(`
@@ -47,7 +48,8 @@ export const useMarketplace = (initialLimit = 50) => {
           created_at,
           category_id,
           slug,
-          creator_id
+          creator_id,
+          content_files!inner(id)
         `)
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
