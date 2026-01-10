@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw } from "lucide-react";
+import { useAIImageDetection } from "@/hooks/useAIImageDetection";
+import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -52,6 +54,8 @@ const ProductManagement = () => {
     publishProduct, 
     loading 
   } = useProductManager();
+  const { detectImage, isDetecting: isDetectingImage } = useAIImageDetection();
+  const { detectVideo, isDetecting: isDetectingVideo } = useAIVideoDetection();
   
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
@@ -60,6 +64,7 @@ const ProductManagement = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
   const hasInitializedRef = useRef(false);
   
   useEffect(() => {
@@ -273,6 +278,67 @@ const ProductManagement = () => {
 
     if (success) {
       updateProductData(fileId, { status: 'draft' });
+    }
+  };
+
+  // Re-analyze AI detection for a file
+  const handleReanalyzeAI = async (fileId: string) => {
+    const file = uploadedFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+
+    if (!isImage && !isVideo) {
+      toast.error('AI detection only works for images and videos');
+      return;
+    }
+
+    setIsReanalyzing(true);
+    toast.info('Re-analyzing content for AI detection...');
+
+    try {
+      let isAiGenerated = false;
+      let confidence = 0;
+
+      if (isImage) {
+        const result = await detectImage(file.url);
+        if (result) {
+          isAiGenerated = result.isAiGenerated;
+          confidence = result.confidence;
+        }
+      } else if (isVideo) {
+        const result = await detectVideo(file.url);
+        if (result) {
+          isAiGenerated = result.isAiGenerated;
+          confidence = result.confidence;
+        }
+      }
+
+      // Update the file's AI detection status
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileId ? { ...f, isAiGenerated } : f
+      ));
+
+      // Update the product data
+      updateProductData(fileId, { isAiGenerated });
+
+      // Update sessionStorage
+      const updatedFiles = uploadedFiles.map(f => 
+        f.id === fileId ? { ...f, isAiGenerated } : f
+      );
+      sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
+
+      if (isAiGenerated) {
+        toast.success(`AI content detected (${Math.round(confidence * 100)}% confidence)`);
+      } else {
+        toast.success('Content appears authentic (no AI markers detected)');
+      }
+    } catch (error) {
+      console.error('Re-analyze error:', error);
+      toast.error('Failed to re-analyze content');
+    } finally {
+      setIsReanalyzing(false);
     }
   };
 
@@ -873,6 +939,19 @@ const ProductManagement = () => {
                                 🤖 Automatic detection by SightEngine - {selectedProductData.isAiGenerated ? 'This content was identified as AI-generated' : 'No AI markers detected'}
                               </p>
                             </div>
+                            {/* Re-analyze button for images and videos */}
+                            {(selectedFile?.type.startsWith('image/') || selectedFile?.type.startsWith('video/')) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReanalyzeAI(selectedFileId!)}
+                                disabled={isReanalyzing || isDetectingImage || isDetectingVideo}
+                                className="shrink-0"
+                              >
+                                <RefreshCw className={`h-4 w-4 mr-1 ${isReanalyzing ? 'animate-spin' : ''}`} />
+                                {isReanalyzing ? 'Analyzing...' : 'Re-analyze'}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
