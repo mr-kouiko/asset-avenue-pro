@@ -66,7 +66,7 @@ serve(async (req) => {
 
     console.log('🎥 [DETECT-AI-VIDEO] User authenticated:', claimsData.claims.sub);
 
-    const { videoUrl, mode = 'sync' } = await req.json();
+    const { videoUrl } = await req.json();
     console.log('🎥 [DETECT-AI-VIDEO] Video URL:', videoUrl);
 
     if (!videoUrl) {
@@ -90,18 +90,63 @@ serve(async (req) => {
 
     console.log('🎥 [DETECT-AI-VIDEO] Starting AI video detection with SightEngine...');
 
-    // Use SightEngine's AI-generated content detection for videos
-    // SYNC API: https://api.sightengine.com/1.0/video/check-sync.json (for videos < 60s)
+    // STEP 1: Download the video file from the URL
+    // SightEngine video API requires the actual file to be uploaded, not a URL
+    console.log('🎥 [DETECT-AI-VIDEO] Downloading video from URL...');
+    
+    const videoResponse = await fetch(videoUrl);
+    if (!videoResponse.ok) {
+      console.error('🎥 [DETECT-AI-VIDEO] Failed to download video:', videoResponse.status);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to download video for analysis',
+          result: {
+            isAiGenerated: false,
+            confidence: 0,
+            frames: [],
+            status: 'error',
+            message: 'Could not access video file'
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const videoBlob = await videoResponse.blob();
+    console.log('🎥 [DETECT-AI-VIDEO] Video downloaded, size:', videoBlob.size, 'bytes');
+
+    // Check video size - SightEngine has limits (typically 100MB for sync API)
+    const maxSizeMB = 100;
+    if (videoBlob.size > maxSizeMB * 1024 * 1024) {
+      console.warn('🎥 [DETECT-AI-VIDEO] Video too large for sync analysis:', (videoBlob.size / 1024 / 1024).toFixed(2), 'MB');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Video too large for AI detection',
+          result: {
+            isAiGenerated: false,
+            confidence: 0,
+            frames: [],
+            status: 'error',
+            message: `Video exceeds ${maxSizeMB}MB limit for AI detection`
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // STEP 2: Upload to SightEngine using multipart form data with 'media' key
+    // The sync API requires the file to be sent as 'media' parameter
     const sightEngineUrl = 'https://api.sightengine.com/1.0/video/check-sync.json';
     
     const formData = new FormData();
-    formData.append('url', videoUrl);
+    // CRITICAL: Use 'media' as the key for file upload, not 'url'
+    formData.append('media', videoBlob, 'video.mp4');
     formData.append('models', 'genai');  // AI-generated content detection model
     formData.append('api_user', apiUser);
     formData.append('api_secret', apiSecret);
     formData.append('interval', '2');  // Check every 2 seconds
 
-    console.log('🎥 [DETECT-AI-VIDEO] Calling SightEngine sync API...');
+    console.log('🎥 [DETECT-AI-VIDEO] Uploading video to SightEngine for analysis...');
     
     const response = await fetch(sightEngineUrl, {
       method: 'POST',
@@ -134,8 +179,18 @@ serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ error: 'Failed to analyze video', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'Failed to analyze video', 
+          details: errorText,
+          result: {
+            isAiGenerated: false,
+            confidence: 0,
+            frames: [],
+            status: 'error',
+            message: 'Video analysis failed'
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
