@@ -73,13 +73,11 @@ export const AdminTransactionsDashboard = () => {
       setLoading(true);
       console.log('Fetching admin transactions...');
 
-      // Fetch transactions with related data
+      // Fetch transactions with content submissions only (no FK to profiles)
       const { data: transactionsData, error } = await supabase
         .from('transactions')
         .select(`
           *,
-          buyer_profile:profiles!transactions_buyer_id_fkey(display_name, email),
-          seller_profile:profiles!transactions_seller_id_fkey(display_name, email),
           content_submissions(title)
         `)
         .order('created_at', { ascending: false });
@@ -90,23 +88,49 @@ export const AdminTransactionsDashboard = () => {
         return;
       }
 
-      console.log('Transactions loaded:', transactionsData?.length);
-      setTransactions((transactionsData as any) || []);
+      // Fetch profiles separately for buyers and sellers
+      const buyerIds = [...new Set(transactionsData?.map(t => t.buyer_id) || [])];
+      const sellerIds = [...new Set(transactionsData?.map(t => t.seller_id) || [])];
+      const allUserIds = [...new Set([...buyerIds, ...sellerIds])];
+
+      let profilesMap: Record<string, { display_name: string; email: string }> = {};
+
+      if (allUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, email')
+          .in('user_id', allUserIds);
+
+        if (profilesData) {
+          profilesMap = profilesData.reduce((acc, p) => {
+            acc[p.user_id] = { display_name: p.display_name || '', email: p.email };
+            return acc;
+          }, {} as Record<string, { display_name: string; email: string }>);
+        }
+      }
+
+      // Merge transactions with profile data
+      const enrichedTransactions = (transactionsData || []).map(t => ({
+        ...t,
+        buyer_profile: profilesMap[t.buyer_id],
+        seller_profile: profilesMap[t.seller_id]
+      }));
+
+      console.log('Transactions loaded:', enrichedTransactions.length);
+      setTransactions(enrichedTransactions);
 
       // Calculate stats
-      if (transactionsData) {
-        const successfulTransactions = transactionsData.filter(t => t.status === 'succeeded');
-        const totalRevenue = successfulTransactions.reduce((sum, t) => sum + t.amount_total, 0);
-        const totalCommission = successfulTransactions.reduce((sum, t) => sum + t.amount_commission, 0);
-        const uniqueSellers = new Set(successfulTransactions.map(t => t.seller_id)).size;
+      const successfulTransactions = enrichedTransactions.filter(t => t.status === 'succeeded');
+      const totalRevenue = successfulTransactions.reduce((sum, t) => sum + t.amount_total, 0);
+      const totalCommission = successfulTransactions.reduce((sum, t) => sum + t.amount_commission, 0);
+      const uniqueSellers = new Set(successfulTransactions.map(t => t.seller_id)).size;
 
-        setStats({
-          total_revenue: Math.round(totalRevenue / 100), // Convert from cents
-          total_commission: Math.round(totalCommission / 100), // Convert from cents
-          total_transactions: successfulTransactions.length,
-          active_sellers: uniqueSellers
-        });
-      }
+      setStats({
+        total_revenue: Math.round(totalRevenue / 100),
+        total_commission: Math.round(totalCommission / 100),
+        total_transactions: successfulTransactions.length,
+        active_sellers: uniqueSellers
+      });
 
     } catch (error) {
       console.error('Error in fetchTransactions:', error);
