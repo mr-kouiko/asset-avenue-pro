@@ -527,10 +527,10 @@ const Marketplace = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="popular">Populaires</SelectItem>
-                <SelectItem value="recent">Récents</SelectItem>
-                <SelectItem value="price-low">Prix croissant</SelectItem>
-                <SelectItem value="price-high">Prix décroissant</SelectItem>
+                <SelectItem value="popular">Most popular</SelectItem>
+                <SelectItem value="recent">Most recent</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
