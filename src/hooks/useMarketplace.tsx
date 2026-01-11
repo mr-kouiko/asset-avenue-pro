@@ -160,12 +160,13 @@ export const useMarketplace = (initialLimit = 50) => {
           // Determine media (video/audio) URL
           let mediaUrl: string | undefined;
           if (contentType === 'video') {
-            // For video, prefer the PREVIEW (watermarked) version
-            const previewFile = files?.find(f => f.is_preview === true && f.preview_path);
-            if (previewFile?.preview_path) {
-              mediaUrl = previewFile.preview_path.startsWith('http')
-                ? previewFile.preview_path
-                : buildPublicUrl('previews', previewFile.preview_path);
+            // For video, prefer the PREVIEW (watermarked) version from preview_path on the original file
+            // The preview URL is stored in preview_path field (not is_preview flag)
+            const fileWithPreview = files?.find(f => f.preview_path);
+            if (fileWithPreview?.preview_path) {
+              mediaUrl = fileWithPreview.preview_path.startsWith('http')
+                ? fileWithPreview.preview_path
+                : buildPublicUrl('previews', fileWithPreview.preview_path);
               console.log(`  🎬 [MARKETPLACE] Video preview for "${item.title}":`, mediaUrl);
             }
             // Fallback: if no preview exists yet, use the original file
