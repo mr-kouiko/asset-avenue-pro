@@ -5,7 +5,7 @@ import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { SlidersHorizontal, ChevronDown } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, Video } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { fuzzySearch, type SearchableContent, type ScoredResult } from "@/utils/fuzzySearch";
+import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersPanel";
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
@@ -41,12 +42,48 @@ const Marketplace = () => {
   
   // Audio filter states
   const [isAudioFilterOpen, setIsAudioFilterOpen] = useState(false);
+  const [isMobileVideoFilterOpen, setIsMobileVideoFilterOpen] = useState(false);
   const [audioSortBy, setAudioSortBy] = useState("relevant");
   const [infinityFilter, setInfinityFilter] = useState("all");
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [lengthRange, setLengthRange] = useState([0, 300]); // 0-5 minutes in seconds
   const [bpmRange, setBpmRange] = useState([60, 180]);
   const filterPanelRef = useRef<HTMLDivElement>(null);
+
+  // Video filter states
+  const [videoFilters, setVideoFilters] = useState<VideoFilters>({
+    useCase: [],
+    aiVideos: [],
+    style: [],
+    format: [],
+    effects: [],
+    orientation: null,
+    resolution: null,
+    aiGenerated: null,
+    loopable: null,
+    withPeople: null,
+    copySpace: null,
+    platform: [],
+    duration: [0, 60],
+  });
+
+  const resetVideoFilters = () => {
+    setVideoFilters({
+      useCase: [],
+      aiVideos: [],
+      style: [],
+      format: [],
+      effects: [],
+      orientation: null,
+      resolution: null,
+      aiGenerated: null,
+      loopable: null,
+      withPeople: null,
+      copySpace: null,
+      platform: [],
+      duration: [0, 60],
+    });
+  };
 
   useEffect(() => {
     const categoryParam = searchParams.get('category');
@@ -198,9 +235,10 @@ const Marketplace = () => {
     }
   });
 
-  // Check if we're viewing audio content
+  // Check if we're viewing audio or video content
   const isAudioSection = selectedCategory === "audio" || 
     filteredContent.some(content => content.type === "audio");
+  const isVideoSection = selectedCategory === "video";
 
   return (
     <div className="min-h-screen bg-background">
@@ -221,35 +259,48 @@ const Marketplace = () => {
               />
             </div>
 
-            {/* Filters */}
+            {/* Filters - hide category dropdown when in video section */}
             <div className="flex gap-3">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label} ({category.count})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!isVideoSection && (
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label} ({category.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
-              <Select>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Prix" />
-                </SelectTrigger>
-                <SelectContent>
-                  {priceRanges.map((range) => (
-                    <SelectItem key={range.value} value={range.value}>
-                      {range.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isVideoSection && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-md">
+                  <Video className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {language === 'en' ? "Videos" : "Vidéos"}
+                  </span>
+                </div>
+              )}
 
-              {isAudioSection && (
+              {!isVideoSection && (
+                <Select>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Prix" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priceRanges.map((range) => (
+                      <SelectItem key={range.value} value={range.value}>
+                        {range.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {isAudioSection && !isVideoSection && (
                 <div className="relative" ref={filterPanelRef}>
                   <Button 
                     variant="outline" 
@@ -364,9 +415,21 @@ const Marketplace = () => {
                 </div>
               )}
 
-              {!isAudioSection && (
+              {!isAudioSection && !isVideoSection && (
                 <Button variant="outline" size="icon">
                   <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* Mobile Video Filter Button */}
+              {isVideoSection && (
+                <Button 
+                  variant="outline" 
+                  className="lg:hidden gap-2"
+                  onClick={() => setIsMobileVideoFilterOpen(!isMobileVideoFilterOpen)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {language === 'en' ? "Filters" : "Filtres"}
                 </Button>
               )}
             </div>
@@ -393,6 +456,17 @@ const Marketplace = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Mobile Video Filters Panel */}
+          {isVideoSection && isMobileVideoFilterOpen && (
+            <div className="lg:hidden mb-6">
+              <VideoFiltersPanel
+                filters={videoFilters}
+                onFiltersChange={setVideoFilters}
+                onReset={resetVideoFilters}
+              />
+            </div>
+          )}
         </div>
 
         {/* Content Grid - Adobe Stock Style */}
@@ -410,8 +484,28 @@ const Marketplace = () => {
           </div>
         ) : (
           <>
-            {/* Conditional layout: vertical stack for audio, grid for other content */}
-            {selectedCategory === "audio" ? (
+            {/* Conditional layout: sidebar + grid for video, vertical stack for audio, grid for others */}
+            {isVideoSection ? (
+              <div className="flex gap-6">
+                {/* Video Filters Sidebar - Hidden on mobile */}
+                <div className="hidden lg:block flex-shrink-0 sticky top-4 self-start">
+                  <VideoFiltersPanel
+                    filters={videoFilters}
+                    onFiltersChange={setVideoFilters}
+                    onReset={resetVideoFilters}
+                  />
+                </div>
+                
+                {/* Video Content Grid */}
+                <div className="flex-1">
+                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {sortedContent.map((content) => (
+                      <ContentCard key={content.id} {...content} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : selectedCategory === "audio" ? (
               <div className="flex flex-col gap-4 w-full">
                 {sortedContent.map((content) => (
                   <ContentCard key={content.id} {...content} />
