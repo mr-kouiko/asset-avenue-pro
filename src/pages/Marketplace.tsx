@@ -5,7 +5,7 @@ import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { SlidersHorizontal, ChevronDown, Video } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, Video, Camera } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { fuzzySearch, type SearchableContent, type ScoredResult } from "@/utils/fuzzySearch";
 import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersPanel";
+import PhotoFiltersPanel, { type PhotoFilters } from "@/components/PhotoFiltersPanel";
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
@@ -82,6 +83,43 @@ const Marketplace = () => {
       copySpace: null,
       platform: [],
       duration: [0, 60],
+    });
+  };
+
+  // Photo filter states
+  const [photoFilters, setPhotoFilters] = useState<PhotoFilters>({
+    useCase: [],
+    aiPhotos: [],
+    style: [],
+    subject: [],
+    format: [],
+    orientation: null,
+    resolution: null,
+    aiGenerated: null,
+    withPeople: null,
+    numberOfPeople: null,
+    copySpace: null,
+    color: null,
+    license: null,
+  });
+
+  const [isMobilePhotoFilterOpen, setIsMobilePhotoFilterOpen] = useState(false);
+
+  const resetPhotoFilters = () => {
+    setPhotoFilters({
+      useCase: [],
+      aiPhotos: [],
+      style: [],
+      subject: [],
+      format: [],
+      orientation: null,
+      resolution: null,
+      aiGenerated: null,
+      withPeople: null,
+      numberOfPeople: null,
+      copySpace: null,
+      color: null,
+      license: null,
     });
   };
 
@@ -235,10 +273,11 @@ const Marketplace = () => {
     }
   });
 
-  // Check if we're viewing audio or video content
+  // Check if we're viewing audio, video, or photo content
   const isAudioSection = selectedCategory === "audio" || 
     filteredContent.some(content => content.type === "audio");
   const isVideoSection = selectedCategory === "video";
+  const isPhotoSection = selectedCategory === "photo";
 
   return (
     <div className="min-h-screen bg-background">
@@ -259,9 +298,9 @@ const Marketplace = () => {
               />
             </div>
 
-            {/* Filters - hide category dropdown when in video section */}
+            {/* Filters - hide category dropdown when in video or photo section */}
             <div className="flex gap-3">
-              {!isVideoSection && (
+              {!isVideoSection && !isPhotoSection && (
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Catégorie" />
@@ -285,7 +324,16 @@ const Marketplace = () => {
                 </div>
               )}
 
-              {!isVideoSection && (
+              {isPhotoSection && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-md">
+                  <Camera className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {language === 'en' ? "Photos" : "Photos"}
+                  </span>
+                </div>
+              )}
+
+              {!isVideoSection && !isPhotoSection && (
                 <Select>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Prix" />
@@ -300,7 +348,7 @@ const Marketplace = () => {
                 </Select>
               )}
 
-              {isAudioSection && !isVideoSection && (
+              {isAudioSection && !isVideoSection && !isPhotoSection && (
                 <div className="relative" ref={filterPanelRef}>
                   <Button 
                     variant="outline" 
@@ -415,7 +463,7 @@ const Marketplace = () => {
                 </div>
               )}
 
-              {!isAudioSection && !isVideoSection && (
+              {!isAudioSection && !isVideoSection && !isPhotoSection && (
                 <Button variant="outline" size="icon">
                   <SlidersHorizontal className="h-4 w-4" />
                 </Button>
@@ -427,6 +475,18 @@ const Marketplace = () => {
                   variant="outline" 
                   className="lg:hidden gap-2"
                   onClick={() => setIsMobileVideoFilterOpen(!isMobileVideoFilterOpen)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {language === 'en' ? "Filters" : "Filtres"}
+                </Button>
+              )}
+
+              {/* Mobile Photo Filter Button */}
+              {isPhotoSection && (
+                <Button 
+                  variant="outline" 
+                  className="lg:hidden gap-2"
+                  onClick={() => setIsMobilePhotoFilterOpen(!isMobilePhotoFilterOpen)}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   {language === 'en' ? "Filters" : "Filtres"}
@@ -467,6 +527,17 @@ const Marketplace = () => {
               />
             </div>
           )}
+
+          {/* Mobile Photo Filters Panel */}
+          {isPhotoSection && isMobilePhotoFilterOpen && (
+            <div className="lg:hidden mb-6">
+              <PhotoFiltersPanel
+                filters={photoFilters}
+                onFiltersChange={setPhotoFilters}
+                onReset={resetPhotoFilters}
+              />
+            </div>
+          )}
         </div>
 
         {/* Content Grid - Adobe Stock Style */}
@@ -484,7 +555,7 @@ const Marketplace = () => {
           </div>
         ) : (
           <>
-            {/* Conditional layout: sidebar + grid for video, vertical stack for audio, grid for others */}
+            {/* Conditional layout: sidebar + grid for video/photo, vertical stack for audio, grid for others */}
             {isVideoSection ? (
               <div className="flex gap-6">
                 {/* Video Filters Sidebar - Hidden on mobile */}
@@ -499,6 +570,26 @@ const Marketplace = () => {
                 {/* Video Content Grid */}
                 <div className="flex-1">
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {sortedContent.map((content) => (
+                      <ContentCard key={content.id} {...content} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : isPhotoSection ? (
+              <div className="flex gap-6">
+                {/* Photo Filters Sidebar - Hidden on mobile */}
+                <div className="hidden lg:block flex-shrink-0 sticky top-4 self-start">
+                  <PhotoFiltersPanel
+                    filters={photoFilters}
+                    onFiltersChange={setPhotoFilters}
+                    onReset={resetPhotoFilters}
+                  />
+                </div>
+                
+                {/* Photo Content Grid */}
+                <div className="flex-1">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {sortedContent.map((content) => (
                       <ContentCard key={content.id} {...content} />
                     ))}
