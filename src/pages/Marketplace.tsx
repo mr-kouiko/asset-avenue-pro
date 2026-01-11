@@ -229,6 +229,10 @@ const Marketplace = () => {
     [marketplaceContent]
   );
 
+  // Check if we're viewing video or photo content (needed for filtering)
+  const isVideoSection = selectedCategory === "video";
+  const isPhotoSection = selectedCategory === "photo";
+
   // Filter content with structured hard filters + keyword ranking
   const filteredContent = useMemo(() => {
     let results = marketplaceContent;
@@ -289,11 +293,9 @@ const Marketplace = () => {
     }
   });
 
-  // Check if we're viewing audio, video, or photo content
+  // Check if we're viewing audio content
   const isAudioSection = selectedCategory === "audio" || 
     filteredContent.some(content => content.type === "audio");
-  const isVideoSection = selectedCategory === "video";
-  const isPhotoSection = selectedCategory === "photo";
 
   return (
     <div className="min-h-screen bg-background">
