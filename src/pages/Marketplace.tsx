@@ -18,6 +18,13 @@ import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { fuzzySearch, type SearchableContent, type ScoredResult } from "@/utils/fuzzySearch";
 import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersPanel";
 import PhotoFiltersPanel, { type PhotoFilters } from "@/components/PhotoFiltersPanel";
+import { 
+  applyVideoHardFilters, 
+  applyPhotoHardFilters, 
+  calculateRelevanceRank,
+  countActiveVideoFilters,
+  countActivePhotoFilters
+} from "@/utils/filterEngine";
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
@@ -222,32 +229,41 @@ const Marketplace = () => {
     [marketplaceContent]
   );
 
-  // Filter content based on search and category using fuzzy search
+  // Filter content with structured hard filters + keyword ranking
   const filteredContent = useMemo(() => {
     let results = marketplaceContent;
     
-    // Apply fuzzy search if there's a query
-    if (searchQuery.trim()) {
-      const fuzzyResults = fuzzySearch(searchableContent, searchQuery, { minScore: 3 });
-      const matchedIds = new Set(fuzzyResults.map(r => r.item.id));
-      
-      // Create a score map for sorting
-      const scoreMap = new Map(fuzzyResults.map(r => [r.item.id, r.score]));
-      
-      results = marketplaceContent
-        .filter(content => matchedIds.has(content.id))
-        .sort((a, b) => (scoreMap.get(b.id) || 0) - (scoreMap.get(a.id) || 0));
-    }
-    
-    // Apply category filter
+    // STEP 1: Apply category filter (content type)
     if (selectedCategory !== "all") {
       results = results.filter(content => 
         content.category_id === selectedCategory || content.type === selectedCategory
       );
     }
     
+    // STEP 2: Apply HARD FILTERS (exact match, AND logic)
+    if (isVideoSection) {
+      results = applyVideoHardFilters(results, videoFilters);
+    } else if (isPhotoSection) {
+      results = applyPhotoHardFilters(results, photoFilters);
+    }
+    
+    // STEP 3: Apply fuzzy search for RANKING only (soft signal)
+    if (searchQuery.trim()) {
+      const fuzzyResults = fuzzySearch(searchableContent, searchQuery, { minScore: 3 });
+      const matchedIds = new Set(fuzzyResults.map(r => r.item.id));
+      
+      // Filter to matched items, then add relevance score
+      results = results
+        .filter(content => matchedIds.has(content.id))
+        .map(content => ({
+          ...content,
+          _relevanceScore: calculateRelevanceRank(content, searchQuery)
+        }))
+        .sort((a, b) => ((b as any)._relevanceScore || 0) - ((a as any)._relevanceScore || 0));
+    }
+    
     return results;
-  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory]);
+  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory, videoFilters, photoFilters, isVideoSection, isPhotoSection]);
 
   // Sort the filtered content
   const sortedContent = [...filteredContent].sort((a, b) => {
