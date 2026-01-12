@@ -24,7 +24,7 @@ export interface MarketplaceContent {
   isAiGenerated?: boolean; // AI-generated content flag
 }
 
-export const useMarketplace = (initialLimit = 50) => {
+export const useMarketplace = (initialLimit = 200) => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
