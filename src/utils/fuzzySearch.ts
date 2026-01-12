@@ -1,6 +1,7 @@
 /**
- * Advanced Fuzzy Search Utilities
- * Handles typos, synonyms, partial matches, and relevance scoring
+ * Intent-Based Search Engine
+ * Prioritizes exact matches, applies strict relevance filtering,
+ * and ranks by intent match first, then contextual relevance.
  */
 
 // Synonym mappings for common search terms
@@ -164,7 +165,7 @@ export function tokenize(text: string): string[] {
 }
 
 /**
- * Calculate relevance score for a content item
+ * Searchable content interface
  */
 export interface SearchableContent {
   id: string;
@@ -173,6 +174,8 @@ export interface SearchableContent {
   tags?: string[];
   author?: string;
   type?: string;
+  category?: string;
+  location?: string;
   price?: number;
   downloads?: number;
   likes?: number;
@@ -182,123 +185,252 @@ export interface ScoredResult<T> {
   item: T;
   score: number;
   matchedTerms: string[];
+  intentMatch: 'exact' | 'strong' | 'partial' | 'weak';
 }
 
+/**
+ * Intent classification for search queries
+ */
+interface SearchIntent {
+  primaryTerms: string[];      // Main intent keywords (must match)
+  modifierTerms: string[];     // Optional refinement terms
+  categoryHint?: string;       // Detected category intent
+  locationHint?: string;       // Detected location intent
+}
+
+/**
+ * Parse search query into structured intent
+ */
+function parseSearchIntent(query: string): SearchIntent {
+  const tokens = tokenize(query);
+  const primaryTerms: string[] = [];
+  const modifierTerms: string[] = [];
+  let categoryHint: string | undefined;
+  let locationHint: string | undefined;
+  
+  // Category keywords
+  const categoryKeywords = ['photo', 'image', 'video', 'audio', 'music', 'sound', 'illustration'];
+  
+  // Common modifiers (less important for matching)
+  const modifiers = ['beautiful', 'amazing', 'stunning', 'professional', 'high', 'quality', 
+                     'best', 'top', 'new', 'latest', 'free', 'premium', 'hd', '4k', '8k'];
+  
+  tokens.forEach(token => {
+    // Check if it's a category keyword
+    if (categoryKeywords.some(cat => areSynonyms(token, cat))) {
+      categoryHint = synonymLookup[token] || token;
+      return;
+    }
+    
+    // Check if it's a modifier
+    if (modifiers.includes(token)) {
+      modifierTerms.push(token);
+      return;
+    }
+    
+    // Otherwise it's a primary term
+    primaryTerms.push(token);
+  });
+  
+  return {
+    primaryTerms,
+    modifierTerms,
+    categoryHint,
+    locationHint
+  };
+}
+
+/**
+ * Calculate intent-based relevance score
+ * Prioritizes exact matches on core fields, applies strict filtering
+ */
 export function calculateRelevanceScore(
   content: SearchableContent,
   searchTerms: string[],
   expandedTerms: string[]
 ): ScoredResult<SearchableContent> | null {
+  const intent = parseSearchIntent(searchTerms.join(' '));
+  
   let score = 0;
   const matchedTerms: string[] = [];
+  let exactTitleMatches = 0;
+  let exactTagMatches = 0;
+  let exactCategoryMatches = 0;
   
+  const titleLower = (content.title || '').toLowerCase();
   const titleTokens = tokenize(content.title || '');
   const descTokens = tokenize(content.description || '');
   const tagTokens = (content.tags || []).flatMap(tag => tokenize(tag));
-  const authorTokens = tokenize(content.author || '');
-  const typeTokens = tokenize(content.type || '');
+  const tagsLower = (content.tags || []).map(t => t.toLowerCase());
+  const categoryTokens = tokenize(content.category || content.type || '');
+  const locationTokens = tokenize(content.location || '');
   
-  const allTokens = [...titleTokens, ...descTokens, ...tagTokens, ...authorTokens, ...typeTokens];
+  // ============ PHASE 1: EXACT MATCH DETECTION (Highest Priority) ============
   
-  // Check each search term
-  for (const term of searchTerms) {
+  for (const term of intent.primaryTerms) {
     let termMatched = false;
     
-    // Exact title match (highest score)
+    // EXACT TITLE MATCH - Highest priority (word boundary)
     if (titleTokens.includes(term)) {
-      score += 100;
+      score += 200;
+      exactTitleMatches++;
       termMatched = true;
-    } else {
-      // Fuzzy title match
-      for (const titleWord of titleTokens) {
-        const sim = similarityScore(term, titleWord);
-        if (sim >= 0.7) {
-          score += 80 * sim;
-          termMatched = true;
-          break;
-        }
-        // Partial match (word starts with term)
-        if (titleWord.startsWith(term) || term.startsWith(titleWord)) {
-          score += 60;
-          termMatched = true;
-          break;
-        }
-      }
-    }
-    
-    // Tag match (high score)
-    if (tagTokens.includes(term)) {
-      score += 70;
-      termMatched = true;
-    } else {
-      for (const tagWord of tagTokens) {
-        const sim = similarityScore(term, tagWord);
-        if (sim >= 0.7) {
-          score += 50 * sim;
-          termMatched = true;
-          break;
-        }
-      }
-    }
-    
-    // Type match
-    if (typeTokens.includes(term)) {
-      score += 40;
-      termMatched = true;
-    }
-    
-    // Author match
-    if (authorTokens.includes(term)) {
-      score += 30;
-      termMatched = true;
-    }
-    
-    // Description match (lower score)
-    if (descTokens.includes(term)) {
-      score += 20;
-      termMatched = true;
-    } else {
-      for (const descWord of descTokens) {
-        if (descWord.startsWith(term) || term.startsWith(descWord)) {
-          score += 10;
-          termMatched = true;
-          break;
-        }
-      }
-    }
-    
-    if (termMatched) {
       matchedTerms.push(term);
     }
+    // EXACT TITLE CONTAINS (phrase in title)
+    else if (titleLower.includes(term)) {
+      score += 150;
+      termMatched = true;
+      matchedTerms.push(term);
+    }
+    
+    // EXACT TAG MATCH - Second highest priority
+    if (tagsLower.includes(term) || tagTokens.includes(term)) {
+      score += 120;
+      exactTagMatches++;
+      if (!termMatched) {
+        termMatched = true;
+        matchedTerms.push(term);
+      }
+    }
+    
+    // EXACT CATEGORY MATCH
+    if (categoryTokens.includes(term)) {
+      score += 100;
+      exactCategoryMatches++;
+      if (!termMatched) {
+        termMatched = true;
+        matchedTerms.push(term);
+      }
+    }
+    
+    // EXACT LOCATION MATCH
+    if (locationTokens.includes(term)) {
+      score += 100;
+      if (!termMatched) {
+        termMatched = true;
+        matchedTerms.push(term);
+      }
+    }
+    
+    // If no exact match found, try fuzzy but with stricter threshold
+    if (!termMatched) {
+      // Fuzzy title match (strict threshold 0.85)
+      for (const titleWord of titleTokens) {
+        const sim = similarityScore(term, titleWord);
+        if (sim >= 0.85) {
+          score += 80 * sim;
+          matchedTerms.push(term);
+          termMatched = true;
+          break;
+        }
+      }
+    }
+    
+    // Fuzzy tag match only if still no match (strict threshold 0.85)
+    if (!termMatched) {
+      for (const tagWord of tagTokens) {
+        const sim = similarityScore(term, tagWord);
+        if (sim >= 0.85) {
+          score += 60 * sim;
+          matchedTerms.push(term);
+          termMatched = true;
+          break;
+        }
+      }
+    }
+    
+    // Description match only for exact word matches (lower weight)
+    if (!termMatched && descTokens.includes(term)) {
+      score += 30;
+      matchedTerms.push(term);
+      termMatched = true;
+    }
   }
   
-  // Bonus for synonym matches
+  // ============ PHASE 2: STRICT RELEVANCE FILTERING ============
+  
+  // CRITICAL: Require at least one primary term to match
+  // This prevents loosely related or ambiguous results
+  if (intent.primaryTerms.length > 0 && matchedTerms.length === 0) {
+    return null; // No match on any primary term = exclude
+  }
+  
+  // Calculate match ratio for intent alignment
+  const primaryMatchRatio = intent.primaryTerms.length > 0 
+    ? matchedTerms.filter(t => intent.primaryTerms.includes(t)).length / intent.primaryTerms.length
+    : 1;
+  
+  // Require at least 50% of primary terms to match for multi-word queries
+  if (intent.primaryTerms.length >= 2 && primaryMatchRatio < 0.5) {
+    return null; // Not enough intent alignment
+  }
+  
+  // ============ PHASE 3: SYNONYM BONUS (Small boost only) ============
+  
   for (const expandedTerm of expandedTerms) {
     if (!searchTerms.includes(expandedTerm)) {
-      if (allTokens.some(token => areSynonyms(token, expandedTerm))) {
-        score += 15;
+      // Only boost if primary terms already matched
+      if (matchedTerms.length > 0) {
+        if (titleTokens.some(token => areSynonyms(token, expandedTerm))) {
+          score += 20;
+        } else if (tagTokens.some(token => areSynonyms(token, expandedTerm))) {
+          score += 10;
+        }
       }
     }
   }
   
-  // Popularity boost (small factor)
-  const popularityBoost = Math.log10(1 + (content.downloads || 0) + (content.likes || 0)) * 2;
-  score += popularityBoost;
+  // ============ PHASE 4: MODIFIER TERM BONUSES ============
   
-  // Return null if no matches
-  if (matchedTerms.length === 0 && score < 5) {
+  for (const modifier of intent.modifierTerms) {
+    if (titleTokens.includes(modifier) || tagTokens.includes(modifier)) {
+      score += 15;
+    }
+  }
+  
+  // ============ PHASE 5: INTENT MATCH CLASSIFICATION ============
+  
+  let intentMatch: 'exact' | 'strong' | 'partial' | 'weak';
+  
+  if (exactTitleMatches >= intent.primaryTerms.length && intent.primaryTerms.length > 0) {
+    intentMatch = 'exact';
+    score *= 1.5; // Boost exact intent matches significantly
+  } else if (exactTitleMatches > 0 || (exactTagMatches >= intent.primaryTerms.length && intent.primaryTerms.length > 0)) {
+    intentMatch = 'strong';
+    score *= 1.2;
+  } else if (primaryMatchRatio >= 0.5) {
+    intentMatch = 'partial';
+  } else {
+    intentMatch = 'weak';
+    score *= 0.7; // Penalize weak matches
+  }
+  
+  // ============ PHASE 6: POPULARITY BOOST (Minimal influence) ============
+  
+  // Only apply popularity boost after intent matching
+  const popularityBoost = Math.log10(1 + (content.downloads || 0) + (content.likes || 0));
+  score += popularityBoost; // Max ~3-4 points for very popular items
+  
+  // ============ FINAL THRESHOLD ============
+  
+  // Minimum score threshold based on query complexity
+  const minScoreThreshold = intent.primaryTerms.length > 1 ? 50 : 30;
+  
+  if (score < minScoreThreshold) {
     return null;
   }
   
   return {
     item: content,
     score,
-    matchedTerms
+    matchedTerms,
+    intentMatch
   };
 }
 
 /**
- * Perform fuzzy search with relevance ranking
+ * Perform intent-based search with strict relevance ranking
  */
 export function fuzzySearch<T extends SearchableContent>(
   items: T[],
@@ -306,12 +438,13 @@ export function fuzzySearch<T extends SearchableContent>(
   options: {
     minScore?: number;
     maxResults?: number;
+    strictMode?: boolean; // New: Enable stricter filtering
   } = {}
 ): ScoredResult<T>[] {
-  const { minScore = 5, maxResults = 100 } = options;
+  const { minScore = 30, maxResults = 100, strictMode = true } = options;
   
   if (!query.trim()) {
-    return items.map(item => ({ item, score: 0, matchedTerms: [] }));
+    return items.map(item => ({ item, score: 0, matchedTerms: [], intentMatch: 'exact' as const }));
   }
   
   const searchTerms = tokenize(query);
@@ -326,8 +459,31 @@ export function fuzzySearch<T extends SearchableContent>(
     }
   }
   
-  // Sort by score descending
-  results.sort((a, b) => b.score - a.score);
+  // Sort by: 1) Intent match type, 2) Score descending
+  results.sort((a, b) => {
+    // Intent match priority
+    const intentPriority = { exact: 4, strong: 3, partial: 2, weak: 1 };
+    const intentDiff = intentPriority[b.intentMatch] - intentPriority[a.intentMatch];
+    if (intentDiff !== 0) return intentDiff;
+    
+    // Then by score
+    return b.score - a.score;
+  });
+  
+  // In strict mode, limit weak matches
+  if (strictMode) {
+    const strongResults = results.filter(r => r.intentMatch !== 'weak');
+    const weakResults = results.filter(r => r.intentMatch === 'weak');
+    
+    // Only include weak matches if we don't have enough strong ones
+    if (strongResults.length >= 10) {
+      return strongResults.slice(0, maxResults);
+    }
+    
+    // Include some weak matches to fill up to minimum
+    const neededWeak = Math.min(10 - strongResults.length, weakResults.length);
+    return [...strongResults, ...weakResults.slice(0, neededWeak)].slice(0, maxResults);
+  }
   
   return results.slice(0, maxResults);
 }
@@ -352,31 +508,32 @@ export function generateSuggestions(
     const allTerms = [
       ...tokenize(item.title || ''),
       ...(item.tags || []).map(t => t.toLowerCase()),
-      item.type?.toLowerCase()
+      item.type?.toLowerCase(),
+      item.category?.toLowerCase()
     ].filter(Boolean) as string[];
     
     allTerms.forEach(term => {
       if (term.length >= 2) {
-        // Starts with query (highest priority)
+        // Exact prefix match (highest priority)
         if (term.startsWith(queryLower)) {
-          suggestions.set(term, (suggestions.get(term) || 0) + 10);
+          suggestions.set(term, (suggestions.get(term) || 0) + 15);
         }
-        // Contains query
+        // Contains query (medium priority)
         else if (term.includes(queryLower)) {
           suggestions.set(term, (suggestions.get(term) || 0) + 5);
         }
-        // Fuzzy match
-        else if (similarityScore(queryLower, term) >= 0.6) {
-          suggestions.set(term, (suggestions.get(term) || 0) + 3);
+        // Fuzzy match (lower priority, stricter threshold)
+        else if (similarityScore(queryLower, term) >= 0.75) {
+          suggestions.set(term, (suggestions.get(term) || 0) + 2);
         }
       }
     });
   });
   
-  // Add synonym suggestions
+  // Add synonym suggestions only for exact prefix matches
   expandWithSynonyms(query).forEach(syn => {
     if (syn !== queryLower && syn.startsWith(queryLower)) {
-      suggestions.set(syn, (suggestions.get(syn) || 0) + 4);
+      suggestions.set(syn, (suggestions.get(syn) || 0) + 3);
     }
   });
   
@@ -397,7 +554,7 @@ export function highlightMatches(text: string, query: string): string {
   let result = text;
   
   terms.forEach(term => {
-    const regex = new RegExp(`(${term})`, 'gi');
+    const regex = new RegExp(`\\b(${term})\\b`, 'gi');
     result = result.replace(regex, '<mark>$1</mark>');
   });
   
