@@ -517,9 +517,9 @@ const Marketplace = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {filteredContent.length} résultats trouvés
+                {filteredContent.length} results found
               </span>
-              <Badge variant="secondary">Tous</Badge>
+              <Badge variant="secondary">All</Badge>
             </div>
 
             <Select value={sortBy} onValueChange={setSortBy}>
