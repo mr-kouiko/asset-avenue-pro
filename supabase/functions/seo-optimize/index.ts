@@ -24,14 +24,8 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-
-    if (!lovableApiKey) {
-      return new Response(JSON.stringify({ error: "AI service not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+    const useAI = !!openaiApiKey;
 
     // Verify admin authorization
     const authHeader = req.headers.get("Authorization");
@@ -104,63 +98,71 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build the AI prompt
-    const prompt = buildOptimizationPrompt(
-      pagePath,
-      pageType,
-      currentMeta,
-      issues,
-      pageData,
-      categories,
-      relatedProducts
-    );
+    let optimizations: OptimizationResult;
 
-    // Call Lovable AI Gateway
-    const aiResponse = await fetch("https://api.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an SEO expert for VisuStock, a premium stock content marketplace. 
+    if (useAI) {
+      // Build the AI prompt
+      const prompt = buildOptimizationPrompt(
+        pagePath,
+        pageType,
+        currentMeta,
+        issues,
+        pageData,
+        categories,
+        relatedProducts
+      );
+
+      // Call OpenAI API
+      const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are an SEO expert for VisuStock, a premium stock content marketplace. 
 Generate optimized SEO content that is natural, compelling, and follows best practices.
 Always respond in valid JSON format.`,
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI API error:", errorText);
-      throw new Error("AI optimization failed");
-    }
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error("AI API error:", errorText);
+        // Fall back to rule-based optimization
+        optimizations = generateFallbackOptimization(pagePath, pageType, currentMeta, pageData, categories);
+      } else {
+        const aiData = await aiResponse.json();
+        const aiContent = aiData.choices?.[0]?.message?.content;
 
-    const aiData = await aiResponse.json();
-    const aiContent = aiData.choices?.[0]?.message?.content;
-
-    // Parse AI response
-    let optimizations: OptimizationResult;
-    try {
-      // Extract JSON from potential markdown code blocks
-      let jsonContent = aiContent;
-      const jsonMatch = aiContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonContent = jsonMatch[1].trim();
+        // Parse AI response
+        try {
+          // Extract JSON from potential markdown code blocks
+          let jsonContent = aiContent;
+          const jsonMatch = aiContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (jsonMatch) {
+            jsonContent = jsonMatch[1].trim();
+          }
+          optimizations = JSON.parse(jsonContent);
+          optimizations.pagePath = pagePath;
+        } catch (parseError) {
+          console.error("Failed to parse AI response:", aiContent);
+          // Fallback to basic optimization
+          optimizations = generateFallbackOptimization(pagePath, pageType, currentMeta, pageData, categories);
+        }
       }
-      optimizations = JSON.parse(jsonContent);
-      optimizations.pagePath = pagePath;
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", aiContent);
-      // Fallback to basic optimization
+    } else {
+      // No AI key configured, use rule-based optimization
+      console.log("No OPENAI_API_KEY configured, using rule-based optimization");
       optimizations = generateFallbackOptimization(pagePath, pageType, currentMeta, pageData, categories);
     }
 
