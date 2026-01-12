@@ -355,16 +355,14 @@ export default function AIImageGenerator() {
                   Unleash your imagination and create with{' '}
                   <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                     VisuStock's image generator!
-                  </span>{' '}
-                  <span className="text-2xl">🚀</span>
+                  </span>
                 </>
               ) : (
               <>
                   Libérez votre imagination et créez avec{' '}
                   <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                     le générateur d'images VisuStock !
-                  </span>{' '}
-                  <span className="text-2xl">🚀</span>
+                  </span>
                 </>
               )}
             </h1>
