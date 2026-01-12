@@ -115,3 +115,9 @@ verify_jwt = true
 
 [functions.seo-apply]
 verify_jwt = true
+
+[functions.static-product]
+verify_jwt = false
+
+[functions.static-category]
+verify_jwt = false

@@ -40,8 +40,9 @@ Deno.serve(async (req) => {
           .eq("status", "approved");
 
         if (count && count > 0) {
+          // Static page is the canonical URL for SEO
           xml += `  <url>
-    <loc>${SITE_URL}/marketplace?category=${cat.id}</loc>
+    <loc>${SITE_URL}/s/categories/${cat.slug}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>

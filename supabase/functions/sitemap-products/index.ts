@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
         const fileType = product.content_files?.[0]?.file_type || "";
         const isVideo = fileType.startsWith("video/");
 
+        // Static page is the canonical URL for SEO
         xml += `  <url>
-    <loc>${SITE_URL}/products/${product.slug}</loc>
+    <loc>${SITE_URL}/s/products/${product.slug}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>`;
