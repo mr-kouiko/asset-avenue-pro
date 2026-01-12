@@ -152,6 +152,71 @@ export function AdminSEOCoPilot() {
     },
   });
 
+  // Bulk optimize mutation
+  const bulkOptimizeMutation = useMutation({
+    mutationFn: async (pagesToOptimize: ScanResult[]) => {
+      const results: { success: boolean; pagePath: string; error?: string }[] = [];
+      
+      for (const page of pagesToOptimize) {
+        try {
+          const { data, error } = await supabase.functions.invoke("seo-optimize", {
+            body: {
+              pagePath: page.pagePath,
+              pageType: page.pageType,
+              pageId: page.pageId,
+              currentMeta: page.currentMeta,
+              issues: page.issues,
+            },
+          });
+
+          if (error) {
+            results.push({ success: false, pagePath: page.pagePath, error: error.message });
+          } else if (data?.optimizations && autoApplyMode) {
+            // Auto-apply the optimizations
+            const { error: applyError } = await supabase.functions.invoke("seo-apply", {
+              body: {
+                pagePath: page.pagePath,
+                pageType: page.pageType,
+                pageId: page.pageId,
+                optimizations: data.optimizations,
+                action: "apply",
+                mode: "full",
+              },
+            });
+            
+            results.push({ 
+              success: !applyError, 
+              pagePath: page.pagePath, 
+              error: applyError?.message 
+            });
+          } else {
+            results.push({ success: true, pagePath: page.pagePath });
+          }
+        } catch (err: any) {
+          results.push({ success: false, pagePath: page.pagePath, error: err.message });
+        }
+      }
+      
+      return results;
+    },
+    onSuccess: (results) => {
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+      
+      if (failed === 0) {
+        toast.success(`Successfully optimized ${successful} pages!`);
+      } else {
+        toast.warning(`Optimized ${successful} pages, ${failed} failed`);
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["user-credits"] });
+      queryClient.invalidateQueries({ queryKey: ["seo-scans"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Bulk optimization failed: ${error.message}`);
+    },
+  });
+
   // Calculate estimated credits
   const getEstimatedCredits = () => {
     if (scope === "single") return 1;
@@ -472,9 +537,29 @@ export function AdminSEOCoPilot() {
                       {scanResults.filter(r => r.issues.some(i => i.severity === 'high')).length} pages need attention
                     </p>
                   </div>
-                  <Button className="ml-auto" disabled={scanResults.length === 0}>
-                    <Zap className="h-4 w-4 mr-2" />
-                    Optimize All ({scanResults.filter(r => r.issues.some(i => i.severity === 'high')).length * 2} credits)
+                  <Button 
+                    className="ml-auto" 
+                    disabled={scanResults.length === 0 || bulkOptimizeMutation.isPending}
+                    onClick={() => {
+                      const highSeverityPages = scanResults.filter(r => r.issues.some(i => i.severity === 'high'));
+                      if (highSeverityPages.length === 0) {
+                        toast.info("No pages with high-severity issues to optimize");
+                        return;
+                      }
+                      bulkOptimizeMutation.mutate(highSeverityPages);
+                    }}
+                  >
+                    {bulkOptimizeMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Optimizing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Optimize All ({scanResults.filter(r => r.issues.some(i => i.severity === 'high')).length * 2} credits)
+                      </>
+                    )}
                   </Button>
                 </div>
 
