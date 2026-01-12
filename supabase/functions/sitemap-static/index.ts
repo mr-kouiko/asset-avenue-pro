@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
   const pages = [
     { url: "/", priority: "1.0", changefreq: "daily" },
     { url: "/marketplace", priority: "0.9", changefreq: "hourly" },
+    { url: "/s/categories", priority: "0.9", changefreq: "daily" }, // Static categories index
     { url: "/en", priority: "1.0", changefreq: "daily" },
     { url: "/about", priority: "0.7", changefreq: "monthly" },
     { url: "/en/about", priority: "0.7", changefreq: "monthly" },
