@@ -306,13 +306,14 @@ const Marketplace = () => {
         {/* Search and Filters Header */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
-            {/* Search Bar with Suggestions */}
+            {/* Search Bar with Suggestions - Category-level search */}
             <div className="flex-1">
               <SearchWithSuggestions
                 items={searchableContent}
                 placeholder={language === 'fr' ? "Rechercher dans la marketplace..." : "Search the marketplace..."}
                 onSearch={setSearchQuery}
                 initialValue={searchQuery}
+                categoryFilter={selectedCategory}
               />
             </div>
 

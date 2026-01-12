@@ -22,6 +22,8 @@ interface SearchWithSuggestionsProps {
   inputClassName?: string;
   variant?: 'default' | 'hero';
   initialValue?: string;
+  /** When set, search will preserve this category in the URL (category-level search) */
+  categoryFilter?: string;
 }
 
 const RECENT_SEARCHES_KEY = 'visustock_recent_searches';
@@ -34,7 +36,8 @@ export function SearchWithSuggestions({
   className,
   inputClassName,
   variant = 'default',
-  initialValue = ''
+  initialValue = '',
+  categoryFilter
 }: SearchWithSuggestionsProps) {
   const [query, setQuery] = useState(initialValue);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -106,8 +109,15 @@ export function SearchWithSuggestions({
     onSearch(trimmed);
     
     // Navigate to marketplace with search param
-    navigate(`/${language}/marketplace?search=${encodeURIComponent(trimmed)}`);
-  }, [saveRecentSearch, onSearch, navigate, language]);
+    // If categoryFilter is provided, preserve it (category-level search)
+    // Otherwise, search across all categories (global search)
+    const searchParams = new URLSearchParams();
+    searchParams.set('search', trimmed);
+    if (categoryFilter && categoryFilter !== 'all') {
+      searchParams.set('category', categoryFilter);
+    }
+    navigate(`/${language}/marketplace?${searchParams.toString()}`);
+  }, [saveRecentSearch, onSearch, navigate, language, categoryFilter]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const allOptions = [...(query.length < 2 ? recentSearches : []), ...suggestions];
