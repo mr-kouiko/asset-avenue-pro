@@ -63,6 +63,12 @@ const App = () => (
                   {/* English Routes - Now at root */}
                   <Route path="/" element={<IndexEN />} />
                   <Route path="/marketplace" element={<Marketplace />} />
+                  {/* SEO-friendly category search routes */}
+                  <Route path="/videos/:searchQuery" element={<Marketplace />} />
+                  <Route path="/photos/:searchQuery" element={<Marketplace />} />
+                  <Route path="/illustrations/:searchQuery" element={<Marketplace />} />
+                  <Route path="/audio/:searchQuery" element={<Marketplace />} />
+                  <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
                   <Route path="/products/:slug" element={<ProductDetail />} />
                   {/* Legacy route for backward compatibility with UUID-based URLs */}
                   <Route path="/product/:id" element={<ProductDetail />} />

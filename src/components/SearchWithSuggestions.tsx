@@ -108,16 +108,27 @@ export function SearchWithSuggestions({
     setIsOpen(false);
     onSearch(trimmed);
     
-    // Navigate to marketplace with search param
-    // If categoryFilter is provided, preserve it (category-level search)
-    // Otherwise, search across all categories (global search)
-    const searchParams = new URLSearchParams();
-    searchParams.set('search', trimmed);
+    // Navigate using SEO-friendly URLs
+    // If categoryFilter is provided, use /{category}/{query} format (category-level search)
+    // Otherwise, search across all categories (global search) with query params
+    const slugifiedQuery = trimmed.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
     if (categoryFilter && categoryFilter !== 'all') {
-      searchParams.set('category', categoryFilter);
+      // Map category to URL path (e.g., 'video' -> 'videos', 'photo' -> 'photos')
+      const categoryPaths: Record<string, string> = {
+        'video': 'videos',
+        'photo': 'photos',
+        'illustration': 'illustrations',
+        'audio': 'audio',
+        'ebook': 'ebooks'
+      };
+      const categoryPath = categoryPaths[categoryFilter] || categoryFilter;
+      navigate(`/${categoryPath}/${slugifiedQuery}`);
+    } else {
+      // Global search uses query params
+      navigate(`/marketplace?search=${encodeURIComponent(trimmed)}`);
     }
-    navigate(`/${language}/marketplace?${searchParams.toString()}`);
-  }, [saveRecentSearch, onSearch, navigate, language, categoryFilter]);
+  }, [saveRecentSearch, onSearch, navigate, categoryFilter]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const allOptions = [...(query.length < 2 ? recentSearches : []), ...suggestions];
