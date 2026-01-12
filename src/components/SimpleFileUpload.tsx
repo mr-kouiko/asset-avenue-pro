@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Upload, X, FileText, Image, Film, Music, AlertCircle, Check, Sparkles, Loader2 } from "lucide-react";
+import { Upload, X, FileText, Image, Film, Music, AlertCircle, Check, Sparkles, Loader2, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -9,12 +9,13 @@ import { toast } from "sonner";
 import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
+import { useIllustrationDetection } from "@/hooks/useIllustrationDetection";
 
 interface UploadFile {
   id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'detecting-ai' | 'completed' | 'error';
+  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'detecting-ai' | 'detecting-category' | 'completed' | 'error';
   url?: string;
   error?: string;
   isWatermarked?: boolean;
@@ -22,6 +23,7 @@ interface UploadFile {
   aiConfidence?: number;
   estimatedTimeRemaining?: number; // in seconds
   fileHash?: string;
+  detectedCategory?: 'photo' | 'illustration' | 'video' | 'audio' | 'ebook';
 }
 
 interface SimpleFileUploadProps {
@@ -35,6 +37,7 @@ interface SimpleFileUploadProps {
     thumbnailUrl?: string;
     previewUrl?: string;
     isAiGenerated?: boolean;
+    detectedCategory?: 'photo' | 'illustration' | 'video' | 'audio' | 'ebook';
   }[]) => void;
   maxFiles?: number;
   maxFileSize?: number; // in MB
@@ -51,6 +54,7 @@ export const SimpleFileUpload = ({
   const { processFiles, isProcessing } = useAutomaticWatermark();
   const { detectImage } = useAIImageDetection();
   const { detectVideo } = useAIVideoDetection();
+  const { detectIllustration } = useIllustrationDetection();
 
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
@@ -265,6 +269,7 @@ export const SimpleFileUpload = ({
       const detectedMimeType = detectMimeType(uploadFileData.file);
       const isImage = detectedMimeType.startsWith('image/');
       const isVideo = detectedMimeType.startsWith('video/');
+      const isAudio = detectedMimeType.startsWith('audio/');
       const isPDF = detectedMimeType === 'application/pdf';
       
       // AUTOMATIC AI DETECTION - Only for images and videos
@@ -328,7 +333,48 @@ export const SimpleFileUpload = ({
         }
       }
 
-      // Update file as completed with AI detection result
+      // AUTOMATIC CATEGORY DETECTION - Detect illustration vs photo for images
+      let detectedCategory: 'photo' | 'illustration' | 'video' | 'audio' | 'ebook' | undefined;
+      
+      if (isVideo) {
+        detectedCategory = 'video';
+      } else if (isAudio) {
+        detectedCategory = 'audio';
+      } else if (isPDF) {
+        detectedCategory = 'ebook';
+      } else if (isImage) {
+        // Update status to detecting category
+        setFiles(prev => prev.map(f => 
+          f.id === uploadFileData.id ? { ...f, status: 'detecting-category', progress: 100 } : f
+        ));
+        
+        try {
+          const urlToAnalyze = processedFile.watermarkedUrl || processedFile.thumbnailUrl;
+          if (urlToAnalyze) {
+            console.log(`🎨 [CATEGORY-DETECTION] Analyzing image: ${uploadFileData.file.name}`);
+            const result = await detectIllustration(urlToAnalyze, uploadFileData.file.name);
+            
+            if (result) {
+              detectedCategory = result.isIllustration ? 'illustration' : 'photo';
+              console.log(`🎨 [CATEGORY-DETECTION] Result: ${detectedCategory} (confidence: ${result.confidence.toFixed(2)})`);
+              
+              if (result.isIllustration) {
+                toast.info(`🎨 Illustration detected: ${uploadFileData.file.name} (${Math.round(result.confidence * 100)}% confidence)`);
+              }
+            } else {
+              // Default to photo if detection fails
+              detectedCategory = 'photo';
+            }
+          } else {
+            detectedCategory = 'photo';
+          }
+        } catch (categoryError) {
+          console.error('🎨 [CATEGORY-DETECTION] Error:', categoryError);
+          detectedCategory = 'photo'; // Default to photo on error
+        }
+      }
+
+      // Update file as completed with AI detection and category result
       setFiles(prev => prev.map(f => 
         f.id === uploadFileData.id ? { 
           ...f, 
@@ -337,7 +383,8 @@ export const SimpleFileUpload = ({
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
           isWatermarked: !!processedFile.watermarkedUrl,
           isAiGenerated,
-          aiConfidence
+          aiConfidence,
+          detectedCategory
         } : f
       ));
 
@@ -345,9 +392,10 @@ export const SimpleFileUpload = ({
       const fileSizeMB = uploadFileData.file.size / (1024 * 1024);
       const storageLocation = fileSizeMB >= 100 ? 'R2 Cloudflare' : 'Supabase Storage';
       const aiLabel = isAiGenerated ? ' 🤖 IA' : '';
-      toast.success(`✅ ${uploadFileData.file.name}${aiLabel} - Stocké dans ${storageLocation}`);
+      const categoryLabel = detectedCategory === 'illustration' ? ' 🎨' : '';
+      toast.success(`✅ ${uploadFileData.file.name}${aiLabel}${categoryLabel} - Stocké dans ${storageLocation}`);
 
-      // Notify parent component with correct file type and AI detection result
+      // Notify parent component with correct file type, AI detection, and category result
       if (onFilesUploaded) {
         onFilesUploaded([{
           id: uploadFileData.id,
@@ -359,7 +407,8 @@ export const SimpleFileUpload = ({
           // For videos and PDFs: use thumbnail, for images: use preview as thumbnail
           thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
           previewUrl: processedFile.previewUrl,
-          isAiGenerated // AUTOMATIC - no user choice
+          isAiGenerated, // AUTOMATIC - no user choice
+          detectedCategory // AUTOMATIC - based on image analysis
         }]);
       }
 
@@ -559,13 +608,22 @@ export const SimpleFileUpload = ({
                     </div>
                   )}
                   
+                  {file.status === 'detecting-category' && (
+                    <div className="mt-2 flex items-center space-x-2">
+                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      <p className="text-xs text-muted-foreground">
+                        🎨 Détection catégorie en cours...
+                      </p>
+                    </div>
+                  )}
+                  
                   {file.error && (
                     <p className="text-xs text-destructive mt-1">{file.error}</p>
                   )}
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {file.status === 'detecting-ai' && (
+                  {(file.status === 'detecting-ai' || file.status === 'detecting-category') && (
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   )}
                   {file.status === 'completed' && (
@@ -575,6 +633,12 @@ export const SimpleFileUpload = ({
                         <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
                           <Sparkles className="h-3 w-3 mr-1" />
                           IA
+                        </Badge>
+                      )}
+                      {file.detectedCategory === 'illustration' && (
+                        <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-300">
+                          <Palette className="h-3 w-3 mr-1" />
+                          Illustration
                         </Badge>
                       )}
                       {file.isWatermarked && (
