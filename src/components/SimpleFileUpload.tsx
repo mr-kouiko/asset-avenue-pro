@@ -226,11 +226,11 @@ export const SimpleFileUpload = ({
           f.id === uploadFileData.id ? { 
             ...f, 
             status: 'error', 
-            error: `Doublon détecté: Ce fichier existe déjà${fileName ? ` (${fileName})` : ''}`,
+            error: `Duplicate detected: This file already exists${fileName ? ` (${fileName})` : ''}`,
             fileHash
           } : f
         ));
-        toast.error(`🚫 Doublon rejeté: ${uploadFileData.file.name}`);
+        toast.error(`🚫 Duplicate rejected: ${uploadFileData.file.name}`);
         return;
       }
 
@@ -320,7 +320,7 @@ export const SimpleFileUpload = ({
           }
           
           if (isAiGenerated) {
-            toast.info(`🤖 Contenu IA détecté: ${uploadFileData.file.name} (${Math.round(aiConfidence * 100)}% confiance)`);
+            toast.info(`🤖 AI content detected: ${uploadFileData.file.name} (${Math.round(aiConfidence * 100)}% confidence)`);
           }
         } catch (aiError) {
           console.error('🤖 [AI-DETECTION] Error:', aiError);
