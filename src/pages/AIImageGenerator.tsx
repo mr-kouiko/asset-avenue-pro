@@ -328,22 +328,22 @@ export default function AIImageGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
       <Header />
       
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Hero Header Section */}
-        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-purple-500/10 border border-emerald-500/20">
+        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20">
           {/* Animated background effects */}
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
             <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
           </div>
           
           <div className="relative p-8 md:p-12">
             <div className="flex items-center gap-2 mb-6">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider border border-emerald-500/30">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider border border-blue-500/30">
                 <Sparkles className="w-3 h-3" />
                 New
               </span>
@@ -351,17 +351,17 @@ export default function AIImageGenerator() {
             
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
               {language === 'en' ? (
-                <>
+              <>
                   Unleash your imagination and create with{' '}
-                  <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                     VisuStock's image generator!
                   </span>{' '}
                   <span className="text-2xl">🚀</span>
                 </>
               ) : (
-                <>
+              <>
                   Libérez votre imagination et créez avec{' '}
-                  <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                     le générateur d'images VisuStock !
                   </span>{' '}
                   <span className="text-2xl">🚀</span>
@@ -377,10 +377,10 @@ export default function AIImageGenerator() {
         </div>
 
         {/* Main Generator Section */}
-        <div className="relative mb-12 rounded-3xl bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/80 border border-slate-700/50 backdrop-blur-xl overflow-hidden">
+        <div className="relative mb-12 rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-950/20 to-slate-900/80 border border-blue-500/20 backdrop-blur-xl overflow-hidden">
           {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-bl-full" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-tr-full" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-full" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-indigo-500/20 to-transparent rounded-tr-full" />
           
           <div className="relative p-6 md:p-8">
             {/* Credits and status bar */}
@@ -391,14 +391,14 @@ export default function AIImageGenerator() {
               <div className="flex items-center gap-4">
                 {user && creditsBalance !== null && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className={creditsBalance > 0 ? "text-emerald-400" : "text-red-400"}>
+                    <span className={creditsBalance > 0 ? "text-blue-400" : "text-red-400"}>
                       {t.freeEditsAvailable(creditsBalance)}
                     </span>
                     <Button
                       variant="link"
                       size="sm"
                       onClick={() => navigate('/buy-credits')}
-                      className="text-emerald-400 hover:text-emerald-300 p-0 h-auto"
+                      className="text-blue-400 hover:text-blue-300 p-0 h-auto"
                     >
                       {t.buyCredits}
                     </Button>
@@ -414,7 +414,7 @@ export default function AIImageGenerator() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={t.promptPlaceholder}
-                className="min-h-[120px] resize-none text-base bg-slate-800/50 border-slate-600/50 text-white placeholder:text-slate-500 rounded-2xl focus:border-emerald-500/50 focus:ring-emerald-500/20"
+                className="min-h-[120px] resize-none text-base bg-slate-800/50 border-slate-600/50 text-white placeholder:text-slate-500 rounded-2xl focus:border-blue-500/50 focus:ring-blue-500/20"
                 disabled={isGenerating}
               />
             </div>
@@ -424,7 +424,7 @@ export default function AIImageGenerator() {
               <Button
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded'}
-                className="h-14 px-8 text-base font-bold rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-emerald-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-14 px-8 text-base font-bold rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-blue-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                 size="lg"
               >
                 {isGenerating ? (
@@ -470,9 +470,9 @@ export default function AIImageGenerator() {
 
         {/* Generated Image Preview */}
         {generatedImage && (
-          <div className="mb-12 rounded-3xl bg-gradient-to-br from-slate-900/80 to-slate-900/60 border border-slate-700/50 p-6 md:p-8">
+          <div className="mb-12 rounded-3xl bg-gradient-to-br from-slate-900/80 to-slate-900/60 border border-blue-500/20 p-6 md:p-8">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-emerald-400" />
+              <ImageIcon className="w-5 h-5 text-blue-400" />
               {t.imagePreview}
             </h3>
             <div className="relative rounded-2xl overflow-hidden bg-slate-800/50">
@@ -485,7 +485,7 @@ export default function AIImageGenerator() {
             <div className="mt-6 flex justify-center">
               <Button
                 variant="outline"
-                className="h-12 px-6 rounded-xl border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                className="h-12 px-6 rounded-xl border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
                 onClick={() => {
                   const link = document.createElement('a');
                   link.href = generatedImage;
@@ -501,9 +501,9 @@ export default function AIImageGenerator() {
         )}
 
         {/* Example Prompts Section */}
-        <div className="mb-12 rounded-3xl bg-gradient-to-br from-slate-900/80 to-slate-900/60 border border-slate-700/50 p-6 md:p-8">
+        <div className="mb-12 rounded-3xl bg-gradient-to-br from-slate-900/80 to-slate-900/60 border border-indigo-500/20 p-6 md:p-8">
           <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-400" />
+            <Sparkles className="w-5 h-5 text-indigo-400" />
             {t.suggestions}
           </h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -512,10 +512,10 @@ export default function AIImageGenerator() {
                 key={index}
                 onClick={() => setPrompt(example)}
                 disabled={isGenerating}
-                className="group text-left p-4 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/30 hover:border-purple-500/50 transition-all duration-300 text-sm text-slate-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group text-left p-4 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/30 hover:border-blue-500/50 transition-all duration-300 text-sm text-slate-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="line-clamp-2">{example}</span>
-                <ArrowRight className="w-4 h-4 mt-2 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight className="w-4 h-4 mt-2 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             ))}
           </div>
@@ -531,8 +531,8 @@ export default function AIImageGenerator() {
             
             <div className="space-y-4">
               {/* Step 1 */}
-              <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+              <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-500/10 to-transparent border border-blue-500/20 hover:border-blue-500/40 transition-colors">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm">
                   1
                 </div>
                 <div>
@@ -542,8 +542,8 @@ export default function AIImageGenerator() {
               </div>
               
               {/* Step 2 */}
-              <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-transparent border border-cyan-500/20 hover:border-cyan-500/40 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-sm">
+              <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-indigo-500/10 to-transparent border border-indigo-500/20 hover:border-indigo-500/40 transition-colors">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm">
                   2
                 </div>
                 <div>
@@ -566,7 +566,7 @@ export default function AIImageGenerator() {
             
             <Button
               onClick={() => document.getElementById('prompt')?.focus()}
-              className="mt-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
+              className="mt-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20"
             >
               <Wand2 className="w-4 h-4 mr-2" />
               {t.generateWithAI}
@@ -576,7 +576,7 @@ export default function AIImageGenerator() {
           {/* Right - Hero Image */}
           <div className="relative">
             {/* Floating decorative elements */}
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-2xl opacity-20 blur-sm animate-pulse" />
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-2xl opacity-20 blur-sm animate-pulse" />
             <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl opacity-20 blur-sm animate-pulse delay-500" />
             
             <div className="relative rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-purple-500/10">
@@ -587,13 +587,13 @@ export default function AIImageGenerator() {
               />
               {/* Floating badge */}
               <div className="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
               </div>
               {/* Decorative corner accent */}
               <div className="absolute -top-2 -right-2 w-12 h-12">
-                <svg viewBox="0 0 100 100" className="w-full h-full text-emerald-400">
+                <svg viewBox="0 0 100 100" className="w-full h-full text-blue-400">
                   <path d="M0 100 L100 100 L100 0" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                 </svg>
               </div>
@@ -602,10 +602,10 @@ export default function AIImageGenerator() {
         </div>
 
         {/* Features Section */}
-        <div className="rounded-3xl bg-gradient-to-r from-emerald-500/5 via-cyan-500/5 to-purple-500/5 border border-slate-700/50 p-8">
+        <div className="rounded-3xl bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 border border-blue-500/20 p-8">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div className="space-y-3 group">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
                 <Zap className="w-8 h-8" />
               </div>
               <h4 className="font-semibold text-white">{t.creditsUnique}</h4>
@@ -614,7 +614,7 @@ export default function AIImageGenerator() {
               </p>
             </div>
             <div className="space-y-3 group">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/5 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
                 <Palette className="w-8 h-8" />
               </div>
               <h4 className="font-semibold text-white">{t.unlimited}</h4>
