@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { SlidersHorizontal, ChevronDown, Video, Camera } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useParams, useLocation } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
@@ -130,6 +130,40 @@ const Marketplace = () => {
     });
   };
 
+  // Get route params for SEO-friendly URLs (e.g., /videos/dubai)
+  const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
+  const location = useLocation();
+  
+  // Map URL path to category
+  useEffect(() => {
+    const path = location.pathname;
+    
+    // Check for SEO-friendly category routes
+    const categoryPathMap: Record<string, string> = {
+      '/videos': 'video',
+      '/photos': 'photo',
+      '/illustrations': 'illustration',
+      '/audio': 'audio',
+      '/ebooks': 'ebook'
+    };
+    
+    // Find matching category from path
+    for (const [urlPath, category] of Object.entries(categoryPathMap)) {
+      if (path.startsWith(urlPath)) {
+        setSelectedCategory(category);
+        break;
+      }
+    }
+    
+    // Extract search query from route param (e.g., /videos/dubai -> "dubai")
+    if (routeSearchQuery) {
+      // Convert slug back to search query (e.g., "new-york" -> "new york")
+      const decodedQuery = routeSearchQuery.replace(/-/g, ' ');
+      setSearchQuery(decodedQuery);
+    }
+  }, [location.pathname, routeSearchQuery]);
+
+  // Also handle traditional query params for backward compatibility
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     const searchParam = searchParams.get('search');
