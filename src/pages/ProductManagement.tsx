@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Palette } from "lucide-react";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
+import { useIllustrationDetection } from "@/hooks/useIllustrationDetection";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -57,6 +58,7 @@ const ProductManagement = () => {
   } = useProductManager();
   const { detectImage, isDetecting: isDetectingImage } = useAIImageDetection();
   const { detectVideo, isDetecting: isDetectingVideo } = useAIVideoDetection();
+  const { detectIllustration, isDetecting: isDetectingCategory } = useIllustrationDetection();
   
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
@@ -66,6 +68,7 @@ const ProductManagement = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [isRecategorizingId, setIsRecategorizingId] = useState<string | null>(null);
   const hasInitializedRef = useRef(false);
   
   useEffect(() => {
@@ -359,6 +362,67 @@ const ProductManagement = () => {
       toast.error('Failed to re-analyze content');
     } finally {
       setIsReanalyzing(false);
+    }
+  };
+
+  // Re-detect illustration category based on title, description, and tags
+  const handleRecategorize = async (fileId: string) => {
+    const file = uploadedFiles.find(f => f.id === fileId);
+    const productData = productsData[fileId];
+    if (!file || !productData) return;
+
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      toast.error('Category re-detection only works for images');
+      return;
+    }
+
+    setIsRecategorizingId(fileId);
+    toast.info('Re-analyzing content type based on title and tags...');
+
+    try {
+      const result = await detectIllustration(file.url, {
+        fileName: file.name,
+        title: productData.title,
+        description: productData.description,
+        tags: productData.tags
+      });
+
+      if (result) {
+        const newCategory = result.isIllustration ? 'illustration' : 'photo';
+        
+        // Update file's detected category
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileId ? { ...f, detectedCategory: newCategory } : f
+        ));
+
+        // Find the matching category in the database
+        const matchingCat = categories.find(cat => 
+          cat.name.toLowerCase().includes(newCategory)
+        );
+        
+        if (matchingCat) {
+          updateProductData(fileId, { category: matchingCat.id });
+        }
+
+        // Update sessionStorage
+        const updatedFiles = uploadedFiles.map(f => 
+          f.id === fileId ? { ...f, detectedCategory: newCategory } : f
+        );
+        sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
+
+        if (result.isIllustration) {
+          toast.success(`🎨 Detected as Illustration (${Math.round(result.confidence * 100)}% confidence)`);
+          console.log('🎨 [RECATEGORIZE] Indicators:', result.indicators);
+        } else {
+          toast.success(`📷 Detected as Photo (${Math.round((1 - result.confidence) * 100)}% confidence)`);
+        }
+      }
+    } catch (error) {
+      console.error('Recategorize error:', error);
+      toast.error('Failed to re-detect category');
+    } finally {
+      setIsRecategorizingId(null);
     }
   };
 

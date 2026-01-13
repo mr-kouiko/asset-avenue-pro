@@ -6,44 +6,121 @@ interface IllustrationDetectionResult {
   indicators: string[];
 }
 
+interface DetectionOptions {
+  fileName?: string;
+  title?: string;
+  description?: string;
+  tags?: string[];
+}
+
+// Keywords that strongly indicate illustration/artwork content
+const ILLUSTRATION_KEYWORDS = [
+  // Style keywords
+  'illustration', 'illust', 'drawing', 'artwork', 'art-', 
+  'vector', 'design', 'cartoon', 'comic', 'icon', 'logo',
+  'graphic', 'sketch', 'digital-art', 'digitalart', 'painted',
+  'paint', 'anime', 'manga', 'clipart', 'hand-drawn', 'handdrawn',
+  // Artistic style keywords (pop art, etc.)
+  'pop art', 'popart', 'pop-art', 'retro', 'stylized', 'artistic',
+  'abstract', 'surreal', 'fantasy', 'watercolor', 'oil painting',
+  'acrylic', 'pastel', 'charcoal', 'pencil drawing', 'ink drawing',
+  'graffiti', 'street art', 'concept art', 'character design',
+  'storyboard', 'comic style', 'comic book', 'graphic novel',
+  'minimalist', 'flat design', 'isometric', 'low poly', '3d render',
+  'cgi', 'digital painting', 'matte painting', 'pixel art', 'voxel',
+  'bold graphics', 'bold colors', 'vibrant colors', 'neon', 
+  'geometric', 'psychedelic', 'trippy', 'kaleidoscope',
+  'art deco', 'art nouveau', 'bauhaus', 'cubism', 'impressionist',
+  'expressionist', 'modernist', 'contemporary art', 'fine art',
+  // Animation/motion graphics keywords
+  'animation', 'animated', 'motion graphics', 'motion design',
+  // Vector/graphic specific
+  'vector style', 'vector art', 'svg', 'eps', 'ai file',
+  'infographic', 'diagram', 'chart design', 'icon set',
+  // Character/creature art
+  'character art', 'creature design', 'monster design', 'mascot',
+  'avatar', 'portrait illustration', 'caricature'
+];
+
+// Check if text contains illustration keywords
+const checkTextForIllustrationKeywords = (text: string): { found: string[]; score: number } => {
+  const lowerText = text.toLowerCase();
+  const found: string[] = [];
+  
+  for (const keyword of ILLUSTRATION_KEYWORDS) {
+    if (lowerText.includes(keyword)) {
+      found.push(keyword);
+    }
+  }
+  
+  // Score based on number of keywords found (diminishing returns)
+  const score = found.length > 0 ? Math.min(0.6, 0.25 + (found.length - 1) * 0.1) : 0;
+  
+  return { found, score };
+};
+
 export const useIllustrationDetection = () => {
   const [isDetecting, setIsDetecting] = useState(false);
 
   /**
    * Analyzes an image to determine if it's an illustration vs a photograph.
    * Uses multiple heuristics:
-   * 1. Color distribution - illustrations typically have fewer unique colors
-   * 2. Edge characteristics - illustrations have cleaner, sharper edges
-   * 3. Color gradients - photos have smoother gradients, illustrations have flat colors
-   * 4. File metadata hints from name
+   * 1. Title/description/tags keyword analysis (strongest indicator)
+   * 2. Filename keyword hints
+   * 3. Color distribution - illustrations typically have fewer unique colors
+   * 4. Edge characteristics - illustrations have cleaner, sharper edges
+   * 5. Color gradients - photos have smoother gradients, illustrations have flat colors
    */
   const detectIllustration = useCallback(async (
     imageUrl: string, 
-    fileName?: string
+    fileNameOrOptions?: string | DetectionOptions
   ): Promise<IllustrationDetectionResult | null> => {
     setIsDetecting(true);
+    
+    // Normalize options
+    const options: DetectionOptions = typeof fileNameOrOptions === 'string' 
+      ? { fileName: fileNameOrOptions }
+      : fileNameOrOptions || {};
     
     try {
       const indicators: string[] = [];
       let score = 0;
       
-      // Heuristic 1: Check filename for illustration hints
-      if (fileName) {
-        const lowerName = fileName.toLowerCase();
-        const illustrationKeywords = [
-          'illustration', 'illust', 'drawing', 'artwork', 'art-', 
-          'vector', 'design', 'cartoon', 'comic', 'icon', 'logo',
-          'graphic', 'sketch', 'digital-art', 'digitalart', 'painted',
-          'paint', 'anime', 'manga', 'clipart', 'hand-drawn', 'handdrawn'
-        ];
-        
-        for (const keyword of illustrationKeywords) {
-          if (lowerName.includes(keyword)) {
-            score += 0.3;
-            indicators.push(`Filename contains "${keyword}"`);
-            break;
-          }
+      // Heuristic 1: Check title for illustration keywords (HIGH PRIORITY)
+      if (options.title) {
+        const titleCheck = checkTextForIllustrationKeywords(options.title);
+        if (titleCheck.found.length > 0) {
+          score += titleCheck.score;
+          indicators.push(`Title contains: ${titleCheck.found.slice(0, 3).join(', ')}`);
+          console.log(`🎨 [ILLUSTRATION-DETECTION] Title keywords found: ${titleCheck.found.join(', ')}`);
         }
+      }
+      
+      // Heuristic 2: Check description for illustration keywords
+      if (options.description) {
+        const descCheck = checkTextForIllustrationKeywords(options.description);
+        if (descCheck.found.length > 0) {
+          score += descCheck.score * 0.8; // Slightly less weight than title
+          indicators.push(`Description contains: ${descCheck.found.slice(0, 3).join(', ')}`);
+          console.log(`🎨 [ILLUSTRATION-DETECTION] Description keywords found: ${descCheck.found.join(', ')}`);
+        }
+      }
+      
+      // Heuristic 3: Check tags for illustration keywords (HIGHEST PRIORITY for tags)
+      if (options.tags && options.tags.length > 0) {
+        const tagsText = options.tags.join(' ');
+        const tagsCheck = checkTextForIllustrationKeywords(tagsText);
+        if (tagsCheck.found.length > 0) {
+          // Tags are very reliable - if user tagged it with art styles, trust them
+          score += Math.min(0.7, tagsCheck.score * 1.2);
+          indicators.push(`Tags contain: ${tagsCheck.found.slice(0, 4).join(', ')}`);
+          console.log(`🎨 [ILLUSTRATION-DETECTION] Tag keywords found: ${tagsCheck.found.join(', ')}`);
+        }
+      }
+      
+      // Heuristic 4: Check filename for illustration hints
+      if (options.fileName) {
+        const lowerName = options.fileName.toLowerCase();
         
         // SVG files are always illustrations
         if (lowerName.endsWith('.svg')) {
@@ -54,48 +131,65 @@ export const useIllustrationDetection = () => {
             indicators: ['SVG format detected - vector illustration']
           };
         }
+        
+        const fileCheck = checkTextForIllustrationKeywords(lowerName);
+        if (fileCheck.found.length > 0) {
+          score += 0.3;
+          indicators.push(`Filename contains "${fileCheck.found[0]}"`);
+        }
       }
       
-      // Heuristic 2: Analyze image pixels
-      const imageAnalysis = await analyzeImageCharacteristics(imageUrl);
-      
-      if (imageAnalysis) {
-        // Low unique color ratio suggests illustration (flat colors)
-        if (imageAnalysis.uniqueColorRatio < 0.15) {
-          score += 0.25;
-          indicators.push('Limited color palette (flat colors)');
-        }
+      // Heuristic 5: Analyze image pixels (only if we don't have strong text signals)
+      // Skip expensive pixel analysis if we already have high confidence from metadata
+      if (score < 0.5) {
+        const imageAnalysis = await analyzeImageCharacteristics(imageUrl);
         
-        // High edge contrast suggests illustration (sharp lines)
-        if (imageAnalysis.edgeSharpness > 0.7) {
-          score += 0.2;
-          indicators.push('Sharp, clean edges detected');
+        if (imageAnalysis) {
+          // Low unique color ratio suggests illustration (flat colors)
+          if (imageAnalysis.uniqueColorRatio < 0.15) {
+            score += 0.25;
+            indicators.push('Limited color palette (flat colors)');
+          }
+          
+          // High edge contrast suggests illustration (sharp lines)
+          if (imageAnalysis.edgeSharpness > 0.7) {
+            score += 0.2;
+            indicators.push('Sharp, clean edges detected');
+          }
+          
+          // Low color variance in regions suggests illustration (solid fills)
+          if (imageAnalysis.colorVariance < 20) {
+            score += 0.2;
+            indicators.push('Solid color regions detected');
+          }
+          
+          // High saturation uniformity suggests illustration
+          if (imageAnalysis.saturationUniformity > 0.6) {
+            score += 0.15;
+            indicators.push('Uniform saturation levels');
+          }
+          
+          // Check for transparency (common in illustrations)
+          if (imageAnalysis.hasTransparency) {
+            score += 0.2;
+            indicators.push('Image has transparency');
+          }
+          
+          // NEW: High saturation with high edge sharpness often indicates digital art
+          if (imageAnalysis.edgeSharpness > 0.5 && imageAnalysis.saturationUniformity > 0.4) {
+            score += 0.1;
+            indicators.push('Digital art characteristics detected');
+          }
         }
-        
-        // Low color variance in regions suggests illustration (solid fills)
-        if (imageAnalysis.colorVariance < 20) {
-          score += 0.2;
-          indicators.push('Solid color regions detected');
-        }
-        
-        // High saturation uniformity suggests illustration
-        if (imageAnalysis.saturationUniformity > 0.6) {
-          score += 0.15;
-          indicators.push('Uniform saturation levels');
-        }
-        
-        // Check for transparency (common in illustrations)
-        if (imageAnalysis.hasTransparency) {
-          score += 0.2;
-          indicators.push('Image has transparency');
-        }
+      } else {
+        indicators.push('High confidence from metadata - pixel analysis skipped');
       }
       
       // Clamp score to 0-1 range
       const confidence = Math.min(1, Math.max(0, score));
       const isIllustration = confidence >= 0.4;
       
-      console.log(`🎨 [ILLUSTRATION-DETECTION] File: ${fileName}, Score: ${confidence.toFixed(2)}, Is Illustration: ${isIllustration}`);
+      console.log(`🎨 [ILLUSTRATION-DETECTION] File: ${options.fileName}, Score: ${confidence.toFixed(2)}, Is Illustration: ${isIllustration}`);
       console.log(`🎨 [ILLUSTRATION-DETECTION] Indicators:`, indicators);
       
       setIsDetecting(false);
