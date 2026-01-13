@@ -228,44 +228,6 @@ const InfinityEN = () => {
         </div>
       </section>
 
-      {/* Content Library Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container">
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                Unlimited access to a creative library
-              </h2>
-              <h3 className="text-xl text-muted-foreground mb-8">
-                Explore the VisuStock Infinity library
-              </h3>
-              
-              <div className="flex justify-center gap-4 mb-8">
-                <Button variant="default" className="bg-blue-600 hover:bg-blue-700">
-                  All items
-                </Button>
-                <Button variant="outline">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Photos
-                </Button>
-                <Button variant="outline">
-                  <Image className="w-4 h-4 mr-2" />
-                  Vectors
-                </Button>
-              </div>
-            </div>
-
-
-            {/* Sample grid placeholder */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Final CTA Section */}
       <section className="py-20 bg-gradient-to-r from-green-600 to-teal-600 text-white">
         <div className="container text-center">
