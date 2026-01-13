@@ -31,7 +31,7 @@ interface BlogArticle {
 const blogArticles: BlogArticle[] = [
   {
     id: "1",
-    slug: "mastering-stock-photography-2024",
+    slug: "stock-photography-tips-composition-lighting-guide-2024",
     title: "Mastering Stock Photography in 2024: A Complete Guide for Creators",
     excerpt: "Learn the essential techniques and strategies to create compelling stock images that sell. From composition to lighting, we cover everything you need to know.",
     content: "",
@@ -47,7 +47,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "2",
-    slug: "video-content-trends-driving-sales",
+    slug: "stock-video-trends-4k-drone-footage-vertical-content",
     title: "Video Content Trends Driving Sales in the Stock Market",
     excerpt: "Discover the hottest video trends that buyers are searching for. Stay ahead of the curve and maximize your earnings with trending content.",
     content: "",
@@ -63,7 +63,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "3",
-    slug: "ai-in-creative-industry",
+    slug: "ai-creative-tools-generative-art-future-content-creation",
     title: "How AI is Transforming the Creative Industry: Opportunities & Challenges",
     excerpt: "Explore the impact of artificial intelligence on stock content creation. Learn how to leverage AI tools while maintaining authenticity.",
     content: "",
@@ -79,7 +79,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "4",
-    slug: "color-psychology-visual-content",
+    slug: "color-psychology-marketing-visual-design-branding",
     title: "Color Psychology in Visual Content: Creating Emotional Connections",
     excerpt: "Understand how color choices influence buyer decisions and learn to create visually compelling content that resonates emotionally.",
     content: "",
@@ -95,7 +95,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "5",
-    slug: "building-passive-income-stock-content",
+    slug: "passive-income-stock-photography-success-stories-earnings",
     title: "Building Passive Income Through Stock Content: Success Stories",
     excerpt: "Real stories from creators who turned their passion into profitable careers. Learn from their journeys and apply their strategies.",
     content: "",
@@ -111,7 +111,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "6",
-    slug: "audio-content-revolution",
+    slug: "stock-audio-music-sound-effects-podcast-production",
     title: "The Audio Content Revolution: Why Sound Design Matters More Than Ever",
     excerpt: "From podcasts to video production, audio content demand is soaring. Learn how to create professional audio that sells.",
     content: "",
@@ -127,7 +127,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "7",
-    slug: "sustainable-creative-workflow",
+    slug: "creative-workflow-productivity-burnout-prevention-tips",
     title: "Creating a Sustainable Creative Workflow: Avoiding Burnout",
     excerpt: "Maintain your creative momentum without burning out. Practical tips for managing your time and energy as a content creator.",
     content: "",
@@ -143,7 +143,7 @@ const blogArticles: BlogArticle[] = [
   },
   {
     id: "8",
-    slug: "licensing-101-protect-your-work",
+    slug: "stock-content-licensing-copyright-royalty-free-guide",
     title: "Licensing 101: Understanding and Protecting Your Creative Work",
     excerpt: "Navigate the complex world of content licensing with confidence. Know your rights and maximize the value of your creations.",
     content: "",
