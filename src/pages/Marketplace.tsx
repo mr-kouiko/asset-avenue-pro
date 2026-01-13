@@ -367,9 +367,9 @@ const Marketplace = () => {
               />
             </div>
 
-            {/* Filters - hide category dropdown when in video or photo section */}
+            {/* Filters - hide category dropdown when in video, photo or audio section */}
             <div className="flex gap-3">
-              {!isVideoSection && !isPhotoSection && (
+              {!isVideoSection && !isPhotoSection && !isAudioSection && (
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Catégorie" />
