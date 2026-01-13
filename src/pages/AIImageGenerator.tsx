@@ -523,10 +523,8 @@ export default function AIImageGenerator() {
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Left - Steps */}
           <div className="space-y-6">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                {t.heroTitle}
-              </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white underline decoration-primary/40 decoration-4 underline-offset-4">
+              {t.heroTitle}
             </h2>
             
             <div className="space-y-4">
@@ -536,8 +534,8 @@ export default function AIImageGenerator() {
                   1
                 </div>
                 <div>
-                  <h4 className="font-semibold text-blue-300 mb-1">{t.heroStep1Title}</h4>
-                  <p className="text-sm text-slate-300">{t.heroStep1Desc}</p>
+                  <h4 className="font-semibold text-white mb-1">{t.heroStep1Title}</h4>
+                  <p className="text-sm text-slate-200">{t.heroStep1Desc}</p>
                 </div>
               </div>
               
@@ -547,8 +545,8 @@ export default function AIImageGenerator() {
                   2
                 </div>
                 <div>
-                  <h4 className="font-semibold text-indigo-300 mb-1">{t.heroStep2Title}</h4>
-                  <p className="text-sm text-slate-300">{t.heroStep2Desc}</p>
+                  <h4 className="font-semibold text-white mb-1">{t.heroStep2Title}</h4>
+                  <p className="text-sm text-slate-200">{t.heroStep2Desc}</p>
                 </div>
               </div>
               
@@ -558,8 +556,8 @@ export default function AIImageGenerator() {
                   3
                 </div>
                 <div>
-                  <h4 className="font-semibold text-purple-300 mb-1">{t.heroStep3Title}</h4>
-                  <p className="text-sm text-slate-300">{t.heroStep3Desc}</p>
+                  <h4 className="font-semibold text-white mb-1">{t.heroStep3Title}</h4>
+                  <p className="text-sm text-slate-200">{t.heroStep3Desc}</p>
                 </div>
               </div>
             </div>
