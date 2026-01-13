@@ -598,7 +598,7 @@ const Marketplace = () => {
           <div className="flex justify-center items-center py-16">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-stock-blue/30 border-t-stock-blue rounded-full animate-spin mx-auto mb-4" />
-              <div className="text-stock-dark/60 font-medium">Chargement des contenus...</div>
+              <div className="text-stock-dark/60 font-medium">Loading content...</div>
             </div>
           </div>
         ) : sortedContent.length === 0 ? (
