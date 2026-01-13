@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/Header';
-import { CheckCircle, Loader2, XCircle, CreditCard, Sparkles } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, Infinity, Sparkles } from 'lucide-react';
 import { usePayPalSubscription, SUBSCRIPTION_PLANS } from '@/hooks/usePayPalSubscription';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -12,40 +12,36 @@ const SubscriptionSuccess = () => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const { activateSubscription } = usePayPalSubscription();
+  const activationAttempted = useRef(false);
   
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [creditsAdded, setCreditsAdded] = useState(0);
-  const [planType, setPlanType] = useState('');
+  const [periodEnd, setPeriodEnd] = useState('');
   const [error, setError] = useState('');
 
   const content = {
     fr: {
       loading: 'Activation de votre abonnement...',
-      success: 'Abonnement Activé !',
-      successDesc: 'Votre abonnement a été activé avec succès.',
-      creditsAdded: 'crédits ajoutés à votre compte',
-      plan: 'Plan',
-      monthly: 'mensuel',
-      yearly: 'annuel',
+      success: 'Abonnement Infinity Activé !',
+      successDesc: 'Bienvenue dans VisuStock Infinity ! Profitez d\'un accès illimité.',
+      accessUntil: 'Accès jusqu\'au',
+      unlimited: 'Téléchargements illimités',
       error: 'Erreur d\'Activation',
       errorDesc: 'Nous n\'avons pas pu activer votre abonnement.',
-      goToMarketplace: 'Aller au Marketplace',
-      goToAI: 'Générer des Images AI',
+      goToMarketplace: 'Explorer le Marketplace',
+      goToDashboard: 'Mon Tableau de Bord',
       goToPricing: 'Retour aux Tarifs',
       tryAgain: 'Réessayer',
     },
     en: {
       loading: 'Activating your subscription...',
-      success: 'Subscription Activated!',
-      successDesc: 'Your subscription has been successfully activated.',
-      creditsAdded: 'credits added to your account',
-      plan: 'Plan',
-      monthly: 'monthly',
-      yearly: 'yearly',
+      success: 'Infinity Subscription Activated!',
+      successDesc: 'Welcome to VisuStock Infinity! Enjoy unlimited access.',
+      accessUntil: 'Access until',
+      unlimited: 'Unlimited downloads',
       error: 'Activation Error',
       errorDesc: 'We couldn\'t activate your subscription.',
-      goToMarketplace: 'Go to Marketplace',
-      goToAI: 'Generate AI Images',
+      goToMarketplace: 'Explore Marketplace',
+      goToDashboard: 'My Dashboard',
       goToPricing: 'Back to Pricing',
       tryAgain: 'Try Again',
     },
@@ -54,30 +50,36 @@ const SubscriptionSuccess = () => {
   const t = content[language];
 
   useEffect(() => {
-    const subscriptionId = searchParams.get('subscription_id');
-    const baToken = searchParams.get('ba_token');
-    const token = searchParams.get('token');
-    
-    // PayPal returns subscription_id in the URL
-    const paypalSubscriptionId = subscriptionId || baToken || token;
+    // Prevent double activation
+    if (activationAttempted.current) return;
+    activationAttempted.current = true;
 
-    if (!paypalSubscriptionId) {
+    // PayPal Orders API returns 'token' parameter (the order ID)
+    const orderId = searchParams.get('token');
+    
+    if (!orderId) {
       setStatus('error');
-      setError('No subscription ID found in URL');
+      setError('No order ID found in URL');
       return;
     }
 
     const activate = async () => {
       try {
-        const result = await activateSubscription(paypalSubscriptionId);
+        console.log('Activating Infinity subscription for order:', orderId);
+        const result = await activateSubscription(orderId);
         
         if (result?.success) {
           setStatus('success');
-          setCreditsAdded(result.credits_added || 0);
-          setPlanType(result.subscription?.plan_type || '');
+          setPeriodEnd(result.period_end || '');
         } else {
-          setStatus('error');
-          setError('Failed to activate subscription');
+          // Check if already processed
+          if (result?.already_processed) {
+            setStatus('success');
+            setPeriodEnd(result.period_end || '');
+          } else {
+            setStatus('error');
+            setError('Failed to activate subscription');
+          }
         }
       } catch (err) {
         console.error('Activation error:', err);
@@ -89,9 +91,13 @@ const SubscriptionSuccess = () => {
     activate();
   }, [searchParams, activateSubscription]);
 
-  const getPlanName = (type: string) => {
-    const plan = SUBSCRIPTION_PLANS[type as keyof typeof SUBSCRIPTION_PLANS];
-    return plan?.name || type;
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
   return (
@@ -112,7 +118,9 @@ const SubscriptionSuccess = () => {
             {status === 'success' && (
               <div className="text-center space-y-6">
                 <div className="relative">
-                  <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
+                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mx-auto">
+                    <Infinity className="h-12 w-12 text-white" />
+                  </div>
                   <Sparkles className="h-6 w-6 text-yellow-500 absolute top-0 right-1/3 animate-pulse" />
                 </div>
                 
@@ -123,15 +131,15 @@ const SubscriptionSuccess = () => {
 
                 <div className="bg-primary/10 rounded-lg p-6 space-y-4">
                   <div className="flex items-center justify-center gap-2">
-                    <CreditCard className="h-6 w-6 text-primary" />
-                    <span className="text-2xl font-bold text-primary">
-                      {creditsAdded} {t.creditsAdded}
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                    <span className="text-xl font-bold text-primary">
+                      {t.unlimited}
                     </span>
                   </div>
                   
-                  {planType && (
+                  {periodEnd && (
                     <p className="text-muted-foreground">
-                      {t.plan}: <span className="font-semibold">{getPlanName(planType)}</span>
+                      {t.accessUntil}: <span className="font-semibold">{formatDate(periodEnd)}</span>
                     </p>
                   )}
                 </div>
@@ -141,12 +149,11 @@ const SubscriptionSuccess = () => {
                     {t.goToMarketplace}
                   </Button>
                   <Button 
-                    onClick={() => navigate('/ai-image-generator')} 
+                    onClick={() => navigate('/dashboard')} 
                     variant="outline" 
                     size="lg"
                   >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {t.goToAI}
+                    {t.goToDashboard}
                   </Button>
                 </div>
               </div>

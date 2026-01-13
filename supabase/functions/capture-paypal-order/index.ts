@@ -6,13 +6,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PAYPAL_API_URL = Deno.env.get('PAYPAL_SANDBOX') === 'true' 
-  ? 'https://api-m.sandbox.paypal.com'
-  : 'https://api-m.paypal.com';
+function getPayPalApiUrl(): string {
+  const isSandbox = Deno.env.get('PAYPAL_SANDBOX');
+  return isSandbox === 'true' 
+    ? 'https://api-m.sandbox.paypal.com'
+    : 'https://api-m.paypal.com';
+}
 
 async function getPayPalAccessToken(): Promise<string> {
   const clientId = Deno.env.get('PAYPAL_CLIENT_ID');
   const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
+  const apiUrl = getPayPalApiUrl();
   
   if (!clientId || !clientSecret) {
     throw new Error('PayPal credentials not configured');
@@ -20,7 +24,7 @@ async function getPayPalAccessToken(): Promise<string> {
 
   const auth = btoa(`${clientId}:${clientSecret}`);
   
-  const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
+  const response = await fetch(`${apiUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
@@ -35,6 +39,25 @@ async function getPayPalAccessToken(): Promise<string> {
 
   const data = await response.json();
   return data.access_token;
+}
+
+// Calculate subscription period dates
+function calculateSubscriptionPeriod(isYearly: boolean): { start: string; end: string; nextBilling: string } {
+  const now = new Date();
+  const start = now.toISOString();
+  
+  const end = new Date(now);
+  if (isYearly) {
+    end.setFullYear(end.getFullYear() + 1);
+  } else {
+    end.setMonth(end.getMonth() + 1);
+  }
+  
+  return {
+    start,
+    end: end.toISOString(),
+    nextBilling: end.toISOString(),
+  };
 }
 
 serve(async (req) => {
@@ -78,7 +101,6 @@ serve(async (req) => {
     console.log('Capturing PayPal order:', order_id);
 
     // ============ IDEMPOTENCY CHECK ============
-    // Check if this order has already been processed
     const { data: existingOrder, error: checkError } = await supabaseAdmin
       .from('paypal_orders')
       .select('*')
@@ -104,11 +126,11 @@ serve(async (req) => {
       );
     }
 
-    // Get PayPal access token
+    // Get PayPal access token and capture order
+    const apiUrl = getPayPalApiUrl();
     const accessToken = await getPayPalAccessToken();
 
-    // Capture the order
-    const captureResponse = await fetch(`${PAYPAL_API_URL}/v2/checkout/orders/${order_id}/capture`, {
+    const captureResponse = await fetch(`${apiUrl}/v2/checkout/orders/${order_id}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -116,12 +138,11 @@ serve(async (req) => {
       },
     });
 
-    // Handle already captured orders (PayPal returns 422 for duplicate captures)
+    // Handle already captured orders
     if (captureResponse.status === 422) {
       const errorData = await captureResponse.json();
       console.log('PayPal 422 response:', JSON.stringify(errorData));
       
-      // If already captured, treat as success if we have a record
       if (existingOrder) {
         return new Response(
           JSON.stringify({
@@ -160,20 +181,20 @@ serve(async (req) => {
 
     const orderAmount = parseFloat(purchaseUnit.amount.value);
     const currency = purchaseUnit.amount.currency_code;
+    const orderType = customData.order_type || 'marketplace';
 
     // ============ RECORD ORDER BEFORE PROCESSING ============
-    // Insert or update order record to prevent duplicates
     const { error: insertOrderError } = await supabaseAdmin
       .from('paypal_orders')
       .upsert({
         paypal_order_id: order_id,
         user_id: user.id,
-        order_type: customData.order_type || 'marketplace',
+        order_type: orderType,
         amount: orderAmount,
         currency: currency,
         status: 'processing',
-        credits_amount: customData.order_type === 'credits' ? parseInt(customData.credits) : null,
-        pack_type: customData.pack || null,
+        credits_amount: orderType === 'credits' ? parseInt(customData.credits) : null,
+        pack_type: customData.pack || (orderType === 'infinity' ? (customData.is_yearly ? 'infinity_yearly' : 'infinity_monthly') : null),
         cart_items: customData.cart_items || null,
       }, { 
         onConflict: 'paypal_order_id',
@@ -182,14 +203,89 @@ serve(async (req) => {
 
     if (insertOrderError) {
       console.error('Error inserting order record:', insertOrderError);
-      // Continue anyway - the order was captured successfully
     }
 
-    // Process based on order type
-    if (customData.order_type === 'credits') {
-      // Add credits to user
+    // ============ PROCESS BY ORDER TYPE ============
+    
+    if (orderType === 'infinity') {
+      // ============ INFINITY SUBSCRIPTION (HYBRID APPROACH) ============
+      const isYearly = customData.is_yearly || false;
+      const period = calculateSubscriptionPeriod(isYearly);
+      
+      console.log('Activating Infinity subscription:', { isYearly, period });
+
+      // Cancel any existing active subscription first
+      await supabaseAdmin
+        .from('user_subscriptions')
+        .update({ status: 'cancelled' })
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      // Create new internal subscription record
+      const { error: subError } = await supabaseAdmin
+        .from('user_subscriptions')
+        .insert({
+          user_id: user.id,
+          paypal_subscription_id: `ORDER_${order_id}`, // Use order ID as reference
+          plan_type: 'infinity',
+          status: 'active',
+          is_yearly: isYearly,
+          credits_per_month: -1, // Unlimited
+          monthly_price: isYearly ? 79 : 89,
+          current_period_start: period.start,
+          current_period_end: period.end,
+          next_billing_date: period.nextBilling,
+        });
+
+      if (subError) {
+        console.error('Error creating subscription:', subError);
+        throw new Error('Failed to activate subscription');
+      }
+
+      // Update order status
+      await supabaseAdmin
+        .from('paypal_orders')
+        .update({ 
+          status: 'completed',
+          processed_at: new Date().toISOString()
+        })
+        .eq('paypal_order_id', order_id);
+
+      // Log to audit
+      await supabaseAdmin.from('security_audit_log').insert({
+        event_type: 'infinity_subscription_activated',
+        user_id: user.id,
+        target_table: 'user_subscriptions',
+        details: {
+          paypal_order_id: order_id,
+          plan_type: 'infinity',
+          is_yearly: isYearly,
+          amount_paid: orderAmount,
+          currency: currency,
+          period_start: period.start,
+          period_end: period.end,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      console.log('Infinity subscription activated successfully');
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: order_id,
+          status: captureData.status,
+          order_type: 'infinity',
+          subscription_activated: true,
+          period_end: period.end,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } else if (orderType === 'credits') {
+      // ============ CREDITS PURCHASE ============
       const creditsAmount = parseInt(customData.credits);
-      const { data, error } = await supabaseAdmin.rpc('add_user_credits', {
+      const { error } = await supabaseAdmin.rpc('add_user_credits', {
         user_id_param: user.id,
         amount_param: creditsAmount
       });
@@ -201,7 +297,6 @@ serve(async (req) => {
 
       console.log('Credits added successfully:', creditsAmount);
 
-      // Update order status to completed
       await supabaseAdmin
         .from('paypal_orders')
         .update({ 
@@ -210,7 +305,6 @@ serve(async (req) => {
         })
         .eq('paypal_order_id', order_id);
 
-      // Log transaction to audit log
       await supabaseAdmin.from('security_audit_log').insert({
         event_type: 'credits_purchased_paypal',
         user_id: user.id,
@@ -235,12 +329,12 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+
     } else {
-      // Marketplace purchase - create download records
+      // ============ MARKETPLACE PURCHASE ============
       const cartItems = customData.cart_items || [];
       
       for (const item of cartItems) {
-        // Check if download already exists (additional idempotency)
         const { data: existingDownload } = await supabaseAdmin
           .from('downloads')
           .select('id')
@@ -253,14 +347,13 @@ serve(async (req) => {
             user_id: user.id,
             submission_id: item.submission_id,
             license_id: item.license_id,
-            expires_at: null, // No expiration for purchased content
+            expires_at: null,
           });
         }
       }
 
       console.log('Download records created for', cartItems.length, 'items');
 
-      // Update order status to completed
       await supabaseAdmin
         .from('paypal_orders')
         .update({ 
@@ -269,7 +362,6 @@ serve(async (req) => {
         })
         .eq('paypal_order_id', order_id);
 
-      // Log transaction to audit log
       await supabaseAdmin.from('security_audit_log').insert({
         event_type: 'marketplace_purchase_paypal',
         user_id: user.id,
@@ -283,12 +375,10 @@ serve(async (req) => {
         }
       });
 
-      // Send seller notification emails for each unique seller
+      // Send seller notifications
       const sellerItems = new Map<string, { items: typeof cartItems, total: number }>();
       
-      // Group items by seller
       for (const item of cartItems) {
-        // Fetch seller_id from submission
         const { data: submission } = await supabaseAdmin
           .from('content_submissions')
           .select('creator_id, price')
@@ -309,7 +399,6 @@ serve(async (req) => {
         }
       }
 
-      // Send notification to each seller
       for (const [sellerId, data] of sellerItems) {
         try {
           const notificationPayload = {
@@ -325,7 +414,7 @@ serve(async (req) => {
             currency: currency,
           };
 
-          const response = await fetch(
+          await fetch(
             `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-seller-notification`,
             {
               method: 'POST',
@@ -333,12 +422,8 @@ serve(async (req) => {
               body: JSON.stringify(notificationPayload),
             }
           );
-
-          const result = await response.json();
-          console.log('Seller notification sent to:', sellerId, result);
         } catch (emailError) {
           console.error('Failed to send seller notification:', emailError);
-          // Don't throw - email failure shouldn't block purchase
         }
       }
 
