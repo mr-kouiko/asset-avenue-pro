@@ -240,28 +240,8 @@ const ProductManagement = () => {
     }));
   };
 
-  // Keywords that should trigger automatic recategorization to illustration
-  const ILLUSTRATION_TRIGGER_KEYWORDS = [
-    'illustration', 'illust', 'drawing', 'artwork', 'vector', 'cartoon', 
-    'comic', 'graphic', 'sketch', 'digital art', 'digitalart', 'painted',
-    'anime', 'manga', 'clipart', 'hand-drawn', 'handdrawn', 'pop art', 
-    'popart', 'retro', 'stylized', 'artistic', 'abstract', 'surreal',
-    'fantasy', 'watercolor', 'oil painting', 'concept art', 'character design',
-    'minimalist', 'flat design', 'isometric', 'pixel art', 'geometric',
-    'art deco', 'cubism', 'impressionist', 'expressionist', 'fine art',
-    'motion graphics', 'infographic', 'mascot', 'caricature', 'abstract illustration',
-    'digital artwork', 'graphic design', 'modern poster'
-  ];
-
-  const checkTagsForIllustrationKeywords = (tags: string[]): boolean => {
-    const tagsLower = tags.map(t => t.toLowerCase()).join(' ');
-    return ILLUSTRATION_TRIGGER_KEYWORDS.some(keyword => tagsLower.includes(keyword));
-  };
-
-  const handleAddTag = async (fileId: string) => {
+  const handleAddTag = (fileId: string) => {
     const productData = productsData[fileId];
-    const file = uploadedFiles.find(f => f.id === fileId);
-    
     if (productData?.currentTag) {
       // Split by comma, semicolon, or newline and clean up tags
       const newTags = productData.currentTag
@@ -270,44 +250,10 @@ const ProductManagement = () => {
         .filter(tag => tag.length > 0 && !productData.tags.includes(tag));
       
       if (newTags.length > 0) {
-        const updatedTags = [...productData.tags, ...newTags];
-        
         updateProductData(fileId, {
-          tags: updatedTags,
+          tags: [...productData.tags, ...newTags],
           currentTag: ''
         });
-        
-        // Auto-recategorize if illustration keywords detected in new tags and file is an image
-        if (file?.type.startsWith('image/') && checkTagsForIllustrationKeywords(newTags)) {
-          console.log('🎨 [AUTO-RECATEGORIZE] Illustration keywords detected in tags, triggering recategorization...');
-          
-          // Small delay to allow state update
-          setTimeout(async () => {
-            const result = await detectIllustration(file.url, {
-              fileName: file.name,
-              title: productData.title,
-              description: productData.description,
-              tags: updatedTags
-            });
-
-            if (result?.isIllustration) {
-              const illustrationCat = categories.find(cat => 
-                cat.name.toLowerCase().includes('illustration')
-              );
-              
-              if (illustrationCat && productData.category !== illustrationCat.id) {
-                updateProductData(fileId, { category: illustrationCat.id });
-                
-                // Update file's detected category
-                setUploadedFiles(prev => prev.map(f => 
-                  f.id === fileId ? { ...f, detectedCategory: 'illustration' } : f
-                ));
-                
-                toast.success('🎨 Auto-detected as Illustration based on keywords!');
-              }
-            }
-          }, 100);
-        }
       }
     }
   };

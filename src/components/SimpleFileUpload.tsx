@@ -54,7 +54,7 @@ export const SimpleFileUpload = ({
   const { processFiles, isProcessing } = useAutomaticWatermark();
   const { detectImage } = useAIImageDetection();
   const { detectVideo } = useAIVideoDetection();
-  const { detectIllustration } = useIllustrationDetection();
+  const { detectIllustrationFromFile } = useIllustrationDetection();
 
   const acceptedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
@@ -349,23 +349,18 @@ export const SimpleFileUpload = ({
         ));
         
         try {
-          const urlToAnalyze = processedFile.watermarkedUrl || processedFile.thumbnailUrl;
-          if (urlToAnalyze) {
-            console.log(`🎨 [CATEGORY-DETECTION] Analyzing image: ${uploadFileData.file.name}`);
-            const result = await detectIllustration(urlToAnalyze, uploadFileData.file.name);
+          console.log(`🎨 [CATEGORY-DETECTION] Analyzing image file bytes: ${uploadFileData.file.name}`);
+          const result = await detectIllustrationFromFile(uploadFileData.file);
+          
+          if (result) {
+            detectedCategory = result.isIllustration ? 'illustration' : 'photo';
+            console.log(`🎨 [CATEGORY-DETECTION] Result: ${detectedCategory} (confidence: ${result.confidence.toFixed(2)})`);
             
-            if (result) {
-              detectedCategory = result.isIllustration ? 'illustration' : 'photo';
-              console.log(`🎨 [CATEGORY-DETECTION] Result: ${detectedCategory} (confidence: ${result.confidence.toFixed(2)})`);
-              
-              if (result.isIllustration) {
-                toast.info(`🎨 Illustration detected: ${uploadFileData.file.name} (${Math.round(result.confidence * 100)}% confidence)`);
-              }
-            } else {
-              // Default to photo if detection fails
-              detectedCategory = 'photo';
+            if (result.isIllustration) {
+              toast.info(`🎨 Illustration detected: ${uploadFileData.file.name} (${Math.round(result.confidence * 100)}% confidence)`);
             }
           } else {
+            // Default to photo if detection fails
             detectedCategory = 'photo';
           }
         } catch (categoryError) {

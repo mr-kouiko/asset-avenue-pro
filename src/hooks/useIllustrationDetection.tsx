@@ -162,6 +162,15 @@ export const useIllustrationDetection = () => {
             score += 0.2;
             indicators.push('Solid color regions detected');
           }
+
+          // NEW: Flat-region ratio (large uniform areas) strongly suggests illustration
+          if (imageAnalysis.flatRegionRatio > 0.55) {
+            score += 0.25;
+            indicators.push('Large flat-color areas detected');
+          } else if (imageAnalysis.flatRegionRatio > 0.4 && imageAnalysis.edgeSharpness > 0.45) {
+            score += 0.15;
+            indicators.push('Flat areas + crisp edges (stylized art)');
+          }
           
           // High saturation uniformity suggests illustration
           if (imageAnalysis.saturationUniformity > 0.6) {
@@ -175,9 +184,9 @@ export const useIllustrationDetection = () => {
             indicators.push('Image has transparency');
           }
           
-          // NEW: High saturation with high edge sharpness often indicates digital art
-          if (imageAnalysis.edgeSharpness > 0.5 && imageAnalysis.saturationUniformity > 0.4) {
-            score += 0.1;
+          // Digital art often has higher saturation + sharper transitions
+          if (imageAnalysis.edgeSharpness > 0.45 && imageAnalysis.saturationUniformity > 0.4) {
+            score += 0.2;
             indicators.push('Digital art characteristics detected');
           }
         }
@@ -206,7 +215,22 @@ export const useIllustrationDetection = () => {
     }
   }, []);
 
-  return { detectIllustration, isDetecting };
+  const detectIllustrationFromFile = useCallback(async (
+    file: File,
+    options?: DetectionOptions
+  ): Promise<IllustrationDetectionResult | null> => {
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      return await detectIllustration(objectUrl, {
+        fileName: file.name,
+        ...options,
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }, [detectIllustration]);
+
+  return { detectIllustration, detectIllustrationFromFile, isDetecting };
 };
 
 /**
@@ -218,6 +242,7 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
   colorVariance: number;
   saturationUniformity: number;
   hasTransparency: boolean;
+  flatRegionRatio: number;
 } | null> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -276,12 +301,13 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
         }
         
         const sampledPixels = Math.ceil(totalPixels / sampleRate);
-        const uniqueColorRatio = colorSet.size / 256; // Normalized against max possible quantized colors
+        const uniqueColorRatio = colorSet.size / 512; // Normalized against max possible quantized colors (8*8*8=512)
         
         // Calculate color variance using regional sampling
         const regionSize = 10;
         let totalVariance = 0;
         let regionCount = 0;
+        let flatRegionCount = 0;
         
         for (let ry = 0; ry < canvas.height - regionSize; ry += regionSize) {
           for (let rx = 0; rx < canvas.width - regionSize; rx += regionSize) {
@@ -299,10 +325,14 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
             const variance = regionColors.reduce((sum, c) => sum + Math.pow(c - mean, 2), 0) / regionColors.length;
             totalVariance += variance;
             regionCount++;
+
+            // Count "flat" regions: low variance blocks are common in illustrations
+            if (variance < 18) flatRegionCount++;
           }
         }
         
         const avgVariance = regionCount > 0 ? totalVariance / regionCount : 50;
+        const flatRegionRatio = regionCount > 0 ? flatRegionCount / regionCount : 0;
         
         // Calculate edge sharpness using Sobel-like operator
         let edgeSum = 0;
@@ -347,7 +377,8 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
           edgeSharpness,
           colorVariance: avgVariance,
           saturationUniformity,
-          hasTransparency
+          hasTransparency,
+          flatRegionRatio,
         });
         
       } catch (error) {
