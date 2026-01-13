@@ -39,14 +39,41 @@ const Marketplace = () => {
       : "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects.",
     type: 'website'
   });
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("popular");
   const [categories, setCategories] = useState([
-    { value: "all", label: "Toutes les catégories", count: "0" }
+    { value: "all", label: "All Categories", count: "0" }
   ]);
   const [searchParams] = useSearchParams();
-  const { content: marketplaceContent, loading, hasMore, loadMore } = useMarketplace();
+  const location = useLocation();
+  const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
+  
+  // Compute initial category from URL
+  const getInitialCategory = () => {
+    // First check query params
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) return categoryParam;
+    
+    // Then check path-based routes
+    const path = location.pathname;
+    const categoryPathMap: Record<string, string> = {
+      '/videos': 'video',
+      '/photos': 'photo',
+      '/illustrations': 'illustration',
+      '/audio': 'audio',
+      '/ebooks': 'ebook'
+    };
+    for (const [urlPath, category] of Object.entries(categoryPathMap)) {
+      if (path.startsWith(urlPath)) return category;
+    }
+    return 'all';
+  };
+  
+  // Initialize with URL category
+  const [selectedCategory, setSelectedCategory] = useState(() => getInitialCategory());
+  
+  // Use server-side category filtering
+  const { content: marketplaceContent, loading, hasMore, loadMore } = useMarketplace(200, selectedCategory);
   
   // Audio filter states
   const [isAudioFilterOpen, setIsAudioFilterOpen] = useState(false);
@@ -130,11 +157,7 @@ const Marketplace = () => {
     });
   };
 
-  // Get route params for SEO-friendly URLs (e.g., /videos/dubai)
-  const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
-  const location = useLocation();
-  
-  // Map URL path to category
+  // Map URL path to category (for route changes after initial load)
   useEffect(() => {
     const path = location.pathname;
     

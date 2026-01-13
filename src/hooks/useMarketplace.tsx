@@ -30,7 +30,17 @@ export interface MarketplaceContent {
 // Throttle duration for focus refetch (5 minutes in milliseconds)
 const FOCUS_THROTTLE_MS = 5 * 60 * 1000;
 
-export const useMarketplace = (initialLimit = 200) => {
+// Category slug to UUID mapping for server-side filtering
+const categorySlugToId: Record<string, string> = {
+  'photo': 'e6eb8946-abab-4a0b-9249-da012b7a87af',
+  'video': 'b4fe5f6a-554b-4409-8eaa-71c87d225b33',
+  'audio': '0b9e322e-cecb-494f-ba8d-c5397e913b99',
+  'illustration': '653f8437-6317-4a81-8bbf-9b8c520c0dbe',
+  'vector': 'ceca4e62-559c-4dc6-98fe-64017d537192',
+  'ebook': '9ec96e29-199f-4ce2-b951-4ca18c62c87c',
+};
+
+export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -39,13 +49,17 @@ export const useMarketplace = (initialLimit = 200) => {
   // Track when the tab was last active for throttled focus refresh
   const lastActiveRef = useRef<number>(Date.now());
   const isInitialLoadRef = useRef<boolean>(true);
+  
+  // Track previous category to detect changes
+  const prevCategoryRef = useRef<string | undefined>(categoryFilter);
 
   // Silent background refresh - updates data without clearing content or showing loading
   const backgroundRefresh = async () => {
     try {
-      console.log('🔄 [MARKETPLACE] Background refresh - preserving UI state');
+      console.log('🔄 [MARKETPLACE] Background refresh - preserving UI state', { categoryFilter });
       
-      const { data: marketplaceData, error } = await supabase
+      // Build query with optional category filter
+      let query = supabase
         .from('content_submissions')
         .select(`
           id,
@@ -59,7 +73,22 @@ export const useMarketplace = (initialLimit = 200) => {
           creator_id,
           content_files!inner(id)
         `)
-        .eq('status', 'approved')
+        .eq('status', 'approved');
+      
+      // Apply server-side category filter
+      if (categoryFilter && categoryFilter !== 'all') {
+        const categoryUUID = categorySlugToId[categoryFilter];
+        if (categoryUUID) {
+          // For illustration, also include vector category
+          if (categoryFilter === 'illustration') {
+            query = query.in('category_id', [categoryUUID, categorySlugToId['vector']]);
+          } else {
+            query = query.eq('category_id', categoryUUID);
+          }
+        }
+      }
+      
+      const { data: marketplaceData, error } = await query
         .order('created_at', { ascending: false })
         .range(0, initialLimit - 1);
 
@@ -284,7 +313,10 @@ export const useMarketplace = (initialLimit = 200) => {
       
       const currentOffset = reset ? 0 : offset;
       
-      const { data: marketplaceData, error } = await supabase
+      console.log('🏪 [MARKETPLACE] Fetching content', { categoryFilter, currentOffset, initialLimit });
+      
+      // Build query with optional category filter
+      let query = supabase
         .from('content_submissions')
         .select(`
           id,
@@ -298,7 +330,23 @@ export const useMarketplace = (initialLimit = 200) => {
           creator_id,
           content_files!inner(id)
         `)
-        .eq('status', 'approved')
+        .eq('status', 'approved');
+      
+      // Apply server-side category filter
+      if (categoryFilter && categoryFilter !== 'all') {
+        const categoryUUID = categorySlugToId[categoryFilter];
+        if (categoryUUID) {
+          // For illustration, also include vector category
+          if (categoryFilter === 'illustration') {
+            query = query.in('category_id', [categoryUUID, categorySlugToId['vector']]);
+          } else {
+            query = query.eq('category_id', categoryUUID);
+          }
+          console.log(`📁 [MARKETPLACE] Server-side filter: ${categoryFilter} -> ${categoryUUID}`);
+        }
+      }
+      
+      const { data: marketplaceData, error } = await query
         .order('created_at', { ascending: false })
         .range(currentOffset, currentOffset + initialLimit - 1);
 
@@ -363,6 +411,17 @@ export const useMarketplace = (initialLimit = 200) => {
       fetchMarketplaceContent(false);
     }
   };
+
+  // Refetch when category filter changes
+  useEffect(() => {
+    if (prevCategoryRef.current !== categoryFilter) {
+      console.log(`🔀 [MARKETPLACE] Category changed: ${prevCategoryRef.current} -> ${categoryFilter}`);
+      prevCategoryRef.current = categoryFilter;
+      isInitialLoadRef.current = true;
+      setOffset(0);
+      fetchMarketplaceContent(true);
+    }
+  }, [categoryFilter]);
 
   useEffect(() => {
     // Initial fetch on mount
