@@ -13,6 +13,12 @@ function getPayPalApiUrl(): string {
     : 'https://api-m.paypal.com';
 }
 
+// Infinity subscription pricing (in USD)
+const INFINITY_PRICING = {
+  monthly: 89,  // $89/month
+  yearly: 948,  // $79/month × 12 = $948/year
+};
+
 async function getPayPalAccessToken(): Promise<string> {
   const clientId = Deno.env.get('PAYPAL_CLIENT_ID');
   const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
@@ -80,15 +86,26 @@ serve(async (req) => {
     const body = await req.json();
     const { cart_items, success_url, cancel_url, order_type = 'marketplace' } = body;
 
-    // Calculate total amount
+    // Calculate total amount based on order type
     let totalAmount = 0;
     let orderDescription = '';
+    let currency = 'EUR';
 
     if (order_type === 'credits') {
       // Credit pack purchase
       const { pack, amount, credits } = body;
       totalAmount = amount;
       orderDescription = `${credits} AI Credits - ${pack} Pack`;
+    } else if (order_type === 'infinity') {
+      // Infinity subscription via Orders API (hybrid approach)
+      const { is_yearly } = body;
+      currency = 'USD';
+      totalAmount = is_yearly ? INFINITY_PRICING.yearly : INFINITY_PRICING.monthly;
+      orderDescription = is_yearly 
+        ? 'VisuStock Infinity - Annual Subscription (12 months)'
+        : 'VisuStock Infinity - Monthly Subscription';
+      
+      console.log('Creating Infinity order:', { is_yearly, totalAmount, currency });
     } else {
       // Marketplace purchase
       if (!cart_items || cart_items.length === 0) {
@@ -104,31 +121,41 @@ serve(async (req) => {
     }
 
     const apiUrl = getPayPalApiUrl();
-    console.log('Creating PayPal order for amount:', totalAmount, 'EUR');
+    console.log('Creating PayPal order for amount:', totalAmount, currency);
 
     // Get PayPal access token
     const accessToken = await getPayPalAccessToken();
+
+    // Build custom_id based on order type
+    let customId: Record<string, any> = {
+      user_id: user.id,
+      order_type,
+    };
+
+    if (order_type === 'credits') {
+      customId.credits = body.credits;
+      customId.pack = body.pack;
+    } else if (order_type === 'infinity') {
+      customId.is_yearly = body.is_yearly || false;
+      customId.plan_type = 'infinity';
+    } else {
+      customId.cart_items = cart_items;
+    }
 
     // Create PayPal order
     const orderPayload = {
       intent: 'CAPTURE',
       purchase_units: [{
         amount: {
-          currency_code: 'EUR',
+          currency_code: currency,
           value: totalAmount.toFixed(2),
         },
         description: orderDescription,
-        custom_id: JSON.stringify({
-          user_id: user.id,
-          order_type,
-          cart_items: order_type === 'marketplace' ? cart_items : undefined,
-          credits: order_type === 'credits' ? body.credits : undefined,
-          pack: order_type === 'credits' ? body.pack : undefined,
-        }),
+        custom_id: JSON.stringify(customId),
       }],
       application_context: {
         brand_name: 'VisuStock',
-        locale: 'fr-FR',
+        locale: order_type === 'infinity' ? 'en-US' : 'fr-FR',
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
         return_url: success_url || `${req.headers.get('origin')}/payment-success`,

@@ -9,6 +9,7 @@ interface SubscriptionPlan {
   current_period_end: string;
   next_billing_date: string;
   is_yearly: boolean;
+  status: string;
 }
 
 interface SubscriptionState {
@@ -18,11 +19,13 @@ interface SubscriptionState {
 }
 
 export const SUBSCRIPTION_PLANS = {
-  monthly_30: { credits: 30, monthlyPrice: 206, name: '30 Credits' },
-  monthly_60: { credits: 60, monthlyPrice: 379, name: '60 Credits' },
-  monthly_100: { credits: 100, monthlyPrice: 599, name: '100 Credits' },
-  monthly_200: { credits: 200, monthlyPrice: 1099, name: '200 Credits' },
-  infinity: { credits: -1, monthlyPrice: 89, yearlyPrice: 79, name: 'Infinity Unlimited' },
+  infinity: { 
+    credits: -1, 
+    monthlyPrice: 89, 
+    yearlyPrice: 79, 
+    yearlyTotal: 948,
+    name: 'Infinity Unlimited' 
+  },
 };
 
 export function usePayPalSubscription() {
@@ -78,6 +81,7 @@ export function usePayPalSubscription() {
     };
   }, [checkSubscription]);
 
+  // Create subscription using Orders API (hybrid approach)
   const createSubscription = async (planType: string, isYearly: boolean = false) => {
     if (!user) {
       toast({
@@ -88,15 +92,25 @@ export function usePayPalSubscription() {
       return null;
     }
 
+    if (planType !== 'infinity') {
+      toast({
+        title: 'Invalid plan',
+        description: 'Only Infinity subscription is available',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
     try {
       setState(prev => ({ ...prev, loading: true }));
 
-      const { data, error } = await supabase.functions.invoke('create-paypal-subscription', {
+      // Use Orders API instead of Subscriptions API
+      const { data, error } = await supabase.functions.invoke('create-paypal-order', {
         body: {
-          plan_type: planType,
+          order_type: 'infinity',
           is_yearly: isYearly,
           success_url: `${window.location.origin}/subscription-success`,
-          cancel_url: `${window.location.origin}/packages-pricing`,
+          cancel_url: `${window.location.origin}/packages-pricing?cancelled=true`,
         },
       });
 
@@ -123,19 +137,22 @@ export function usePayPalSubscription() {
     }
   };
 
-  const activateSubscription = async (subscriptionId: string) => {
+  // Activate subscription after PayPal payment (called from success page)
+  const activateSubscription = async (orderId: string) => {
     try {
       setState(prev => ({ ...prev, loading: true }));
 
-      const { data, error } = await supabase.functions.invoke('manage-paypal-subscription', {
-        body: {
-          action: 'activate',
-          paypal_subscription_id: subscriptionId,
-        },
+      // Capture the PayPal order - this activates the internal subscription
+      const { data, error } = await supabase.functions.invoke('capture-paypal-order', {
+        body: { order_id: orderId },
       });
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      if (!data.success) {
+        throw new Error('Failed to capture payment');
       }
 
       // Refresh subscription state
@@ -143,7 +160,7 @@ export function usePayPalSubscription() {
 
       toast({
         title: 'Subscription Activated!',
-        description: `${data.credits_added} credits have been added to your account`,
+        description: 'Welcome to VisuStock Infinity! Enjoy unlimited access.',
       });
 
       return data;
@@ -159,7 +176,7 @@ export function usePayPalSubscription() {
     }
   };
 
-  const cancelSubscription = async (subscriptionId: string) => {
+  const cancelSubscription = async (subscriptionId?: string) => {
     try {
       setState(prev => ({ ...prev, loading: true }));
 
