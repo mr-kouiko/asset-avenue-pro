@@ -6,22 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PAYPAL_API_URL = Deno.env.get('PAYPAL_SANDBOX') === 'true' 
-  ? 'https://api-m.sandbox.paypal.com'
-  : 'https://api-m.paypal.com';
+function getPayPalApiUrl(): string {
+  const isSandbox = Deno.env.get('PAYPAL_SANDBOX');
+  return isSandbox === 'true' 
+    ? 'https://api-m.sandbox.paypal.com'
+    : 'https://api-m.paypal.com';
+}
 
 async function getPayPalAccessToken(): Promise<string> {
   const clientId = Deno.env.get('PAYPAL_CLIENT_ID');
   const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
-  const isSandbox = Deno.env.get('PAYPAL_SANDBOX');
+  const apiUrl = getPayPalApiUrl();
   
-  console.log('PayPal Config Debug:', {
-    hasClientId: !!clientId,
-    clientIdPrefix: clientId?.substring(0, 10) + '...',
-    hasClientSecret: !!clientSecret,
-    secretLength: clientSecret?.length,
-    isSandbox,
-    apiUrl: PAYPAL_API_URL
+  console.log('PayPal Config:', { 
+    hasClientId: !!clientId, 
+    hasSecret: !!clientSecret, 
+    apiUrl 
   });
   
   if (!clientId || !clientSecret) {
@@ -30,7 +30,7 @@ async function getPayPalAccessToken(): Promise<string> {
 
   const auth = btoa(`${clientId}:${clientSecret}`);
   
-  const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
+  const response = await fetch(`${apiUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
@@ -42,12 +42,10 @@ async function getPayPalAccessToken(): Promise<string> {
   if (!response.ok) {
     const error = await response.text();
     console.error('PayPal auth error:', error);
-    console.error('Using API URL:', PAYPAL_API_URL);
     throw new Error('Failed to get PayPal access token');
   }
 
   const data = await response.json();
-  console.log('PayPal auth successful');
   return data.access_token;
 }
 
@@ -105,6 +103,7 @@ serve(async (req) => {
       throw new Error('Invalid order amount');
     }
 
+    const apiUrl = getPayPalApiUrl();
     console.log('Creating PayPal order for amount:', totalAmount, 'EUR');
 
     // Get PayPal access token
@@ -137,7 +136,7 @@ serve(async (req) => {
       },
     };
 
-    const orderResponse = await fetch(`${PAYPAL_API_URL}/v2/checkout/orders`, {
+    const orderResponse = await fetch(`${apiUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
