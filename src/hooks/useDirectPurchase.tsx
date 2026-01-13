@@ -104,7 +104,7 @@ export const useDirectPurchase = () => {
     // Allow null/undefined prices (will use license-based pricing)
     if (item.price !== null && item.price !== undefined && 
         (typeof item.price !== 'number' || item.price < 0)) {
-      return { valid: false, error: 'Prix invalide' };
+      return { valid: false, error: 'Invalid price' };
     }
 
     return { valid: true };

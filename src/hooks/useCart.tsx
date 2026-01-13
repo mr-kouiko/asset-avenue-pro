@@ -33,17 +33,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setItems(prev => {
       const exists = prev.find(i => i.id === item.id);
       if (exists) {
-        toast.info('Cet article est déjà dans votre panier');
+        toast.info('This item is already in your cart');
         return prev;
       }
-      toast.success('Article ajouté au panier • Connectez-vous pour finaliser l\'achat');
+      toast.success('Item added to cart • Sign in to complete purchase');
       return [...prev, item];
     });
   };
 
   const removeFromCart = (id: string) => {
     setItems(prev => prev.filter(item => item.id !== id));
-    toast.success('Article retiré du panier');
+    toast.success('Item removed from cart');
   };
 
   const clearCart = () => {

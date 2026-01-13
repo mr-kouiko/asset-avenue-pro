@@ -33,10 +33,10 @@ const Marketplace = () => {
   useSEO({
     title: language === 'en'
       ? "Marketplace - Browse Creative Content"
-      : "Marketplace - Parcourez le Contenu Créatif",
+      : "Marketplace - Browse Creative Content",
     description: language === 'en'
       ? "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects."
-      : "Parcourez des milliers de photos, vidéos, pistes audio et illustrations professionnelles. Trouvez le contenu créatif parfait pour vos projets.",
+      : "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects.",
     type: 'website'
   });
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -202,12 +202,12 @@ const Marketplace = () => {
   }, [marketplaceContent]);
 
   const priceRanges = [
-    { value: "all", label: "Tous les prix" },
-    { value: "free", label: "Gratuit" },
-    { value: "0-10", label: "0€ - 10€" },
-    { value: "10-25", label: "10€ - 25€" },
-    { value: "25-50", label: "25€ - 50€" },
-    { value: "50+", label: "50€ et plus" },
+    { value: "all", label: "All prices" },
+    { value: "free", label: "Free" },
+    { value: "0-10", label: "€0 - €10" },
+    { value: "10-25", label: "€10 - €25" },
+    { value: "25-50", label: "€25 - €50" },
+    { value: "50+", label: "€50 and up" },
   ];
 
   // Close audio filter panel when clicking outside
@@ -372,7 +372,7 @@ const Marketplace = () => {
                 <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-md">
                   <Video className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">
-                    {language === 'en' ? "Videos" : "Vidéos"}
+                    Videos
                   </span>
                 </div>
               )}
@@ -389,7 +389,7 @@ const Marketplace = () => {
               {!isVideoSection && !isPhotoSection && (
                 <Select>
                   <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Prix" />
+                    <SelectValue placeholder="Price" />
                   </SelectTrigger>
                   <SelectContent>
                     {priceRanges.map((range) => (
@@ -603,8 +603,8 @@ const Marketplace = () => {
           </div>
         ) : sortedContent.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-stock-dark/60 text-lg">Aucun contenu trouvé</div>
-            <p className="text-stock-dark/40 mt-2">Essayez d'ajuster vos filtres de recherche</p>
+            <div className="text-stock-dark/60 text-lg">No content found</div>
+            <p className="text-stock-dark/40 mt-2">Try adjusting your search filters</p>
           </div>
         ) : (
           <>

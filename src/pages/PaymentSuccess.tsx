@@ -41,7 +41,7 @@ const PaymentSuccess = () => {
 
           if (captureError) {
             console.error('Error capturing PayPal order:', captureError);
-            setError('Erreur lors de la finalisation du paiement');
+            setError('Error finalizing payment');
             setLoading(false);
             return;
           }
@@ -70,14 +70,14 @@ const PaymentSuccess = () => {
         if (!fetchError && downloads) {
           const items: PurchasedItem[] = downloads.map((d: any) => ({
             id: d.submission_id,
-            title: d.content_submissions?.title || 'Contenu acheté',
+            title: d.content_submissions?.title || 'Purchased content',
             type: 'content'
           }));
           setPurchases(items);
         }
       } catch (err) {
         console.error('Error processing payment:', err);
-        setError('Erreur lors du traitement du paiement');
+        setError('Error processing payment');
       } finally {
         setTimeout(() => setLoading(false), 1500);
       }
@@ -121,7 +121,7 @@ const PaymentSuccess = () => {
                   </div>
                 </div>
                 <CardTitle className="text-3xl text-red-600 mb-2">
-                  Erreur de paiement
+                  Payment Error
                 </CardTitle>
                 <p className="text-muted-foreground text-lg">
                   {error}
@@ -132,7 +132,7 @@ const PaymentSuccess = () => {
                 <div className="flex gap-3 justify-center">
                   <Button asChild>
                     <Link to="/cart">
-                      Retourner au panier
+                      Return to cart
                     </Link>
                   </Button>
                   
@@ -165,10 +165,10 @@ const PaymentSuccess = () => {
                 </div>
               </div>
               <CardTitle className="text-3xl text-green-600 mb-2">
-                Paiement réussi !
+                Payment Successful!
               </CardTitle>
               <p className="text-muted-foreground text-lg">
-                Votre achat a été traité avec succès via PayPal
+                Your purchase has been successfully processed via PayPal
               </p>
             </CardHeader>
             
@@ -177,7 +177,7 @@ const PaymentSuccess = () => {
                 {purchaseType === 'credits' || creditsAdded ? (
                   <>
                     <h3 className="font-semibold text-green-800 mb-2">
-                      Vos crédits ont été ajoutés !
+                      Your credits have been added!
                     </h3>
                     <p className="text-green-700 text-sm mb-3">
                       Vous pouvez maintenant générer des images avec l'IA.
@@ -248,7 +248,7 @@ const PaymentSuccess = () => {
                     <Button size="lg" className="w-full" asChild>
                       <Link to="/buyer-dashboard">
                         <Download className="h-4 w-4 mr-2" />
-                        Accéder à mes téléchargements
+                        Access my downloads
                       </Link>
                     </Button>
                     
@@ -256,7 +256,7 @@ const PaymentSuccess = () => {
                       <Button variant="outline" className="flex-1" asChild>
                         <Link to="/marketplace">
                           <ArrowRight className="h-4 w-4 mr-2" />
-                          Continuer mes achats
+                          Continue shopping
                         </Link>
                       </Button>
                       

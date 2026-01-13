@@ -138,11 +138,11 @@ const AdminDashboard = () => {
       .eq('id', id);
 
     if (error) {
-      toast.error('Erreur lors de la mise à jour');
+      toast.error('Error updating status');
       return;
     }
 
-    toast.success(`Contenu ${status === 'approved' ? 'approuvé' : status === 'rejected' ? 'rejeté' : 'mis à jour'}`);
+    toast.success(`Content ${status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'updated'}`);
     refetchSubmissions();
   };
 
@@ -410,13 +410,13 @@ const AdminDashboard = () => {
                             {submission.description}
                           </p>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>Par: {(submission.profiles as any)?.display_name || (submission.profiles as any)?.store_name || 'Créateur anonyme'}</span>
-                            <span>{submission.price ? `${submission.price}€` : 'Gratuit'}</span>
+                            <span>By: {(submission.profiles as any)?.display_name || (submission.profiles as any)?.store_name || 'Anonymous Creator'}</span>
+                            <span>{submission.price ? `€${submission.price}` : 'Free'}</span>
                             <span>{new Date(submission.created_at).toLocaleDateString()}</span>
                           </div>
                           {submission.rejection_reason && (
                             <p className="text-sm text-red-600 mt-2">
-                              Raison du rejet: {submission.rejection_reason}
+                              Rejection reason: {submission.rejection_reason}
                             </p>
                           )}
                         </div>

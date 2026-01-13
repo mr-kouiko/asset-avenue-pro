@@ -234,7 +234,7 @@ export const AdminOrdersTracking = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">
-                          {order.content_submissions?.title || 'Contenu supprimé'}
+                          {order.content_submissions?.title || 'Deleted content'}
                         </h4>
                         {getStatusBadge(order)}
                       </div>

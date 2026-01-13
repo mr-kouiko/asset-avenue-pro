@@ -58,11 +58,11 @@ export const AdminSettings = () => {
       return data;
     },
     onSuccess: () => {
-      toast.success('Paramètres mis à jour avec succès');
+      toast.success('Settings updated successfully');
       queryClient.invalidateQueries({ queryKey: ['admin-platform-settings'] });
     },
     onError: (error) => {
-      toast.error('Erreur lors de la mise à jour des paramètres');
+      toast.error('Error updating settings');
       console.error(error);
     }
   });

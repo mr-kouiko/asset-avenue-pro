@@ -379,7 +379,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           >
             <img 
               src={thumbnail} 
-              alt="Aperçu vidéo" 
+              alt="Video preview" 
               className="w-full h-full object-cover"
               onError={() => setVideoError(true)}
             />
@@ -389,7 +389,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
               </div>
             </div>
             <div className="absolute bottom-4 left-4 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
-              Appuyez pour charger
+              Tap to load
             </div>
           </div>
         ) : (
@@ -398,7 +398,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
               <Play className="h-8 w-8 text-primary" />
             </div>
             <p className="text-muted-foreground">
-              {videoError ? 'Impossible de charger la vidéo' : 'Vidéo en cours de traitement...'}
+              {videoError ? 'Unable to load video' : 'Video processing...'}
             </p>
             {videoError && (
               <Button 
@@ -408,7 +408,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
                 className="mt-2"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Réessayer
+                Retry
               </Button>
             )}
           </div>
@@ -426,7 +426,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
       >
         <img 
           src={thumbnail}
-          alt="Aperçu vidéo"
+          alt="Video preview"
           className="w-full h-full object-cover transition-transform group-hover:scale-105"
           onError={() => setVideoError(true)}
         />
@@ -436,7 +436,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           </div>
         </div>
         <div className="absolute bottom-4 left-4 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
-          Vidéo
+          Video
         </div>
       </div>
     );
@@ -450,13 +450,13 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
           </div>
-          <p className="text-destructive font-medium mb-1">Erreur de lecture</p>
+          <p className="text-destructive font-medium mb-1">Playback error</p>
           <p className="text-muted-foreground text-sm mb-4">
-            Impossible de charger cette vidéo
+            Unable to load this video
           </p>
           {fallbackUsed && (
             <p className="text-xs text-muted-foreground mb-4">
-              Tentative de fallback utilisée
+              Fallback attempt used
             </p>
           )}
           <Button 
@@ -465,7 +465,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             onClick={handleRetry}
           >
             <RotateCcw className="h-4 w-4 mr-2" />
-            Réessayer
+            Retry
           </Button>
         </div>
       </div>
@@ -503,7 +503,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
         {optimalFormats.video.map((format, index) => (
           <source key={index} src={src} type={format} />
         ))}
-        Votre navigateur ne supporte pas la lecture vidéo.
+        Your browser does not support video playback.
       </video>
 
       {/* Video Watermark - ALWAYS show for videos, even when loading */}

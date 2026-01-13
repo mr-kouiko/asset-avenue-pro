@@ -70,29 +70,29 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
 
   // Video taxonomy data
   const useCaseOptions = [
-    { value: "social-media", label: language === 'en' ? "Social Media (Reels/TikTok/Shorts)" : "Réseaux sociaux (Reels/TikTok/Shorts)" },
-    { value: "ads-marketing", label: language === 'en' ? "Ads & Marketing" : "Publicités & Marketing" },
-    { value: "business-corporate", label: language === 'en' ? "Business & Corporate" : "Business & Corporate" },
-    { value: "startup-saas", label: language === 'en' ? "Startup & SaaS" : "Startup & SaaS" },
-    { value: "ecommerce-product", label: language === 'en' ? "E-commerce & Product" : "E-commerce & Produits" },
-    { value: "real-estate", label: language === 'en' ? "Real Estate" : "Immobilier" },
-    { value: "luxury-lifestyle", label: language === 'en' ? "Luxury & Lifestyle" : "Luxe & Lifestyle" },
-    { value: "motivation-success", label: language === 'en' ? "Motivation & Success" : "Motivation & Succès" },
+    { value: "social-media", label: "Social Media (Reels/TikTok/Shorts)" },
+    { value: "ads-marketing", label: "Ads & Marketing" },
+    { value: "business-corporate", label: "Business & Corporate" },
+    { value: "startup-saas", label: "Startup & SaaS" },
+    { value: "ecommerce-product", label: "E-commerce & Product" },
+    { value: "real-estate", label: "Real Estate" },
+    { value: "luxury-lifestyle", label: "Luxury & Lifestyle" },
+    { value: "motivation-success", label: "Motivation & Success" },
   ];
 
   const aiVideoOptions = [
-    { value: "ai-generated", label: language === 'en' ? "AI-Generated Videos" : "Vidéos générées par IA" },
-    { value: "ai-cinematic", label: language === 'en' ? "AI Cinematic B-Roll" : "B-Roll cinématique IA" },
-    { value: "ai-avatars", label: language === 'en' ? "AI Avatars" : "Avatars IA" },
-    { value: "ai-backgrounds", label: language === 'en' ? "AI Background Loops" : "Boucles de fond IA" },
-    { value: "ai-motion-graphics", label: language === 'en' ? "AI Motion Graphics" : "Motion Graphics IA" },
+    { value: "ai-generated", label: "AI-Generated Videos" },
+    { value: "ai-cinematic", label: "AI Cinematic B-Roll" },
+    { value: "ai-avatars", label: "AI Avatars" },
+    { value: "ai-backgrounds", label: "AI Background Loops" },
+    { value: "ai-motion-graphics", label: "AI Motion Graphics" },
   ];
 
   const styleOptions = [
-    { value: "cinematic", label: language === 'en' ? "Cinematic" : "Cinématique" },
-    { value: "minimal", label: language === 'en' ? "Minimal" : "Minimaliste" },
-    { value: "futuristic", label: language === 'en' ? "Futuristic" : "Futuriste" },
-    { value: "abstract", label: language === 'en' ? "Abstract" : "Abstrait" },
+    { value: "cinematic", label: "Cinematic" },
+    { value: "minimal", label: "Minimal" },
+    { value: "futuristic", label: "Futuristic" },
+    { value: "abstract", label: "Abstract" },
     { value: "documentary", label: language === 'en' ? "Documentary" : "Documentaire" },
     { value: "urban-street", label: language === 'en' ? "Urban / Street" : "Urbain / Street" },
     { value: "nature-travel", label: language === 'en' ? "Nature / Travel" : "Nature / Voyage" },

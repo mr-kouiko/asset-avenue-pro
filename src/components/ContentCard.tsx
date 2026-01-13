@@ -161,7 +161,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             className="bg-white/95 text-stock-dark text-[10px] px-2 py-0.5 font-medium border-0 shadow-sm"
           >
             {type === 'photo' ? 'PHOTO' : 
-             type === 'video' ? 'VIDÉO' : 
+             type === 'video' ? 'VIDEO' : 
              type === 'illustration' ? 'VECTOR' : 'EBOOK'}
           </Badge>
           {isAiGenerated && (
