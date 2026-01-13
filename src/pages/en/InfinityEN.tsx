@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, Users, Camera, Image, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
-import heroImage from "@/assets/hero-image.jpg";
 import { useToast } from "@/hooks/use-toast";
 import { usePayPalSubscription } from "@/hooks/usePayPalSubscription";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,29 +83,9 @@ const InfinityEN = () => {
       <Header />
       
       {/* Hero Section with Pricing Card - Mobile optimized with controlled height */}
-      <section className="relative text-white overflow-hidden">
-        {/* Background Video */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          poster={heroImage}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        >
-          <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
-        </video>
-        
-        {/* Fallback Background */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${heroImage})` }}
-        />
-        
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 sm:bg-gradient-to-r sm:from-black/60 sm:via-black/50 sm:to-black/60"></div>
-        
-        <div className="relative container py-6 sm:py-10 lg:py-20 px-4 sm:px-6 z-10">
+      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative container py-6 sm:py-10 lg:py-20 px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-start lg:items-center">
             {/* Left content - Compact on mobile */}
             <div className="space-y-3 sm:space-y-4 lg:space-y-6 text-center lg:text-left">
