@@ -34,10 +34,21 @@ const FileUpload = () => {
   }, []);
 
   const handleFilesUploaded = async (files: UploadedFileData[]) => {
+    console.log('📥 handleFilesUploaded called with files:', files);
+    
+    // CRITICAL: Always update state first so the button appears
+    // Even if database save fails, user can continue
+    setUploadedFiles(prev => {
+      const newFiles = [...prev, ...files];
+      console.log('✅ State updated, total files:', newFiles.length);
+      return newFiles;
+    });
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in to upload files");
+        console.warn("User not logged in, but files are in state");
+        toast.warning("Files uploaded but not saved to database - please login");
         return;
       }
 
@@ -54,6 +65,8 @@ const FileUpload = () => {
         status: 'completed'
       }));
 
+      console.log('💾 Saving files to database:', filesToInsert);
+
       const { data: insertedFiles, error } = await supabase
         .from('uploaded_files')
         .insert(filesToInsert)
@@ -61,23 +74,29 @@ const FileUpload = () => {
 
       if (error) {
         console.error('Error saving files to database:', error);
-        toast.error("Error saving files");
+        toast.warning("Files ready but database save failed - you can still continue");
         return;
       }
 
       console.log('✅ Files saved to database:', insertedFiles);
       
-      // Update state with database IDs
-      const filesWithDbIds = files.map((file, index) => ({
-        ...file,
-        id: insertedFiles?.[index]?.id || file.id
-      }));
+      // Update state with database IDs (replace the files we just added)
+      if (insertedFiles && insertedFiles.length > 0) {
+        setUploadedFiles(prev => {
+          return prev.map(file => {
+            const dbFile = insertedFiles.find(df => df.file_url === file.url);
+            if (dbFile) {
+              return { ...file, id: dbFile.id };
+            }
+            return file;
+          });
+        });
+      }
 
-      setUploadedFiles(prev => [...prev, ...filesWithDbIds]);
       toast.success(`${files.length} file(s) uploaded successfully`);
     } catch (error) {
       console.error('Error in handleFilesUploaded:', error);
-      toast.error("Error processing files");
+      toast.warning("Files ready - database save failed but you can continue");
     }
   };
 
