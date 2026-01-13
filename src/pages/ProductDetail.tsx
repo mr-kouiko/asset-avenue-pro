@@ -110,7 +110,8 @@ const ProductDetail = () => {
   const { resolution, basePrice, licensePrice, totalPrice, isVideo } = useVideoPricing({
     type: product?.type || '',
     files: product?.files || [],
-    selectedLicense
+    selectedLicense,
+    isAiGenerated: product?.isAiGenerated || false
   });
 
   // SEO Configuration - Must be called before any conditional returns

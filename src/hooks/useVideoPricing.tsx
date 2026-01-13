@@ -9,6 +9,7 @@ interface VideoPricingParams {
     is_original: boolean;
   }>;
   selectedLicense: string;
+  isAiGenerated?: boolean;
 }
 
 interface PricingConfig {
@@ -23,21 +24,23 @@ interface PricingConfig {
   };
 }
 
+const AI_VIDEO_BASE_PRICE = 10; // Fixed $10 for AI-generated videos
+
 const PRICING_CONFIG: PricingConfig = {
   resolutions: {
-    HD: { basePrice: 10 }, // 10$ pour HD (AI videos)
-    '4K': { basePrice: 10 }, // 10$ pour 4K (AI videos)
+    HD: { basePrice: 25 }, // $25 for HD (non-AI videos)
+    '4K': { basePrice: 50 }, // $50 for 4K (non-AI videos)
   },
   licenses: {
-    standard: { price: 15 }, // +15€ pour licence standard
-    extended: { price: 45 }, // +45€ pour licence étendue  
-    exclusive: { price: 299 }, // +299€ pour licence exclusive
+    standard: { price: 15 }, // +$15 for standard license
+    extended: { price: 45 }, // +$45 for extended license  
+    exclusive: { price: 299 }, // +$299 for exclusive license
   }
 };
 
-export const useVideoPricing = ({ type, files, selectedLicense }: VideoPricingParams) => {
+export const useVideoPricing = ({ type, files, selectedLicense, isAiGenerated = false }: VideoPricingParams) => {
   const { resolution, basePrice, licensePrice, totalPrice } = useMemo(() => {
-    // Par défaut, pour les non-vidéos, utiliser l'ancien système
+    // For non-videos, use license-only pricing
     if (type !== 'video') {
       const licensePrice = PRICING_CONFIG.licenses[selectedLicense as keyof typeof PRICING_CONFIG.licenses]?.price || 0;
       return {
@@ -48,17 +51,17 @@ export const useVideoPricing = ({ type, files, selectedLicense }: VideoPricingPa
       };
     }
 
-    // Détecter la résolution de la vidéo
+    // Detect video resolution
     const originalVideoFile = files.find(f => f.is_original && f.file_type.startsWith('video/'));
-    let detectedResolution: 'HD' | '4K' = 'HD'; // Défaut HD
+    let detectedResolution: 'HD' | '4K' = 'HD'; // Default HD
 
     if (originalVideoFile) {
-      // Essayer de détecter la résolution depuis le nom de fichier
+      // Try to detect resolution from filename
       const fileName = originalVideoFile.file_name?.toLowerCase() || '';
       if (fileName.includes('4k') || fileName.includes('2160p') || fileName.includes('uhd')) {
         detectedResolution = '4K';
       } else if (originalVideoFile.metadata) {
-        // Si on a des métadonnées, vérifier la résolution
+        // Check metadata for resolution
         const width = originalVideoFile.metadata.width;
         const height = originalVideoFile.metadata.height;
         
@@ -68,7 +71,11 @@ export const useVideoPricing = ({ type, files, selectedLicense }: VideoPricingPa
       }
     }
 
-    const basePrice = PRICING_CONFIG.resolutions[detectedResolution].basePrice;
+    // AI videos have fixed $10 price, non-AI use resolution-based pricing
+    const basePrice = isAiGenerated 
+      ? AI_VIDEO_BASE_PRICE 
+      : PRICING_CONFIG.resolutions[detectedResolution].basePrice;
+    
     const licensePrice = PRICING_CONFIG.licenses[selectedLicense as keyof typeof PRICING_CONFIG.licenses]?.price || 0;
     const totalPrice = basePrice + licensePrice;
 
@@ -78,7 +85,7 @@ export const useVideoPricing = ({ type, files, selectedLicense }: VideoPricingPa
       licensePrice,
       totalPrice
     };
-  }, [type, files, selectedLicense]);
+  }, [type, files, selectedLicense, isAiGenerated]);
 
   return {
     resolution,
