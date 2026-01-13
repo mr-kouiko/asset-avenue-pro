@@ -339,13 +339,13 @@ export const UniversalAudioPlayer: React.FC<UniversalAudioPlayerProps> = ({
           <div className="w-12 h-12 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
             <AlertCircle className="h-6 w-6 text-destructive" />
           </div>
-          <p className="text-destructive font-medium mb-1">Erreur de lecture</p>
+          <p className="text-destructive font-medium mb-1">Playback error</p>
           <p className="text-muted-foreground text-sm mb-4">
-            Impossible de lire ce fichier audio
+            Unable to play this audio file
           </p>
           {fallbackUsed && (
             <p className="text-xs text-muted-foreground mb-4">
-              Tentative de fallback utilisée
+              Fallback attempt used
             </p>
           )}
           <Button 
@@ -354,7 +354,7 @@ export const UniversalAudioPlayer: React.FC<UniversalAudioPlayerProps> = ({
             onClick={handleRetry}
           >
             <RotateCcw className="h-4 w-4 mr-2" />
-            Réessayer
+            Retry
           </Button>
         </div>
       </div>
@@ -383,7 +383,7 @@ export const UniversalAudioPlayer: React.FC<UniversalAudioPlayerProps> = ({
         {optimalFormats.audio.map((format, index) => (
           <source key={index} src={src} type={format} />
         ))}
-        Votre navigateur ne supporte pas la lecture audio.
+        Your browser does not support audio playback.
       </audio>
 
       {/* Loading indicator */}
@@ -392,7 +392,7 @@ export const UniversalAudioPlayer: React.FC<UniversalAudioPlayerProps> = ({
           <div className="text-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
             <p className="text-primary text-sm">
-              {fallbackUsed ? 'Chargement de l\'URL de secours...' : 'Chargement...'}
+              {fallbackUsed ? 'Loading fallback URL...' : 'Loading...'}
             </p>
           </div>
         </div>

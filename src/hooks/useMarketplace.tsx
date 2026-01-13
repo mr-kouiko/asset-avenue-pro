@@ -233,7 +233,7 @@ export const useMarketplace = (initialLimit = 200) => {
         id: item.id,
         slug: item.slug,
         title: item.title || 'Untitled',
-        author: creatorMap.get(item.creator_id) || 'Boutique anonyme',
+        author: creatorMap.get(item.creator_id) || 'Anonymous Store',
         price: item.price || 0,
         type: contentType,
         thumbnail: thumbnailUrl,

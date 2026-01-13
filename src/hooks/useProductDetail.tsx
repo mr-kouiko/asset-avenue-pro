@@ -88,7 +88,7 @@ export const useProductDetail = (productId: string) => {
             id: found.id,
             title: found.title || 'Untitled',
             description: found.description || '',
-            creator_store_name: found.creator_store_name || 'Boutique anonyme',
+            creator_store_name: found.creator_store_name || 'Anonymous Store',
             created_at: found.created_at,
             price: found.price ?? null,
             tags: found.tags || [],
@@ -389,7 +389,7 @@ export const useProductDetail = (productId: string) => {
           id: productInfo.id,
           title: productInfo.title,
           description: productInfo.description,
-          author: productInfo.creator_store_name || 'Boutique anonyme', // Use ONLY store name, no fallback to display name
+          author: productInfo.creator_store_name || 'Anonymous Store', // Use ONLY store name, no fallback to display name
           authorId: 'anonymous', // Don't expose real creator ID
           type: contentType,
           thumbnail,

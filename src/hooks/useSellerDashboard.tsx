@@ -339,7 +339,7 @@ export const useSellerDashboard = () => {
       setSubmissions(transformedData);
     } catch (error) {
       console.error('💥 Error fetching submissions:', error);
-      toast.error('Erreur lors du chargement du contenu');
+      toast.error('Error loading content');
     }
   };
 
@@ -456,21 +456,21 @@ export const useSellerDashboard = () => {
 
         if (filesError) {
           console.error('Error adding files:', filesError);
-          toast.error('Contenu créé mais erreur lors de l\'ajout des fichiers');
+          toast.error('Content created but error adding files');
         } else {
           console.log('Files added successfully');
         }
       }
 
       const watermarkedCount = draftFiles.filter(f => f.isWatermarked).length;
-      toast.success(`Contenu publié avec succès! ${draftFiles.length > 0 ? `${draftFiles.length} fichier(s) uploadé(s)` : ''}${watermarkedCount > 0 ? ` (${watermarkedCount} avec watermarking)` : ''}`);
+      toast.success(`Content published successfully! ${draftFiles.length > 0 ? `${draftFiles.length} file(s) uploaded` : ''}${watermarkedCount > 0 ? ` (${watermarkedCount} with watermark)` : ''}`);
       clearDraftFiles();
       await fetchSubmissions();
       await fetchStats();
       return submission;
     } catch (error) {
       console.error('Error creating submission:', error);
-      toast.error('Erreur lors de la création du contenu');
+      toast.error('Error creating content');
       return null;
     }
   };
@@ -498,20 +498,20 @@ export const useSellerDashboard = () => {
       if (error) {
         console.error('❌ Update error:', error);
         if (error.code === 'PGRST116') {
-          toast.error('Produit non trouvé ou vous n\'avez pas les droits pour le modifier');
+          toast.error('Product not found or you do not have permission to edit it');
         } else {
-          toast.error(`Erreur: ${error.message}`);
+          toast.error(`Error: ${error.message}`);
         }
         return false;
       }
 
       console.log('✅ Submission updated successfully:', data);
-      toast.success('Contenu mis à jour');
+      toast.success('Content updated');
       await fetchSubmissions();
       return true;
     } catch (error) {
       console.error('💥 Error updating submission:', error);
-      toast.error('Erreur lors de la mise à jour');
+      toast.error('Error updating content');
       return false;
     }
   };
@@ -535,7 +535,7 @@ export const useSellerDashboard = () => {
 
       if (checkError || !submission) {
         console.error('Submission not found or access denied:', checkError);
-        toast.error('Contenu non trouvé ou accès refusé');
+        toast.error('Content not found or access denied');
         return false;
       }
 
@@ -601,7 +601,7 @@ export const useSellerDashboard = () => {
 
       if (submissionError) {
         console.error('❌ [DELETE] Error deleting submission:', submissionError.message, submissionError.details, submissionError.hint);
-        toast.error('Erreur lors de la suppression du contenu: ' + submissionError.message);
+        toast.error('Error deleting content: ' + submissionError.message);
         // Restore UI if deletion failed
         await fetchSubmissions();
         return false;
@@ -610,7 +610,7 @@ export const useSellerDashboard = () => {
       console.log('✅ [DELETE] Submission deleted successfully:', id);
 
       // Step 3: Update stats and trigger refresh events
-      toast.success(`Contenu "${submission.title}" supprimé définitivement`);
+      toast.success(`Content "${submission.title}" permanently deleted`);
       
       // Update stats and submissions list immediately - force fresh fetch
       await Promise.all([
@@ -676,12 +676,12 @@ export const useSellerDashboard = () => {
 
       if (error) throw error;
 
-      toast.success('Fichiers ajoutés au contenu');
+      toast.success('Files added to content');
       await fetchSubmissions();
       return true;
     } catch (error) {
       console.error('Error adding files:', error);
-      toast.error('Erreur lors de l\'ajout des fichiers');
+      toast.error('Error adding files');
       return false;
     }
   };

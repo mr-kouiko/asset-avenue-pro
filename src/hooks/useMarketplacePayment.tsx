@@ -26,12 +26,12 @@ export const useMarketplacePayment = () => {
     cancelUrl?: string
   ) => {
     if (!user) {
-      toast.error('Vous devez être connecté pour effectuer un achat');
+      toast.error('You must be logged in to make a purchase');
       return null;
     }
 
     if (cartItems.length === 0) {
-      toast.error('Votre panier est vide');
+      toast.error('Your cart is empty');
       return null;
     }
 
@@ -179,11 +179,11 @@ export const useMarketplacePayment = () => {
 
   const validateCart = () => {
     if (!user) {
-      return { valid: false, error: 'Vous devez être connecté' };
+      return { valid: false, error: 'You must be logged in' };
     }
 
     if (cartItems.length === 0) {
-      return { valid: false, error: 'Votre panier est vide' };
+      return { valid: false, error: 'Your cart is empty' };
     }
 
     // Check for items with problematic prices
@@ -194,7 +194,7 @@ export const useMarketplacePayment = () => {
 
     if (invalidItems.length > 0) {
       console.error('Invalid items found:', invalidItems);
-      return { valid: false, error: 'Certains articles ont des prix invalides' };
+      return { valid: false, error: 'Some items have invalid prices' };
     }
 
     // Check for missing required fields

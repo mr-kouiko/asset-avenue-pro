@@ -114,7 +114,7 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
                   className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-accent"
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  {t('header.cart') || 'Panier'}
+                  {t('header.cart') || 'Cart'}
                 </Link>
 
                 {userRole === 'admin' && (
