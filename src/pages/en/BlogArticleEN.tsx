@@ -31,9 +31,9 @@ const articleContent: Record<string, {
   content: string;
   relatedArticles: { slug: string; title: string }[];
 }> = {
-  "mastering-stock-photography-2024": {
+  "stock-photography-tips-composition-lighting-guide-2024": {
     id: "1",
-    slug: "mastering-stock-photography-2024",
+    slug: "stock-photography-tips-composition-lighting-guide-2024",
     title: "Mastering Stock Photography in 2024: A Complete Guide for Creators",
     excerpt: "Learn the essential techniques and strategies to create compelling stock images that sell.",
     category: "Photography",
@@ -132,13 +132,13 @@ Success in stock photography requires a combination of technical skill, market a
 Remember: Every expert was once a beginner. Start where you are, use what you have, and do what you can. Your unique perspective has value in the marketplace.
     `,
     relatedArticles: [
-      { slug: "color-psychology-visual-content", title: "Color Psychology in Visual Content" },
-      { slug: "building-passive-income-stock-content", title: "Building Passive Income Through Stock Content" },
+      { slug: "color-psychology-marketing-visual-design-branding", title: "Color Psychology in Visual Content" },
+      { slug: "passive-income-stock-photography-success-stories-earnings", title: "Building Passive Income Through Stock Content" },
     ]
   },
-  "video-content-trends-driving-sales": {
+  "stock-video-trends-4k-drone-footage-vertical-content": {
     id: "2",
-    slug: "video-content-trends-driving-sales",
+    slug: "stock-video-trends-4k-drone-footage-vertical-content",
     title: "Video Content Trends Driving Sales in the Stock Market",
     excerpt: "Discover the hottest video trends that buyers are searching for.",
     category: "Video",
@@ -225,13 +225,13 @@ Focus on evergreen content that remains relevant regardless of trends. Combine t
 The stock video market continues to grow exponentially. By staying ahead of trends, maintaining technical excellence, and building a diverse portfolio, you can establish a sustainable income stream from your video content.
     `,
     relatedArticles: [
-      { slug: "mastering-stock-photography-2024", title: "Mastering Stock Photography in 2024" },
-      { slug: "audio-content-revolution", title: "The Audio Content Revolution" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "stock-audio-music-sound-effects-podcast-production", title: "The Audio Content Revolution" },
     ]
   },
-  "ai-in-creative-industry": {
+  "ai-creative-tools-generative-art-future-content-creation": {
     id: "3",
-    slug: "ai-in-creative-industry",
+    slug: "ai-creative-tools-generative-art-future-content-creation",
     title: "How AI is Transforming the Creative Industry: Opportunities & Challenges",
     excerpt: "Explore the impact of artificial intelligence on stock content creation.",
     category: "Industry Insights",
@@ -327,13 +327,13 @@ The creators who will thrive are those who view AI as a tool rather than a threa
 AI is not the end of human creativity—it's a new chapter. By embracing these tools thoughtfully and ethically, creators can enhance their productivity, explore new creative territories, and continue to deliver the authentic, meaningful content that audiences crave.
     `,
     relatedArticles: [
-      { slug: "video-content-trends-driving-sales", title: "Video Content Trends Driving Sales" },
-      { slug: "licensing-101-protect-your-work", title: "Licensing 101: Protect Your Work" },
+      { slug: "stock-video-trends-4k-drone-footage-vertical-content", title: "Video Content Trends Driving Sales" },
+      { slug: "stock-content-licensing-copyright-royalty-free-guide", title: "Licensing 101: Protect Your Work" },
     ]
   },
-  "color-psychology-visual-content": {
+  "color-psychology-marketing-visual-design-branding": {
     id: "4",
-    slug: "color-psychology-visual-content",
+    slug: "color-psychology-marketing-visual-design-branding",
     title: "Color Psychology in Visual Content: Creating Emotional Connections",
     excerpt: "Understand how color choices influence buyer decisions and learn to create visually compelling content that resonates emotionally.",
     category: "Design",
@@ -453,13 +453,13 @@ Mastering color psychology transforms good content into great content. By unders
 Color is not just visual—it's emotional. Use it wisely.
     `,
     relatedArticles: [
-      { slug: "mastering-stock-photography-2024", title: "Mastering Stock Photography in 2024" },
-      { slug: "ai-in-creative-industry", title: "How AI is Transforming the Creative Industry" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "ai-creative-tools-generative-art-future-content-creation", title: "How AI is Transforming the Creative Industry" },
     ]
   },
-  "building-passive-income-stock-content": {
+  "passive-income-stock-photography-success-stories-earnings": {
     id: "5",
-    slug: "building-passive-income-stock-content",
+    slug: "passive-income-stock-photography-success-stories-earnings",
     title: "Building Passive Income Through Stock Content: Success Stories",
     excerpt: "Real stories from creators who turned their passion into profitable careers. Learn from their journeys and apply their strategies.",
     category: "Success Stories",
@@ -598,13 +598,13 @@ Passive income through stock content is real—but it requires active effort upf
 Your success story starts with your first upload. What are you waiting for?
     `,
     relatedArticles: [
-      { slug: "mastering-stock-photography-2024", title: "Mastering Stock Photography in 2024" },
-      { slug: "sustainable-creative-workflow", title: "Creating a Sustainable Creative Workflow" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "creative-workflow-productivity-burnout-prevention-tips", title: "Creating a Sustainable Creative Workflow" },
     ]
   },
-  "audio-content-revolution": {
+  "stock-audio-music-sound-effects-podcast-production": {
     id: "6",
-    slug: "audio-content-revolution",
+    slug: "stock-audio-music-sound-effects-podcast-production",
     title: "The Audio Content Revolution: Why Sound Design Matters More Than Ever",
     excerpt: "From podcasts to video production, audio content demand is soaring. Learn how to create professional audio that sells.",
     category: "Audio",
@@ -766,13 +766,13 @@ The audio market continues to expand as digital content consumption grows. By fo
 Sound is half the picture—make it count.
     `,
     relatedArticles: [
-      { slug: "video-content-trends-driving-sales", title: "Video Content Trends Driving Sales" },
-      { slug: "building-passive-income-stock-content", title: "Building Passive Income Through Stock Content" },
+      { slug: "stock-video-trends-4k-drone-footage-vertical-content", title: "Video Content Trends Driving Sales" },
+      { slug: "passive-income-stock-photography-success-stories-earnings", title: "Building Passive Income Through Stock Content" },
     ]
   },
-  "sustainable-creative-workflow": {
+  "creative-workflow-productivity-burnout-prevention-tips": {
     id: "7",
-    slug: "sustainable-creative-workflow",
+    slug: "creative-workflow-productivity-burnout-prevention-tips",
     title: "Creating a Sustainable Creative Workflow: Avoiding Burnout",
     excerpt: "Maintain your creative momentum without burning out. Practical tips for managing your time and energy as a content creator.",
     category: "Lifestyle",
@@ -952,13 +952,13 @@ Sustainability isn't about working less—it's about working smarter and taking 
 Your creative career is a marathon, not a sprint. Pace yourself accordingly.
     `,
     relatedArticles: [
-      { slug: "building-passive-income-stock-content", title: "Building Passive Income Through Stock Content" },
-      { slug: "mastering-stock-photography-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "passive-income-stock-photography-success-stories-earnings", title: "Building Passive Income Through Stock Content" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
     ]
   },
-  "licensing-101-protect-your-work": {
+  "stock-content-licensing-copyright-royalty-free-guide": {
     id: "8",
-    slug: "licensing-101-protect-your-work",
+    slug: "stock-content-licensing-copyright-royalty-free-guide",
     title: "Licensing 101: Understanding and Protecting Your Creative Work",
     excerpt: "Navigate the complex world of content licensing with confidence. Know your rights and maximize the value of your creations.",
     category: "Legal",
@@ -1175,8 +1175,8 @@ Understanding licensing isn't just about protection—it's about maximizing the 
 When in doubt, consult a qualified intellectual property attorney.
     `,
     relatedArticles: [
-      { slug: "ai-in-creative-industry", title: "How AI is Transforming the Creative Industry" },
-      { slug: "building-passive-income-stock-content", title: "Building Passive Income Through Stock Content" },
+      { slug: "ai-creative-tools-generative-art-future-content-creation", title: "How AI is Transforming the Creative Industry" },
+      { slug: "passive-income-stock-photography-success-stories-earnings", title: "Building Passive Income Through Stock Content" },
     ]
   },
 };
