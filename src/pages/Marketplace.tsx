@@ -688,7 +688,7 @@ const Marketplace = () => {
                   size="lg"
                   variant="outline"
                 >
-                  {loading ? 'Chargement...' : 'Charger plus de contenu'}
+                  {loading ? 'Loading...' : 'Load more content'}
                 </Button>
               </div>
             )}
