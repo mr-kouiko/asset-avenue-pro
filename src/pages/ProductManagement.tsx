@@ -451,6 +451,38 @@ const ProductManagement = () => {
       return;
     }
 
+    // AUTO-RECATEGORIZE: Re-detect illustration vs photo using title/description/tags BEFORE publishing
+    // This catches cases where the initial pixel analysis missed stylized content (pop art, digital art, etc.)
+    const isImage = file.type.startsWith('image/');
+    let finalCategoryId = productData.category;
+    
+    if (isImage && !isPDF) {
+      try {
+        console.log('🎨 [AUTO-RECATEGORIZE] Re-detecting category before publish with metadata...');
+        const result = await detectIllustration(file.url, {
+          fileName: file.name,
+          title: productData.title,
+          description: productData.description,
+          tags: productData.tags
+        });
+        
+        if (result && result.isIllustration) {
+          // Update to illustration category if detected
+          const illustrationCat = categories.find(cat => 
+            cat.name.toLowerCase().includes('illustration')
+          );
+          if (illustrationCat && illustrationCat.id !== productData.category) {
+            finalCategoryId = illustrationCat.id;
+            toast.info(`🎨 Auto-detected as Illustration based on title/tags`);
+            console.log('🎨 [AUTO-RECATEGORIZE] Switched to Illustration category. Indicators:', result.indicators);
+          }
+        }
+      } catch (error) {
+        console.error('Auto-recategorize error:', error);
+        // Continue with original category on error
+      }
+    }
+
     const success = await publishProduct({
       file: {
         ...file,
@@ -461,7 +493,7 @@ const ProductManagement = () => {
       productData: {
         title: productData.title,
         description: productData.description,
-        category_id: productData.category || undefined,
+        category_id: finalCategoryId || undefined,
         tags: productData.tags
       }
     });
