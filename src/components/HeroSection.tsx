@@ -3,6 +3,7 @@ import { useContentStats } from "@/hooks/useContentStats";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { useMarketplace } from "@/hooks/useMarketplace";
+import { useAuth } from "@/hooks/useAuth";
 import { useMemo } from "react";
 import heroImage from "@/assets/hero-image.jpg";
 
@@ -10,6 +11,7 @@ export const HeroSection = () => {
   const { stats, loading } = useContentStats();
   const { language } = useLanguage();
   const { content: marketplaceContent } = useMarketplace();
+  const { user } = useAuth();
 
   // Convert to searchable format for suggestions
   const searchableItems = useMemo(() => 
@@ -95,39 +97,41 @@ export const HeroSection = () => {
               />
             </div>
 
-            {/* Stats - Grid on mobile */}
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-6 md:gap-8 pt-4 md:pt-6 max-w-lg mx-auto lg:mx-0 lg:max-w-none">
-              <div className="text-center lg:text-left">
-                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
-                  {loading ? "..." : stats.photos.toLocaleString()}
+            {/* Stats - Grid on mobile - Only show counts for logged-in users */}
+            {user && (
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-6 md:gap-8 pt-4 md:pt-6 max-w-lg mx-auto lg:mx-0 lg:max-w-none">
+                <div className="text-center lg:text-left">
+                  <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
+                    {loading ? "..." : stats.photos.toLocaleString()}
+                  </div>
+                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.photos}</div>
                 </div>
-                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.photos}</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
-                  {loading ? "..." : stats.videos.toLocaleString()}
+                <div className="text-center lg:text-left">
+                  <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
+                    {loading ? "..." : stats.videos.toLocaleString()}
+                  </div>
+                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.videos}</div>
                 </div>
-                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.videos}</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
-                  {loading ? "..." : stats.illustrations.toLocaleString()}
+                <div className="text-center lg:text-left">
+                  <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
+                    {loading ? "..." : stats.illustrations.toLocaleString()}
+                  </div>
+                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.illustrations}</div>
                 </div>
-                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.illustrations}</div>
-              </div>
-              <div className="text-center lg:text-left hidden sm:block">
-                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
-                  {loading ? "..." : stats.audios.toLocaleString()}
+                <div className="text-center lg:text-left hidden sm:block">
+                  <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
+                    {loading ? "..." : stats.audios.toLocaleString()}
+                  </div>
+                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.audio}</div>
                 </div>
-                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.audio}</div>
-              </div>
-              <div className="text-center lg:text-left hidden sm:block">
-                <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
-                  {loading ? "..." : stats.ebooks.toLocaleString()}
+                <div className="text-center lg:text-left hidden sm:block">
+                  <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
+                    {loading ? "..." : stats.ebooks.toLocaleString()}
+                  </div>
+                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.ebooks}</div>
                 </div>
-                <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.ebooks}</div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Image - Hidden on mobile and tablet */}

@@ -7,12 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useContentStats } from "@/hooks/useContentStats";
+import { useAuth } from "@/hooks/useAuth";
 import { Camera, Video, Music, Palette, Zap, Shield, Globe, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const IndexEN = () => {
   const { content, loading } = useMarketplace(6);
   const { stats } = useContentStats();
+  const { user } = useAuth();
 
   // Get first 6 items for featured section
   const featuredContent = content.slice(0, 6);
@@ -88,22 +90,22 @@ const IndexEN = () => {
               <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <Camera className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <h3 className="font-semibold mb-2">Photos</h3>
-                <Badge variant="secondary">{stats.photos} items</Badge>
+                {user && <Badge variant="secondary">{stats.photos} items</Badge>}
               </Card>
               <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <Video className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <h3 className="font-semibold mb-2">Videos</h3>
-                <Badge variant="secondary">{stats.videos} items</Badge>
+                {user && <Badge variant="secondary">{stats.videos} items</Badge>}
               </Card>
               <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <Music className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <h3 className="font-semibold mb-2">Audio</h3>
-                <Badge variant="secondary">{stats.audios} items</Badge>
+                {user && <Badge variant="secondary">{stats.audios} items</Badge>}
               </Card>
               <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <Palette className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <h3 className="font-semibold mb-2">Illustrations</h3>
-                <Badge variant="secondary">{stats.illustrations} items</Badge>
+                {user && <Badge variant="secondary">{stats.illustrations} items</Badge>}
               </Card>
             </div>
           </div>
