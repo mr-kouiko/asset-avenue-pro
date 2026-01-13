@@ -39,7 +39,15 @@ const ILLUSTRATION_KEYWORDS = [
   'infographic', 'diagram', 'chart design', 'icon set',
   // Character/creature art
   'character art', 'creature design', 'monster design', 'mascot',
-  'avatar', 'portrait illustration', 'caricature'
+  'avatar', 'portrait illustration', 'caricature',
+  // NEW: Vibrant/colorful art keywords (common in AI-generated art)
+  'vibrant', 'colorful', 'colorful painting', 'digital artwork',
+  'impressionistic', 'bold brushstrokes', 'painting style',
+  'artistic style', 'artistic illustration', 'creative artwork',
+  'stylized art', 'artistic rendering', 'modern art', 'mixed media',
+  // AI art style keywords
+  'ai art', 'ai generated', 'midjourney', 'dall-e', 'stable diffusion',
+  'generative art', 'neural art', 'dream-like', 'surrealistic'
 ];
 
 // Check if text contains illustration keywords
