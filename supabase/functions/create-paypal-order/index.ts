@@ -13,6 +13,16 @@ const PAYPAL_API_URL = Deno.env.get('PAYPAL_SANDBOX') === 'true'
 async function getPayPalAccessToken(): Promise<string> {
   const clientId = Deno.env.get('PAYPAL_CLIENT_ID');
   const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
+  const isSandbox = Deno.env.get('PAYPAL_SANDBOX');
+  
+  console.log('PayPal Config Debug:', {
+    hasClientId: !!clientId,
+    clientIdPrefix: clientId?.substring(0, 10) + '...',
+    hasClientSecret: !!clientSecret,
+    secretLength: clientSecret?.length,
+    isSandbox,
+    apiUrl: PAYPAL_API_URL
+  });
   
   if (!clientId || !clientSecret) {
     throw new Error('PayPal credentials not configured');
@@ -32,10 +42,12 @@ async function getPayPalAccessToken(): Promise<string> {
   if (!response.ok) {
     const error = await response.text();
     console.error('PayPal auth error:', error);
+    console.error('Using API URL:', PAYPAL_API_URL);
     throw new Error('Failed to get PayPal access token');
   }
 
   const data = await response.json();
+  console.log('PayPal auth successful');
   return data.access_token;
 }
 
