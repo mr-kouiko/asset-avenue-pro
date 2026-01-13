@@ -63,24 +63,9 @@ const Dashboard = () => {
   
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Refresh dashboard data when returning to this page
+  // Load dashboard data on mount only (no auto-refresh)
   useEffect(() => {
-    // Refresh when component mounts or becomes visible
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        refreshData();
-      }
-    };
-
-    // Refresh on mount
     refreshData();
-
-    // Also refresh when tab becomes visible again
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
   }, []);
   
   const handleEditSubmission = async (submissionId: string) => {
