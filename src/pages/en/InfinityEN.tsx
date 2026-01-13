@@ -82,104 +82,105 @@ const InfinityEN = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* Hero Section with Pricing Card */}
-      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+      {/* Hero Section with Pricing Card - Mobile optimized with controlled height */}
+      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden min-h-[auto] sm:min-h-[auto] lg:min-h-[auto]">
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative container py-8 sm:py-12 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
-            {/* Left content */}
-            <div className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left">
-              <Badge className="bg-white/10 text-white border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm">
-                <Crown className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+        <div className="relative container py-6 sm:py-10 lg:py-20 px-4 sm:px-6">
+          <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-start lg:items-center">
+            {/* Left content - Compact on mobile */}
+            <div className="space-y-3 sm:space-y-4 lg:space-y-6 text-center lg:text-left">
+              <Badge className="bg-white/10 text-white border-white/20 px-2.5 py-1 sm:px-4 sm:py-2 text-xs">
+                <Crown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 New
               </Badge>
               
-              <h1 className="text-2xl sm:text-3xl lg:text-6xl font-bold leading-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl font-bold leading-tight">
                 Unleash your unlimited creativity with VisuStock Infinity
               </h1>
               
-              <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-lg mx-auto lg:mx-0">
+              <p className="text-sm sm:text-base lg:text-lg text-slate-300 max-w-lg mx-auto lg:mx-0 leading-relaxed">
                 Authentic creative content with an unlimited plan for individuals and freelancers
               </p>
 
-              {/* Content type badges - hidden on mobile, shown on larger screens */}
-              <div className="hidden sm:flex flex-wrap gap-3 justify-center lg:justify-start">
-                <Badge variant="outline" className="bg-blue-500/20 text-blue-200 border-blue-400/30 px-4 py-2">
-                  <Camera className="w-4 h-4 mr-2" />
+              {/* Content type badges - hidden on mobile */}
+              <div className="hidden md:flex flex-wrap gap-2 lg:gap-3 justify-center lg:justify-start">
+                <Badge variant="outline" className="bg-blue-500/20 text-blue-200 border-blue-400/30 px-3 py-1.5 text-xs lg:text-sm">
+                  <Camera className="w-3 h-3 lg:w-4 lg:h-4 mr-1.5" />
                   Photos
                 </Badge>
-                <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 px-4 py-2">
-                  <Image className="w-4 h-4 mr-2" />
+                <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 px-3 py-1.5 text-xs lg:text-sm">
+                  <Image className="w-3 h-3 lg:w-4 lg:h-4 mr-1.5" />
                   Vectors
                 </Badge>
               </div>
             </div>
 
-            {/* Right pricing card */}
-            <div className="lg:justify-self-end w-full max-w-md mx-auto lg:mx-0">
+            {/* Right pricing card - Compact on mobile */}
+            <div className="lg:justify-self-end w-full max-w-sm sm:max-w-md mx-auto lg:mx-0">
               <Card className="bg-white shadow-2xl border-0">
-                <CardContent className="p-5 sm:p-6 lg:p-8">
-                  <Badge className="bg-red-500 text-white mb-4">
+                <CardContent className="p-4 sm:p-5 lg:p-6">
+                  <Badge className="bg-red-500 text-white mb-3 text-xs">
                     New
                   </Badge>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-3 sm:space-y-4 lg:space-y-5">
                     <div>
-                      <p className="text-lg font-medium text-foreground mb-2">
+                      <p className="text-sm sm:text-base font-medium text-foreground mb-1.5">
                         A plan with unlimited downloads.
                       </p>
                       
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-gray-400 line-through">
+                      <div className="flex items-baseline gap-1.5 sm:gap-2">
+                        <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-400 line-through">
                           ${isYearly ? 99 : 109}
                         </span>
-                        <span className="text-4xl font-bold text-primary">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary">
                           ${displayPrice}
                         </span>
-                        <span className="text-muted-foreground">/monthly</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">/monthly</span>
                       </div>
                     </div>
 
-                    {/* Billing Toggle */}
-                    <div className="flex items-center justify-center space-x-3 py-4">
-                      <span className={!isYearly ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                    {/* Billing Toggle - Compact */}
+                    <div className="flex items-center justify-center space-x-2 py-2 sm:py-3">
+                      <span className={`text-xs sm:text-sm ${!isYearly ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                         monthly
                       </span>
                       <Switch
                         checked={isYearly}
                         onCheckedChange={setIsYearly}
+                        className="scale-90 sm:scale-100"
                       />
-                      <span className={isYearly ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                      <span className={`text-xs sm:text-sm ${isYearly ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                         annual
                       </span>
                       {isYearly && (
-                        <Badge className="bg-green-100 text-green-800 ml-2">
+                        <Badge className="bg-green-100 text-green-800 ml-1 text-xs px-1.5 py-0.5">
                           Save 11%
                         </Badge>
                       )}
                     </div>
 
-                    <div className="space-y-3 text-sm">
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-green-500" />
+                        <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
                         <span>Unlimited downloads</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-green-500" />
-                        <span>Access to photos and vectors (Infinity)</span>
+                        <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+                        <span>Access to photos and vectors</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-green-500" />
-                        <span>Unlimited standard usage license</span>
+                        <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+                        <span>Standard usage license</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-green-500" />
-                        <span>Suitable for individual creators and freelancers</span>
+                        <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+                        <span>For creators and freelancers</span>
                       </div>
                     </div>
 
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm sm:text-base py-2.5 sm:py-3"
                       onClick={handleSubscribeInfinity}
                       disabled={isProcessing}
                     >
@@ -193,8 +194,8 @@ const InfinityEN = () => {
                       )}
                     </Button>
 
-                    <p className="text-xs text-muted-foreground text-center">
-                      Auto-renewal, you can cancel anytime
+                    <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
+                      Auto-renewal, cancel anytime
                     </p>
                   </div>
                 </CardContent>
