@@ -60,13 +60,12 @@ const Dashboard = () => {
     refreshData 
   } = useSellerDashboard();
   
-  
+
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Load dashboard data on mount only (no auto-refresh)
-  useEffect(() => {
-    refreshData();
-  }, []);
+  // Data is loaded automatically by useSellerDashboard hook on mount
+  // No additional auto-refresh needed - sellers can use refreshData() manually if needed
+
   
   const handleEditSubmission = async (submissionId: string) => {
     try {
