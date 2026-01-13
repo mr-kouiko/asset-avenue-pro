@@ -152,9 +152,24 @@ export const useMarketplace = (initialLimit = 200) => {
         thumbnailUrl = '/placeholder.svg';
       }
 
-      // Content type detection
+      // Content type detection - prioritize category_id over file type
       let contentType: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook' = 'photo';
-      if (originalFile) {
+      
+      // Category ID to type mapping (from database categories table)
+      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook'> = {
+        'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',      // Photo
+        'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',      // Vidéo
+        '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',      // Audio
+        '653f8437-6317-4a81-8bbf-9b8c520c0dbe': 'illustration', // Illustration
+        'ceca4e62-559c-4dc6-98fe-64017d537192': 'illustration', // Vectoriel (treated as illustration)
+        '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',      // Ebooks
+      };
+      
+      // Use category_id first if available
+      if (item.category_id && categoryTypeMap[item.category_id]) {
+        contentType = categoryTypeMap[item.category_id];
+      } else if (originalFile) {
+        // Fallback to file type detection
         const fileType = originalFile.file_type?.toLowerCase() || '';
         const fileFormat = originalFile.file_format?.toLowerCase() || '';
         
