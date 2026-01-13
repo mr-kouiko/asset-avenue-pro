@@ -55,23 +55,27 @@ export const HeroSection = () => {
 
   const t = content[language];
   return (
-    <section className="relative py-12 md:py-20 overflow-hidden min-h-[60vh] md:min-h-[70vh] flex items-center">
-      {/* Background Video - Hidden on mobile for performance */}
+    <section className="relative py-10 sm:py-12 md:py-20 overflow-hidden min-h-[50vh] sm:min-h-[55vh] md:min-h-[70vh] flex items-center">
+      {/* Background Video - Responsive on all devices */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="hidden md:block absolute inset-0 w-full h-full object-cover"
+        poster={heroImage}
+        className="absolute inset-0 w-full h-full object-cover object-center"
       >
         <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
       </video>
       
-      {/* Fallback Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary-glow/5 to-primary/5"></div>
+      {/* Fallback Background for when video fails to load */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${heroImage})` }}
+      />
       
-      {/* Overlay - Darker on mobile for better text readability */}
-      <div className="absolute inset-0 bg-black/50 md:bg-black/40"></div>
+      {/* Gradient Overlay - Stronger on mobile for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 sm:bg-gradient-to-r sm:from-black/50 sm:via-black/40 sm:to-black/50"></div>
       
       <div className="container relative z-10 px-4">
         <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
