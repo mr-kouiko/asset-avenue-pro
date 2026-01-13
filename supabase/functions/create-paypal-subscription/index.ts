@@ -16,6 +16,7 @@ const SUBSCRIPTION_PLANS = {
   monthly_60: { credits: 60, monthlyPrice: 37900, name: '60 Credits Monthly' },
   monthly_100: { credits: 100, monthlyPrice: 59900, name: '100 Credits Monthly' },
   monthly_200: { credits: 200, monthlyPrice: 109900, name: '200 Credits Monthly' },
+  infinity: { credits: -1, monthlyPrice: 8900, name: 'Infinity Unlimited' }, // -1 means unlimited
 };
 
 async function getPayPalAccessToken(): Promise<string> {
@@ -87,9 +88,20 @@ async function createBillingPlan(
 ): Promise<string> {
   const plan = SUBSCRIPTION_PLANS[planType as keyof typeof SUBSCRIPTION_PLANS];
   
-  // Calculate price (yearly gets 16% discount)
-  const yearlyTotal = Math.round(plan.monthlyPrice * 12 * 0.84);
-  const monthlyAmount = isYearly ? Math.round(yearlyTotal / 12) : plan.monthlyPrice;
+  // Calculate price based on plan type
+  let monthlyAmount: number;
+  let yearlyTotal: number;
+  
+  if (planType === 'infinity') {
+    // Infinity: $89/month or $79/month equivalent when yearly
+    monthlyAmount = isYearly ? 7900 : 8900; // in cents
+    yearlyTotal = 7900 * 12; // $948/year
+  } else {
+    // Credit plans: yearly gets 16% discount
+    yearlyTotal = Math.round(plan.monthlyPrice * 12 * 0.84);
+    monthlyAmount = isYearly ? Math.round(yearlyTotal / 12) : plan.monthlyPrice;
+  }
+  
   const priceInDollars = (monthlyAmount / 100).toFixed(2);
 
   const billingPlanPayload = {

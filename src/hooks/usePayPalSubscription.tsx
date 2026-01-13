@@ -22,6 +22,7 @@ export const SUBSCRIPTION_PLANS = {
   monthly_60: { credits: 60, monthlyPrice: 379, name: '60 Credits' },
   monthly_100: { credits: 100, monthlyPrice: 599, name: '100 Credits' },
   monthly_200: { credits: 200, monthlyPrice: 1099, name: '200 Credits' },
+  infinity: { credits: -1, monthlyPrice: 89, yearlyPrice: 79, name: 'Infinity Unlimited' },
 };
 
 export function usePayPalSubscription() {

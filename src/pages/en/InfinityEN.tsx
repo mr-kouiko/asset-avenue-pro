@@ -3,21 +3,47 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, Users, Camera, Image } from "lucide-react";
+import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, Users, Camera, Image, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
+import { usePayPalSubscription } from "@/hooks/usePayPalSubscription";
+import { useAuth } from "@/hooks/useAuth";
 
 const InfinityEN = () => {
   const [isYearly, setIsYearly] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { createSubscription } = usePayPalSubscription();
+  const { user } = useAuth();
 
-  const handleSubscribeInfinity = () => {
+  const handleSubscribeInfinity = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to subscribe to Infinity",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
     toast({
-      title: "Redirecting to Infinity subscription...",
+      title: "Redirecting to PayPal...",
       description: "Unlimited access to the entire VisuStock library"
     });
-    // Redirect to Infinity subscription payment
-    window.open('https://buy.stripe.com/infinity', '_blank');
+
+    try {
+      await createSubscription('infinity', isYearly);
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast({
+        title: "Subscription Error",
+        description: "Failed to create subscription. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const monthlyPrice = 89;
@@ -155,8 +181,16 @@ const InfinityEN = () => {
                     <Button 
                       className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3"
                       onClick={handleSubscribeInfinity}
+                      disabled={isProcessing}
                     >
-                      Subscribe now
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Subscribe now"
+                      )}
                     </Button>
 
                     <p className="text-xs text-muted-foreground text-center">
@@ -264,9 +298,14 @@ const InfinityEN = () => {
                 size="lg"
                 className="bg-white text-green-600 hover:bg-gray-100 font-bold text-lg px-8 py-4"
                 onClick={handleSubscribeInfinity}
+                disabled={isProcessing}
               >
-                <Crown className="w-6 h-6 mr-2" />
-                Start now
+                {isProcessing ? (
+                  <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                ) : (
+                  <Crown className="w-6 h-6 mr-2" />
+                )}
+                {isProcessing ? "Processing..." : "Start now"}
               </Button>
               <p className="text-sm opacity-75">
                 Free trial • Cancel anytime
