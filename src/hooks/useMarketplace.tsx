@@ -11,7 +11,7 @@ export interface MarketplaceContent {
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
-  coverUrl?: string; // Pour les ebooks/PDF
+  coverUrl?: string; // For ebooks/PDF
   likes: number;
   downloads: number;
   isLiked?: boolean;
@@ -22,7 +22,10 @@ export interface MarketplaceContent {
   created_at?: string; // Upload date for sorting
   original_language?: string; // Original language of the content
   isAiGenerated?: boolean; // AI-generated content flag
+  /** True only for real vector assets (SVG). */
+  isVector?: boolean;
 }
+
 
 // Throttle duration for focus refetch (5 minutes in milliseconds)
 const FOCUS_THROTTLE_MS = 5 * 60 * 1000;
@@ -229,6 +232,19 @@ export const useMarketplace = (initialLimit = 200) => {
       const isAiGenerated = originalFile?.metadata && typeof originalFile.metadata === 'object' && 
         ('isAiGenerated' in originalFile.metadata ? originalFile.metadata.isAiGenerated === true : false);
 
+      const isVector = (() => {
+        const fileName = (originalFile?.file_name || originalFile?.file_path || '').toLowerCase();
+        const fileType = (originalFile?.file_type || '').toLowerCase();
+        const fileFormat = (originalFile?.file_format || '').toLowerCase();
+        return (
+          fileName.endsWith('.svg') ||
+          fileType.includes('svg') ||
+          fileFormat.includes('svg') ||
+          fileType.includes('vector') ||
+          fileFormat.includes('vector')
+        );
+      })();
+
       return {
         id: item.id,
         slug: item.slug,
@@ -252,6 +268,7 @@ export const useMarketplace = (initialLimit = 200) => {
           ? originalFile.metadata.bpm as number 
           : undefined,
         isAiGenerated: isAiGenerated,
+        isVector,
       } as MarketplaceContent;
     });
 

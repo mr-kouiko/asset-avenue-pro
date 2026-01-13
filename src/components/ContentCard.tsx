@@ -22,14 +22,17 @@ interface ContentCardProps {
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
-  coverUrl?: string; // Pour les ebooks/PDF
+  coverUrl?: string; // For ebooks/PDF
   likes: number;
   downloads: number;
   isLiked?: boolean;
   duration?: string;
   bpm?: number;
   isAiGenerated?: boolean;
+  /** True only for real vector assets (SVG). */
+  isVector?: boolean;
 }
+
 
 export const ContentCard: React.FC<ContentCardProps> = ({
   id,
@@ -48,6 +51,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   duration,
   bpm,
   isAiGenerated = false,
+  isVector = false,
 }) => {
   // Use specialized AudioContentCard for audio content
   if (type === 'audio') {
@@ -160,9 +164,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             variant="secondary" 
             className="bg-white/95 text-stock-dark text-[10px] px-2 py-0.5 font-medium border-0 shadow-sm"
           >
-            {type === 'photo' ? 'PHOTO' : 
-             type === 'video' ? 'VIDEO' : 
-             type === 'illustration' ? 'VECTOR' : 'EBOOK'}
+            {type === 'photo' ? 'PHOTO' :
+             type === 'video' ? 'VIDEO' :
+             type === 'illustration' ? (isVector ? 'VECTOR' : 'ILLUSTRATION') :
+             type === 'pdf' ? 'PDF' : 'EBOOK'}
           </Badge>
           {isAiGenerated && (
             <Badge 
@@ -232,7 +237,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </span>
           </div>
           <div className="font-bold text-sm text-stock-dark">
-            {price === null || price === 0 ? 'Gratuit' : `${price}€`}
+            {price === null || price === 0 ? 'Free' : `${price}€`}
           </div>
         </div>
       </div>
