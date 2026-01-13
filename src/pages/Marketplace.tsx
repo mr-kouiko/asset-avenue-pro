@@ -267,15 +267,31 @@ const Marketplace = () => {
   const isVideoSection = selectedCategory === "video";
   const isPhotoSection = selectedCategory === "photo";
 
+  // Category slug to UUID mapping for filtering
+  const categorySlugToId: Record<string, string> = {
+    'photo': 'e6eb8946-abab-4a0b-9249-da012b7a87af',
+    'video': 'b4fe5f6a-554b-4409-8eaa-71c87d225b33',
+    'audio': '0b9e322e-cecb-494f-ba8d-c5397e913b99',
+    'illustration': '653f8437-6317-4a81-8bbf-9b8c520c0dbe',
+    'vector': 'ceca4e62-559c-4dc6-98fe-64017d537192',
+    'ebook': '9ec96e29-199f-4ce2-b951-4ca18c62c87c',
+  };
+
   // Filter content with structured hard filters + keyword ranking
   const filteredContent = useMemo(() => {
     let results = marketplaceContent;
     
     // STEP 1: Apply category filter (content type)
     if (selectedCategory !== "all") {
-      results = results.filter(content => 
-        content.category_id === selectedCategory || content.type === selectedCategory
-      );
+      const categoryUUID = categorySlugToId[selectedCategory];
+      results = results.filter(content => {
+        // Match by category_id UUID OR by normalized type
+        if (categoryUUID && content.category_id === categoryUUID) return true;
+        // Also match vector category when filtering by illustration
+        if (selectedCategory === 'illustration' && content.category_id === categorySlugToId['vector']) return true;
+        // Fallback: match by content.type for items without category_id
+        return content.type === selectedCategory;
+      });
     }
     
     // STEP 2: Apply HARD FILTERS (exact match, AND logic)
