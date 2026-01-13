@@ -85,25 +85,25 @@ const InfinityEN = () => {
       {/* Hero Section with Pricing Card */}
       <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative container py-16 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative container py-8 sm:py-12 lg:py-24">
+          <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
             {/* Left content */}
-            <div className="space-y-8">
-              <Badge className="bg-white/10 text-white border-white/20 px-4 py-2">
-                <Crown className="w-4 h-4 mr-2" />
+            <div className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left">
+              <Badge className="bg-white/10 text-white border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm">
+                <Crown className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                 New
               </Badge>
               
-              <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-6xl font-bold leading-tight">
                 Unleash your unlimited creativity with VisuStock Infinity
               </h1>
               
-              <p className="text-xl text-slate-300 max-w-lg">
+              <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-lg mx-auto lg:mx-0">
                 Authentic creative content with an unlimited plan for individuals and freelancers
               </p>
 
-              {/* Content type badges */}
-              <div className="flex flex-wrap gap-3">
+              {/* Content type badges - hidden on mobile, shown on larger screens */}
+              <div className="hidden sm:flex flex-wrap gap-3 justify-center lg:justify-start">
                 <Badge variant="outline" className="bg-blue-500/20 text-blue-200 border-blue-400/30 px-4 py-2">
                   <Camera className="w-4 h-4 mr-2" />
                   Photos
@@ -116,9 +116,9 @@ const InfinityEN = () => {
             </div>
 
             {/* Right pricing card */}
-            <div className="lg:justify-self-end w-full max-w-md">
+            <div className="lg:justify-self-end w-full max-w-md mx-auto lg:mx-0">
               <Card className="bg-white shadow-2xl border-0">
-                <CardContent className="p-8">
+                <CardContent className="p-5 sm:p-6 lg:p-8">
                   <Badge className="bg-red-500 text-white mb-4">
                     New
                   </Badge>
