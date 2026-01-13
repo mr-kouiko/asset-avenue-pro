@@ -255,23 +255,6 @@ const InfinityEN = () => {
               </div>
             </div>
 
-            {/* Content stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              {contentSamples.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <div key={index} className="space-y-3">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-foreground">{item.count}</div>
-                      <div className="text-sm text-muted-foreground">{item.label}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
 
             {/* Sample grid placeholder */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
