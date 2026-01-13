@@ -124,13 +124,8 @@ All colors MUST be HSL.
 
   /* Ensure selected (highlighted) text stays readable across the site */
   ::selection {
-    background: hsl(var(--primary) / 0.35);
-    color: hsl(var(--primary-foreground));
-  }
-
-  .dark ::selection {
-    background: hsl(var(--ring) / 0.35);
-    color: hsl(var(--foreground));
+    background: hsl(217 91% 60% / 0.85);
+    color: hsl(0 0% 100%);
   }
 }
 
