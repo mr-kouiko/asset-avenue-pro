@@ -6,6 +6,7 @@ import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { useAudioWatermark } from "@/hooks/useAudioWatermark";
 import WaveSurfer from "wavesurfer.js";
 
 interface AudioContentCardProps {
@@ -45,10 +46,19 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [audioDuration, setAudioDuration] = useState(duration || "");
   const [currentTime, setCurrentTime] = useState("0:00");
+  const [volume, setVolume] = useState(1);
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
 
   const playing = isPlaying(id);
+  const isCurrentlyPlaying = playing && currentPlayingId === id;
+
+  // Audio watermark - plays every 15 seconds when this track is playing
+  useAudioWatermark({
+    isPlaying: isCurrentlyPlaying,
+    mainVolume: volume,
+    isMuted: false
+  });
 
   useEffect(() => {
     if (!waveformRef.current || !audioUrl) {
@@ -88,6 +98,8 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
       const minutes = Math.floor(duration / 60);
       const seconds = Math.floor(duration % 60);
       setAudioDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      // Sync volume state
+      setVolume(wavesurfer.getVolume());
     });
 
     wavesurfer.on('error', (error) => {
