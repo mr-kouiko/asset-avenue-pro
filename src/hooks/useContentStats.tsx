@@ -25,12 +25,13 @@ export const useContentStats = () => {
     try {
       setLoading(true);
       
-      // Get ALL approved content with file types from all creators
+      // Get ALL approved content with file types + category_id
       const { data: submissions, error } = await supabase
         .from('content_submissions')
         .select(`
           id,
           status,
+          category_id,
           content_files!inner (
             file_type,
             is_original
@@ -44,29 +45,46 @@ export const useContentStats = () => {
         return;
       }
 
-      // Count by type - using exact file_type values from database
+      // Count by type - prefer category_id (seller edits), fallback to file_type
       let photos = 0;
-      let videos = 0; 
+      let videos = 0;
       let audios = 0;
       let illustrations = 0;
       let ebooks = 0;
 
+      // Category ID to type mapping (from database categories table)
+      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'illustration' | 'ebook'> = {
+        'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',
+        'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',
+        '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',
+        '653f8437-6317-4a81-8bbf-9b8c520c0dbe': 'illustration',
+        'ceca4e62-559c-4dc6-98fe-64017d537192': 'illustration', // Vector category counts under illustrations
+        '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',
+      };
+
       // Use a Map to track unique submissions by ID
-      const processedSubmissions = new Map<string, string>();
+      const processedSubmissions = new Map<string, true>();
 
       submissions?.forEach((submission: any) => {
-        const fileType = submission.content_files[0]?.file_type?.toLowerCase() || '';
         const submissionId = submission.id;
-        
+
         // Skip if we've already processed this submission
-        if (processedSubmissions.has(submissionId)) {
+        if (processedSubmissions.has(submissionId)) return;
+        processedSubmissions.set(submissionId, true);
+
+        const mappedType = submission.category_id ? categoryTypeMap[submission.category_id] : undefined;
+        if (mappedType) {
+          if (mappedType === 'photo') photos++;
+          else if (mappedType === 'video') videos++;
+          else if (mappedType === 'audio') audios++;
+          else if (mappedType === 'ebook') ebooks++;
+          else if (mappedType === 'illustration') illustrations++;
           return;
         }
-        
-        // Mark this submission as processed
-        processedSubmissions.set(submissionId, fileType);
-        
-        // Match file types - handle both MIME types and simple types
+
+        // Fallback: classify from file_type
+        const fileType = submission.content_files[0]?.file_type?.toLowerCase() || '';
+
         if (fileType === 'video' || fileType.startsWith('video/')) {
           videos++;
         } else if (fileType === 'audio' || fileType.startsWith('audio/')) {
@@ -74,8 +92,8 @@ export const useContentStats = () => {
         } else if (
           fileType === 'document' ||
           fileType === 'ebook' ||
-          fileType === 'application/pdf' || 
-          fileType === 'application/epub+zip' || 
+          fileType === 'application/pdf' ||
+          fileType === 'application/epub+zip' ||
           fileType.includes('ebook')
         ) {
           ebooks++;
