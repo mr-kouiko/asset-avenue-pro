@@ -38,6 +38,13 @@ const PRICING_CONFIG: PricingConfig = {
   }
 };
 
+// Lower license prices for AI-generated videos
+const AI_LICENSE_PRICES = {
+  standard: 10,   // +$10 for AI standard license
+  extended: 25,   // +$25 for AI extended license
+  exclusive: 149, // +$149 for AI exclusive license
+};
+
 export const useVideoPricing = ({ type, files, selectedLicense, isAiGenerated = false }: VideoPricingParams) => {
   const { resolution, basePrice, licensePrice, totalPrice } = useMemo(() => {
     // For non-videos, use license-only pricing
@@ -76,7 +83,10 @@ export const useVideoPricing = ({ type, files, selectedLicense, isAiGenerated = 
       ? AI_VIDEO_BASE_PRICE 
       : PRICING_CONFIG.resolutions[detectedResolution].basePrice;
     
-    const licensePrice = PRICING_CONFIG.licenses[selectedLicense as keyof typeof PRICING_CONFIG.licenses]?.price || 0;
+    // AI videos have lower license prices
+    const licensePrice = isAiGenerated
+      ? AI_LICENSE_PRICES[selectedLicense as keyof typeof AI_LICENSE_PRICES] || 0
+      : PRICING_CONFIG.licenses[selectedLicense as keyof typeof PRICING_CONFIG.licenses]?.price || 0;
     const totalPrice = basePrice + licensePrice;
 
     return {
