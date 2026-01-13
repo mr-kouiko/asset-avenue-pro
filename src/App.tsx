@@ -38,6 +38,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { CreateTestAccounts } from "./pages/CreateTestAccounts";
 import NotFound from "./pages/NotFound";
 import AboutEN from "./pages/en/AboutEN";
+import BlogEN from "./pages/en/BlogEN";
+import BlogArticleEN from "./pages/en/BlogArticleEN";
 import AIImageGenerator from "./pages/AIImageGenerator";
 import BuyCredits from "./pages/BuyCredits";
 import BecomeSeller from "./pages/BecomeSeller";
@@ -95,6 +97,8 @@ const App = () => (
                   <Route path="/infinity" element={<InfinityEN />} />
                   <Route path="/packages-pricing" element={<PackagesPricing />} />
                   <Route path="/about" element={<AboutEN />} />
+                  <Route path="/blog" element={<BlogEN />} />
+                  <Route path="/blog/:slug" element={<BlogArticleEN />} />
                   <Route path="/ai-image-generator" element={<AIImageGenerator />} />
                   <Route path="/buy-credits" element={<BuyCredits />} />
                   <Route path="/test-accounts" element={<TestAccounts />} />
