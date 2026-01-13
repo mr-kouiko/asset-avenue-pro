@@ -523,48 +523,48 @@ export default function AIImageGenerator() {
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Left - Steps */}
           <div className="space-y-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-white underline decoration-primary/40 decoration-4 underline-offset-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 underline decoration-primary/40 decoration-4 underline-offset-4">
               {t.heroTitle}
             </h2>
             
             <div className="space-y-4">
               {/* Step 1 */}
               <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-500/10 to-transparent border border-blue-500/20 hover:border-blue-500/40 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
                   1
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">{t.heroStep1Title}</h4>
-                  <p className="text-sm text-slate-200">{t.heroStep1Desc}</p>
+                  <h4 className="font-semibold text-slate-900 mb-1">{t.heroStep1Title}</h4>
+                  <p className="text-sm text-slate-700">{t.heroStep1Desc}</p>
                 </div>
               </div>
               
               {/* Step 2 */}
               <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-indigo-500/10 to-transparent border border-indigo-500/20 hover:border-indigo-500/40 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
                   2
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">{t.heroStep2Title}</h4>
-                  <p className="text-sm text-slate-200">{t.heroStep2Desc}</p>
+                  <h4 className="font-semibold text-slate-900 mb-1">{t.heroStep2Title}</h4>
+                  <p className="text-sm text-slate-700">{t.heroStep2Desc}</p>
                 </div>
               </div>
               
               {/* Step 3 */}
               <div className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-purple-500/10 to-transparent border border-purple-500/20 hover:border-purple-500/40 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
                   3
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">{t.heroStep3Title}</h4>
-                  <p className="text-sm text-slate-200">{t.heroStep3Desc}</p>
+                  <h4 className="font-semibold text-slate-900 mb-1">{t.heroStep3Title}</h4>
+                  <p className="text-sm text-slate-700">{t.heroStep3Desc}</p>
                 </div>
               </div>
             </div>
             
             <Button
               onClick={() => document.getElementById('prompt')?.focus()}
-              className="mt-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20"
+              className="mt-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-lg"
             >
               <Wand2 className="w-4 h-4 mr-2" />
               {t.generateWithAI}
