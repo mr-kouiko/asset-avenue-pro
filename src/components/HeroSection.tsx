@@ -55,21 +55,21 @@ export const HeroSection = () => {
 
   const t = content[language];
   return (
-    <section className="relative py-10 sm:py-12 md:py-20 overflow-hidden min-h-[50vh] sm:min-h-[55vh] md:min-h-[70vh] flex items-center">
+    <section className="relative py-6 sm:py-12 md:py-20 overflow-hidden min-h-[40vh] sm:min-h-[55vh] md:min-h-[70vh] flex items-center">
       {/* Fallback Background for when video fails to load - lowest z-index */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
         style={{ backgroundImage: `url(${heroImage})` }}
       />
       
-      {/* Background Video - Responsive on all devices */}
+      {/* Background Video - Cropped on mobile to focus on center subject */}
       <video
         autoPlay
         loop
         muted
         playsInline
         poster={heroImage}
-        className="absolute inset-0 w-full h-full object-cover object-center z-[1]"
+        className="absolute inset-0 w-full h-[120%] sm:h-full object-cover object-center sm:object-center z-[1] -top-[10%] sm:top-0"
       >
         <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
       </video>
