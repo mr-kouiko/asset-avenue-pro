@@ -962,16 +962,28 @@ const ProductManagement = () => {
                           />
                         </div>
                        
-                        <div>
-                          <Label>Category</Label>
-                          <div className="flex items-center space-x-2 h-10 px-3 border rounded-md bg-muted/50">
-                            <Badge variant="secondary">
-                              {categories.find(c => c.id === selectedProductData.category)?.name || 'Auto-detected'}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              (Based on file type)
-                            </span>
-                          </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="category">Category</Label>
+                          <Select
+                            value={selectedProductData.category || ''}
+                            onValueChange={(value) => updateProductData(selectedFileId!, { category: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedProductData.category && (
+                            <p className="text-xs text-muted-foreground">
+                              {isEditMode ? 'You can change the category' : 'Auto-detected from file type'}
+                            </p>
+                          )}
                         </div>
                         
                         <div className="md:col-span-2 space-y-2">
