@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Heart, 
   Download, 
@@ -551,17 +552,40 @@ const ProductDetail = () => {
                 )}
               </div>
               
-              {/* Author Info */}
+              {/* Author Info - Clickable Avatar */}
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-stock-blue/10 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-stock-blue" />
+                {product.authorHash ? (
+                  <Link 
+                    to={`/seller/${product.authorHash}`}
+                    className="flex items-center gap-3 group hover:opacity-90 transition-opacity"
+                  >
+                    <Avatar className="h-10 w-10 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
+                      <AvatarImage src={product.authorAvatar} alt={product.author} />
+                      <AvatarFallback className="bg-stock-blue/10 text-stock-blue">
+                        {product.author?.[0]?.toUpperCase() || 'S'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-stock-dark group-hover:text-primary transition-colors">
+                        {product.author}
+                      </div>
+                      <div className="text-xs text-stock-dark/60">Creator</div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={product.authorAvatar} alt={product.author} />
+                      <AvatarFallback className="bg-stock-blue/10 text-stock-blue">
+                        {product.author?.[0]?.toUpperCase() || 'S'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-stock-dark">{product.author}</div>
+                      <div className="text-xs text-stock-dark/60">Creator</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-medium text-stock-dark">{product.author}</div>
-                    <div className="text-xs text-stock-dark/60">Creator</div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Stats Row */}
