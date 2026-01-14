@@ -354,11 +354,10 @@ const ProductManagement = () => {
     }
   };
 
-  // Re-detect illustration category based on title, description, and tags
+  // Re-detect illustration category using pixel analysis
   const handleRecategorize = async (fileId: string) => {
     const file = uploadedFiles.find(f => f.id === fileId);
-    const productData = productsData[fileId];
-    if (!file || !productData) return;
+    if (!file) return;
 
     const isImage = file.type.startsWith('image/');
     if (!isImage) {
@@ -367,15 +366,11 @@ const ProductManagement = () => {
     }
 
     setIsRecategorizingId(fileId);
-    toast.info('Re-analyzing content type based on title and tags...');
+    toast.info('Re-analyzing image pixels to detect content type...');
 
     try {
-      const result = await detectIllustration(file.url, {
-        fileName: file.name,
-        title: productData.title,
-        description: productData.description,
-        tags: productData.tags
-      });
+      // Use pure pixel analysis - no keywords
+      const result = await detectIllustration(file.url);
 
       if (result) {
         const newCategory = result.isIllustration ? 'illustration' : 'photo';
@@ -406,6 +401,8 @@ const ProductManagement = () => {
         } else {
           toast.success(`📷 Detected as Photo (${Math.round((1 - result.confidence) * 100)}% confidence)`);
         }
+      } else {
+        toast.warning('Could not analyze image - using current category');
       }
     } catch (error) {
       console.error('Recategorize error:', error);
