@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Store, Image as ImageIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Store, Image as ImageIcon, Video, Music, FileText, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMarketplace } from "@/hooks/useMarketplace";
 
@@ -16,11 +17,21 @@ interface SellerProfile {
   user_id: string;
 }
 
+const categoryConfig = [
+  { key: "all", label: "All", icon: Layers },
+  { key: "photo", label: "Photos", icon: ImageIcon },
+  { key: "video", label: "Videos", icon: Video },
+  { key: "audio", label: "Audio", icon: Music },
+  { key: "ebook", label: "Ebooks", icon: FileText },
+  { key: "vector", label: "Vectors", icon: Layers },
+];
+
 const SellerPortfolio = () => {
   const { creatorHash } = useParams<{ creatorHash: string }>();
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState("all");
   const { content: marketplaceContent } = useMarketplace();
 
   useEffect(() => {
@@ -32,7 +43,6 @@ const SellerPortfolio = () => {
       }
 
       try {
-        // Get creator profiles using the public function
         const { data: creators, error: creatorsError } = await supabase
           .rpc('get_creator_profiles_public');
 
@@ -41,9 +51,7 @@ const SellerPortfolio = () => {
           throw creatorsError;
         }
 
-        // Find the creator by matching the hash
         const matchedCreator = (creators as any[])?.find(c => {
-          // Generate the same hash that we use in useProductDetail
           const hash = btoa(c.user_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
           return hash === creatorHash;
         });
@@ -71,12 +79,26 @@ const SellerPortfolio = () => {
     fetchSellerData();
   }, [creatorHash]);
 
-  // Filter marketplace content by matching the hash against creator store name or user_id
-  const sellerProducts = marketplaceContent.filter(item => {
-    if (!seller) return false;
-    // Match by author (store name) since that's what we have
-    return item.author === (seller.store_name || seller.display_name);
-  });
+  const sellerProducts = useMemo(() => {
+    if (!seller) return [];
+    return marketplaceContent.filter(item => 
+      item.author === (seller.store_name || seller.display_name)
+    );
+  }, [marketplaceContent, seller]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: sellerProducts.length };
+    sellerProducts.forEach(item => {
+      const type = item.type || "photo";
+      counts[type] = (counts[type] || 0) + 1;
+    });
+    return counts;
+  }, [sellerProducts]);
+
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === "all") return sellerProducts;
+    return sellerProducts.filter(item => item.type === activeCategory);
+  }, [sellerProducts, activeCategory]);
 
   const getInitials = (name: string | null) => {
     if (!name) return "S";
@@ -150,38 +172,59 @@ const SellerPortfolio = () => {
           </div>
         </div>
 
-        {/* Seller Products */}
-        <div>
-          <h2 className="text-xl font-semibold mb-6">All Content</h2>
-          
-          {sellerProducts.length === 0 ? (
-            <div className="text-center py-12 bg-muted/30 rounded-lg">
-              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                This seller has no published content yet.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {sellerProducts.map((item) => (
-                <ContentCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  author={storeName}
-                  type={item.type}
-                  thumbnail={item.thumbnail}
-                  videoUrl={item.videoUrl}
-                  audioUrl={item.audioUrl}
-                  price={item.price ?? 0}
-                  slug={item.slug}
-                  likes={item.likes}
-                  downloads={item.downloads}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Category Tabs */}
+        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+          <TabsList className="mb-6 flex-wrap h-auto gap-2 bg-transparent p-0">
+            {categoryConfig.map(({ key, label, icon: Icon }) => {
+              const count = categoryCounts[key] || 0;
+              if (key !== "all" && count === 0) return null;
+              
+              return (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 rounded-full border"
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  {label}
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                    {count}
+                  </Badge>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          <TabsContent value={activeCategory} className="mt-0">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12 bg-muted/30 rounded-lg">
+                <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  No content in this category yet.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredProducts.map((item) => (
+                  <ContentCard
+                    key={item.id}
+                    id={item.id}
+                    title={item.title}
+                    author={storeName}
+                    type={item.type}
+                    thumbnail={item.thumbnail}
+                    videoUrl={item.videoUrl}
+                    audioUrl={item.audioUrl}
+                    price={item.price ?? 0}
+                    slug={item.slug}
+                    likes={item.likes}
+                    downloads={item.downloads}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
