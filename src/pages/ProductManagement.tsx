@@ -440,14 +440,15 @@ const ProductManagement = () => {
       return;
     }
 
-    // AUTO-RECATEGORIZE: Re-detect illustration vs photo using title/description/tags BEFORE publishing
-    // This catches cases where the initial pixel analysis missed stylized content (pop art, digital art, etc.)
+    // Use the category selected by the user - NO AUTO-OVERRIDE
+    // The user has manually selected the category in the dropdown, respect their choice
     const isImage = file.type.startsWith('image/');
     let finalCategoryId = productData.category;
     
-    if (isImage && !isPDF) {
+    // Only auto-detect if NO category is set (edge case)
+    if (isImage && !isPDF && !finalCategoryId) {
       try {
-        console.log('🎨 [AUTO-RECATEGORIZE] Re-detecting category before publish with metadata...');
+        console.log('🎨 [AUTO-CATEGORIZE] No category set, detecting...');
         const result = await detectIllustration(file.url, {
           fileName: file.name,
           title: productData.title,
@@ -456,19 +457,24 @@ const ProductManagement = () => {
         });
         
         if (result && result.isIllustration) {
-          // Update to illustration category if detected
           const illustrationCat = categories.find(cat => 
             cat.name.toLowerCase().includes('illustration')
           );
-          if (illustrationCat && illustrationCat.id !== productData.category) {
+          if (illustrationCat) {
             finalCategoryId = illustrationCat.id;
-            toast.info(`🎨 Auto-detected as Illustration based on title/tags`);
-            console.log('🎨 [AUTO-RECATEGORIZE] Switched to Illustration category. Indicators:', result.indicators);
+            console.log('🎨 [AUTO-CATEGORIZE] Set to Illustration. Indicators:', result.indicators);
+          }
+        } else {
+          // Default to photo for realistic images
+          const photoCat = categories.find(cat => 
+            cat.name.toLowerCase().includes('photo')
+          );
+          if (photoCat) {
+            finalCategoryId = photoCat.id;
           }
         }
       } catch (error) {
-        console.error('Auto-recategorize error:', error);
-        // Continue with original category on error
+        console.error('Auto-categorize error:', error);
       }
     }
 

@@ -13,25 +13,22 @@ interface DetectionOptions {
   tags?: string[];
 }
 
-// Keywords that strongly indicate illustration/artwork content
+// Keywords that STRONGLY indicate illustration/artwork content
+// IMPORTANT: Avoid generic words like "vibrant", "colorful" that appear in realistic photos
 const ILLUSTRATION_KEYWORDS = [
-  // Style keywords
-  'illustration', 'illust', 'drawing', 'artwork', 'art-', 
-  'vector', 'design', 'cartoon', 'comic', 'icon', 'logo',
-  'graphic', 'sketch', 'digital-art', 'digitalart', 'painted',
-  'paint', 'anime', 'manga', 'clipart', 'hand-drawn', 'handdrawn',
-  // Artistic style keywords (pop art, etc.)
-  'pop art', 'popart', 'pop-art', 'retro', 'stylized', 'artistic',
-  'abstract', 'surreal', 'fantasy', 'watercolor', 'oil painting',
+  // Style keywords - VERY SPECIFIC to illustrations
+  'illustration', 'illust', 'drawing', 'artwork', 
+  'vector', 'cartoon', 'comic', 'icon', 'logo',
+  'sketch', 'digital-art', 'digitalart', 
+  'anime', 'manga', 'clipart', 'hand-drawn', 'handdrawn',
+  // Artistic style keywords - SPECIFIC art styles (not photography)
+  'pop art', 'popart', 'pop-art', 'watercolor', 'oil painting',
   'acrylic', 'pastel', 'charcoal', 'pencil drawing', 'ink drawing',
   'graffiti', 'street art', 'concept art', 'character design',
   'storyboard', 'comic style', 'comic book', 'graphic novel',
-  'minimalist', 'flat design', 'isometric', 'low poly', '3d render',
-  'cgi', 'digital painting', 'matte painting', 'pixel art', 'voxel',
-  'bold graphics', 'bold colors', 'vibrant colors', 'neon', 
-  'geometric', 'psychedelic', 'trippy', 'kaleidoscope',
-  'art deco', 'art nouveau', 'bauhaus', 'cubism', 'impressionist',
-  'expressionist', 'modernist', 'contemporary art', 'fine art',
+  'flat design', 'isometric', 'low poly', 'pixel art', 'voxel',
+  'psychedelic', 'trippy', 'kaleidoscope',
+  'art deco', 'art nouveau', 'bauhaus', 'cubism',
   // Animation/motion graphics keywords
   'animation', 'animated', 'motion graphics', 'motion design',
   // Vector/graphic specific
@@ -39,15 +36,11 @@ const ILLUSTRATION_KEYWORDS = [
   'infographic', 'diagram', 'chart design', 'icon set',
   // Character/creature art
   'character art', 'creature design', 'monster design', 'mascot',
-  'avatar', 'portrait illustration', 'caricature',
-  // NEW: Vibrant/colorful art keywords (common in AI-generated art)
-  'vibrant', 'colorful', 'colorful painting', 'digital artwork',
-  'impressionistic', 'bold brushstrokes', 'painting style',
-  'artistic style', 'artistic illustration', 'creative artwork',
-  'stylized art', 'artistic rendering', 'modern art', 'mixed media',
-  // AI art style keywords
-  'ai art', 'ai generated', 'midjourney', 'dall-e', 'stable diffusion',
-  'generative art', 'neural art', 'dream-like', 'surrealistic'
+  'portrait illustration', 'caricature',
+  // Digital art specific (NOT generic photo terms)
+  'digital painting', 'matte painting', 'painted illustration',
+  // REMOVED: vibrant, colorful, bold, neon, geometric, abstract, fantasy, surreal
+  // These are too generic and match realistic AI-generated photos
 ];
 
 // Check if text contains illustration keywords
