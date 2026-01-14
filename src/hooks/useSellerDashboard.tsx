@@ -144,18 +144,16 @@ export const useSellerDashboard = () => {
     }
   };
 
-  // Fetch seller submissions
-  const fetchSubmissions = async () => {
+  // Fetch seller submissions - internal function, doesn't manage loading state
+  const fetchSubmissions = async (skipUnsubmitted = false) => {
     if (!user) {
       console.log('❌ [SELLER-DASHBOARD] No user found, cannot fetch submissions');
       return;
     }
 
     console.log('🔍 [SELLER-DASHBOARD] Starting fetchSubmissions...');
-    console.log('👤 [SELLER-DASHBOARD] Current user ID (normalized):', user.id);
 
     try {
-      setLoading(true);
       const startTime = Date.now();
       
       // First query: Fetch submissions (with cache busting to ensure fresh data)
@@ -226,13 +224,13 @@ export const useSellerDashboard = () => {
       console.log('✅ [SELLER-DASHBOARD] Final submissions with files:', submissionsWithFiles.length);
       setSubmissions(submissionsWithFiles);
 
-      // Also fetch unsubmitted files
-      await fetchUnsubmittedFiles();
+      // Only fetch unsubmitted files if not skipped (prevents cascading calls)
+      if (!skipUnsubmitted) {
+        await fetchUnsubmittedFiles();
+      }
     } catch (error) {
       console.error('❌ [SELLER-DASHBOARD] Critical error in fetchSubmissions:', error);
       toast.error("Erreur lors du chargement des soumissions");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -769,22 +767,36 @@ export const useSellerDashboard = () => {
     }
   };
 
-  // Initialize data
+  // Initialize data - ONLY on mount, no dependencies that change frequently
   useEffect(() => {
+    let isMounted = true;
+    
     const loadData = async () => {
       if (!user) return;
 
       setLoading(true);
-      await Promise.all([
-        fetchStats(),
-        fetchSubmissions(),
-        fetchCategories()
-      ]);
-      setLoading(false);
+      try {
+        // Parallel fetch all data, skip nested unsubmitted call
+        await Promise.all([
+          fetchStats(),
+          fetchSubmissions(true), // Skip nested fetchUnsubmittedFiles
+          fetchCategories(),
+          fetchUnsubmittedFiles() // Fetch separately in parallel
+        ]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     };
 
     loadData();
-  }, [user]);
+    
+    // Cleanup to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]); // Only depend on user.id, not the whole user object
 
   return {
     loading,
@@ -801,10 +813,18 @@ export const useSellerDashboard = () => {
     addDraftFiles,
     clearDraftFiles,
     fetchUnsubmittedFiles,
-    refreshData: () => {
-      fetchStats();
-      fetchSubmissions();
-      fetchCategories();
+    refreshData: async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchStats(),
+          fetchSubmissions(true),
+          fetchCategories(),
+          fetchUnsubmittedFiles()
+        ]);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 };
