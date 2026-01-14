@@ -13,23 +13,13 @@ interface DetectionResult {
   detectionMethod?: string;
   details?: {
     aiScore: number;
-    photoScore?: number;
-    artScore?: number;
-    qualityScore?: number;
-    textureAnalysis?: {
-      hasArtifacts: boolean;
-      smoothnessScore: number;
-    };
-    modelBreakdown?: {
-      genai: number;
-      deepfake: number;
-      quality: number;
-    };
+    reasoning?: string;
+    indicators?: string[];
   };
 }
 
 // Timeout helper for fetch requests
-const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 25000): Promise<Response> => {
+const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 30000): Promise<Response> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
   
@@ -41,80 +31,20 @@ const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 250
   }
 };
 
-// Weighted scoring algorithm for better accuracy
-const calculateWeightedScore = (scores: {
-  genai?: number;
-  deepfake?: number;
-  quality?: number;
-  photo?: number;
-  illustration?: number;
-}): { finalScore: number; breakdown: Record<string, number> } => {
-  const weights = {
-    genai: 0.50,      // Primary AI detection
-    deepfake: 0.25,   // Deepfake detection as secondary signal
-    quality: 0.15,    // Quality anomalies
-    typeAnalysis: 0.10 // Photo vs illustration analysis
-  };
-
-  const genaiScore = scores.genai ?? 0;
-  const deepfakeScore = scores.deepfake ?? 0;
-  
-  // Quality score: low quality in specific patterns suggests AI
-  const qualityScore = scores.quality !== undefined 
-    ? Math.max(0, 1 - scores.quality) * 0.3 // Low quality slightly increases AI likelihood
-    : 0;
-  
-  // Type analysis: if it's classified as photo but has AI markers, increase confidence
-  const photoScore = scores.photo ?? 0;
-  const illustrationScore = scores.illustration ?? 0;
-  const typeAnalysisScore = illustrationScore > 0.5 && genaiScore > 0.3 
-    ? 0.2 // Boost for illustrations that also have AI markers
-    : 0;
-
-  const finalScore = Math.min(1, 
-    genaiScore * weights.genai +
-    deepfakeScore * weights.deepfake +
-    qualityScore * weights.quality +
-    typeAnalysisScore * weights.typeAnalysis
-  );
-
-  return {
-    finalScore,
-    breakdown: {
-      genai: genaiScore,
-      deepfake: deepfakeScore,
-      quality: qualityScore,
-      typeAnalysis: typeAnalysisScore
-    }
-  };
-};
-
-// Generate human-readable message based on analysis
-const generateMessage = (
-  isAiGenerated: boolean,
-  confidence: number,
-  details: DetectionResult['details']
-): string => {
-  if (!isAiGenerated) {
-    if (details?.photoScore && details.photoScore > 0.8) {
-      return 'High confidence authentic photograph';
-    } else if (details?.artScore && details.artScore > 0.7) {
-      return 'Appears to be human-created artwork or illustration';
-    } else if (confidence < 0.2) {
-      return 'Very likely authentic - no AI markers detected';
-    }
-    return 'This image appears to be authentic';
-  }
-
-  // AI-generated messages
-  if (confidence > 0.9) {
-    return 'Very high confidence AI-generated content detected';
-  } else if (confidence > 0.75) {
-    return 'High confidence: This image is likely AI-generated';
-  } else if (confidence > 0.5) {
-    return 'This image appears to be AI-generated';
-  } else {
-    return 'This image may contain AI-generated elements';
+// Convert image URL to base64 for Gemini
+const imageUrlToBase64 = async (imageUrl: string): Promise<{ base64: string; mimeType: string } | null> => {
+  try {
+    const response = await fetchWithTimeout(imageUrl, {}, 15000);
+    if (!response.ok) return null;
+    
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    return { base64, mimeType: contentType };
+  } catch (error) {
+    console.error('📸 [DETECT-AI-IMAGE] Failed to fetch image:', error);
+    return null;
   }
 };
 
@@ -135,13 +65,12 @@ serve(async (req) => {
       );
     }
 
-    console.log('📸 [DETECT-AI-IMAGE] Starting enhanced detection for:', imageUrl.substring(0, 80));
+    console.log('📸 [DETECT-AI-IMAGE] Starting Gemini detection for:', imageUrl.substring(0, 80));
 
-    const apiUser = Deno.env.get('SIGHTENGINE_API_USER');
-    const apiSecret = Deno.env.get('SIGHTENGINE_API_SECRET');
+    const apiKey = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!apiUser || !apiSecret) {
-      console.error('📸 [DETECT-AI-IMAGE] SightEngine API credentials not configured');
+    if (!apiKey) {
+      console.error('📸 [DETECT-AI-IMAGE] LOVABLE_API_KEY not configured');
       return new Response(
         JSON.stringify({ 
           error: 'AI detection service not configured',
@@ -156,33 +85,86 @@ serve(async (req) => {
       );
     }
 
-    // Use comprehensive model set for maximum accuracy
-    const sightEngineUrl = `https://api.sightengine.com/1.0/check.json`;
-    
-    const params = new URLSearchParams({
-      url: imageUrl,
-      models: 'genai,deepfake,type,quality', // Multiple models for comprehensive analysis
-      api_user: apiUser,
-      api_secret: apiSecret,
-    });
+    // Fetch and convert image to base64
+    const imageData = await imageUrlToBase64(imageUrl);
+    if (!imageData) {
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to fetch image',
+          result: {
+            isAiGenerated: false,
+            confidence: 0,
+            status: 'error',
+            message: 'Could not download image for analysis'
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log('📸 [DETECT-AI-IMAGE] Calling SightEngine with models: genai,deepfake,type,quality');
-
+    // Call Gemini via Lovable AI Gateway with vision
     const response = await fetchWithTimeout(
-      `${sightEngineUrl}?${params}`,
-      { method: 'GET' },
-      30000 // Increased timeout for multi-model analysis
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this image and determine if it is AI-generated or human-created.
+
+Look for these AI indicators:
+- Unnatural smoothness or plastic-like textures
+- Inconsistent lighting or shadows
+- Anatomical errors (extra fingers, distorted limbs, asymmetric features)
+- Blurred or merged background elements
+- Text that is distorted or nonsensical
+- Repeating patterns or artifacts
+- Overly perfect or idealized features
+- Unnatural hair or fabric textures
+- Inconsistent perspective or depth
+
+Respond with ONLY a JSON object in this exact format:
+{
+  "isAiGenerated": true or false,
+  "confidence": 0.0 to 1.0,
+  "reasoning": "brief explanation",
+  "indicators": ["indicator1", "indicator2"]
+}
+
+Be strict: if you see clear AI artifacts, mark it as AI-generated. If the image looks authentically photographed or hand-drawn with natural imperfections, mark it as not AI-generated.`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${imageData.mimeType};base64,${imageData.base64}`
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 500
+        }),
+      },
+      45000
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('📸 [DETECT-AI-IMAGE] SightEngine error:', response.status, errorText);
+      console.error('📸 [DETECT-AI-IMAGE] Gemini error:', response.status, errorText);
       
       const errorMessages: Record<number, string> = {
-        402: 'Detection quota exceeded - please try again later',
-        403: 'Detection service authentication failed',
+        402: 'AI detection quota exceeded',
         429: 'Rate limit exceeded - please wait before retrying',
-        500: 'Detection service temporarily unavailable'
+        500: 'AI detection service temporarily unavailable'
       };
       
       return new Response(
@@ -201,76 +183,93 @@ serve(async (req) => {
 
     const data = await response.json();
     const processingTime = Date.now() - startTime;
-    console.log(`📸 [DETECT-AI-IMAGE] Response received in ${processingTime}ms`);
+    console.log(`📸 [DETECT-AI-IMAGE] Gemini response received in ${processingTime}ms`);
 
-    let detectionResult: DetectionResult;
+    // Extract Gemini's response
+    const content = data.choices?.[0]?.message?.content || '';
+    console.log('📸 [DETECT-AI-IMAGE] Raw response:', content.substring(0, 300));
 
-    if (data.status === 'success') {
-      // Extract all available scores
-      const rawScores = {
-        genai: data.type?.ai_generated ?? 0,
-        deepfake: data.deepfake ?? 0,
-        quality: data.quality?.score ?? undefined,
-        photo: data.type?.photo ?? 0,
-        illustration: data.type?.illustration ?? data.type?.art ?? 0
-      };
+    // Parse JSON from response (handle markdown code blocks)
+    let analysisResult: {
+      isAiGenerated: boolean;
+      confidence: number;
+      reasoning: string;
+      indicators: string[];
+    };
 
-      // Calculate weighted score for final determination
-      const { finalScore, breakdown } = calculateWeightedScore(rawScores);
+    try {
+      // Try to extract JSON from response
+      let jsonStr = content;
       
-      // Use provided threshold (clamped between 0.3 and 0.9)
-      const effectiveThreshold = Math.max(0.3, Math.min(0.9, threshold));
-      const isAiGenerated = finalScore > effectiveThreshold;
-
-      // Detect texture artifacts (smoothness patterns common in AI images)
-      const hasArtifacts = rawScores.genai > 0.4 && rawScores.photo < 0.6;
-      const smoothnessScore = rawScores.genai > 0.5 ? 0.7 : 0.3;
-
-      const details: DetectionResult['details'] = {
-        aiScore: finalScore,
-        photoScore: rawScores.photo,
-        artScore: rawScores.illustration,
-        qualityScore: rawScores.quality,
-        textureAnalysis: {
-          hasArtifacts,
-          smoothnessScore
-        },
-        modelBreakdown: {
-          genai: rawScores.genai,
-          deepfake: rawScores.deepfake,
-          quality: breakdown.quality
+      // Handle markdown code blocks
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      } else {
+        // Try to find raw JSON
+        const braceMatch = content.match(/\{[\s\S]*\}/);
+        if (braceMatch) {
+          jsonStr = braceMatch[0];
         }
-      };
-
-      const message = generateMessage(isAiGenerated, finalScore, details);
-
-      detectionResult = {
-        isAiGenerated,
-        confidence: finalScore,
-        status: 'success',
-        message,
-        detectionMethod: 'sightengine-multi-model',
-        details
-      };
-
-      console.log(`📸 [DETECT-AI-IMAGE] ✅ Result: AI=${isAiGenerated}, confidence=${(finalScore * 100).toFixed(1)}%, method=multi-model`);
-      console.log(`📸 [DETECT-AI-IMAGE] Breakdown: genai=${(rawScores.genai * 100).toFixed(1)}%, deepfake=${(rawScores.deepfake * 100).toFixed(1)}%, photo=${(rawScores.photo * 100).toFixed(1)}%`);
-    } else {
-      console.error('📸 [DETECT-AI-IMAGE] Unexpected response:', JSON.stringify(data).substring(0, 200));
-      detectionResult = {
-        isAiGenerated: false,
-        confidence: 0,
-        status: 'error',
-        message: data.error?.message || 'Failed to analyze image - unexpected response',
-        detectionMethod: 'sightengine'
+      }
+      
+      analysisResult = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('📸 [DETECT-AI-IMAGE] Failed to parse Gemini response:', parseError);
+      // Fallback: try to interpret the response
+      const lowerContent = content.toLowerCase();
+      analysisResult = {
+        isAiGenerated: lowerContent.includes('ai-generated') || lowerContent.includes('ai generated'),
+        confidence: 0.5,
+        reasoning: 'Could not parse detailed analysis',
+        indicators: []
       };
     }
+
+    // Apply threshold
+    const effectiveThreshold = Math.max(0.3, Math.min(0.9, threshold));
+    const isAiGenerated = analysisResult.confidence >= effectiveThreshold && analysisResult.isAiGenerated;
+
+    // Generate message
+    let message: string;
+    if (!isAiGenerated) {
+      if (analysisResult.confidence < 0.3) {
+        message = 'Very likely authentic - no AI markers detected';
+      } else {
+        message = 'This image appears to be authentic';
+      }
+    } else {
+      if (analysisResult.confidence > 0.9) {
+        message = 'Very high confidence AI-generated content detected';
+      } else if (analysisResult.confidence > 0.75) {
+        message = 'High confidence: This image is likely AI-generated';
+      } else if (analysisResult.confidence > 0.5) {
+        message = 'This image appears to be AI-generated';
+      } else {
+        message = 'This image may contain AI-generated elements';
+      }
+    }
+
+    const detectionResult: DetectionResult = {
+      isAiGenerated,
+      confidence: analysisResult.confidence,
+      status: 'success',
+      message,
+      detectionMethod: 'gemini-vision',
+      details: {
+        aiScore: analysisResult.confidence,
+        reasoning: analysisResult.reasoning,
+        indicators: analysisResult.indicators || []
+      }
+    };
+
+    console.log(`📸 [DETECT-AI-IMAGE] ✅ Result: AI=${isAiGenerated}, confidence=${(analysisResult.confidence * 100).toFixed(1)}%, method=gemini-vision`);
+    console.log(`📸 [DETECT-AI-IMAGE] Reasoning: ${analysisResult.reasoning}`);
 
     return new Response(
       JSON.stringify({ 
         result: detectionResult, 
-        processingTime,
-        raw: data 
+        processingTime
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -282,7 +281,7 @@ serve(async (req) => {
     let message = 'Detection service unavailable';
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
-        message = 'Detection timed out - image may be too large or slow connection';
+        message = 'Detection timed out - image may be too large';
       } else if (error.message.includes('fetch')) {
         message = 'Failed to connect to detection service';
       } else if (error.message.includes('JSON')) {
@@ -299,7 +298,7 @@ serve(async (req) => {
           confidence: 0,
           status: 'error',
           message,
-          detectionMethod: 'sightengine'
+          detectionMethod: 'gemini-vision'
         }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
