@@ -118,7 +118,6 @@ export function SearchWithSuggestions({
       const categoryPaths: Record<string, string> = {
         'video': 'videos',
         'photo': 'photos',
-        'illustration': 'illustrations',
         'audio': 'audio',
         'ebook': 'ebooks'
       };

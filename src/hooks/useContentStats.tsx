@@ -5,7 +5,6 @@ interface ContentStats {
   photos: number;
   videos: number;
   audios: number;
-  illustrations: number;
   ebooks: number;
   total: number;
 }
@@ -15,7 +14,6 @@ export const useContentStats = () => {
     photos: 0,
     videos: 0,
     audios: 0,
-    illustrations: 0,
     ebooks: 0,
     total: 0
   });
@@ -49,16 +47,13 @@ export const useContentStats = () => {
       let photos = 0;
       let videos = 0;
       let audios = 0;
-      let illustrations = 0;
       let ebooks = 0;
 
       // Category ID to type mapping (from database categories table)
-      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'illustration' | 'ebook'> = {
+      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'ebook'> = {
         'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',
         'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',
         '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',
-        '653f8437-6317-4a81-8bbf-9b8c520c0dbe': 'illustration',
-        'ceca4e62-559c-4dc6-98fe-64017d537192': 'illustration', // Vector category counts under illustrations
         '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',
       };
 
@@ -78,7 +73,6 @@ export const useContentStats = () => {
           else if (mappedType === 'video') videos++;
           else if (mappedType === 'audio') audios++;
           else if (mappedType === 'ebook') ebooks++;
-          else if (mappedType === 'illustration') illustrations++;
           return;
         }
 
@@ -97,20 +91,17 @@ export const useContentStats = () => {
           fileType.includes('ebook')
         ) {
           ebooks++;
-        } else if (fileType === 'illustration' || fileType.includes('vector') || fileType.includes('svg')) {
-          illustrations++;
         } else if (fileType === 'image' || fileType.startsWith('image/')) {
           photos++;
         }
       });
 
-      const total = photos + videos + audios + illustrations + ebooks;
+      const total = photos + videos + audios + ebooks;
 
       setStats({
         photos,
         videos,
         audios,
-        illustrations,
         ebooks,
         total
       });

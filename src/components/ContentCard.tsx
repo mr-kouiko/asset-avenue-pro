@@ -18,7 +18,7 @@ interface ContentCardProps {
   title: string;
   author: string;
   price: number;
-  type: "photo" | "video" | "audio" | "illustration" | "pdf" | "ebook";
+  type: "photo" | "video" | "audio" | "pdf" | "ebook";
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
@@ -83,7 +83,6 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   const getTypeColor = (type: string) => {
     switch (type) {
       case "video": return "bg-red-100 text-red-800";
-      case "illustration": return "bg-purple-100 text-purple-800";
       case "pdf":
       case "ebook": return "bg-orange-100 text-orange-800";
       default: return "bg-blue-100 text-blue-800";
@@ -170,7 +169,6 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
           >
             {type === 'photo' ? 'PHOTO' :
              type === 'video' ? 'VIDEO' :
-             type === 'illustration' ? (isVector ? 'VECTOR' : 'ILLUSTRATION') :
              type === 'pdf' ? 'PDF' : 'EBOOK'}
           </Badge>
           {isAiGenerated && (
