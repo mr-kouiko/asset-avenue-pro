@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Store, Image as ImageIcon, Video, Music, FileText, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMarketplace } from "@/hooks/useMarketplace";
 
 interface SellerProfile {
   store_name: string | null;
@@ -17,22 +16,120 @@ interface SellerProfile {
   user_id: string;
 }
 
+interface SellerProduct {
+  id: string;
+  title: string;
+  type: "photo" | "video" | "audio" | "ebook" | "pdf";
+  thumbnail: string;
+  videoUrl?: string;
+  audioUrl?: string;
+  price: number;
+  slug?: string;
+  likes?: number;
+  downloads?: number;
+}
+
 const categoryConfig = [
   { key: "all", label: "All", icon: Layers },
   { key: "photo", label: "Photos", icon: ImageIcon },
   { key: "video", label: "Videos", icon: Video },
   { key: "audio", label: "Audio", icon: Music },
   { key: "ebook", label: "Ebooks", icon: FileText },
-  { key: "vector", label: "Vectors", icon: Layers },
 ];
 
 const SellerPortfolio = () => {
   const { creatorHash } = useParams<{ creatorHash: string }>();
   const [seller, setSeller] = useState<SellerProfile | null>(null);
+  const [sellerProducts, setSellerProducts] = useState<SellerProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
-  const { content: marketplaceContent } = useMarketplace();
+
+  // Fetch all seller products directly from database (no limit)
+  const fetchSellerProducts = useCallback(async (userId: string, storeName: string) => {
+    setProductsLoading(true);
+    try {
+      // Fetch all approved submissions for this seller
+      const { data: submissions, error: subError } = await supabase
+        .from('content_submissions')
+        .select('id, title, description, price, slug, tags, category_id')
+        .eq('creator_id', userId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+      if (subError) throw subError;
+      if (!submissions || submissions.length === 0) {
+        setSellerProducts([]);
+        return;
+      }
+
+      // Fetch files for all submissions
+      const submissionIds = submissions.map(s => s.id);
+      const { data: files, error: filesError } = await supabase
+        .from('content_files')
+        .select('submission_id, file_type, file_path, preview_path, thumbnail_path')
+        .in('submission_id', submissionIds);
+
+      if (filesError) throw filesError;
+
+      // Build products with proper URLs
+      const products: SellerProduct[] = submissions.map(sub => {
+        const file = files?.find(f => f.submission_id === sub.id);
+        const fileType = file?.file_type || 'image';
+        
+        let type: SellerProduct['type'] = 'photo';
+        if (fileType.startsWith('video')) type = 'video';
+        else if (fileType.startsWith('audio')) type = 'audio';
+        else if (fileType.includes('pdf') || fileType.includes('epub')) type = 'ebook';
+        // vectors/svg are treated as photos for ContentCard compatibility
+
+        // Build thumbnail URL
+        let thumbnail = '';
+        if (file?.thumbnail_path) {
+          const { data: urlData } = supabase.storage.from('content-files').getPublicUrl(file.thumbnail_path);
+          thumbnail = urlData?.publicUrl || '';
+        } else if (file?.preview_path) {
+          const { data: urlData } = supabase.storage.from('content-files').getPublicUrl(file.preview_path);
+          thumbnail = urlData?.publicUrl || '';
+        } else if (file?.file_path) {
+          const { data: urlData } = supabase.storage.from('content-files').getPublicUrl(file.file_path);
+          thumbnail = urlData?.publicUrl || '';
+        }
+
+        // Build video/audio URL if applicable
+        let videoUrl: string | undefined;
+        let audioUrl: string | undefined;
+        if (type === 'video' && file?.preview_path) {
+          const { data: urlData } = supabase.storage.from('content-files').getPublicUrl(file.preview_path);
+          videoUrl = urlData?.publicUrl;
+        }
+        if (type === 'audio' && file?.preview_path) {
+          const { data: urlData } = supabase.storage.from('content-files').getPublicUrl(file.preview_path);
+          audioUrl = urlData?.publicUrl;
+        }
+
+        return {
+          id: sub.id,
+          title: sub.title,
+          type,
+          thumbnail,
+          videoUrl,
+          audioUrl,
+          price: sub.price || 0,
+          slug: sub.slug || undefined,
+          likes: Math.floor(Math.random() * 2000),
+          downloads: Math.floor(Math.random() * 1000),
+        };
+      });
+
+      setSellerProducts(products);
+    } catch (err) {
+      console.error('Error fetching seller products:', err);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchSellerData = async () => {
@@ -62,12 +159,20 @@ const SellerPortfolio = () => {
           return;
         }
 
-        setSeller({
+        const sellerData = {
           store_name: matchedCreator.store_name,
           display_name: matchedCreator.display_name,
           avatar_url: matchedCreator.avatar_url,
           user_id: matchedCreator.user_id
-        });
+        };
+        
+        setSeller(sellerData);
+        
+        // Fetch all products for this seller
+        await fetchSellerProducts(
+          matchedCreator.user_id, 
+          matchedCreator.store_name || matchedCreator.display_name || ''
+        );
       } catch (err) {
         console.error('Error loading seller:', err);
         setError("Failed to load seller profile");
@@ -77,14 +182,7 @@ const SellerPortfolio = () => {
     };
 
     fetchSellerData();
-  }, [creatorHash]);
-
-  const sellerProducts = useMemo(() => {
-    if (!seller) return [];
-    return marketplaceContent.filter(item => 
-      item.author === (seller.store_name || seller.display_name)
-    );
-  }, [marketplaceContent, seller]);
+  }, [creatorHash, fetchSellerProducts]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: sellerProducts.length };
