@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -12,10 +12,38 @@ import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Link } from "react-router-dom";
 import { Plus, Upload, TrendingUp, Heart, Download } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface SellerProfile {
+  display_name: string | null;
+  store_name: string | null;
+  avatar_url: string | null;
+}
 
 const Portfolio = () => {
   const { user } = useAuth();
   const { submissions, stats, loading, refreshData } = useSellerDashboard();
+  const [profile, setProfile] = useState<SellerProfile | null>(null);
+
+  // Fetch fresh profile data from database
+  const fetchProfile = useCallback(async () => {
+    if (!user?.id) return;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('display_name, store_name, avatar_url')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (!error && data) {
+      setProfile(data);
+    }
+  }, [user?.id]);
+
+  // Fetch profile on mount and when user changes
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   // Filter only approved submissions for public portfolio
   const approvedSubmissions = submissions.filter(submission => submission.status === 'approved');
@@ -25,6 +53,7 @@ const Portfolio = () => {
     const handleGlobalRefresh = () => {
       console.log('Portfolio: Handling global refresh event');
       refreshData();
+      fetchProfile(); // Also refresh profile data
     };
 
     window.addEventListener('globalContentRefresh', handleGlobalRefresh);
@@ -32,7 +61,7 @@ const Portfolio = () => {
     return () => {
       window.removeEventListener('globalContentRefresh', handleGlobalRefresh);
     };
-  }, [refreshData]);
+  }, [refreshData, fetchProfile]);
 
   return (
     <ProtectedRoute 
@@ -49,15 +78,15 @@ const Portfolio = () => {
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
                   <AvatarFallback>
-                    {user?.user_metadata?.display_name?.[0] || user?.email?.[0]?.toUpperCase()}
+                    {(profile?.display_name || profile?.store_name)?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div>
                   <h1 className="text-3xl font-bold">
-                    {user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'My Portfolio'}
+                    {profile?.store_name || profile?.display_name || 'My Portfolio'}
                   </h1>
                   <p className="text-muted-foreground">
                     VisuStock Creator • Member since {new Date(user?.created_at || '').getFullYear()}
@@ -178,7 +207,7 @@ const Portfolio = () => {
                         key={submission.id}
                         id={submission.id}
                         title={submission.title}
-                        author={user?.user_metadata?.store_name || user?.user_metadata?.display_name || 'You'}
+                        author={profile?.store_name || profile?.display_name || 'You'}
                         price={submission.price || 0}
                         type={getContentType()}
                         thumbnail={previewFile?.file_path || thumbnailFile?.thumbnail_path || '/placeholder.svg'}
