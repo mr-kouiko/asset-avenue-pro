@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -13,141 +13,258 @@ interface DetectionResult {
   frames: FrameResult[];
   status: 'success' | 'error' | 'pending';
   message?: string;
+  detectionMethod?: string;
 }
 
 interface UseAIVideoDetectionReturn {
   isDetecting: boolean;
   result: DetectionResult | null;
-  detectVideo: (videoUrl: string) => Promise<DetectionResult | null>;
+  progress: number;
+  detectVideo: (videoUrl: string, options?: DetectionOptions) => Promise<DetectionResult | null>;
   reset: () => void;
+  cancel: () => void;
 }
+
+interface DetectionOptions {
+  threshold?: number; // 0-1, default 0.5
+  maxRetries?: number; // default 5
+  skipCache?: boolean;
+}
+
+// Simple in-memory cache for video detection results
+const videoDetectionCache = new Map<string, { result: DetectionResult; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes for videos (longer processing time)
+
+const getCachedResult = (url: string): DetectionResult | null => {
+  const cached = videoDetectionCache.get(url);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.result;
+  }
+  videoDetectionCache.delete(url);
+  return null;
+};
+
+const setCachedResult = (url: string, result: DetectionResult): void => {
+  videoDetectionCache.set(url, { result, timestamp: Date.now() });
+};
+
+// Exponential backoff helper
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const getBackoffDelay = (attempt: number, baseDelay = 2000): number => {
+  return Math.min(baseDelay * Math.pow(1.5, attempt), 15000); // Max 15 seconds
+};
 
 export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [result, setResult] = useState<DetectionResult | null>(null);
+  const [progress, setProgress] = useState(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isCancelledRef = useRef(false);
 
-  const detectVideo = useCallback(async (videoUrl: string): Promise<DetectionResult | null> => {
-    console.log('🎥 [AI-VIDEO-DETECTION] Starting detection for:', videoUrl);
+  const detectVideo = useCallback(async (
+    videoUrl: string,
+    options: DetectionOptions = {}
+  ): Promise<DetectionResult | null> => {
+    const { threshold = 0.5, maxRetries = 5, skipCache = false } = options;
+    
+    console.log('🎥 [AI-VIDEO] Starting detection for:', videoUrl);
     
     if (!videoUrl) {
-      console.error('🎥 [AI-VIDEO-DETECTION] No video URL provided');
       toast.error('No video URL provided');
       return null;
     }
 
+    // Check cache first
+    if (!skipCache) {
+      const cached = getCachedResult(videoUrl);
+      if (cached) {
+        console.log('🎥 [AI-VIDEO] Using cached result');
+        setResult(cached);
+        return cached;
+      }
+    }
+
+    // Cancel any pending detection
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    isCancelledRef.current = false;
+
     setIsDetecting(true);
     setResult(null);
+    setProgress(10);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('🎥 [AI-VIDEO-DETECTION] Session exists:', !!session);
 
       if (!session?.access_token) {
-        console.error('🎥 [AI-VIDEO-DETECTION] No access token available');
         toast.error('Please login to use AI detection');
         return null;
       }
 
       const token = session.access_token;
-      console.log('🎥 [AI-VIDEO-DETECTION] Token available, length:', token.length);
+      setProgress(20);
 
       const invokeOnce = async (): Promise<DetectionResult | null> => {
-        console.log('🎥 [AI-VIDEO-DETECTION] Calling Edge Function with videoUrl:', videoUrl);
+        if (isCancelledRef.current) return null;
         
         try {
           const response = await fetch(
-            `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/detect-ai-video`,
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/detect-ai-video`,
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8'
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
               },
-              body: JSON.stringify({ videoUrl })
+              body: JSON.stringify({ videoUrl, threshold }),
+              signal: abortControllerRef.current?.signal
             }
           );
           
-          console.log('🎥 [AI-VIDEO-DETECTION] Response status:', response.status);
-          
           if (!response.ok) {
             const errorText = await response.text();
-            console.error('🎥 [AI-VIDEO-DETECTION] Error response:', errorText);
+            console.error('🎥 [AI-VIDEO] Error response:', response.status, errorText);
+            
+            // Handle specific error codes
+            if (response.status === 429) {
+              throw new Error('Rate limit exceeded');
+            }
+            if (response.status === 402) {
+              throw new Error('API quota exceeded');
+            }
             return null;
           }
           
           const data = await response.json();
-          console.log('🎥 [AI-VIDEO-DETECTION] Response data:', data);
-          
           return (data?.result as DetectionResult) ?? null;
         } catch (fetchError) {
-          console.error('🎥 [AI-VIDEO-DETECTION] Fetch error:', fetchError);
-          return null;
+          if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+            console.log('🎥 [AI-VIDEO] Detection cancelled');
+            return null;
+          }
+          throw fetchError;
         }
       };
 
       let detectionResult = await invokeOnce();
-      console.log('🎥 [AI-VIDEO-DETECTION] Initial result:', detectionResult);
+      setProgress(40);
 
-      // SightEngine can return "pending"; retry a few times to make this feel automatic.
-      for (let attempt = 0; detectionResult?.status === 'pending' && attempt < 5; attempt++) {
-        console.log(`🎥 [AI-VIDEO-DETECTION] Status pending, retry ${attempt + 1}/5...`);
-        await new Promise((r) => setTimeout(r, 3000));
+      // Retry with exponential backoff for pending status
+      for (let attempt = 0; detectionResult?.status === 'pending' && attempt < maxRetries; attempt++) {
+        if (isCancelledRef.current) break;
+        
+        const delay = getBackoffDelay(attempt);
+        console.log(`🎥 [AI-VIDEO] Status pending, retry ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        
+        setProgress(40 + ((attempt + 1) / maxRetries) * 40);
+        await sleep(delay);
+        
+        if (isCancelledRef.current) break;
         detectionResult = await invokeOnce();
-        if (!detectionResult) break;
       }
 
+      setProgress(90);
+
       if (!detectionResult) {
-        console.error('🎥 [AI-VIDEO-DETECTION] No result after retries');
-        toast.error('Failed to analyze video');
+        if (!isCancelledRef.current) {
+          toast.error('Failed to analyze video', {
+            description: 'The video may be too large or in an unsupported format'
+          });
+        }
         return null;
       }
 
-      console.log('🎥 [AI-VIDEO-DETECTION] Final result:', detectionResult);
-      setResult(detectionResult);
-
-      // Show appropriate toast based on result
+      // Apply custom threshold if result is success
       if (detectionResult.status === 'success') {
+        detectionResult.isAiGenerated = detectionResult.confidence > threshold;
+        detectionResult.detectionMethod = 'sightengine';
+      }
+
+      setResult(detectionResult);
+      setCachedResult(videoUrl, detectionResult);
+      setProgress(100);
+
+      // Show appropriate feedback with more detail
+      if (detectionResult.status === 'success') {
+        const confidencePercent = Math.round(detectionResult.confidence * 100);
+        const framesAnalyzed = detectionResult.frames?.length || 0;
+        
         if (detectionResult.isAiGenerated) {
-          console.log('🎥 [AI-VIDEO-DETECTION] ✅ AI-Generated video detected!');
-          toast.warning(`AI-Generated Detected (${Math.round(detectionResult.confidence * 100)}% confidence)`, {
-            description: detectionResult.message
+          toast.warning(`🤖 AI-Generated Video (${confidencePercent}% confidence)`, {
+            description: `Analyzed ${framesAnalyzed} frames. ${detectionResult.message || ''}`,
+            duration: 6000
           });
         } else {
-          console.log('🎥 [AI-VIDEO-DETECTION] ✅ Video appears authentic');
-          toast.success('Video appears authentic', {
-            description: `Confidence: ${Math.round((1 - detectionResult.confidence) * 100)}%`
+          toast.success(`✅ Authentic Video (${100 - confidencePercent}% confidence)`, {
+            description: `Analyzed ${framesAnalyzed} frames. Video appears to be real footage.`,
+            duration: 5000
           });
         }
       } else if (detectionResult.status === 'pending') {
-        console.log('🎥 [AI-VIDEO-DETECTION] ⏳ Still pending after retries');
-        toast.info('AI analysis in progress', {
-          description: detectionResult.message || 'Please wait a moment and try again.'
+        toast.info('⏳ Analysis still processing', {
+          description: 'Try again in a few seconds',
+          duration: 4000
         });
       } else if (detectionResult.status === 'error') {
-        console.error('🎥 [AI-VIDEO-DETECTION] ❌ Detection error:', detectionResult.message);
-        toast.error(detectionResult.message || 'Detection failed');
+        toast.error(detectionResult.message || 'Detection failed', {
+          description: 'Try re-uploading or using a different video format'
+        });
       }
 
       return detectionResult;
     } catch (err) {
-      console.error('🎥 [AI-VIDEO-DETECTION] Exception:', err);
-      toast.error('Failed to analyze video');
+      console.error('🎥 [AI-VIDEO] Exception:', err);
+      
+      if (err instanceof Error) {
+        if (err.message === 'Rate limit exceeded') {
+          toast.error('Rate limit exceeded', {
+            description: 'Please wait a moment and try again'
+          });
+        } else if (err.message === 'API quota exceeded') {
+          toast.error('AI detection quota exceeded', {
+            description: 'Please contact support for more credits'
+          });
+        } else if (!isCancelledRef.current) {
+          toast.error('Failed to analyze video');
+        }
+      }
       return null;
     } finally {
       setIsDetecting(false);
+      setProgress(0);
+      abortControllerRef.current = null;
     }
   }, []);
 
   const reset = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    isCancelledRef.current = true;
     setResult(null);
     setIsDetecting(false);
+    setProgress(0);
+  }, []);
+
+  const cancel = useCallback(() => {
+    isCancelledRef.current = true;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsDetecting(false);
+    setProgress(0);
+    toast.info('Detection cancelled');
   }, []);
 
   return {
     isDetecting,
     result,
+    progress,
     detectVideo,
-    reset
+    reset,
+    cancel
   };
 };

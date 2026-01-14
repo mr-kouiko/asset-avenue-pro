@@ -12,6 +12,13 @@ interface DetectionResult {
   frames: FrameResult[];
   status: 'success' | 'error' | 'pending';
   message?: string;
+  details?: {
+    avgScore: number;
+    maxScore: number;
+    minScore: number;
+    frameCount: number;
+    videoDuration?: number;
+  };
 }
 
 interface FrameResult {
@@ -19,21 +26,37 @@ interface FrameResult {
   aiGeneratedScore: number;
 }
 
+// Timeout wrapper for fetch
+const fetchWithTimeout = async (
+  url: string, 
+  options: RequestInit, 
+  timeout = 60000
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 serve(async (req) => {
+  const startTime = Date.now();
   console.log('🎥 [DETECT-AI-VIDEO] Request received');
   
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Auth (signing-keys compatible): verify JWT manually using getClaims()
+    // Auth verification
     const authHeader = req.headers.get('Authorization') ?? '';
-    console.log('🎥 [DETECT-AI-VIDEO] Auth header present:', authHeader.startsWith('Bearer '));
     
     if (!authHeader.startsWith('Bearer ')) {
-      console.error('🎥 [DETECT-AI-VIDEO] Missing or invalid Authorization header');
+      console.error('🎥 [DETECT-AI-VIDEO] Missing Authorization header');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -42,8 +65,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('🎥 [DETECT-AI-VIDEO] Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars');
       return new Response(JSON.stringify({ error: 'Server not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -56,50 +79,58 @@ serve(async (req) => {
 
     const token = authHeader.slice('Bearer '.length);
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    
     if (claimsError || !claimsData?.claims) {
-      console.error('🎥 [DETECT-AI-VIDEO] Auth claims error:', claimsError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('🎥 [DETECT-AI-VIDEO] User authenticated:', claimsData.claims.sub);
+    const userId = claimsData.claims.sub;
+    console.log('🎥 [DETECT-AI-VIDEO] User authenticated:', userId);
 
-    const { videoUrl } = await req.json();
-    console.log('🎥 [DETECT-AI-VIDEO] Video URL:', videoUrl);
+    const { videoUrl, threshold = 0.5 } = await req.json();
 
     if (!videoUrl) {
-      console.error('🎥 [DETECT-AI-VIDEO] No video URL provided');
       return new Response(
         JSON.stringify({ error: 'Video URL is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('🎥 [DETECT-AI-VIDEO] Processing video:', videoUrl.substring(0, 80));
+
     const apiUser = Deno.env.get('SIGHTENGINE_API_USER');
     const apiSecret = Deno.env.get('SIGHTENGINE_API_SECRET');
 
     if (!apiUser || !apiSecret) {
-      console.error('🎥 [DETECT-AI-VIDEO] SightEngine API credentials not configured');
+      console.error('🎥 [DETECT-AI-VIDEO] SightEngine credentials missing');
       return new Response(
-        JSON.stringify({ error: 'AI detection service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'AI detection service not configured',
+          result: {
+            isAiGenerated: false,
+            confidence: 0,
+            frames: [],
+            status: 'error',
+            message: 'Detection service not available'
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('🎥 [DETECT-AI-VIDEO] Starting AI video detection with SightEngine...');
-
-    // STEP 1: Download the video file from the URL
-    // SightEngine video API requires the actual file to be uploaded, not a URL
-    console.log('🎥 [DETECT-AI-VIDEO] Downloading video from URL...');
+    // Step 1: Download video with timeout
+    console.log('🎥 [DETECT-AI-VIDEO] Downloading video...');
     
-    const videoResponse = await fetch(videoUrl);
+    const videoResponse = await fetchWithTimeout(videoUrl, { method: 'GET' }, 45000);
+    
     if (!videoResponse.ok) {
       console.error('🎥 [DETECT-AI-VIDEO] Failed to download video:', videoResponse.status);
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to download video for analysis',
+          error: 'Failed to download video',
           result: {
             isAiGenerated: false,
             confidence: 0,
@@ -113,65 +144,77 @@ serve(async (req) => {
     }
 
     const videoBlob = await videoResponse.blob();
-    console.log('🎥 [DETECT-AI-VIDEO] Video downloaded, size:', videoBlob.size, 'bytes');
+    const videoSizeMB = videoBlob.size / (1024 * 1024);
+    console.log('🎥 [DETECT-AI-VIDEO] Video downloaded:', videoSizeMB.toFixed(2), 'MB');
 
-    // Check video size - SightEngine has limits (typically 100MB for sync API)
+    // Size limit check
     const maxSizeMB = 100;
-    if (videoBlob.size > maxSizeMB * 1024 * 1024) {
-      console.warn('🎥 [DETECT-AI-VIDEO] Video too large for sync analysis:', (videoBlob.size / 1024 / 1024).toFixed(2), 'MB');
+    if (videoSizeMB > maxSizeMB) {
       return new Response(
         JSON.stringify({ 
-          error: 'Video too large for AI detection',
+          error: 'Video too large',
           result: {
             isAiGenerated: false,
             confidence: 0,
             frames: [],
             status: 'error',
-            message: `Video exceeds ${maxSizeMB}MB limit for AI detection`
+            message: `Video exceeds ${maxSizeMB}MB limit. Please use a smaller file.`
           }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // STEP 2: Upload to SightEngine using multipart form data with 'media' key
-    // The sync API requires the file to be sent as 'media' parameter
+    // Step 2: Upload to SightEngine
     const sightEngineUrl = 'https://api.sightengine.com/1.0/video/check-sync.json';
     
     const formData = new FormData();
-    // CRITICAL: Use 'media' as the key for file upload, not 'url'
     formData.append('media', videoBlob, 'video.mp4');
-    formData.append('models', 'genai');  // AI-generated content detection model
+    formData.append('models', 'genai');
     formData.append('api_user', apiUser);
     formData.append('api_secret', apiSecret);
-    formData.append('interval', '2');  // Check every 2 seconds
+    formData.append('interval', '1.5'); // Check every 1.5 seconds for better accuracy
 
-    console.log('🎥 [DETECT-AI-VIDEO] Uploading video to SightEngine for analysis...');
+    console.log('🎥 [DETECT-AI-VIDEO] Uploading to SightEngine...');
     
-    const response = await fetch(sightEngineUrl, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetchWithTimeout(
+      sightEngineUrl, 
+      { method: 'POST', body: formData },
+      90000 // 90 second timeout for video processing
+    );
 
-    console.log('🎥 [DETECT-AI-VIDEO] SightEngine response status:', response.status);
+    console.log('🎥 [DETECT-AI-VIDEO] SightEngine status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('🎥 [DETECT-AI-VIDEO] SightEngine API error:', response.status, errorText);
+      console.error('🎥 [DETECT-AI-VIDEO] SightEngine error:', response.status, errorText);
       
-      // Return a fallback response for demo/testing
-      if (response.status === 402 || response.status === 403) {
-        console.warn('🎥 [DETECT-AI-VIDEO] API quota exceeded or authentication failed');
+      if (response.status === 402) {
         return new Response(
           JSON.stringify({
-            error: 'API quota exceeded or authentication failed',
-            fallback: true,
+            error: 'API quota exceeded',
             result: {
               isAiGenerated: false,
               confidence: 0,
               frames: [],
               status: 'error',
-              message: 'Unable to verify - API limit reached'
+              message: 'Detection quota exceeded - please try again later'
+            }
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (response.status === 403) {
+        return new Response(
+          JSON.stringify({
+            error: 'API authentication failed',
+            result: {
+              isAiGenerated: false,
+              confidence: 0,
+              frames: [],
+              status: 'error',
+              message: 'Detection service authentication failed'
             }
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -180,14 +223,13 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to analyze video', 
-          details: errorText,
+          error: 'Video analysis failed',
           result: {
             isAiGenerated: false,
             confidence: 0,
             frames: [],
             status: 'error',
-            message: 'Video analysis failed'
+            message: 'Failed to analyze video content'
           }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -195,42 +237,77 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('🎥 [DETECT-AI-VIDEO] SightEngine response:', JSON.stringify(data, null, 2));
+    const processingTime = Date.now() - startTime;
+    console.log(`🎥 [DETECT-AI-VIDEO] Response received in ${processingTime}ms`);
 
-    // Process the response
     let detectionResult: DetectionResult;
 
     if (data.status === 'success' && data.data?.frames) {
-      console.log('🎥 [DETECT-AI-VIDEO] Processing frames:', data.data.frames.length);
-      
-      const frames = data.data.frames.map((frame: any) => ({
+      const frames: FrameResult[] = data.data.frames.map((frame: any) => ({
         position: frame.info?.position || 0,
         aiGeneratedScore: frame.type?.ai_generated || 0,
       }));
 
-      // Calculate average AI-generated score across all frames
-      const avgScore = frames.length > 0
-        ? frames.reduce((sum: number, f: FrameResult) => sum + f.aiGeneratedScore, 0) / frames.length
-        : 0;
-
-      console.log('🎥 [DETECT-AI-VIDEO] Average AI score:', avgScore);
-
-      // Threshold: if average score > 0.5, likely AI-generated (lowered from 0.7 for better detection)
-      const isAiGenerated = avgScore > 0.5;
-
-      detectionResult = {
-        isAiGenerated,
-        confidence: avgScore,
-        frames,
-        status: 'success',
-        message: isAiGenerated 
-          ? 'This video appears to be AI-generated'
-          : 'This video appears to be authentic'
-      };
+      const frameCount = frames.length;
       
-      console.log('🎥 [DETECT-AI-VIDEO] ✅ Detection result: AI=' + isAiGenerated + ', confidence=' + avgScore);
+      if (frameCount === 0) {
+        detectionResult = {
+          isAiGenerated: false,
+          confidence: 0,
+          frames: [],
+          status: 'error',
+          message: 'No frames could be analyzed'
+        };
+      } else {
+        // Calculate statistics
+        const scores = frames.map(f => f.aiGeneratedScore);
+        const avgScore = scores.reduce((sum, s) => sum + s, 0) / frameCount;
+        const maxScore = Math.max(...scores);
+        const minScore = Math.min(...scores);
+        
+        // Use weighted scoring: higher weight for max score to catch AI segments
+        const weightedScore = avgScore * 0.6 + maxScore * 0.4;
+        
+        // Apply threshold
+        const effectiveThreshold = Math.max(0.3, Math.min(0.9, threshold));
+        const isAiGenerated = weightedScore > effectiveThreshold;
+
+        // Generate detailed message
+        let message: string;
+        if (isAiGenerated) {
+          if (maxScore > 0.9) {
+            message = 'High confidence: This video contains AI-generated content';
+          } else if (avgScore > 0.7) {
+            message = 'This video appears to be AI-generated';
+          } else {
+            message = 'This video may contain AI-generated segments';
+          }
+        } else {
+          if (avgScore < 0.2) {
+            message = 'This video appears to be authentic footage';
+          } else {
+            message = 'This video appears to be primarily real content';
+          }
+        }
+
+        detectionResult = {
+          isAiGenerated,
+          confidence: weightedScore,
+          frames,
+          status: 'success',
+          message,
+          details: {
+            avgScore,
+            maxScore,
+            minScore,
+            frameCount,
+            videoDuration: data.data.duration
+          }
+        };
+
+        console.log(`🎥 [DETECT-AI-VIDEO] ✅ Result: AI=${isAiGenerated}, avg=${(avgScore * 100).toFixed(1)}%, max=${(maxScore * 100).toFixed(1)}%`);
+      }
     } else if (data.status === 'failure') {
-      console.error('🎥 [DETECT-AI-VIDEO] SightEngine failure:', data.error);
       detectionResult = {
         isAiGenerated: false,
         confidence: 0,
@@ -239,38 +316,50 @@ serve(async (req) => {
         message: data.error?.message || 'Failed to analyze video'
       };
     } else {
-      console.log('🎥 [DETECT-AI-VIDEO] Analysis pending or unknown status:', data.status);
       detectionResult = {
         isAiGenerated: false,
         confidence: 0,
         frames: [],
         status: 'pending',
-        message: 'Analysis in progress'
+        message: 'Analysis in progress - please wait'
       };
     }
 
     return new Response(
       JSON.stringify({ 
         result: detectionResult,
+        processingTime,
         raw: data 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('🎥 [DETECT-AI-VIDEO] Unexpected error:', error);
+    const processingTime = Date.now() - startTime;
+    console.error('🎥 [DETECT-AI-VIDEO] Exception:', error);
+    
+    let message = 'Detection service unavailable';
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        message = 'Detection timed out - video may be too long or large';
+      } else if (error.message.includes('fetch')) {
+        message = 'Failed to connect to detection service';
+      }
+    }
+    
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
+        processingTime,
         result: {
           isAiGenerated: false,
           confidence: 0,
           frames: [],
           status: 'error',
-          message: 'Detection service unavailable'
+          message
         }
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
