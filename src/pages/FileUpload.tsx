@@ -20,7 +20,7 @@ interface UploadedFileData {
   thumbnailUrl?: string;
   isWatermarked?: boolean;
   isAiGenerated?: boolean;
-  detectedCategory?: 'photo' | 'illustration' | 'video' | 'audio' | 'ebook';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
 }
 
 const FileUpload = () => {

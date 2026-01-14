@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useContentStats } from "@/hooks/useContentStats";
 import { useAuth } from "@/hooks/useAuth";
-import { Camera, Video, Music, Palette, Zap, Shield, Globe, Heart } from "lucide-react";
+import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const IndexEN = () => {
@@ -104,9 +104,9 @@ const IndexEN = () => {
                 {user && <Badge variant="secondary">{stats.audios} items</Badge>}
               </Card>
               <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <Palette className="h-12 w-12 mx-auto mb-4 text-primary" />
-                <h3 className="font-semibold mb-2">Illustrations</h3>
-                {user && <Badge variant="secondary">{stats.illustrations} items</Badge>}
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <h3 className="font-semibold mb-2">Ebooks</h3>
+                {user && <Badge variant="secondary">{stats.ebooks} items</Badge>}
               </Card>
             </div>
           </div>

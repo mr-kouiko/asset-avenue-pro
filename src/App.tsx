@@ -68,7 +68,6 @@ const App = () => (
                   {/* SEO-friendly category search routes */}
                   <Route path="/videos/:searchQuery" element={<Marketplace />} />
                   <Route path="/photos/:searchQuery" element={<Marketplace />} />
-                  <Route path="/illustrations/:searchQuery" element={<Marketplace />} />
                   <Route path="/audio/:searchQuery" element={<Marketplace />} />
                   <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
                   <Route path="/products/:slug" element={<ProductDetail />} />

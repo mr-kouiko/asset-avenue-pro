@@ -13,11 +13,10 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const translations = {
   en: {
-    'search.placeholder': 'Search for photos, videos, illustrations...',
+    'search.placeholder': 'Search for photos, videos, audio...',
     'nav.photos': 'Photos',
     'nav.videos': 'Videos',
     'nav.audio': 'Audio',
-    'nav.illustrations': 'Illustrations',
     'nav.vectors': 'Vectors',
     'nav.trending': 'Trending',
     'header.account': 'My Account',

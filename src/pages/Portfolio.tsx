@@ -164,17 +164,12 @@ const Portfolio = () => {
                     const originalFile = submission.content_files?.find(file => file.is_original);
                     
                     // Determine content type from file type
-                    const getContentType = (): "photo" | "video" | "audio" | "illustration" | "pdf" | "ebook" => {
+                    const getContentType = (): "photo" | "video" | "audio" | "pdf" | "ebook" => {
                       const fileType = originalFile?.file_type || previewFile?.file_type || '';
                       if (fileType.startsWith('video/')) return 'video';
                       if (fileType.startsWith('audio/')) return 'audio';
                       if (fileType === 'application/pdf') return 'pdf';
                       if (fileType.includes('epub') || fileType.includes('ebook')) return 'ebook';
-                      // Check filename for illustration keywords
-                      const fileName = (originalFile?.file_name || '').toLowerCase();
-                      if (fileName.includes('illustration') || fileName.includes('vector') || fileName.includes('drawing')) {
-                        return 'illustration';
-                      }
                       return 'photo';
                     };
                     

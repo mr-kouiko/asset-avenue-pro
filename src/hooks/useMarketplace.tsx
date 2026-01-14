@@ -7,7 +7,7 @@ export interface MarketplaceContent {
   title: string;
   author: string;
   price: number;
-  type: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook';
+  type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook';
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
@@ -35,7 +35,6 @@ const categorySlugToId: Record<string, string> = {
   'photo': 'e6eb8946-abab-4a0b-9249-da012b7a87af',
   'video': 'b4fe5f6a-554b-4409-8eaa-71c87d225b33',
   'audio': '0b9e322e-cecb-494f-ba8d-c5397e913b99',
-  'illustration': '653f8437-6317-4a81-8bbf-9b8c520c0dbe',
   'vector': 'ceca4e62-559c-4dc6-98fe-64017d537192',
   'ebook': '9ec96e29-199f-4ce2-b951-4ca18c62c87c',
 };
@@ -90,12 +89,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       if (categoryFilter && categoryFilter !== 'all') {
         const categoryUUID = categorySlugToId[categoryFilter];
         if (categoryUUID) {
-          // For illustration, also include vector category
-          if (categoryFilter === 'illustration') {
-            query = query.in('category_id', [categoryUUID, categorySlugToId['vector']]);
-          } else {
-            query = query.eq('category_id', categoryUUID);
-          }
+          query = query.eq('category_id', categoryUUID);
         }
       }
       
@@ -194,15 +188,14 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       }
 
       // Content type detection - prioritize category_id over file type
-      let contentType: 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook' = 'photo';
+      let contentType: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' = 'photo';
       
       // Category ID to type mapping (from database categories table)
-      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'illustration' | 'pdf' | 'ebook'> = {
+      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'pdf' | 'ebook'> = {
         'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',      // Photo
         'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',      // Vidéo
         '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',      // Audio
-        '653f8437-6317-4a81-8bbf-9b8c520c0dbe': 'illustration', // Illustration
-        'ceca4e62-559c-4dc6-98fe-64017d537192': 'illustration', // Vectoriel (treated as illustration)
+        'ceca4e62-559c-4dc6-98fe-64017d537192': 'photo',      // Vector (now treated as photo)
         '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',      // Ebooks
       };
       
@@ -220,8 +213,6 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
           contentType = 'audio';
         } else if (fileType === 'document' || fileFormat === 'application/pdf') {
           contentType = 'ebook';
-        } else if (fileType.includes('vector') || fileFormat === 'svg') {
-          contentType = 'illustration';
         }
       }
 
@@ -345,12 +336,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       if (categoryFilter && categoryFilter !== 'all') {
         const categoryUUID = categorySlugToId[categoryFilter];
         if (categoryUUID) {
-          // For illustration, also include vector category
-          if (categoryFilter === 'illustration') {
-            query = query.in('category_id', [categoryUUID, categorySlugToId['vector']]);
-          } else {
-            query = query.eq('category_id', categoryUUID);
-          }
+          query = query.eq('category_id', categoryUUID);
           console.log(`📁 [MARKETPLACE] Server-side filter: ${categoryFilter} -> ${categoryUUID}`);
         }
       }

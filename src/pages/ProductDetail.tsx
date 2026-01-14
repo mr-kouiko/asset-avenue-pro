@@ -98,12 +98,12 @@ const ProductDetail = () => {
   // Create watermarked preview for images (use product or fallback)
   const { watermarkedUrl, isProcessing } = useWatermarkedPreview({
     imageUrl:
-      (product?.type === 'photo' || product?.type === 'illustration') ? product?.thumbnail :
-      (fallbackProduct?.type === 'photo' || fallbackProduct?.type === 'illustration') ? fallbackProduct?.thumbnail :
+      (product?.type === 'photo') ? product?.thumbnail :
+      (fallbackProduct?.type === 'photo') ? fallbackProduct?.thumbnail :
       undefined,
     enabled:
-      (product?.type === 'photo' || product?.type === 'illustration') ||
-      (fallbackProduct?.type === 'photo' || fallbackProduct?.type === 'illustration')
+      (product?.type === 'photo') ||
+      (fallbackProduct?.type === 'photo')
   });
 
   // Use dynamic pricing for videos

@@ -28,12 +28,11 @@ export const HeroSection = () => {
     fr: {
       title: "Découvrez des millions de",
       titleHighlight: "contenus créatifs",
-      subtitle: "Photos, vidéos, illustrations, sons et bien plus. Trouvez le contenu parfait pour vos projets créatifs et professionnels.",
+      subtitle: "Photos, vidéos, sons et bien plus. Trouvez le contenu parfait pour vos projets créatifs et professionnels.",
       searchPlaceholder: "Rechercher...",
       statsLabels: {
         photos: "Photos",
         videos: "Vidéos", 
-        illustrations: "Illustrations",
         audio: "Audio",
         ebooks: "Ebooks"
       }
@@ -41,12 +40,11 @@ export const HeroSection = () => {
     en: {
       title: "Discover millions of",
       titleHighlight: "creative content",
-      subtitle: "Photos, videos, illustrations, audio and more. Find the perfect content for your creative and professional projects.",
+      subtitle: "Photos, videos, audio and more. Find the perfect content for your creative and professional projects.",
       searchPlaceholder: "Search...",
       statsLabels: {
         photos: "Photos",
         videos: "Videos",
-        illustrations: "Illustrations", 
         audio: "Audio",
         ebooks: "Ebooks"
       }
@@ -118,9 +116,9 @@ export const HeroSection = () => {
                 </div>
                 <div className="text-center lg:text-left">
                   <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
-                    {loading ? "..." : stats.illustrations.toLocaleString()}
+                    {loading ? "..." : stats.ebooks.toLocaleString()}
                   </div>
-                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.illustrations}</div>
+                  <div className="text-xs sm:text-sm text-white/80 drop-shadow-sm">{t.statsLabels.ebooks}</div>
                 </div>
                 <div className="text-center lg:text-left hidden sm:block">
                   <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-md">
