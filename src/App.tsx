@@ -47,6 +47,7 @@ import SellerRegistrationSuccess from "./pages/SellerRegistrationSuccess";
 import SellerRegistrationCancelled from "./pages/SellerRegistrationCancelled";
 import AuthCallback from "./pages/AuthCallback";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import SellerPortfolio from "./pages/SellerPortfolio";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -80,6 +81,7 @@ const App = () => (
                   <Route path="/seller-dashboard" element={<SellerDashboard />} />
                   <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
                   <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/seller/:creatorHash" element={<SellerPortfolio />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/payment-success" element={<PaymentSuccess />} />

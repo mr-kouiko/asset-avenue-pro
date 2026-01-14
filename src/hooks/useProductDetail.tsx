@@ -8,6 +8,8 @@ interface ProductDetailData {
   description: string;
   author: string;
   authorId: string;
+  authorAvatar?: string;
+  authorHash?: string;
   type: string;
   thumbnail: string;
   previewUrl?: string;
@@ -154,16 +156,18 @@ export const useProductDetail = (productId: string) => {
                 actualProductUuid = slugData.id;
                 console.log('✅ [PRODUCT-DETAIL] Product loaded by slug, UUID:', actualProductUuid);
                 
-                // Now fetch creator info
+                // Now fetch creator info including avatar
                 const { data: creatorData } = await supabase
                   .from('profiles')
-                  .select('store_name')
+                  .select('store_name, avatar_url')
                   .eq('user_id', slugData.creator_id)
                   .single();
                 
                 productInfo = {
                   ...slugData,
                   creator_store_name: creatorData?.store_name || 'Anonymous Store',
+                  creator_avatar: creatorData?.avatar_url || null,
+                  creator_hash: slugData.creator_id ? btoa(slugData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16) : null,
                 };
               }
             } else {
@@ -185,14 +189,26 @@ export const useProductDetail = (productId: string) => {
                 productInfo = productDetails[0];
                 console.log('✅ [PRODUCT-DETAIL] Product loaded:', productInfo.title);
                 
-                // RPC doesn't return slug, so fetch it separately for redirects
-                const { data: slugData } = await supabase
+                // RPC doesn't return slug or avatar, so fetch them separately
+                const { data: submissionData } = await supabase
                   .from('content_submissions')
-                  .select('slug')
+                  .select('slug, creator_id')
                   .eq('id', normalizedId)
                   .single();
-                if (slugData?.slug) {
-                  productInfo.slug = slugData.slug;
+                if (submissionData?.slug) {
+                  productInfo.slug = submissionData.slug;
+                }
+                
+                // Fetch creator avatar if we have creator_id
+                if (submissionData?.creator_id) {
+                  const { data: creatorProfile } = await supabase
+                    .from('profiles')
+                    .select('avatar_url')
+                    .eq('user_id', submissionData.creator_id)
+                    .single();
+                  
+                  productInfo.creator_avatar = creatorProfile?.avatar_url || null;
+                  productInfo.creator_hash = btoa(submissionData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
                 }
               } else {
                 console.warn('⚠️ [PRODUCT-DETAIL] RPC returned empty array for id:', normalizedId);
@@ -391,6 +407,8 @@ export const useProductDetail = (productId: string) => {
           description: productInfo.description,
           author: productInfo.creator_store_name || 'Anonymous Store', // Use ONLY store name, no fallback to display name
           authorId: 'anonymous', // Don't expose real creator ID
+          authorAvatar: productInfo.creator_avatar || undefined,
+          authorHash: productInfo.creator_hash || undefined,
           type: contentType,
           thumbnail,
           previewUrl,
