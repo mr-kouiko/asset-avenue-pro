@@ -440,43 +440,8 @@ const ProductManagement = () => {
       return;
     }
 
-    // Use the category selected by the user - NO AUTO-OVERRIDE
-    // The user has manually selected the category in the dropdown, respect their choice
-    const isImage = file.type.startsWith('image/');
-    let finalCategoryId = productData.category;
-    
-    // Only auto-detect if NO category is set (edge case)
-    if (isImage && !isPDF && !finalCategoryId) {
-      try {
-        console.log('🎨 [AUTO-CATEGORIZE] No category set, detecting...');
-        const result = await detectIllustration(file.url, {
-          fileName: file.name,
-          title: productData.title,
-          description: productData.description,
-          tags: productData.tags
-        });
-        
-        if (result && result.isIllustration) {
-          const illustrationCat = categories.find(cat => 
-            cat.name.toLowerCase().includes('illustration')
-          );
-          if (illustrationCat) {
-            finalCategoryId = illustrationCat.id;
-            console.log('🎨 [AUTO-CATEGORIZE] Set to Illustration. Indicators:', result.indicators);
-          }
-        } else {
-          // Default to photo for realistic images
-          const photoCat = categories.find(cat => 
-            cat.name.toLowerCase().includes('photo')
-          );
-          if (photoCat) {
-            finalCategoryId = photoCat.id;
-          }
-        }
-      } catch (error) {
-        console.error('Auto-categorize error:', error);
-      }
-    }
+    // Use the category selected by the user - no auto-override
+    const finalCategoryId = productData.category;
 
     const success = await publishProduct({
       file: {
