@@ -128,12 +128,8 @@ const ProductManagement = () => {
           
           switch (file.detectedCategory) {
             case 'illustration':
-              const illustrationCat = categories.find(cat => 
-                cat.name.toLowerCase().includes('illustration')
-              );
-              autoCategory = illustrationCat?.id || '';
-              break;
             case 'photo':
+              // Both illustration and photo map to Photo category
               const photoCat = categories.find(cat => 
                 cat.name.toLowerCase().includes('photo')
               );
@@ -373,16 +369,17 @@ const ProductManagement = () => {
       const result = await detectIllustration(file.url);
 
       if (result) {
-        const newCategory = result.isIllustration ? 'illustration' : 'photo';
+        // Always use 'photo' - illustration category is removed
+        const newCategory = 'photo';
         
         // Update file's detected category
         setUploadedFiles(prev => prev.map(f => 
           f.id === fileId ? { ...f, detectedCategory: newCategory } : f
         ));
 
-        // Find the matching category in the database
+        // Find the Photo category in the database
         const matchingCat = categories.find(cat => 
-          cat.name.toLowerCase().includes(newCategory)
+          cat.name.toLowerCase().includes('photo')
         );
         
         if (matchingCat) {
@@ -395,12 +392,8 @@ const ProductManagement = () => {
         );
         sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
 
-        if (result.isIllustration) {
-          toast.success(`🎨 Detected as Illustration (${Math.round(result.confidence * 100)}% confidence)`);
-          console.log('🎨 [RECATEGORIZE] Indicators:', result.indicators);
-        } else {
-          toast.success(`📷 Detected as Photo (${Math.round((1 - result.confidence) * 100)}% confidence)`);
-        }
+        // Always show as Photo (illustration category removed)
+        toast.success(`📷 Detected as Photo`);
       } else {
         toast.warning('Could not analyze image - using current category');
       }
@@ -929,11 +922,13 @@ const ProductManagement = () => {
                               <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
+                              {categories
+                                .filter((category) => category.name.toLowerCase() !== 'illustration')
+                                .map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           {selectedProductData.category && (
