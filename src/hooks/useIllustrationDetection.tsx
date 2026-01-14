@@ -6,201 +6,144 @@ interface IllustrationDetectionResult {
   indicators: string[];
 }
 
-interface DetectionOptions {
-  fileName?: string;
-  title?: string;
-  description?: string;
-  tags?: string[];
-}
-
-// Keywords that STRONGLY indicate illustration/artwork content
-// IMPORTANT: Avoid generic words like "vibrant", "colorful" that appear in realistic photos
-const ILLUSTRATION_KEYWORDS = [
-  // Style keywords - VERY SPECIFIC to illustrations
-  'illustration', 'illust', 'drawing', 'artwork', 
-  'vector', 'cartoon', 'comic', 'icon', 'logo',
-  'sketch', 'digital-art', 'digitalart', 
-  'anime', 'manga', 'clipart', 'hand-drawn', 'handdrawn',
-  // Artistic style keywords - SPECIFIC art styles (not photography)
-  'pop art', 'popart', 'pop-art', 'watercolor', 'oil painting',
-  'acrylic', 'pastel', 'charcoal', 'pencil drawing', 'ink drawing',
-  'graffiti', 'street art', 'concept art', 'character design',
-  'storyboard', 'comic style', 'comic book', 'graphic novel',
-  'flat design', 'isometric', 'low poly', 'pixel art', 'voxel',
-  'psychedelic', 'trippy', 'kaleidoscope',
-  'art deco', 'art nouveau', 'bauhaus', 'cubism',
-  // Animation/motion graphics keywords
-  'animation', 'animated', 'motion graphics', 'motion design',
-  // Vector/graphic specific
-  'vector style', 'vector art', 'svg', 'eps', 'ai file',
-  'infographic', 'diagram', 'chart design', 'icon set',
-  // Character/creature art
-  'character art', 'creature design', 'monster design', 'mascot',
-  'portrait illustration', 'caricature',
-  // Digital art specific (NOT generic photo terms)
-  'digital painting', 'matte painting', 'painted illustration',
-  // REMOVED: vibrant, colorful, bold, neon, geometric, abstract, fantasy, surreal
-  // These are too generic and match realistic AI-generated photos
-];
-
-// Check if text contains illustration keywords
-const checkTextForIllustrationKeywords = (text: string): { found: string[]; score: number } => {
-  const lowerText = text.toLowerCase();
-  const found: string[] = [];
-  
-  for (const keyword of ILLUSTRATION_KEYWORDS) {
-    if (lowerText.includes(keyword)) {
-      found.push(keyword);
-    }
-  }
-  
-  // Score based on number of keywords found (diminishing returns)
-  const score = found.length > 0 ? Math.min(0.6, 0.25 + (found.length - 1) * 0.1) : 0;
-  
-  return { found, score };
-};
-
 export const useIllustrationDetection = () => {
   const [isDetecting, setIsDetecting] = useState(false);
 
   /**
    * Analyzes an image to determine if it's an illustration vs a photograph.
-   * Uses multiple heuristics:
-   * 1. Title/description/tags keyword analysis (strongest indicator)
-   * 2. Filename keyword hints
-   * 3. Color distribution - illustrations typically have fewer unique colors
-   * 4. Edge characteristics - illustrations have cleaner, sharper edges
-   * 5. Color gradients - photos have smoother gradients, illustrations have flat colors
+   * Uses ONLY pixel-based analysis - NO keyword detection.
+   * 
+   * Heuristics:
+   * 1. Color distribution - illustrations have fewer unique colors (flat fills)
+   * 2. Edge characteristics - illustrations have cleaner, sharper edges
+   * 3. Flat region ratio - illustrations have large uniform color areas
+   * 4. Saturation uniformity - illustrations have more uniform saturation
+   * 5. Transparency - illustrations often have alpha channels
    */
   const detectIllustration = useCallback(async (
-    imageUrl: string, 
-    fileNameOrOptions?: string | DetectionOptions
+    imageUrl: string
   ): Promise<IllustrationDetectionResult | null> => {
     setIsDetecting(true);
-    
-    // Normalize options
-    const options: DetectionOptions = typeof fileNameOrOptions === 'string' 
-      ? { fileName: fileNameOrOptions }
-      : fileNameOrOptions || {};
     
     try {
       const indicators: string[] = [];
       let score = 0;
       
-      // Heuristic 1: Check title for illustration keywords (HIGH PRIORITY)
-      if (options.title) {
-        const titleCheck = checkTextForIllustrationKeywords(options.title);
-        if (titleCheck.found.length > 0) {
-          score += titleCheck.score;
-          indicators.push(`Title contains: ${titleCheck.found.slice(0, 3).join(', ')}`);
-          console.log(`🎨 [ILLUSTRATION-DETECTION] Title keywords found: ${titleCheck.found.join(', ')}`);
-        }
-      }
+      // Analyze image pixels - the ONLY detection method
+      const imageAnalysis = await analyzeImageCharacteristics(imageUrl);
       
-      // Heuristic 2: Check description for illustration keywords
-      if (options.description) {
-        const descCheck = checkTextForIllustrationKeywords(options.description);
-        if (descCheck.found.length > 0) {
-          score += descCheck.score * 0.8; // Slightly less weight than title
-          indicators.push(`Description contains: ${descCheck.found.slice(0, 3).join(', ')}`);
-          console.log(`🎨 [ILLUSTRATION-DETECTION] Description keywords found: ${descCheck.found.join(', ')}`);
-        }
+      if (!imageAnalysis) {
+        setIsDetecting(false);
+        return null;
       }
-      
-      // Heuristic 3: Check tags for illustration keywords (HIGHEST PRIORITY for tags)
-      if (options.tags && options.tags.length > 0) {
-        const tagsText = options.tags.join(' ');
-        const tagsCheck = checkTextForIllustrationKeywords(tagsText);
-        if (tagsCheck.found.length > 0) {
-          // Tags are very reliable - if user tagged it with art styles, trust them
-          score += Math.min(0.7, tagsCheck.score * 1.2);
-          indicators.push(`Tags contain: ${tagsCheck.found.slice(0, 4).join(', ')}`);
-          console.log(`🎨 [ILLUSTRATION-DETECTION] Tag keywords found: ${tagsCheck.found.join(', ')}`);
-        }
-      }
-      
-      // Heuristic 4: Check filename for illustration hints
-      if (options.fileName) {
-        const lowerName = options.fileName.toLowerCase();
-        
-        // SVG files are always illustrations
-        if (lowerName.endsWith('.svg')) {
-          setIsDetecting(false);
-          return {
-            isIllustration: true,
-            confidence: 1.0,
-            indicators: ['SVG format detected - vector illustration']
-          };
-        }
-        
-        const fileCheck = checkTextForIllustrationKeywords(lowerName);
-        if (fileCheck.found.length > 0) {
-          score += 0.3;
-          indicators.push(`Filename contains "${fileCheck.found[0]}"`);
-        }
-      }
-      
-      // Heuristic 5: Analyze image pixels (only if we don't have strong text signals)
-      // Skip expensive pixel analysis if we already have high confidence from metadata
-      if (score < 0.5) {
-        const imageAnalysis = await analyzeImageCharacteristics(imageUrl);
-        
-        if (imageAnalysis) {
-          // Low unique color ratio suggests illustration (flat colors)
-          if (imageAnalysis.uniqueColorRatio < 0.15) {
-            score += 0.25;
-            indicators.push('Limited color palette (flat colors)');
-          }
-          
-          // High edge contrast suggests illustration (sharp lines)
-          if (imageAnalysis.edgeSharpness > 0.7) {
-            score += 0.2;
-            indicators.push('Sharp, clean edges detected');
-          }
-          
-          // Low color variance in regions suggests illustration (solid fills)
-          if (imageAnalysis.colorVariance < 20) {
-            score += 0.2;
-            indicators.push('Solid color regions detected');
-          }
 
-          // NEW: Flat-region ratio (large uniform areas) strongly suggests illustration
-          if (imageAnalysis.flatRegionRatio > 0.55) {
-            score += 0.25;
-            indicators.push('Large flat-color areas detected');
-          } else if (imageAnalysis.flatRegionRatio > 0.4 && imageAnalysis.edgeSharpness > 0.45) {
-            score += 0.15;
-            indicators.push('Flat areas + crisp edges (stylized art)');
-          }
-          
-          // High saturation uniformity suggests illustration
-          if (imageAnalysis.saturationUniformity > 0.6) {
-            score += 0.15;
-            indicators.push('Uniform saturation levels');
-          }
-          
-          // Check for transparency (common in illustrations)
-          if (imageAnalysis.hasTransparency) {
-            score += 0.2;
-            indicators.push('Image has transparency');
-          }
-          
-          // Digital art often has higher saturation + sharper transitions
-          if (imageAnalysis.edgeSharpness > 0.45 && imageAnalysis.saturationUniformity > 0.4) {
-            score += 0.2;
-            indicators.push('Digital art characteristics detected');
-          }
-        }
-      } else {
-        indicators.push('High confidence from metadata - pixel analysis skipped');
+      // === FLAT REGION RATIO (strongest indicator) ===
+      // Illustrations have large flat-color areas, photos have texture everywhere
+      if (imageAnalysis.flatRegionRatio > 0.6) {
+        score += 0.35;
+        indicators.push(`Very high flat-color areas (${(imageAnalysis.flatRegionRatio * 100).toFixed(0)}%)`);
+      } else if (imageAnalysis.flatRegionRatio > 0.45) {
+        score += 0.25;
+        indicators.push(`High flat-color areas (${(imageAnalysis.flatRegionRatio * 100).toFixed(0)}%)`);
+      } else if (imageAnalysis.flatRegionRatio > 0.3) {
+        score += 0.1;
+        indicators.push(`Moderate flat-color areas`);
+      }
+      
+      // === UNIQUE COLOR RATIO ===
+      // Illustrations use limited palettes, photos have millions of colors
+      if (imageAnalysis.uniqueColorRatio < 0.08) {
+        score += 0.25;
+        indicators.push('Very limited color palette');
+      } else if (imageAnalysis.uniqueColorRatio < 0.15) {
+        score += 0.15;
+        indicators.push('Limited color palette');
+      } else if (imageAnalysis.uniqueColorRatio > 0.35) {
+        // High color count strongly suggests photo
+        score -= 0.15;
+        indicators.push('High color variation (photo-like)');
+      }
+      
+      // === EDGE SHARPNESS ===
+      // Illustrations have crisp, defined edges; photos have soft gradients
+      if (imageAnalysis.edgeSharpness > 0.75) {
+        score += 0.2;
+        indicators.push('Very sharp, clean edges');
+      } else if (imageAnalysis.edgeSharpness > 0.5) {
+        score += 0.1;
+        indicators.push('Clean edges detected');
+      } else if (imageAnalysis.edgeSharpness < 0.25) {
+        // Very soft edges suggest photo
+        score -= 0.1;
+        indicators.push('Soft edges (photo-like)');
+      }
+      
+      // === COLOR VARIANCE ===
+      // Low variance in regions = solid fills (illustration)
+      // High variance = texture/noise (photo)
+      if (imageAnalysis.colorVariance < 15) {
+        score += 0.2;
+        indicators.push('Solid color regions (low variance)');
+      } else if (imageAnalysis.colorVariance < 25) {
+        score += 0.1;
+        indicators.push('Relatively uniform colors');
+      } else if (imageAnalysis.colorVariance > 50) {
+        // High variance strongly suggests photo
+        score -= 0.15;
+        indicators.push('High texture/variance (photo-like)');
+      }
+      
+      // === SATURATION UNIFORMITY ===
+      // Illustrations have consistent saturation levels
+      if (imageAnalysis.saturationUniformity > 0.7) {
+        score += 0.15;
+        indicators.push('Very uniform saturation');
+      } else if (imageAnalysis.saturationUniformity > 0.5) {
+        score += 0.08;
+        indicators.push('Uniform saturation levels');
+      }
+      
+      // === TRANSPARENCY ===
+      // Transparency is common in illustrations/graphics
+      if (imageAnalysis.hasTransparency) {
+        score += 0.2;
+        indicators.push('Image has transparency');
+      }
+      
+      // === COMBINED SIGNALS ===
+      // Strong illustration: flat regions + sharp edges + limited colors
+      if (imageAnalysis.flatRegionRatio > 0.4 && 
+          imageAnalysis.edgeSharpness > 0.45 && 
+          imageAnalysis.uniqueColorRatio < 0.2) {
+        score += 0.15;
+        indicators.push('Combined digital art characteristics');
+      }
+      
+      // Strong photo: high variance + many colors + soft edges
+      if (imageAnalysis.colorVariance > 40 && 
+          imageAnalysis.uniqueColorRatio > 0.25 && 
+          imageAnalysis.edgeSharpness < 0.4) {
+        score -= 0.2;
+        indicators.push('Combined photographic characteristics');
       }
       
       // Clamp score to 0-1 range
       const confidence = Math.min(1, Math.max(0, score));
+      
+      // Threshold for illustration classification
+      // 0.4 = need moderate evidence, not just any signal
       const isIllustration = confidence >= 0.4;
       
-      console.log(`🎨 [ILLUSTRATION-DETECTION] File: ${options.fileName}, Score: ${confidence.toFixed(2)}, Is Illustration: ${isIllustration}`);
-      console.log(`🎨 [ILLUSTRATION-DETECTION] Indicators:`, indicators);
+      console.log(`🎨 [PIXEL-DETECTION] Score: ${confidence.toFixed(2)}, Is Illustration: ${isIllustration}`);
+      console.log(`🎨 [PIXEL-DETECTION] Raw values:`, {
+        flatRegionRatio: imageAnalysis.flatRegionRatio.toFixed(3),
+        uniqueColorRatio: imageAnalysis.uniqueColorRatio.toFixed(3),
+        edgeSharpness: imageAnalysis.edgeSharpness.toFixed(3),
+        colorVariance: imageAnalysis.colorVariance.toFixed(1),
+        saturationUniformity: imageAnalysis.saturationUniformity.toFixed(3),
+        hasTransparency: imageAnalysis.hasTransparency
+      });
+      console.log(`🎨 [PIXEL-DETECTION] Indicators:`, indicators);
       
       setIsDetecting(false);
       return {
@@ -210,22 +153,18 @@ export const useIllustrationDetection = () => {
       };
       
     } catch (error) {
-      console.error('🎨 [ILLUSTRATION-DETECTION] Error:', error);
+      console.error('🎨 [PIXEL-DETECTION] Error:', error);
       setIsDetecting(false);
       return null;
     }
   }, []);
 
   const detectIllustrationFromFile = useCallback(async (
-    file: File,
-    options?: DetectionOptions
+    file: File
   ): Promise<IllustrationDetectionResult | null> => {
     const objectUrl = URL.createObjectURL(file);
     try {
-      return await detectIllustration(objectUrl, {
-        fileName: file.name,
-        ...options,
-      });
+      return await detectIllustration(objectUrl);
     } finally {
       URL.revokeObjectURL(objectUrl);
     }
@@ -235,7 +174,7 @@ export const useIllustrationDetection = () => {
 };
 
 /**
- * Analyzes image characteristics using canvas
+ * Analyzes image characteristics using canvas - pure pixel analysis
  */
 async function analyzeImageCharacteristics(imageUrl: string): Promise<{
   uniqueColorRatio: number;
@@ -258,8 +197,8 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
           return;
         }
         
-        // Use a smaller sample size for performance
-        const maxDimension = 200;
+        // Use a larger sample size for better accuracy
+        const maxDimension = 300;
         const scale = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
         canvas.width = Math.floor(img.width * scale);
         canvas.height = Math.floor(img.height * scale);
@@ -271,7 +210,7 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
         
         // Analyze unique colors (sample every Nth pixel for performance)
         const colorSet = new Set<string>();
-        const sampleRate = Math.max(1, Math.floor(totalPixels / 5000));
+        const sampleRate = Math.max(1, Math.floor(totalPixels / 8000));
         let hasTransparency = false;
         let totalSaturation = 0;
         const saturations: number[] = [];
@@ -283,14 +222,14 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
           const a = data[i + 3];
           
           // Check transparency
-          if (a < 255) {
+          if (a < 250) {
             hasTransparency = true;
           }
           
           // Quantize colors to reduce noise (group similar colors)
-          const qr = Math.floor(r / 32) * 32;
-          const qg = Math.floor(g / 32) * 32;
-          const qb = Math.floor(b / 32) * 32;
+          const qr = Math.floor(r / 24) * 24;
+          const qg = Math.floor(g / 24) * 24;
+          const qb = Math.floor(b / 24) * 24;
           colorSet.add(`${qr},${qg},${qb}`);
           
           // Calculate saturation
@@ -301,11 +240,11 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
           totalSaturation += saturation;
         }
         
-        const sampledPixels = Math.ceil(totalPixels / sampleRate);
-        const uniqueColorRatio = colorSet.size / 512; // Normalized against max possible quantized colors (8*8*8=512)
+        // Max possible quantized colors: (256/24)^3 ≈ 1331
+        const uniqueColorRatio = colorSet.size / 1000;
         
         // Calculate color variance using regional sampling
-        const regionSize = 10;
+        const regionSize = 8;
         let totalVariance = 0;
         let regionCount = 0;
         let flatRegionCount = 0;
@@ -327,8 +266,8 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
             totalVariance += variance;
             regionCount++;
 
-            // Count "flat" regions: low variance blocks are common in illustrations
-            if (variance < 18) flatRegionCount++;
+            // Count "flat" regions: low variance = solid colors
+            if (variance < 12) flatRegionCount++;
           }
         }
         
@@ -336,13 +275,12 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
         const flatRegionRatio = regionCount > 0 ? flatRegionCount / regionCount : 0;
         
         // Calculate edge sharpness using Sobel-like operator
-        let edgeSum = 0;
+        let strongEdgeCount = 0;
         let edgeCount = 0;
         
         for (let y = 1; y < canvas.height - 1; y++) {
           for (let x = 1; x < canvas.width - 1; x++) {
             const idx = (y * canvas.width + x) * 4;
-            const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
             
             const leftIdx = (y * canvas.width + (x - 1)) * 4;
             const rightIdx = (y * canvas.width + (x + 1)) * 4;
@@ -359,19 +297,21 @@ async function analyzeImageCharacteristics(imageUrl: string): Promise<{
             const edge = Math.sqrt(gx * gx + gy * gy);
             
             // Count strong edges (sharp transitions)
-            if (edge > 50) {
-              edgeSum += edge > 100 ? 1 : 0.5;
+            if (edge > 60) {
+              strongEdgeCount++;
             }
             edgeCount++;
           }
         }
         
-        const edgeSharpness = edgeCount > 0 ? Math.min(1, edgeSum / (edgeCount * 0.1)) : 0;
+        const edgeSharpness = edgeCount > 0 ? Math.min(1, (strongEdgeCount / edgeCount) * 15) : 0;
         
         // Calculate saturation uniformity
-        const avgSaturation = totalSaturation / saturations.length;
-        const saturationVariance = saturations.reduce((sum, s) => sum + Math.pow(s - avgSaturation, 2), 0) / saturations.length;
-        const saturationUniformity = 1 - Math.min(1, saturationVariance * 10);
+        const avgSaturation = saturations.length > 0 ? totalSaturation / saturations.length : 0;
+        const saturationVariance = saturations.length > 0 
+          ? saturations.reduce((sum, s) => sum + Math.pow(s - avgSaturation, 2), 0) / saturations.length 
+          : 0;
+        const saturationUniformity = 1 - Math.min(1, saturationVariance * 8);
         
         resolve({
           uniqueColorRatio,
