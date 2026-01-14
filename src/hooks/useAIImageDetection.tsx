@@ -8,6 +8,21 @@ interface DetectionResult {
   status: 'success' | 'error';
   message?: string;
   detectionMethod?: string;
+  details?: {
+    aiScore: number;
+    photoScore?: number;
+    artScore?: number;
+    qualityScore?: number;
+    textureAnalysis?: {
+      hasArtifacts: boolean;
+      smoothnessScore: number;
+    };
+    modelBreakdown?: {
+      genai: number;
+      deepfake: number;
+      quality: number;
+    };
+  };
 }
 
 interface UseAIImageDetectionReturn {
@@ -18,9 +33,10 @@ interface UseAIImageDetectionReturn {
 }
 
 interface DetectionOptions {
-  threshold?: number; // 0-1, default 0.7
+  threshold?: number; // 0-1, default 0.65 (lowered for better sensitivity)
   skipCache?: boolean;
-  timeout?: number; // ms, default 30000
+  timeout?: number; // ms, default 35000
+  showDetailedToast?: boolean; // Show breakdown in toast
 }
 
 // Simple in-memory cache for detection results
@@ -49,7 +65,7 @@ export const useAIImageDetection = (): UseAIImageDetectionReturn => {
     imageUrl: string, 
     options: DetectionOptions = {}
   ): Promise<DetectionResult | null> => {
-    const { threshold = 0.7, skipCache = false, timeout = 30000 } = options;
+    const { threshold = 0.65, skipCache = false, timeout = 35000, showDetailedToast = false } = options;
 
     if (!imageUrl) {
       toast.error('No image URL provided');
@@ -128,15 +144,25 @@ export const useAIImageDetection = (): UseAIImageDetectionReturn => {
         // Show appropriate feedback
         if (detectionResult.status === 'success') {
           const confidencePercent = Math.round(detectionResult.confidence * 100);
+          const details = detectionResult.details;
+          
+          // Build detailed description if requested
+          let description = detectionResult.message || '';
+          if (showDetailedToast && details?.modelBreakdown) {
+            const breakdown = details.modelBreakdown;
+            description += ` | GenAI: ${Math.round(breakdown.genai * 100)}%, Deepfake: ${Math.round(breakdown.deepfake * 100)}%`;
+          }
           
           if (detectionResult.isAiGenerated) {
-            toast.warning(`🤖 AI-Generated (${confidencePercent}% confidence)`, {
-              description: detectionResult.message || 'This image appears to be AI-generated',
-              duration: 5000
+            const icon = confidencePercent > 80 ? '🚨' : '🤖';
+            toast.warning(`${icon} AI-Generated (${confidencePercent}% confidence)`, {
+              description,
+              duration: 6000
             });
           } else {
-            toast.success(`✅ Authentic (${100 - confidencePercent}% confidence)`, {
-              description: 'This image appears to be a real photograph',
+            const icon = confidencePercent < 20 ? '✅' : '📷';
+            toast.success(`${icon} Authentic (${100 - confidencePercent}% confidence)`, {
+              description: detectionResult.message || 'This image appears to be authentic',
               duration: 4000
             });
           }
