@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Film } from 'lucide-react';
 import { VideoWatermark } from './VideoWatermark';
 
@@ -7,6 +7,7 @@ interface WatermarkedVideoThumbnailProps {
   title: string;
   videoUrl?: string;
   className?: string;
+  priority?: boolean;
 }
 
 /**
@@ -14,21 +15,24 @@ interface WatermarkedVideoThumbnailProps {
  * Adds hover auto-play preview of the actual video
  * Optimized: video element only mounted on hover to save bandwidth
  */
-export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = ({
+export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = memo(({
   thumbnail,
   title,
   videoUrl,
-  className = "w-full h-full"
+  className = "w-full h-full",
+  priority = false
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(priority); // Priority items load immediately
   const [thumbnailError, setThumbnailError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Lazy loading with Intersection Observer
+  // Lazy loading with Intersection Observer - skip for priority items
   useEffect(() => {
+    if (priority) return;
+    
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -36,7 +40,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           observer.disconnect();
         }
       },
-      { threshold: 0.1, rootMargin: '50px' }
+      { threshold: 0.1, rootMargin: '200px' } // Increased rootMargin for earlier loading
     );
 
     if (containerRef.current) {
@@ -44,7 +48,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [priority]);
 
   // Check if thumbnail is missing or is placeholder
   const hasValidThumbnail = thumbnail && 
@@ -106,11 +110,13 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
         <img
           src={thumbnail}
           alt={title}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
           className={`w-full h-full object-cover transition-opacity duration-200 ${
             isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
           }`}
           onError={() => {
-            console.warn(`Thumbnail failed to load for ${title}, showing fallback`);
             setThumbnailError(true);
           }}
         />
@@ -136,4 +142,6 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       )}
     </div>
   );
-};
+});
+
+WatermarkedVideoThumbnail.displayName = 'WatermarkedVideoThumbnail';

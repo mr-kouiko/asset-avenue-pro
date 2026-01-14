@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MarketplaceContent {
@@ -38,6 +38,17 @@ const categorySlugToId: Record<string, string> = {
   'illustration': '653f8437-6317-4a81-8bbf-9b8c520c0dbe',
   'vector': 'ceca4e62-559c-4dc6-98fe-64017d537192',
   'ebook': '9ec96e29-199f-4ce2-b951-4ca18c62c87c',
+};
+
+// Cache for public URLs to avoid re-computation
+const urlCache = new Map<string, string>();
+
+const buildPublicUrlCached = (bucket: string, path: string): string => {
+  const key = `${bucket}:${path}`;
+  if (urlCache.has(key)) return urlCache.get(key)!;
+  const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  urlCache.set(key, url);
+  return url;
 };
 
 export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
@@ -145,14 +156,12 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
     }
   };
 
-  // Helper function to process marketplace data (extracted for reuse)
-  const processMarketplaceData = (
+  // Helper function to process marketplace data (extracted for reuse) - memoized
+  const processMarketplaceData = useCallback((
     marketplaceData: any[], 
     filesBySubmission: Map<string, any[]>,
     creatorMap: Map<string, string>
   ): MarketplaceContent[] => {
-    const buildPublicUrl = (bucket: string, path: string) => 
-      supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
     const isImagePath = (p?: string) => !!p && /\.(jpg|jpeg|png|webp|gif)$/i.test(p);
 
     const contentWithFiles = marketplaceData.map((item: any) => {
@@ -164,20 +173,20 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
 
       const originalFile = files?.find(f => f.is_original);
 
-      // Thumbnail logic
+      // Thumbnail logic - optimized with cached URL builder
       let thumbnailUrl = '';
       const imageThumb = files?.find(f => isImagePath(f.thumbnail_path));
       if (imageThumb?.thumbnail_path) {
         thumbnailUrl = imageThumb.thumbnail_path.startsWith('http')
           ? imageThumb.thumbnail_path
-          : buildPublicUrl('thumbnails', imageThumb.thumbnail_path);
+          : buildPublicUrlCached('thumbnails', imageThumb.thumbnail_path);
       }
       if (!thumbnailUrl) {
         const imagePreview = files?.find(f => isImagePath(f.preview_path));
         if (imagePreview?.preview_path) {
           thumbnailUrl = imagePreview.preview_path.startsWith('http')
             ? imagePreview.preview_path
-            : buildPublicUrl('previews', imagePreview.preview_path);
+            : buildPublicUrlCached('previews', imagePreview.preview_path);
         }
       }
       if (!thumbnailUrl) {
@@ -216,25 +225,25 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         }
       }
 
-      // Media URL
+      // Media URL - optimized with cached URL builder
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
         const fileWithPreview = files?.find(f => f.preview_path);
         if (fileWithPreview?.preview_path) {
           mediaUrl = fileWithPreview.preview_path.startsWith('http')
             ? fileWithPreview.preview_path
-            : buildPublicUrl('previews', fileWithPreview.preview_path);
+            : buildPublicUrlCached('previews', fileWithPreview.preview_path);
         }
         if (!mediaUrl && originalFile?.file_path) {
           mediaUrl = originalFile.file_path.startsWith('http')
             ? originalFile.file_path
-            : buildPublicUrl('uploads', originalFile.file_path);
+            : buildPublicUrlCached('uploads', originalFile.file_path);
         }
       } else if (contentType === 'audio') {
         if (originalFile?.file_path) {
           mediaUrl = originalFile.file_path.startsWith('http')
             ? originalFile.file_path
-            : buildPublicUrl('uploads', originalFile.file_path);
+            : buildPublicUrlCached('uploads', originalFile.file_path);
         }
       }
 
@@ -253,7 +262,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
           if (coverFile?.file_path) {
             coverUrl = coverFile.file_path.startsWith('http')
               ? coverFile.file_path
-              : buildPublicUrl('uploads', coverFile.file_path);
+              : buildPublicUrlCached('uploads', coverFile.file_path);
           }
         }
       }
@@ -302,7 +311,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
     });
 
     return contentWithFiles.filter((item): item is MarketplaceContent => item !== null);
-  };
+  }, []);
 
   const fetchMarketplaceContent = async (reset = false) => {
     try {
@@ -360,29 +369,32 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
       
       const creatorIds = [...new Set((marketplaceData || []).map((item: any) => item.creator_id))];
-      const { data: creators } = await supabase
-        .from('profiles')
-        .select('user_id, store_name')
-        .in('user_id', creatorIds);
-      
-      const creatorMap = new Map(creators?.map(c => [c.user_id, c.store_name]) || []);
-
       const submissionIds = (marketplaceData || []).map((item: any) => item.id);
-      const filesStart = Date.now();
-      const { data: allFiles, error: filesError } = await supabase
-        .from('content_files')
-        .select('*')
-        .in('submission_id', submissionIds);
       
-      const filesTime = Date.now() - filesStart;
-      console.log(`⚡ [MARKETPLACE] Fetched ALL files in ONE query: ${filesTime}ms (${allFiles?.length || 0} files)`);
+      // PARALLEL FETCH: Creators and Files at the same time
+      const parallelStart = Date.now();
+      const [creatorsResult, filesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, store_name')
+          .in('user_id', creatorIds),
+        supabase
+          .from('content_files')
+          .select('id, submission_id, file_name, file_path, file_type, file_format, is_original, is_preview, preview_path, thumbnail_path, metadata')
+          .in('submission_id', submissionIds)
+      ]);
       
-      if (filesError) {
-        console.error('❌ [MARKETPLACE] Error loading files:', filesError);
+      const parallelTime = Date.now() - parallelStart;
+      console.log(`⚡ [MARKETPLACE] PARALLEL fetch (creators + files): ${parallelTime}ms`);
+      
+      const creatorMap = new Map(creatorsResult.data?.map(c => [c.user_id, c.store_name]) || []);
+      
+      if (filesResult.error) {
+        console.error('❌ [MARKETPLACE] Error loading files:', filesResult.error);
       }
 
       const filesBySubmission = new Map<string, any[]>();
-      (allFiles || []).forEach(file => {
+      (filesResult.data || []).forEach(file => {
         const existing = filesBySubmission.get(file.submission_id) || [];
         filesBySubmission.set(file.submission_id, [...existing, file]);
       });
