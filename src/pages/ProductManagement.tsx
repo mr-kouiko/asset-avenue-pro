@@ -141,24 +141,19 @@ const ProductManagement = () => {
               break;
             case 'video':
               const videoCat = categories.find(cat => 
-                cat.name.toLowerCase().includes('video') || 
-                cat.name.toLowerCase().includes('vidéo')
+                cat.name.toLowerCase().includes('video')
               );
               autoCategory = videoCat?.id || '';
               break;
             case 'audio':
               const audioCat = categories.find(cat => 
-                cat.name.toLowerCase().includes('audio') ||
-                cat.name.toLowerCase().includes('son') ||
-                cat.name.toLowerCase().includes('musique')
+                cat.name.toLowerCase().includes('audio')
               );
               autoCategory = audioCat?.id || '';
               break;
             case 'ebook':
               const ebookCat = categories.find(cat => 
-                cat.name.toLowerCase().includes('ebook') ||
-                cat.name.toLowerCase().includes('document') ||
-                cat.name.toLowerCase().includes('livre')
+                cat.name.toLowerCase().includes('ebook')
               );
               autoCategory = ebookCat?.id || '';
               break;
@@ -177,13 +172,11 @@ const ProductManagement = () => {
               fileName.includes('.webm') || 
               fileName.includes('.mkv')) {
             const videoCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('video') || 
-              cat.name.toLowerCase().includes('vidéo')
+              cat.name.toLowerCase().includes('video')
             );
             autoCategory = videoCategory?.id || '';
           }
           else if (fileType.startsWith('image/')) {
-            // Default to photo for images without detection
             const photoCategory = categories.find(cat => 
               cat.name.toLowerCase().includes('photo')
             );
@@ -191,17 +184,13 @@ const ProductManagement = () => {
           }
           else if (fileType.startsWith('audio/')) {
             const audioCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('audio') ||
-              cat.name.toLowerCase().includes('son') ||
-              cat.name.toLowerCase().includes('musique')
+              cat.name.toLowerCase().includes('audio')
             );
             autoCategory = audioCategory?.id || '';
           }
           else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
             const ebookCategory = categories.find(cat => 
-              cat.name.toLowerCase().includes('ebook') ||
-              cat.name.toLowerCase().includes('document') ||
-              cat.name.toLowerCase().includes('livre')
+              cat.name.toLowerCase().includes('ebook')
             );
             autoCategory = ebookCategory?.id || '';
           }
