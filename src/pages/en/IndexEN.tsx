@@ -51,7 +51,7 @@ const IndexEN = () => {
             ) : featuredContent.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {featuredContent.map((item) => (
+                  {featuredContent.map((item, index) => (
                     <ContentCard 
                       key={item.id} 
                       id={item.id}
@@ -65,6 +65,7 @@ const IndexEN = () => {
                       likes={item.likes}
                       downloads={item.downloads}
                       isLiked={item.isLiked}
+                      priority={index < 3} // First 3 items load eagerly
                     />
                   ))}
                 </div>

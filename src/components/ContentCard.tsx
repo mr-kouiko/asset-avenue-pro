@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Heart, Download, ShoppingCart, Eye, FileText, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,10 +31,11 @@ interface ContentCardProps {
   isAiGenerated?: boolean;
   /** True only for real vector assets (SVG). */
   isVector?: boolean;
+  priority?: boolean; // For above-the-fold content
 }
 
 
-export const ContentCard: React.FC<ContentCardProps> = ({
+export const ContentCard: React.FC<ContentCardProps> = memo(({
   id,
   slug,
   title,
@@ -52,6 +53,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   bpm,
   isAiGenerated = false,
   isVector = false,
+  priority = false,
 }) => {
   // Use specialized AudioContentCard for audio content
   if (type === 'audio') {
@@ -120,10 +122,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     }, 'standard');
   };
 
-  // Debug logging for video content
-  if (type === "video") {
-    console.log('ContentCard - Video item:', title, 'Video URL:', videoUrl, 'Thumbnail:', thumbnail);
-  }
+  // Remove excessive logging for performance
+  // Debug logging for video content - only in development
+  // if (type === "video" && process.env.NODE_ENV === 'development') {
+  //   console.log('ContentCard - Video item:', title, 'Video URL:', videoUrl, 'Thumbnail:', thumbnail);
+  // }
 
   const handleCardClick = () => {
     // Use SEO-friendly slug URL, with UUID fallback for legacy links
@@ -152,6 +155,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             src={thumbnail}
             alt={title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            priority={priority}
           />
         )}
 
@@ -243,4 +247,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       </div>
     </Card>
   );
-};
+});
+
+ContentCard.displayName = 'ContentCard';
