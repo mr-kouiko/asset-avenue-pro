@@ -1,5 +1,5 @@
 # VisuStock Robots.txt
-# Last updated: 2025-01-15
+# Last updated: 2026-01-15
 
 User-agent: *
 Allow: /
