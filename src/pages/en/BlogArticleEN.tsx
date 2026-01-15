@@ -953,7 +953,7 @@ Your creative career is a marathon, not a sprint. Pace yourself accordingly.
     `,
     relatedArticles: [
       { slug: "passive-income-stock-photography-success-stories-earnings", title: "Building Passive Income Through Stock Content" },
-      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2025", title: "Mastering Stock Photography in 2025" },
     ]
   },
   "stock-content-licensing-copyright-royalty-free-guide": {
