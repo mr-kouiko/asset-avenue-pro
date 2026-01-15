@@ -98,6 +98,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           playsInline
           preload="none"
           onCanPlay={() => setIsVideoReady(true)}
+          onContextMenu={(e) => e.preventDefault()}
         >
           <source src={videoUrl} type={videoUrl.endsWith('.mov') ? 'video/quicktime' : 'video/mp4'} />
           {/* Fallback for .mov files - try as MP4 if QuickTime fails */}
@@ -119,6 +120,8 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           onError={() => {
             setThumbnailError(true);
           }}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-stock-blue/10 to-stock-blue/20 flex items-center justify-center">

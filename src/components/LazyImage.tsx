@@ -83,6 +83,8 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
           )}
           onLoad={handleLoad}
           onError={handleError}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
         />
       )}
     </div>
