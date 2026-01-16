@@ -79,8 +79,8 @@ const imageTools: AITool[] = [
     description: 'Instantly remove backgrounds from images with clean, professional results.',
     icon: <Scissors className="w-6 h-6" />,
     href: '/studio-ai/remove-background',
-    available: false,
-    badge: 'Coming Soon'
+    available: true,
+    badge: 'Available'
   },
   {
     id: 'create-variations',
