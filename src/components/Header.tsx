@@ -91,11 +91,11 @@ export const Header = () => {
 
         {/* Navigation & Actions */}
         <div className="flex items-center gap-2 md:gap-4">
-          {/* AI Image Generator Link - Desktop only */}
+          {/* Studio AI Link - Desktop only */}
           <Button variant="outline" size="sm" asChild className="hidden lg:flex">
-            <Link to={`/${language}/ai-image-generator`} className="flex items-center gap-2">
+            <Link to="/studio-ai" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
-              IA Image
+              Studio AI
             </Link>
           </Button>
 
