@@ -51,6 +51,7 @@ import SellerPortfolio from "./pages/SellerPortfolio";
 import StudioAI from "./pages/StudioAI";
 import RemoveBackground from "./pages/RemoveBackground";
 import VideoUpscale from "./pages/VideoUpscale";
+import TextToSpeech from "./pages/TextToSpeech";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -107,6 +108,7 @@ const App = () => (
                   <Route path="/studio-ai" element={<StudioAI />} />
                   <Route path="/studio-ai/remove-background" element={<RemoveBackground />} />
                   <Route path="/studio-ai/video-upscale" element={<VideoUpscale />} />
+                  <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
                   <Route path="/buy-credits" element={<BuyCredits />} />
                   <Route path="/test-accounts" element={<TestAccounts />} />
                   <Route path="/become-seller" element={<BecomeSeller />} />
