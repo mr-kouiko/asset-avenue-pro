@@ -100,8 +100,8 @@ const audioTools: AITool[] = [
     description: 'Convert text into natural-sounding voiceovers for videos, ads and presentations.',
     icon: <Mic className="w-6 h-6" />,
     href: '/studio-ai/text-to-speech',
-    available: false,
-    badge: 'Coming Soon'
+    available: true,
+    badge: 'Available'
   }
 ];
 
