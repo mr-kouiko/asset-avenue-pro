@@ -29,6 +29,8 @@ interface DetectionOptions {
   threshold?: number; // 0-1, default 0.5
   maxRetries?: number; // default 5
   skipCache?: boolean;
+  thumbnailUrl?: string; // Optional thumbnail for Gemini fallback
+  silent?: boolean; // Don't show toasts
 }
 
 // Simple in-memory cache for video detection results
@@ -65,12 +67,12 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
     videoUrl: string,
     options: DetectionOptions = {}
   ): Promise<DetectionResult | null> => {
-    const { threshold = 0.5, maxRetries = 5, skipCache = false } = options;
+    const { threshold = 0.5, maxRetries = 5, skipCache = false, thumbnailUrl, silent = false } = options;
     
     console.log('🎥 [AI-VIDEO] Starting detection for:', videoUrl);
     
     if (!videoUrl) {
-      toast.error('No video URL provided');
+      if (!silent) toast.error('No video URL provided');
       return null;
     }
 
@@ -99,7 +101,7 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        toast.error('Please login to use AI detection');
+        if (!silent) toast.error('Please login to use AI detection');
         return null;
       }
 
@@ -119,7 +121,7 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
                 'Authorization': `Bearer ${token}`,
                 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
               },
-              body: JSON.stringify({ videoUrl, threshold }),
+              body: JSON.stringify({ videoUrl, threshold, thumbnailUrl }),
               signal: abortControllerRef.current?.signal
             }
           );
@@ -169,7 +171,7 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
       setProgress(90);
 
       if (!detectionResult) {
-        if (!isCancelledRef.current) {
+        if (!isCancelledRef.current && !silent) {
           toast.error('Failed to analyze video', {
             description: 'The video may be too large or in an unsupported format'
           });
@@ -180,7 +182,7 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
       // Apply custom threshold if result is success
       if (detectionResult.status === 'success') {
         detectionResult.isAiGenerated = detectionResult.confidence > threshold;
-        detectionResult.detectionMethod = 'sightengine';
+        // Detection method is set by the edge function now
       }
 
       setResult(detectionResult);
@@ -188,27 +190,34 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
       setProgress(100);
 
       // Show appropriate feedback with more detail
-      if (detectionResult.status === 'success') {
+      if (!silent && detectionResult.status === 'success') {
         const confidencePercent = Math.round(detectionResult.confidence * 100);
         const framesAnalyzed = detectionResult.frames?.length || 0;
+        const method = detectionResult.detectionMethod || 'ai-detection';
         
         if (detectionResult.isAiGenerated) {
-          toast.warning(`🤖 AI-Generated Video (${confidencePercent}% confidence)`, {
-            description: `Analyzed ${framesAnalyzed} frames. ${detectionResult.message || ''}`,
+          const icon = confidencePercent > 85 ? '🚨' : confidencePercent > 70 ? '🤖' : '⚠️';
+          toast.warning(`${icon} AI-Generated Video (${confidencePercent}% confidence)`, {
+            description: framesAnalyzed > 1 
+              ? `Analyzed ${framesAnalyzed} frames via ${method}. ${detectionResult.message || ''}`
+              : detectionResult.message || '',
             duration: 6000
           });
         } else {
-          toast.success(`✅ Authentic Video (${100 - confidencePercent}% confidence)`, {
-            description: `Analyzed ${framesAnalyzed} frames. Video appears to be real footage.`,
+          const icon = confidencePercent < 25 ? '✅' : '📹';
+          toast.success(`${icon} Authentic Video (${100 - confidencePercent}% confidence)`, {
+            description: framesAnalyzed > 1 
+              ? `Analyzed ${framesAnalyzed} frames. Video appears to be real footage.`
+              : 'Video appears to be real footage.',
             duration: 5000
           });
         }
-      } else if (detectionResult.status === 'pending') {
+      } else if (!silent && detectionResult.status === 'pending') {
         toast.info('⏳ Analysis still processing', {
           description: 'Try again in a few seconds',
           duration: 4000
         });
-      } else if (detectionResult.status === 'error') {
+      } else if (!silent && detectionResult.status === 'error') {
         toast.error(detectionResult.message || 'Detection failed', {
           description: 'Try re-uploading or using a different video format'
         });
@@ -218,7 +227,7 @@ export const useAIVideoDetection = (): UseAIVideoDetectionReturn => {
     } catch (err) {
       console.error('🎥 [AI-VIDEO] Exception:', err);
       
-      if (err instanceof Error) {
+      if (!silent && err instanceof Error) {
         if (err.message === 'Rate limit exceeded') {
           toast.error('Rate limit exceeded', {
             description: 'Please wait a moment and try again'

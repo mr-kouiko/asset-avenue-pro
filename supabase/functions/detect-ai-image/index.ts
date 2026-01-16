@@ -15,6 +15,17 @@ interface DetectionResult {
     aiScore: number;
     reasoning?: string;
     indicators?: string[];
+    deepfakeScore?: number;
+    qualityScore?: number;
+    textureAnalysis?: {
+      hasArtifacts: boolean;
+      smoothnessScore: number;
+    };
+    modelBreakdown?: {
+      genai: number;
+      deepfake: number;
+      quality: number;
+    };
   };
 }
 
@@ -34,11 +45,18 @@ const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 300
 // Convert image URL to base64 for Gemini
 const imageUrlToBase64 = async (imageUrl: string): Promise<{ base64: string; mimeType: string } | null> => {
   try {
-    const response = await fetchWithTimeout(imageUrl, {}, 15000);
+    const response = await fetchWithTimeout(imageUrl, {}, 20000);
     if (!response.ok) return null;
     
     const contentType = response.headers.get('content-type') || 'image/jpeg';
     const arrayBuffer = await response.arrayBuffer();
+    
+    // Check file size (max 20MB for base64)
+    if (arrayBuffer.byteLength > 20 * 1024 * 1024) {
+      console.error('📸 [DETECT-AI-IMAGE] Image too large:', arrayBuffer.byteLength);
+      return null;
+    }
+    
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
     
     return { base64, mimeType: contentType };
@@ -48,6 +66,66 @@ const imageUrlToBase64 = async (imageUrl: string): Promise<{ base64: string; mim
   }
 };
 
+// Enhanced multi-aspect AI detection prompt
+const getDetectionPrompt = () => `You are an expert AI image forensics analyst. Analyze this image thoroughly for AI-generation indicators.
+
+## Analysis Criteria
+
+### 1. Texture Analysis
+- Check for unnaturally smooth skin, plastic-like surfaces
+- Look for repeating micro-patterns typical of diffusion models
+- Identify overly uniform gradients or color transitions
+
+### 2. Anatomical Accuracy
+- Count fingers, limbs, facial features carefully
+- Check symmetry - AI often creates asymmetric faces/bodies
+- Look for merged or missing body parts
+- Verify proportions are anatomically correct
+
+### 3. Lighting & Physics
+- Check shadow consistency with light sources
+- Verify reflections match the scene
+- Look for impossible lighting conditions
+- Check if specular highlights are realistic
+
+### 4. Detail Consistency
+- Examine text/symbols for distortion or nonsense
+- Check background coherence and depth
+- Look for resolution inconsistencies between regions
+- Verify edges are natural, not over-sharpened
+
+### 5. Deepfake Indicators
+- Facial blending artifacts around edges
+- Inconsistent skin texture vs. background
+- Unnatural eye reflections or gaze
+- Temporal consistency issues (if apparent)
+
+### 6. Generation Artifacts
+- JPEG-like artifacts in non-JPEG regions
+- Color banding in smooth gradients
+- Checkerboard patterns at edges
+- Hallucinated or merged objects
+
+## Response Format
+Return ONLY valid JSON:
+{
+  "isAiGenerated": boolean,
+  "confidence": 0.0 to 1.0,
+  "deepfakeScore": 0.0 to 1.0,
+  "qualityScore": 0.0 to 1.0 (how confident in analysis),
+  "reasoning": "2-3 sentence explanation",
+  "indicators": ["specific indicator 1", "specific indicator 2"],
+  "textureAnalysis": {
+    "hasArtifacts": boolean,
+    "smoothnessScore": 0.0 to 1.0
+  }
+}
+
+Be strict but fair:
+- High confidence AI: Clear artifacts, anatomical errors, texture issues
+- Medium confidence: Some suspicious elements but could be editing/filters
+- Low confidence AI / Authentic: Natural imperfections, consistent physics, coherent details`;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -56,7 +134,7 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { imageUrl, threshold = 0.65 } = await req.json();
+    const { imageUrl, threshold = 0.60 } = await req.json();
 
     if (!imageUrl) {
       return new Response(
@@ -65,7 +143,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('📸 [DETECT-AI-IMAGE] Starting Gemini detection for:', imageUrl.substring(0, 80));
+    console.log('📸 [DETECT-AI-IMAGE] Starting enhanced Gemini detection for:', imageUrl.substring(0, 80));
 
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
 
@@ -102,7 +180,9 @@ serve(async (req) => {
       );
     }
 
-    // Call Gemini via Lovable AI Gateway with vision
+    console.log('📸 [DETECT-AI-IMAGE] Image loaded, calling Gemini 3 Flash...');
+
+    // Call Gemini 3 Flash via Lovable AI Gateway with enhanced prompt
     const response = await fetchWithTimeout(
       'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
@@ -112,35 +192,14 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'google/gemini-3-flash-preview',
           messages: [
             {
               role: 'user',
               content: [
                 {
                   type: 'text',
-                  text: `Analyze this image and determine if it is AI-generated or human-created.
-
-Look for these AI indicators:
-- Unnatural smoothness or plastic-like textures
-- Inconsistent lighting or shadows
-- Anatomical errors (extra fingers, distorted limbs, asymmetric features)
-- Blurred or merged background elements
-- Text that is distorted or nonsensical
-- Repeating patterns or artifacts
-- Overly perfect or idealized features
-- Unnatural hair or fabric textures
-- Inconsistent perspective or depth
-
-Respond with ONLY a JSON object in this exact format:
-{
-  "isAiGenerated": true or false,
-  "confidence": 0.0 to 1.0,
-  "reasoning": "brief explanation",
-  "indicators": ["indicator1", "indicator2"]
-}
-
-Be strict: if you see clear AI artifacts, mark it as AI-generated. If the image looks authentically photographed or hand-drawn with natural imperfections, mark it as not AI-generated.`
+                  text: getDetectionPrompt()
                 },
                 {
                   type: 'image_url',
@@ -151,10 +210,11 @@ Be strict: if you see clear AI artifacts, mark it as AI-generated. If the image 
               ]
             }
           ],
-          max_tokens: 500
+          max_tokens: 800,
+          temperature: 0.1 // Low temperature for more consistent analysis
         }),
       },
-      45000
+      50000
     );
 
     if (!response.ok) {
@@ -187,14 +247,20 @@ Be strict: if you see clear AI artifacts, mark it as AI-generated. If the image 
 
     // Extract Gemini's response
     const content = data.choices?.[0]?.message?.content || '';
-    console.log('📸 [DETECT-AI-IMAGE] Raw response:', content.substring(0, 300));
+    console.log('📸 [DETECT-AI-IMAGE] Raw response:', content.substring(0, 400));
 
     // Parse JSON from response (handle markdown code blocks)
     let analysisResult: {
       isAiGenerated: boolean;
       confidence: number;
+      deepfakeScore?: number;
+      qualityScore?: number;
       reasoning: string;
       indicators: string[];
+      textureAnalysis?: {
+        hasArtifacts: boolean;
+        smoothnessScore: number;
+      };
     };
 
     try {
@@ -214,57 +280,111 @@ Be strict: if you see clear AI artifacts, mark it as AI-generated. If the image 
       }
       
       analysisResult = JSON.parse(jsonStr);
+      
+      // Validate required fields
+      if (typeof analysisResult.isAiGenerated !== 'boolean') {
+        throw new Error('Missing isAiGenerated field');
+      }
+      if (typeof analysisResult.confidence !== 'number') {
+        analysisResult.confidence = analysisResult.isAiGenerated ? 0.7 : 0.3;
+      }
     } catch (parseError) {
       console.error('📸 [DETECT-AI-IMAGE] Failed to parse Gemini response:', parseError);
       // Fallback: try to interpret the response
       const lowerContent = content.toLowerCase();
+      const hasAiKeywords = lowerContent.includes('ai-generated') || 
+                           lowerContent.includes('ai generated') ||
+                           lowerContent.includes('artificially created');
+      const hasAuthenticKeywords = lowerContent.includes('authentic') || 
+                                   lowerContent.includes('real photograph') ||
+                                   lowerContent.includes('not ai');
+      
       analysisResult = {
-        isAiGenerated: lowerContent.includes('ai-generated') || lowerContent.includes('ai generated'),
+        isAiGenerated: hasAiKeywords && !hasAuthenticKeywords,
         confidence: 0.5,
-        reasoning: 'Could not parse detailed analysis',
+        reasoning: 'Analysis result parsed from text response',
         indicators: []
       };
     }
 
-    // Apply threshold
-    const effectiveThreshold = Math.max(0.3, Math.min(0.9, threshold));
-    const isAiGenerated = analysisResult.confidence >= effectiveThreshold && analysisResult.isAiGenerated;
+    // Clamp confidence to valid range
+    analysisResult.confidence = Math.max(0, Math.min(1, analysisResult.confidence));
+    
+    // Calculate weighted final score using multiple signals
+    const deepfakeWeight = 0.15;
+    const qualityWeight = 0.1;
+    const baseWeight = 0.75;
+    
+    let finalConfidence = analysisResult.confidence * baseWeight;
+    
+    if (analysisResult.deepfakeScore !== undefined) {
+      finalConfidence += analysisResult.deepfakeScore * deepfakeWeight;
+    } else {
+      finalConfidence += analysisResult.confidence * deepfakeWeight;
+    }
+    
+    // Quality score inversely affects confidence (low quality = less certain)
+    const qualityFactor = analysisResult.qualityScore ?? 0.8;
+    finalConfidence = finalConfidence * (0.5 + qualityFactor * 0.5);
+    
+    // Clamp final confidence
+    finalConfidence = Math.max(0, Math.min(1, finalConfidence));
 
-    // Generate message
+    // Apply threshold
+    const effectiveThreshold = Math.max(0.25, Math.min(0.9, threshold));
+    const isAiGenerated = finalConfidence >= effectiveThreshold && analysisResult.isAiGenerated;
+
+    // Generate descriptive message
     let message: string;
     if (!isAiGenerated) {
-      if (analysisResult.confidence < 0.3) {
+      if (finalConfidence < 0.25) {
         message = 'Very likely authentic - no AI markers detected';
+      } else if (finalConfidence < 0.4) {
+        message = 'Appears authentic with minor uncertainties';
       } else {
         message = 'This image appears to be authentic';
       }
     } else {
-      if (analysisResult.confidence > 0.9) {
-        message = 'Very high confidence AI-generated content detected';
-      } else if (analysisResult.confidence > 0.75) {
+      if (finalConfidence > 0.9) {
+        message = 'Very high confidence: AI-generated content detected';
+      } else if (finalConfidence > 0.75) {
         message = 'High confidence: This image is likely AI-generated';
-      } else if (analysisResult.confidence > 0.5) {
+      } else if (finalConfidence > 0.6) {
         message = 'This image appears to be AI-generated';
       } else {
         message = 'This image may contain AI-generated elements';
       }
     }
 
+    // Build model breakdown for detailed analysis
+    const modelBreakdown = {
+      genai: analysisResult.confidence,
+      deepfake: analysisResult.deepfakeScore ?? 0,
+      quality: analysisResult.qualityScore ?? 0.8
+    };
+
     const detectionResult: DetectionResult = {
       isAiGenerated,
-      confidence: analysisResult.confidence,
+      confidence: finalConfidence,
       status: 'success',
       message,
-      detectionMethod: 'gemini-vision',
+      detectionMethod: 'gemini-3-flash-vision',
       details: {
         aiScore: analysisResult.confidence,
         reasoning: analysisResult.reasoning,
-        indicators: analysisResult.indicators || []
+        indicators: analysisResult.indicators || [],
+        deepfakeScore: analysisResult.deepfakeScore,
+        qualityScore: analysisResult.qualityScore,
+        textureAnalysis: analysisResult.textureAnalysis,
+        modelBreakdown
       }
     };
 
-    console.log(`📸 [DETECT-AI-IMAGE] ✅ Result: AI=${isAiGenerated}, confidence=${(analysisResult.confidence * 100).toFixed(1)}%, method=gemini-vision`);
+    console.log(`📸 [DETECT-AI-IMAGE] ✅ Result: AI=${isAiGenerated}, confidence=${(finalConfidence * 100).toFixed(1)}%, method=gemini-3-flash-vision`);
     console.log(`📸 [DETECT-AI-IMAGE] Reasoning: ${analysisResult.reasoning}`);
+    if (analysisResult.indicators?.length > 0) {
+      console.log(`📸 [DETECT-AI-IMAGE] Indicators: ${analysisResult.indicators.join(', ')}`);
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -298,7 +418,7 @@ Be strict: if you see clear AI artifacts, mark it as AI-generated. If the image 
           confidence: 0,
           status: 'error',
           message,
-          detectionMethod: 'gemini-vision'
+          detectionMethod: 'gemini-3-flash-vision'
         }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
