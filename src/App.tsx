@@ -48,6 +48,7 @@ import SellerRegistrationCancelled from "./pages/SellerRegistrationCancelled";
 import AuthCallback from "./pages/AuthCallback";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import SellerPortfolio from "./pages/SellerPortfolio";
+import StudioAI from "./pages/StudioAI";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -101,6 +102,7 @@ const App = () => (
                   <Route path="/blog" element={<BlogEN />} />
                   <Route path="/blog/:slug" element={<BlogArticleEN />} />
                   <Route path="/ai-image-generator" element={<AIImageGenerator />} />
+                  <Route path="/studio-ai" element={<StudioAI />} />
                   <Route path="/buy-credits" element={<BuyCredits />} />
                   <Route path="/test-accounts" element={<TestAccounts />} />
                   <Route path="/become-seller" element={<BecomeSeller />} />
