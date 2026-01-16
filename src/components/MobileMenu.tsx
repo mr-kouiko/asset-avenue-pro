@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, Home, ShoppingCart, User, Sparkles, LogOut, Shield, Upload, LayoutDashboard, Package, Search } from "lucide-react";
+import { Menu, X, Home, ShoppingCart, User, Sparkles, LogOut, Shield, Upload, LayoutDashboard, Package, Search, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -86,12 +86,12 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
               </Link>
               
               <Link 
-                to={`/${language}/ai-image-generator`} 
+                to="/studio-ai" 
                 onClick={handleLinkClick}
                 className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-accent"
               >
-                <Sparkles className="h-5 w-5" />
-                IA Image
+                <Wand2 className="h-5 w-5" />
+                Studio AI
               </Link>
               
               <Link 
