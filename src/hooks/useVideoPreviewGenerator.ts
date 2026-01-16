@@ -28,19 +28,16 @@ export function useVideoPreviewGenerator() {
     setIsGenerating(true);
     console.log('[VideoPreview] Starting generation for:', url);
 
-    // Create video element - try without crossOrigin first if same-origin or Supabase
+    // Create video element
     const video = document.createElement('video');
     video.muted = true;
     video.playsInline = true;
     video.preload = 'auto';
     
-    // Check if URL is from Supabase storage (which supports CORS)
-    const isSupabaseUrl = url.includes('supabase.co') || url.includes('supabase.in');
-    
-    // For Supabase URLs, use crossOrigin; for others, try without first
-    if (isSupabaseUrl) {
-      video.crossOrigin = 'anonymous';
-    }
+    // ALWAYS use crossOrigin for any external URL to allow canvas capture
+    // Supabase public buckets support CORS, so this is safe
+    video.crossOrigin = 'anonymous';
+    console.log('[VideoPreview] Video element created with crossOrigin=anonymous');
     
     video.src = url;
 
@@ -223,6 +220,12 @@ export function useVideoPreviewGenerator() {
 
     console.log('[VideoPreview] Frames drawn:', framesDrawn, 'Draw errors:', drawErrors);
 
+    // Check if frames were drawn successfully
+    if (framesDrawn === 0 || drawErrors > framesDrawn * 0.5) {
+      setIsGenerating(false);
+      throw new Error('Canvas drawing failed - video may have CORS restrictions');
+    }
+
     // Check if we got any data
     if (chunks.length === 0) {
       setIsGenerating(false);
@@ -238,6 +241,14 @@ export function useVideoPreviewGenerator() {
     if (blob.size < 1000) {
       setIsGenerating(false);
       throw new Error('Generated preview too small - likely empty frames due to CORS');
+    }
+    
+    // Final validation: make sure blob type is correct
+    if (!blob.type || blob.type === 'application/octet-stream') {
+      console.warn('[VideoPreview] Blob has no proper MIME type, forcing to:', outputMimeType);
+      const correctedBlob = new Blob(chunks, { type: outputMimeType });
+      setIsGenerating(false);
+      return correctedBlob;
     }
     
     setIsGenerating(false);
