@@ -58,8 +58,8 @@ const videoTools: AITool[] = [
     description: 'Enhance video quality and upscale footage to HD or 4K using AI.',
     icon: <ArrowUpRight className="w-6 h-6" />,
     href: '/studio-ai/video-upscale',
-    available: false,
-    badge: 'Coming Soon'
+    available: true,
+    badge: 'Available'
   }
 ];
 
