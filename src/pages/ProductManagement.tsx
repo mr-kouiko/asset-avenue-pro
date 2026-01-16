@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Palette } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw } from "lucide-react";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
-import { useIllustrationDetection } from "@/hooks/useIllustrationDetection";
+
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -33,7 +33,7 @@ interface UploadedFileData {
   thumbnailUrl?: string;
   previewUrl?: string;
   isAiGenerated?: boolean;
-  detectedCategory?: 'photo' | 'illustration' | 'video' | 'audio' | 'ebook';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
 }
 
 interface ProductData {
@@ -58,7 +58,7 @@ const ProductManagement = () => {
   } = useProductManager();
   const { detectImage, isDetecting: isDetectingImage } = useAIImageDetection();
   const { detectVideo, isDetecting: isDetectingVideo } = useAIVideoDetection();
-  const { detectIllustration, isDetecting: isDetectingCategory } = useIllustrationDetection();
+  
   
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
@@ -68,7 +68,7 @@ const ProductManagement = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
-  const [isRecategorizingId, setIsRecategorizingId] = useState<string | null>(null);
+  
   const hasInitializedRef = useRef(false);
   
   useEffect(() => {
@@ -127,9 +127,7 @@ const ProductManagement = () => {
           console.log(`🎨 [AUTO-CATEGORY] Using detected category for ${file.name}: ${file.detectedCategory}`);
           
           switch (file.detectedCategory) {
-            case 'illustration':
             case 'photo':
-              // Both illustration and photo map to Photo category
               const photoCat = categories.find(cat => 
                 cat.name.toLowerCase().includes('photo')
               );
@@ -350,60 +348,6 @@ const ProductManagement = () => {
     }
   };
 
-  // Re-detect illustration category using pixel analysis
-  const handleRecategorize = async (fileId: string) => {
-    const file = uploadedFiles.find(f => f.id === fileId);
-    if (!file) return;
-
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      toast.error('Category re-detection only works for images');
-      return;
-    }
-
-    setIsRecategorizingId(fileId);
-    toast.info('Re-analyzing image pixels to detect content type...');
-
-    try {
-      // Use pure pixel analysis - no keywords
-      const result = await detectIllustration(file.url);
-
-      if (result) {
-        // Always use 'photo' - illustration category is removed
-        const newCategory = 'photo';
-        
-        // Update file's detected category
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, detectedCategory: newCategory } : f
-        ));
-
-        // Find the Photo category in the database
-        const matchingCat = categories.find(cat => 
-          cat.name.toLowerCase().includes('photo')
-        );
-        
-        if (matchingCat) {
-          updateProductData(fileId, { category: matchingCat.id });
-        }
-
-        // Update sessionStorage
-        const updatedFiles = uploadedFiles.map(f => 
-          f.id === fileId ? { ...f, detectedCategory: newCategory } : f
-        );
-        sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
-
-        // Always show as Photo (illustration category removed)
-        toast.success(`📷 Detected as Photo`);
-      } else {
-        toast.warning('Could not analyze image - using current category');
-      }
-    } catch (error) {
-      console.error('Recategorize error:', error);
-      toast.error('Failed to re-detect category');
-    } finally {
-      setIsRecategorizingId(null);
-    }
-  };
 
   const handlePublish = async (fileId: string) => {
     // If in edit mode, update the submission instead
