@@ -40,8 +40,8 @@ const videoTools: AITool[] = [
     description: 'Bring any image to life by transforming it into smooth, engaging video content.',
     icon: <Play className="w-6 h-6" />,
     href: '/studio-ai/image-to-video',
-    available: false,
-    badge: 'Coming Soon'
+    available: true,
+    badge: 'Available'
   },
   {
     id: 'text-to-video',
