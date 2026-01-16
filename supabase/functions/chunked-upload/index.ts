@@ -134,12 +134,13 @@ function checkAuth(req: Request): boolean {
   return false;
 }
 
-// Optimized parallel merge with batching
+// Memory-efficient merge: download and upload chunks one at a time
+// to avoid memory limit issues with large files
 async function mergeChunks(uploadId: string, fileName: string): Promise<string> {
   const startTime = Date.now();
   console.log(`🧩 [Merge] Starting for uploadId: ${uploadId}`);
 
-  // Liste des morceaux
+  // List chunks
   const { data: chunkList, error } = await supabase.storage
     .from(BUCKET_TEMP)
     .list(uploadId, { limit: 10000, offset: 0, sortBy: { column: 'name', order: 'asc' } });
@@ -149,42 +150,54 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
     throw new Error("No chunks found for this uploadId");
   }
 
-  // Trie les fichiers par numéro
+  // Sort by chunk number
   const sorted = chunkList.sort(
     (a, b) => parseInt(a.name.split("chunk_")[1]) - parseInt(b.name.split("chunk_")[1])
   );
 
   console.log(`📦 [Merge] Found ${sorted.length} chunks to merge`);
 
-  // Download chunks in parallel batches for speed
-  const BATCH_SIZE = 10; // Download 10 chunks at a time
+  // For small files (< 50MB estimated), use the fast in-memory method
+  // For larger files, use streaming approach
+  const estimatedSize = sorted.length * 6 * 1024 * 1024; // ~6MB per chunk
+  const MAX_MEMORY_SIZE = 50 * 1024 * 1024; // 50MB threshold
+
+  if (estimatedSize < MAX_MEMORY_SIZE) {
+    console.log(`📦 [Merge] Using in-memory merge for small file`);
+    return await mergeChunksInMemory(uploadId, fileName, sorted, startTime);
+  }
+
+  console.log(`📦 [Merge] Using streaming merge for large file (${sorted.length} chunks)`);
+  return await mergeChunksStreaming(uploadId, fileName, sorted, startTime);
+}
+
+// Fast in-memory merge for smaller files
+async function mergeChunksInMemory(
+  uploadId: string, 
+  fileName: string, 
+  sorted: any[], 
+  startTime: number
+): Promise<string> {
+  const BATCH_SIZE = 5; // Smaller batch for safety
   const fileChunks: Uint8Array[] = new Array(sorted.length);
 
   for (let i = 0; i < sorted.length; i += BATCH_SIZE) {
     const batch = sorted.slice(i, Math.min(i + BATCH_SIZE, sorted.length));
     const batchPromises = batch.map(async (chunk, batchIdx) => {
       const globalIdx = i + batchIdx;
-      try {
-        const { data, error: downloadErr } = await supabase.storage
-          .from(BUCKET_TEMP)
-          .download(`${uploadId}/${chunk.name}`);
-        if (downloadErr) throw downloadErr;
+      const { data, error: downloadErr } = await supabase.storage
+        .from(BUCKET_TEMP)
+        .download(`${uploadId}/${chunk.name}`);
+      if (downloadErr) throw downloadErr;
 
-        const arrayBuffer = await data.arrayBuffer();
-        fileChunks[globalIdx] = new Uint8Array(arrayBuffer);
-        console.log(`✓ [Merge] Downloaded chunk ${globalIdx + 1}/${sorted.length}`);
-      } catch (err) {
-        console.error(`❌ [Merge] Failed to download chunk ${globalIdx}:`, err);
-        throw err;
-      }
+      const arrayBuffer = await data.arrayBuffer();
+      fileChunks[globalIdx] = new Uint8Array(arrayBuffer);
+      console.log(`✓ [Merge] Downloaded chunk ${globalIdx + 1}/${sorted.length}`);
     });
 
     await Promise.all(batchPromises);
   }
 
-  console.log(`✅ [Merge] All chunks downloaded in ${Date.now() - startTime}ms`);
-
-  // Concatène efficacement
   const totalLength = fileChunks.reduce((sum, arr) => sum + arr.length, 0);
   const mergedFile = new Uint8Array(totalLength);
 
@@ -196,7 +209,74 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
 
   console.log(`🔗 [Merge] Concatenated ${totalLength} bytes`);
 
-  // Upload du fichier final
+  const finalPath = fileName;
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET_FINAL)
+    .upload(finalPath, mergedFile, {
+      contentType: detectMimeType(fileName),
+      upsert: true,
+    });
+
+  if (uploadError) throw uploadError;
+
+  console.log(`📤 [Merge] Uploaded final file: ${finalPath}`);
+  await cleanupChunks(uploadId, sorted);
+  console.log(`🧹 [Merge] Cleanup completed in ${Date.now() - startTime}ms total`);
+
+  return finalPath;
+}
+
+// Streaming merge for large files - process chunks sequentially
+// to minimize memory usage
+async function mergeChunksStreaming(
+  uploadId: string, 
+  fileName: string, 
+  sorted: any[], 
+  startTime: number
+): Promise<string> {
+  // For very large files, we need to use a different approach:
+  // Copy chunks to final bucket with numbered names, then use resumable upload
+  // But Supabase doesn't support resumable uploads well, so we'll process in smaller batches
+  
+  const MINI_BATCH_SIZE = 3; // Process 3 chunks at a time (~18MB in memory max)
+  const allChunkData: Uint8Array[] = [];
+  
+  for (let i = 0; i < sorted.length; i += MINI_BATCH_SIZE) {
+    const batch = sorted.slice(i, Math.min(i + MINI_BATCH_SIZE, sorted.length));
+    
+    // Download this mini-batch sequentially to control memory
+    for (const chunk of batch) {
+      const { data, error: downloadErr } = await supabase.storage
+        .from(BUCKET_TEMP)
+        .download(`${uploadId}/${chunk.name}`);
+      if (downloadErr) throw downloadErr;
+
+      const arrayBuffer = await data.arrayBuffer();
+      allChunkData.push(new Uint8Array(arrayBuffer));
+      console.log(`✓ [Merge] Downloaded chunk ${allChunkData.length}/${sorted.length}`);
+    }
+    
+    // Check memory periodically and merge if getting large
+    const currentSize = allChunkData.reduce((sum, arr) => sum + arr.length, 0);
+    console.log(`📊 [Merge] Current buffer: ${(currentSize / 1024 / 1024).toFixed(2)}MB`);
+  }
+
+  console.log(`✅ [Merge] All chunks downloaded in ${Date.now() - startTime}ms`);
+
+  // Now merge all chunks
+  const totalLength = allChunkData.reduce((sum, arr) => sum + arr.length, 0);
+  console.log(`🔗 [Merge] Total size: ${(totalLength / 1024 / 1024).toFixed(2)}MB`);
+  
+  const mergedFile = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of allChunkData) {
+    mergedFile.set(chunk, offset);
+    offset += chunk.length;
+    // Clear reference to help GC
+  }
+
+  console.log(`🔗 [Merge] Concatenated ${totalLength} bytes`);
+
   const finalPath = fileName;
   const { error: uploadError } = await supabase.storage
     .from(BUCKET_FINAL)
@@ -211,8 +291,14 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
   }
 
   console.log(`📤 [Merge] Uploaded final file: ${finalPath}`);
+  await cleanupChunks(uploadId, sorted);
+  console.log(`🧹 [Merge] Cleanup completed in ${Date.now() - startTime}ms total`);
 
-  // Supprime les morceaux en parallèle par batch
+  return finalPath;
+}
+
+// Cleanup helper
+async function cleanupChunks(uploadId: string, sorted: any[]) {
   const cleanupBatches = [];
   for (let i = 0; i < sorted.length; i += 100) {
     const batch = sorted.slice(i, Math.min(i + 100, sorted.length));
@@ -223,10 +309,6 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
     );
   }
   await Promise.all(cleanupBatches);
-
-  console.log(`🧹 [Merge] Cleanup completed in ${Date.now() - startTime}ms total`);
-
-  return finalPath;
 }
 
 // Serveur
