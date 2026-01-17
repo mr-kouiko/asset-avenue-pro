@@ -6,27 +6,28 @@ export const LanguageRedirect = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const path = location.pathname;
-    
+    const { pathname, search, hash } = location;
+
     // If user is on root path, no redirect needed - English is default
-    if (path === '/') {
+    if (pathname === '/') {
       return;
     }
-    
+
     // Redirect old French routes to English
-    if (path.startsWith('/fr/') || path === '/fr') {
-      const newPath = path.replace('/fr', '');
-      navigate(newPath || '/', { replace: true });
+    if (pathname.startsWith('/fr/') || pathname === '/fr') {
+      const newPath = pathname.replace('/fr', '') || '/';
+      navigate(`${newPath}${search}${hash}`, { replace: true });
       return;
     }
-    
+
     // Redirect old /en/ routes to root
-    if (path.startsWith('/en/') || path === '/en') {
-      const newPath = path.replace('/en', '');
-      navigate(newPath || '/', { replace: true });
+    // IMPORTANT: preserve query params (e.g. ?theme=..., ?price=free)
+    if (pathname.startsWith('/en/') || pathname === '/en') {
+      const newPath = pathname.replace('/en', '') || '/';
+      navigate(`${newPath}${search}${hash}`, { replace: true });
       return;
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.search, location.hash, navigate]);
 
   return null;
 };

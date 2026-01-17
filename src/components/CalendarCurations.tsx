@@ -27,7 +27,7 @@ const EventCard = memo(({ event }: { event: CalendarEvent }) => {
   
   return (
     <Link
-      to={`/en/marketplace?theme=${encodeURIComponent(event.themeId)}`}
+      to={`/marketplace?theme=${encodeURIComponent(event.themeId)}`}
       className="flex-shrink-0 snap-start group"
     >
       <Card className="relative w-[200px] overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
@@ -174,7 +174,7 @@ export const CalendarCurations = memo(({ limit = 8 }: CalendarCurationsProps) =>
             {monthEvents.map((event) => (
               <Link
                 key={event.id}
-                to={`/en/marketplace?theme=${encodeURIComponent(event.themeId)}`}
+                to={`/marketplace?theme=${encodeURIComponent(event.themeId)}`}
                 className="group"
               >
                 <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
