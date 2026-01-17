@@ -1,23 +1,18 @@
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
-import { ContentCard } from "@/components/ContentCard";
+import { HomepageTabs } from "@/components/HomepageTabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useMarketplace } from "@/hooks/useMarketplace";
 import { useContentStats } from "@/hooks/useContentStats";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const IndexEN = () => {
-  const { content, loading } = useMarketplace(6);
   const { stats } = useContentStats();
   const { user } = useAuth();
-
-  // Get first 6 items for featured section
-  const featuredContent = content.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,60 +23,8 @@ const IndexEN = () => {
         {/* Hero Section */}
         <HeroSection />
 
-        {/* Featured Content */}
-        <section className="py-16 bg-surface">
-          <div className="container">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">Featured Creative Content</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Discover high-quality photos, videos, illustrations, and audio from talented creators worldwide
-              </p>
-            </div>
-            
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="bg-muted rounded-lg h-64 mb-4"></div>
-                    <div className="h-4 bg-muted rounded mb-2"></div>
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                  </div>
-                ))}
-              </div>
-            ) : featuredContent.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {featuredContent.map((item, index) => (
-                    <ContentCard 
-                      key={item.id} 
-                      id={item.id}
-                      title={item.title}
-                      author={item.author}
-                      price={item.price}
-                      type={item.type}
-                      thumbnail={item.thumbnail}
-                      videoUrl={item.videoUrl}
-                      audioUrl={item.type === 'audio' ? item.videoUrl : undefined}
-                      likes={item.likes}
-                      downloads={item.downloads}
-                      isLiked={item.isLiked}
-                      priority={index < 3} // First 3 items load eagerly
-                    />
-                  ))}
-                </div>
-                <div className="text-center">
-                  <Button size="lg" asChild className="md:hidden">
-                    <Link to="/en/marketplace">View All Content</Link>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No featured content available yet.</p>
-              </div>
-            )}
-          </div>
-        </section>
+        {/* Tabbed Content Discovery */}
+        <HomepageTabs />
 
         {/* Categories */}
         <section className="py-16">
