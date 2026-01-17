@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift } from "lucide-react";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
@@ -46,6 +47,7 @@ interface ProductData {
   status: 'draft' | 'published' | 'pending';
   coverUrl?: string;
   isAiGenerated?: boolean;
+  isFreeContent?: boolean;
 }
 
 const ProductManagement = () => {
@@ -198,7 +200,8 @@ const ProductManagement = () => {
           tags: [],
           currentTag: '',
           status: 'draft',
-          isAiGenerated: file.isAiGenerated || false
+          isAiGenerated: file.isAiGenerated || false,
+          isFreeContent: false
         };
       });
     }
@@ -388,7 +391,8 @@ const ProductManagement = () => {
         title: productData.title,
         description: productData.description,
         category_id: finalCategoryId || undefined,
-        tags: productData.tags
+        tags: productData.tags,
+        isFreeContent: productData.isFreeContent || false
       }
     });
 
@@ -514,7 +518,8 @@ const ProductManagement = () => {
             title: productData.title,
             description: productData.description,
             category_id: productData.category || undefined,
-            tags: productData.tags
+            tags: productData.tags,
+            isFreeContent: productData.isFreeContent || false
           }
         });
 
@@ -976,8 +981,39 @@ const ProductManagement = () => {
                                 {isReanalyzing ? 'Analyzing...' : 'Re-analyze'}
                               </Button>
                             )}
-                          </div>
                         </div>
+
+                        {/* Free Content Toggle */}
+                        <div className="md:col-span-2">
+                          <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                            selectedProductData.isFreeContent 
+                              ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' 
+                              : 'bg-muted/50 border-muted'
+                          }`}>
+                            <div className="flex items-center space-x-3">
+                              <Gift className={`h-5 w-5 ${selectedProductData.isFreeContent ? 'text-green-600' : 'text-muted-foreground'}`} />
+                              <div>
+                                <div className="text-sm font-medium">
+                                  Free Content
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Make this content available for free download
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={selectedProductData.isFreeContent || false}
+                              onCheckedChange={(checked) => updateProductData(selectedFileId!, { isFreeContent: checked })}
+                            />
+                          </div>
+                          {selectedProductData.isFreeContent && (
+                            <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                              <Gift className="h-3 w-3" />
+                              This content will be offered for free to all users
+                            </p>
+                          )}
+                        </div>
+                      </div>
                       </div>
 
                       {/* Product Actions */}

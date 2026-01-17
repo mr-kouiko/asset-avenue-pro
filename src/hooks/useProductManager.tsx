@@ -20,6 +20,7 @@ interface ProductMetadata {
   description: string;
   category_id?: string;
   tags: string[];
+  isFreeContent?: boolean;
 }
 
 interface ProductSubmission {
@@ -122,8 +123,14 @@ export const useProductManager = () => {
         }
       }
 
-      // Automatically set price to $3.99 USD for eBooks (PDF files)
-      const productPrice = submission.file.type === 'application/pdf' ? 3.99 : null;
+      // Determine product price
+      // Free content = price 0, eBooks default to $3.99, others null
+      let productPrice: number | null = null;
+      if (submission.productData.isFreeContent) {
+        productPrice = 0;
+      } else if (submission.file.type === 'application/pdf') {
+        productPrice = 3.99;
+      }
 
       // Generate SEO-friendly slug
       const baseSlug = generateSlug(
