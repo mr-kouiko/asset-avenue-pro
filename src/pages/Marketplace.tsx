@@ -187,11 +187,15 @@ const Marketplace = () => {
     }
   }, [location.pathname, routeSearchQuery]);
 
+  // Track price filter from URL
+  const [priceFilter, setPriceFilter] = useState<string | null>(null);
+
   // Also handle traditional query params and theme params for backward compatibility
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     const searchParam = searchParams.get('search');
     const themeParam = searchParams.get('theme');
+    const priceParam = searchParams.get('price');
     
     if (categoryParam) {
       setSelectedCategory(categoryParam);
@@ -202,6 +206,12 @@ const Marketplace = () => {
     // Theme param triggers semantic search with the theme ID
     if (themeParam) {
       setSearchQuery(themeParam);
+    }
+    // Handle price=free filter
+    if (priceParam) {
+      setPriceFilter(priceParam);
+    } else {
+      setPriceFilter(null);
     }
   }, [searchParams]);
 
@@ -310,6 +320,11 @@ const Marketplace = () => {
   const filteredContent = useMemo(() => {
     let results = marketplaceContent;
     
+    // STEP 0: Apply price filter (free content)
+    if (priceFilter === 'free') {
+      results = results.filter(content => content.price === 0);
+    }
+    
     // STEP 1: Apply category filter (content type)
     if (selectedCategory !== "all") {
       const categoryUUID = categorySlugToId[selectedCategory];
@@ -364,7 +379,7 @@ const Marketplace = () => {
     }
     
     return results;
-  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory, videoFilters, photoFilters, isVideoSection, isPhotoSection, searchParams]);
+  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory, videoFilters, photoFilters, isVideoSection, isPhotoSection, searchParams, priceFilter]);
 
   // Sort the filtered content
   const sortedContent = [...filteredContent].sort((a, b) => {
