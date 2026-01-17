@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Gift, Calendar, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ContentCard } from '@/components/ContentCard';
@@ -39,17 +39,14 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
       <div className="container">
         <Tabs defaultValue="trending" className="w-full">
           <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-8 h-14 p-1.5">
-            <TabsTrigger value="trending" className="flex items-center gap-2.5 text-base font-semibold py-3">
-              <TrendingUp className="h-5 w-5" />
-              <span className="hidden sm:inline">Trending</span>
+            <TabsTrigger value="trending" className="py-3 text-sm font-semibold uppercase tracking-[0.02em] font-['Inter',system-ui,sans-serif]">
+              Trending
             </TabsTrigger>
-            <TabsTrigger value="free" className="flex items-center gap-2.5 text-base font-semibold py-3">
-              <Gift className="h-5 w-5" />
-              <span className="hidden sm:inline">Free Stock</span>
+            <TabsTrigger value="free" className="py-3 text-sm font-semibold uppercase tracking-[0.02em] font-['Inter',system-ui,sans-serif]">
+              Free Stock
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2.5 text-base font-semibold py-3">
-              <Calendar className="h-5 w-5" />
-              <span className="hidden sm:inline">Calendar</span>
+            <TabsTrigger value="calendar" className="py-3 text-sm font-semibold uppercase tracking-[0.02em] font-['Inter',system-ui,sans-serif]">
+              Calendar
             </TabsTrigger>
           </TabsList>
 
