@@ -335,8 +335,14 @@ const ProductDetail = () => {
     }
   ];
 
+  // Check if product is free (price = 0)
+  const isFreeContent = product?.price === 0;
+
   // Calculate and format price display for each license option
   const getPriceDisplay = (license: { id: string; price: number }) => {
+    if (isFreeContent) {
+      return 'Free';
+    }
     if (isVideo) {
       // For videos: always use base price + license price
       const currentTotal = basePrice + license.price;
@@ -639,97 +645,133 @@ const ProductDetail = () => {
             {/* License Selection */}
             <div>
               <h3 className="font-semibold mb-4">Choose a license</h3>
-              {isVideo && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-2 text-blue-800 mb-2">
-                    <FileVideo className="h-4 w-4" />
-                    <span className="font-medium">Video pricing {resolution}</span>
-                  </div>
-                  <div className="text-sm text-blue-700">
-                    Base price {resolution}: <span className="font-semibold">${basePrice}</span>
-                    {licensePrice > 0 && (
-                      <>
-                        <br />Selected license: <span className="font-semibold">+€{licensePrice}</span>
-                        <br />Total price: <span className="font-semibold text-lg">${totalPrice}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-              <div className="space-y-3">
-                {licenses.map((license) => (
-                  <div
-                    key={license.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedLicense === license.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => setSelectedLicense(license.id)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded-full border-2 ${
-                          selectedLicense === license.id
-                            ? "border-primary bg-primary"
-                            : "border-muted-foreground"
-                        }`}>
-                          {selectedLicense === license.id && (
-                            <div className="w-2 h-2 bg-white rounded-full m-0.5" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium">{license.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {license.description}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold">
-                          {getPriceDisplay(license)}
-                        </div>
-                        {isVideo && selectedLicense === license.id && (
-                          <div className="text-xs text-muted-foreground">
-                            {basePrice}$ + {license.price}€
-                          </div>
-                        )}
-                      </div>
+            {/* License Selection - Hidden for free content */}
+            {isFreeContent ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">Free</div>
+                <p className="text-green-700 text-sm">
+                  This content is available for free download. No license fee required.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h3 className="font-semibold mb-4">Choose a license</h3>
+                {isVideo && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 text-blue-800 mb-2">
+                      <FileVideo className="h-4 w-4" />
+                      <span className="font-medium">Video pricing {resolution}</span>
+                    </div>
+                    <div className="text-sm text-blue-700">
+                      Base price {resolution}: <span className="font-semibold">${basePrice}</span>
+                      {licensePrice > 0 && (
+                        <>
+                          <br />Selected license: <span className="font-semibold">+€{licensePrice}</span>
+                          <br />Total price: <span className="font-semibold text-lg">${totalPrice}</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+                <div className="space-y-3">
+                  {licenses.map((license) => (
+                    <div
+                      key={license.id}
+                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                        selectedLicense === license.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                      onClick={() => setSelectedLicense(license.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full border-2 ${
+                            selectedLicense === license.id
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground"
+                          }`}>
+                            {selectedLicense === license.id && (
+                              <div className="w-2 h-2 bg-white rounded-full m-0.5" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">{license.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {license.description}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold">
+                            {getPriceDisplay(license)}
+                          </div>
+                          {isVideo && selectedLicense === license.id && (
+                            <div className="text-xs text-muted-foreground">
+                              {basePrice}$ + {license.price}€
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             </div>
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              <Button 
-                size="lg" 
-                className="flex-1"
-                onClick={handleAddToCart}
-                disabled={directPurchaseLoading}
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to cart
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={handleDirectPurchase}
-                disabled={directPurchaseLoading}
-              >
-                {directPurchaseLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Redirecting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Buy now
-                  </>
-                )}
-              </Button>
+              {isFreeContent ? (
+                <Button 
+                  size="lg" 
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleDirectPurchase}
+                  disabled={directPurchaseLoading}
+                >
+                  {directPurchaseLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download for Free
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="flex-1"
+                    onClick={handleAddToCart}
+                    disabled={directPurchaseLoading}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Add to cart
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    onClick={handleDirectPurchase}
+                    disabled={directPurchaseLoading}
+                  >
+                    {directPurchaseLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Redirecting...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Buy now
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* License Info */}
