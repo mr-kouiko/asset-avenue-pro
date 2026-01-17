@@ -39,13 +39,13 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
       <div className="container">
         <Tabs defaultValue="trending" className="w-full">
           <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-8 h-14 p-1.5">
-            <TabsTrigger value="trending" className="py-3 text-sm font-semibold uppercase tracking-[0.02em] font-['Inter',system-ui,sans-serif]">
+            <TabsTrigger value="trending" className="py-3 text-sm sm:text-base font-bold">
               Trending
             </TabsTrigger>
-            <TabsTrigger value="free" className="py-3 text-sm font-semibold uppercase tracking-[0.02em] font-['Inter',system-ui,sans-serif]">
+            <TabsTrigger value="free" className="py-3 text-sm sm:text-base font-bold">
               Free Stock
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="py-3 text-sm font-semibold uppercase tracking-[0.02em] font-['Inter',system-ui,sans-serif]">
+            <TabsTrigger value="calendar" className="py-3 text-sm sm:text-base font-bold">
               Calendar
             </TabsTrigger>
           </TabsList>
