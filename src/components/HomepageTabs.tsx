@@ -37,13 +37,6 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
   return (
     <section className={`py-16 bg-surface ${className || ''}`}>
       <div className="container">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-4">Discover Creative Content</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore trending assets, free downloads, and content curated for upcoming events
-          </p>
-        </div>
-
         <Tabs defaultValue="trending" className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-3 mb-8">
             <TabsTrigger value="trending" className="flex items-center gap-2">
