@@ -321,8 +321,10 @@ const Marketplace = () => {
     let results = marketplaceContent;
     
     // STEP 0: Apply price filter (free content)
+    // IMPORTANT: Only treat explicitly free items as free (price = 0 in DB),
+    // not items with null price.
     if (priceFilter === 'free') {
-      results = results.filter(content => content.price === 0);
+      results = results.filter(content => content.isFree === true);
     }
     
     // STEP 1: Apply category filter (content type)

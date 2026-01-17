@@ -7,6 +7,8 @@ export interface MarketplaceContent {
   title: string;
   author: string;
   price: number;
+  /** True only when the creator explicitly set the product as free (price = 0 in DB). */
+  isFree?: boolean;
   type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook';
   thumbnail: string;
   videoUrl?: string;
@@ -279,7 +281,8 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         slug: item.slug,
         title: item.title || 'Untitled',
         author: creatorMap.get(item.creator_id) || 'Anonymous Store',
-        price: item.price || 0,
+        price: item.price ?? 0,
+        isFree: item.price === 0,
         type: contentType,
         thumbnail: thumbnailUrl,
         videoUrl: contentType === 'video' ? mediaUrl : undefined,
