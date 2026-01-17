@@ -38,17 +38,17 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
     <section className={`py-16 bg-surface ${className || ''}`}>
       <div className="container">
         <Tabs defaultValue="trending" className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-3 mb-8">
-            <TabsTrigger value="trending" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-8 h-14 p-1.5">
+            <TabsTrigger value="trending" className="flex items-center gap-2.5 text-base font-semibold py-3">
+              <TrendingUp className="h-5 w-5" />
               <span className="hidden sm:inline">Trending</span>
             </TabsTrigger>
-            <TabsTrigger value="free" className="flex items-center gap-2">
-              <Gift className="h-4 w-4" />
+            <TabsTrigger value="free" className="flex items-center gap-2.5 text-base font-semibold py-3">
+              <Gift className="h-5 w-5" />
               <span className="hidden sm:inline">Free Stock</span>
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+            <TabsTrigger value="calendar" className="flex items-center gap-2.5 text-base font-semibold py-3">
+              <Calendar className="h-5 w-5" />
               <span className="hidden sm:inline">Calendar</span>
             </TabsTrigger>
           </TabsList>
