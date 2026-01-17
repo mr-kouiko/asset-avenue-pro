@@ -311,13 +311,18 @@ export const SimpleFileUpload = ({
                 console.log(`🤖 [AI-DETECTION] Image result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
               }
             } else if (isVideo) {
-              console.log(`🎥 [AI-DETECTION] Calling detectVideo with URL: ${urlToAnalyze}`);
-              const result = await detectVideo(urlToAnalyze);
+              // Pass BOTH the video URL (for SightEngine) and thumbnail URL (for Gemini fallback)
+              const thumbnailForFallback = processedFile.thumbnailUrl;
+              console.log(`🎥 [AI-DETECTION] Calling detectVideo with URL: ${urlToAnalyze}, thumbnail fallback: ${thumbnailForFallback}`);
+              const result = await detectVideo(urlToAnalyze, { 
+                thumbnailUrl: thumbnailForFallback,
+                threshold: 0.5 
+              });
               console.log(`🎥 [AI-DETECTION] Video detection raw result:`, result);
               if (result) {
                 isAiGenerated = result.isAiGenerated;
                 aiConfidence = result.confidence;
-                console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
+                console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}, method=${result.detectionMethod}`);
               } else {
                 console.warn(`🤖 [AI-DETECTION] Video detection returned null result`);
               }

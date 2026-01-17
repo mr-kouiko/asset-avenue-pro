@@ -71,12 +71,14 @@ const extractVideoFrame = async (videoUrl: string): Promise<{ base64: string; mi
   }
 };
 
-// Gemini-based video frame analysis (fallback)
+// Gemini-based video frame analysis (fallback) - Enhanced for AI video detection
 const analyzeWithGemini = async (
   imageData: { base64: string; mimeType: string },
   apiKey: string
 ): Promise<{ score: number; reasoning: string } | null> => {
   try {
+    console.log('🎥 [DETECT-AI-VIDEO] Sending frame to Gemini for analysis...');
+    
     const response = await fetchWithTimeout(
       'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
@@ -93,20 +95,25 @@ const analyzeWithGemini = async (
               content: [
                 {
                   type: 'text',
-                  text: `Analyze this video frame/thumbnail for AI-generation indicators.
+                  text: `You are an expert AI-generated content detector. Analyze this video frame/thumbnail for signs of AI generation.
 
-Look for:
-- Unnatural motion blur or frame interpolation artifacts
-- Face/body distortions typical of deepfakes
-- Inconsistent lighting across the frame
-- AI texture patterns (too smooth, plastic-like)
-- Background anomalies or impossible physics
+CRITICAL INDICATORS OF AI-GENERATED VIDEO:
+1. **Facial anomalies**: Asymmetric features, morphing artifacts, unnatural skin texture, eyes that don't track correctly
+2. **Hand/finger issues**: Extra or missing fingers, distorted hands, unnatural poses
+3. **Temporal inconsistencies**: Motion blur that doesn't match movement, flickering elements
+4. **Background anomalies**: Warping backgrounds, impossible architecture, floating objects
+5. **Texture patterns**: Overly smooth/plastic skin, repetitive textures, unnatural lighting gradients
+6. **Physics violations**: Impossible shadows, lighting from multiple sources, objects defying gravity
+7. **AI model signatures**: Characteristic patterns from Sora, Runway, Pika, Midjourney video, Stable Video
 
-Return ONLY JSON:
+LOOK CAREFULLY for these subtle signs. Many AI videos look realistic at first glance.
+
+Return ONLY a valid JSON object (no markdown, no explanation outside JSON):
 {
-  "aiScore": 0.0 to 1.0,
-  "isLikelyAI": boolean,
-  "reasoning": "brief explanation"
+  "aiScore": <number 0.0-1.0 where 1.0 = definitely AI-generated>,
+  "isLikelyAI": <boolean>,
+  "reasoning": "<brief explanation of what you detected>",
+  "detectedArtifacts": ["<list of specific AI artifacts found>"]
 }`
                 },
                 {
@@ -118,28 +125,48 @@ Return ONLY JSON:
               ]
             }
           ],
-          max_tokens: 300,
+          max_tokens: 500,
           temperature: 0.1
         }),
       },
-      40000
+      45000
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🎥 [DETECT-AI-VIDEO] Gemini API error:', response.status, errorText);
+      return null;
+    }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
+    console.log('🎥 [DETECT-AI-VIDEO] Gemini raw response:', content.substring(0, 200));
     
-    // Parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        score: parsed.aiScore ?? (parsed.isLikelyAI ? 0.7 : 0.3),
-        reasoning: parsed.reasoning || 'Analysis completed'
-      };
+    // Parse JSON response - handle both clean JSON and markdown-wrapped JSON
+    let jsonStr = content;
+    
+    // Remove markdown code blocks if present
+    if (content.includes('```json')) {
+      jsonStr = content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    } else if (content.includes('```')) {
+      jsonStr = content.replace(/```\s*/g, '');
     }
     
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const score = parsed.aiScore ?? (parsed.isLikelyAI ? 0.75 : 0.25);
+      const artifacts = parsed.detectedArtifacts?.join(', ') || '';
+      const reasoning = artifacts 
+        ? `${parsed.reasoning || 'Analysis completed'}. Detected: ${artifacts}`
+        : (parsed.reasoning || 'Analysis completed');
+      
+      console.log(`🎥 [DETECT-AI-VIDEO] Gemini parsed result: score=${score}, reasoning=${reasoning.substring(0, 100)}`);
+      
+      return { score, reasoning };
+    }
+    
+    console.error('🎥 [DETECT-AI-VIDEO] Could not parse Gemini response as JSON');
     return null;
   } catch (error) {
     console.error('🎥 [DETECT-AI-VIDEO] Gemini fallback failed:', error);
@@ -364,11 +391,23 @@ serve(async (req) => {
     if (!detectionResult && lovableApiKey) {
       console.log('🎥 [DETECT-AI-VIDEO] Falling back to Gemini analysis...');
       
-      // Try to use thumbnail URL if provided, otherwise try video URL
-      const urlToAnalyze = thumbnailUrl || videoUrl;
-      const frameData = await extractVideoFrame(urlToAnalyze);
+      // Priority: Use thumbnail URL first (it's an image), then try video URL
+      // Gemini can only analyze images, so thumbnail is required for video AI detection fallback
+      let frameData = null;
+      
+      if (thumbnailUrl) {
+        console.log('🎥 [DETECT-AI-VIDEO] Using provided thumbnail for Gemini analysis:', thumbnailUrl.substring(0, 60));
+        frameData = await extractVideoFrame(thumbnailUrl);
+      }
+      
+      // If no thumbnail provided or extraction failed, try video URL (won't work for actual videos)
+      if (!frameData && videoUrl) {
+        console.log('🎥 [DETECT-AI-VIDEO] No thumbnail, attempting video URL extraction...');
+        frameData = await extractVideoFrame(videoUrl);
+      }
       
       if (frameData) {
+        console.log('🎥 [DETECT-AI-VIDEO] Frame extracted successfully, calling Gemini...');
         const geminiResult = await analyzeWithGemini(frameData, lovableApiKey);
         
         if (geminiResult) {
@@ -391,7 +430,11 @@ serve(async (req) => {
           };
 
           console.log(`🎥 [DETECT-AI-VIDEO] ✅ Gemini fallback Result: AI=${isAiGenerated}, score=${(geminiResult.score * 100).toFixed(1)}%`);
+        } else {
+          console.error('🎥 [DETECT-AI-VIDEO] Gemini analysis returned null');
         }
+      } else {
+        console.error('🎥 [DETECT-AI-VIDEO] ❌ No frame data available for Gemini fallback. Thumbnail URL required for video AI detection.');
       }
     }
 
