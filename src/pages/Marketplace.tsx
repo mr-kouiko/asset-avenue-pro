@@ -16,6 +16,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { fuzzySearch, type SearchableContent, type ScoredResult } from "@/utils/fuzzySearch";
+import { themeSearch, shouldUseThemeSearch, findThemeForQuery } from "@/utils/themeSearch";
 import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersPanel";
 import PhotoFiltersPanel, { type PhotoFilters } from "@/components/PhotoFiltersPanel";
 import { 
@@ -186,16 +187,21 @@ const Marketplace = () => {
     }
   }, [location.pathname, routeSearchQuery]);
 
-  // Also handle traditional query params for backward compatibility
+  // Also handle traditional query params and theme params for backward compatibility
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     const searchParam = searchParams.get('search');
+    const themeParam = searchParams.get('theme');
     
     if (categoryParam) {
       setSelectedCategory(categoryParam);
     }
     if (searchParam) {
       setSearchQuery(searchParam);
+    }
+    // Theme param triggers semantic search with the theme ID
+    if (themeParam) {
+      setSearchQuery(themeParam);
     }
   }, [searchParams]);
 
@@ -324,23 +330,41 @@ const Marketplace = () => {
       results = applyPhotoHardFilters(results, photoFilters);
     }
     
-    // STEP 3: Apply fuzzy search for RANKING only (soft signal)
+    // STEP 3: Apply search - use THEME SEARCH for calendar curations, fuzzy search otherwise
     if (searchQuery.trim()) {
-      const fuzzyResults = fuzzySearch(searchableContent, searchQuery, { minScore: 3 });
-      const matchedIds = new Set(fuzzyResults.map(r => r.item.id));
+      const themeParam = searchParams.get('theme');
       
-      // Filter to matched items, then add relevance score
-      results = results
-        .filter(content => matchedIds.has(content.id))
-        .map(content => ({
-          ...content,
-          _relevanceScore: calculateRelevanceRank(content, searchQuery)
-        }))
-        .sort((a, b) => ((b as any)._relevanceScore || 0) - ((a as any)._relevanceScore || 0));
+      // Use semantic theme search for calendar curations (strict relevance)
+      if (themeParam && shouldUseThemeSearch(searchQuery)) {
+        const themeResults = themeSearch(searchableContent, searchQuery, 100);
+        const matchedIds = new Set(themeResults.map(r => r.item.id));
+        
+        // Filter to only theme-matched items and sort by theme score
+        results = results
+          .filter(content => matchedIds.has(content.id))
+          .map(content => {
+            const themeResult = themeResults.find(r => r.item.id === content.id);
+            return { ...content, _themeScore: themeResult?.score || 0 };
+          })
+          .sort((a, b) => (b._themeScore || 0) - (a._themeScore || 0));
+      } else {
+        // Standard fuzzy search for regular queries
+        const fuzzyResults = fuzzySearch(searchableContent, searchQuery, { minScore: 3 });
+        const matchedIds = new Set(fuzzyResults.map(r => r.item.id));
+        
+        // Filter to matched items, then add relevance score
+        results = results
+          .filter(content => matchedIds.has(content.id))
+          .map(content => ({
+            ...content,
+            _relevanceScore: calculateRelevanceRank(content, searchQuery)
+          }))
+          .sort((a, b) => ((b as any)._relevanceScore || 0) - ((a as any)._relevanceScore || 0));
+      }
     }
     
     return results;
-  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory, videoFilters, photoFilters, isVideoSection, isPhotoSection]);
+  }, [marketplaceContent, searchableContent, searchQuery, selectedCategory, videoFilters, photoFilters, isVideoSection, isPhotoSection, searchParams]);
 
   // Sort the filtered content
   const sortedContent = [...filteredContent].sort((a, b) => {
