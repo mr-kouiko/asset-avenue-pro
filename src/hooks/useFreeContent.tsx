@@ -42,12 +42,12 @@ export function useFreeContent(limit: number = 6) {
     try {
       setLoading(true);
       
-      // Fetch approved content with price = 0 or null
+      // Fetch approved content with price = 0 (explicitly marked as free by seller)
       const { data: submissions, error } = await supabase
         .from('content_submissions')
         .select('id, title, description, price, creator_id, created_at')
         .eq('status', 'approved')
-        .or('price.eq.0,price.is.null')
+        .eq('price', 0)
         .order('created_at', { ascending: false })
         .limit(limit);
 
