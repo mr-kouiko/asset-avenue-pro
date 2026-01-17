@@ -351,12 +351,43 @@ const Marketplace = () => {
     if (searchQuery.trim()) {
       const themeParam = searchParams.get('theme');
       
-      // Use semantic theme search for calendar curations (strict relevance)
-      if (themeParam && shouldUseThemeSearch(searchQuery)) {
+      // Use semantic theme search for calendar curations (STRICT relevance)
+      if (themeParam) {
+        // STRICT MODE: When theme param exists, ONLY show theme-matched products
+        // If no matches, show EMPTY (never fallback to all products)
+        const theme = findThemeForQuery(searchQuery);
+        
+        if (theme) {
+          // Theme found - apply strict semantic filtering
+          const themeResults = themeSearch(searchableContent, searchQuery, 200);
+          const matchedIds = new Set(themeResults.map(r => r.item.id));
+          
+          // Filter to only theme-matched items and sort by theme score
+          results = results
+            .filter(content => matchedIds.has(content.id))
+            .map(content => {
+              const themeResult = themeResults.find(r => r.item.id === content.id);
+              return { ...content, _themeScore: themeResult?.score || 0 };
+            })
+            .sort((a, b) => (b._themeScore || 0) - (a._themeScore || 0));
+        } else {
+          // Theme param exists but no theme definition found
+          // Still try to match by simple keyword search in title/tags
+          const themeWords = themeParam.toLowerCase().split(/[\s-]+/);
+          results = results.filter(content => {
+            const titleLower = (content.title || '').toLowerCase();
+            const tagsLower = (content.tags || []).map(t => t.toLowerCase());
+            const allText = `${titleLower} ${tagsLower.join(' ')}`;
+            
+            // Must match at least one theme word
+            return themeWords.some(word => word.length > 2 && allText.includes(word));
+          });
+        }
+      } else if (shouldUseThemeSearch(searchQuery)) {
+        // No theme param but query matches a theme - use theme search
         const themeResults = themeSearch(searchableContent, searchQuery, 100);
         const matchedIds = new Set(themeResults.map(r => r.item.id));
         
-        // Filter to only theme-matched items and sort by theme score
         results = results
           .filter(content => matchedIds.has(content.id))
           .map(content => {

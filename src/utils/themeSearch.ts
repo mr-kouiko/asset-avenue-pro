@@ -377,6 +377,227 @@ export const themeDefinitions: Record<string, ThemeDefinition> = {
       'halloween', 'summer', 'beach', 'tropical'
     ],
     requiredContexts: ['chinese', 'lunar', 'dragon', 'lantern', 'red', 'asia', 'zodiac']
+  },
+
+  // St. Patrick's Day
+  'st patrick': {
+    id: 'st-patrick',
+    name: "St. Patrick's Day",
+    coreKeywords: [
+      'patrick', 'irish', 'ireland', 'shamrock', 'clover', 'leprechaun',
+      'green', 'lucky', 'luck'
+    ],
+    semanticKeywords: [
+      'celtic', 'dublin', 'pub', 'beer', 'parade', 'saint',
+      'march', 'gold', 'rainbow', 'pot of gold', 'emerald',
+      'tradition', 'celebration', 'festival', 'party', 'guinness',
+      'fiddle', 'celtic knot', 'harp'
+    ],
+    excludedConcepts: [
+      'business', 'corporate', 'technology', 'office', 'fitness',
+      'christmas', 'halloween', 'summer', 'beach'
+    ],
+    requiredContexts: ['irish', 'ireland', 'shamrock', 'clover', 'patrick', 'green', 'lucky']
+  },
+
+  // Women's Day
+  'womens day': {
+    id: 'womens-day',
+    name: "International Women's Day",
+    coreKeywords: [
+      'woman', 'women', 'female', 'empowerment', 'feminist', 'feminism',
+      'girl', 'lady', 'ladies'
+    ],
+    semanticKeywords: [
+      'equality', 'strength', 'powerful', 'inspire', 'leadership',
+      'march', 'international', 'celebrate', 'rights', 'diversity',
+      'inclusion', 'boss', 'entrepreneur', 'mother', 'daughter',
+      'sisterhood', 'unity', 'voice', 'change'
+    ],
+    excludedConcepts: [
+      'halloween', 'spooky', 'christmas', 'winter', 'snow'
+    ],
+    requiredContexts: ['woman', 'women', 'female', 'empowerment', 'girl', 'equality']
+  },
+
+  // Earth Day
+  'earth day': {
+    id: 'earth-day',
+    name: 'Earth Day',
+    coreKeywords: [
+      'earth', 'planet', 'environment', 'nature', 'eco', 'green',
+      'sustainable', 'sustainability', 'climate'
+    ],
+    semanticKeywords: [
+      'recycle', 'recycling', 'ecology', 'conservation', 'organic',
+      'renewable', 'solar', 'wind', 'forest', 'ocean', 'wildlife',
+      'pollution', 'clean', 'global', 'protection', 'april',
+      'trees', 'water', 'air', 'biodiversity'
+    ],
+    excludedConcepts: [
+      'business', 'corporate', 'office', 'technology', 'fashion',
+      'christmas', 'halloween'
+    ],
+    requiredContexts: ['earth', 'environment', 'nature', 'eco', 'green', 'planet', 'sustainable']
+  },
+
+  // Memorial Day
+  'memorial day': {
+    id: 'memorial-day',
+    name: 'Memorial Day',
+    coreKeywords: [
+      'memorial', 'veteran', 'military', 'soldier', 'army', 'flag',
+      'american', 'patriot', 'patriotic', 'honor'
+    ],
+    semanticKeywords: [
+      'usa', 'united states', 'america', 'hero', 'service', 'sacrifice',
+      'remember', 'tribute', 'cemetery', 'grave', 'fallen', 'brave',
+      'freedom', 'liberty', 'may', 'red white blue', 'stars stripes'
+    ],
+    excludedConcepts: [
+      'business', 'corporate', 'technology', 'fitness', 'gym',
+      'christmas', 'halloween', 'romantic', 'love'
+    ],
+    requiredContexts: ['memorial', 'veteran', 'military', 'soldier', 'patriotic', 'american', 'flag']
+  },
+
+  // Independence Day (4th of July)
+  'independence day': {
+    id: 'independence-day',
+    name: 'Independence Day',
+    coreKeywords: [
+      'independence', 'july', 'fourth', '4th', 'fireworks', 'american',
+      'patriot', 'patriotic', 'flag', 'usa'
+    ],
+    semanticKeywords: [
+      'freedom', 'liberty', 'america', 'united states', 'celebration',
+      'parade', 'barbecue', 'bbq', 'red white blue', 'stars stripes',
+      'sparkler', 'summer', 'picnic', 'party', 'national', 'holiday'
+    ],
+    excludedConcepts: [
+      'business', 'corporate', 'technology', 'office', 'fitness',
+      'christmas', 'halloween', 'winter', 'snow'
+    ],
+    requiredContexts: ['independence', 'july', 'fireworks', 'american', 'patriotic', 'usa', 'flag']
+  },
+
+  // Labor Day
+  'labor day': {
+    id: 'labor-day',
+    name: 'Labor Day',
+    coreKeywords: [
+      'labor', 'worker', 'work', 'american', 'holiday', 'september',
+      'end of summer'
+    ],
+    semanticKeywords: [
+      'bbq', 'barbecue', 'picnic', 'family', 'relaxation', 'weekend',
+      'celebration', 'usa', 'america', 'union', 'employment', 'job',
+      'career', 'break', 'rest'
+    ],
+    excludedConcepts: [
+      'christmas', 'halloween', 'winter', 'snow', 'easter', 'valentine'
+    ],
+    requiredContexts: ['labor', 'worker', 'american', 'holiday', 'september']
+  },
+
+  // Back to School
+  'back to school': {
+    id: 'back-to-school',
+    name: 'Back to School',
+    coreKeywords: [
+      'school', 'student', 'education', 'learning', 'study', 'class',
+      'classroom', 'teacher', 'book', 'books'
+    ],
+    semanticKeywords: [
+      'pencil', 'notebook', 'backpack', 'supplies', 'college', 'university',
+      'homework', 'exam', 'test', 'graduation', 'academic', 'knowledge',
+      'library', 'desk', 'chalk', 'blackboard', 'september', 'august'
+    ],
+    excludedConcepts: [
+      'christmas', 'halloween', 'winter', 'snow', 'beach', 'vacation',
+      'romantic', 'love'
+    ],
+    requiredContexts: ['school', 'student', 'education', 'learning', 'study', 'class', 'book']
+  },
+
+  // Cyber Monday
+  'cyber monday': {
+    id: 'cyber-monday',
+    name: 'Cyber Monday',
+    coreKeywords: [
+      'cyber', 'online', 'sale', 'discount', 'shopping', 'deal',
+      'promotion', 'ecommerce', 'tech'
+    ],
+    semanticKeywords: [
+      'monday', 'november', 'december', 'digital', 'internet', 'website',
+      'store', 'buy', 'purchase', 'bargain', 'savings', 'percent off',
+      'limited', 'exclusive', 'special', 'cart', 'checkout', 'coupon',
+      'flash sale', 'gadget', 'electronics'
+    ],
+    excludedConcepts: [
+      'nature', 'landscape', 'beach', 'vacation', 'romantic', 'love',
+      'fitness', 'gym', 'workout', 'travel'
+    ],
+    requiredContexts: ['cyber', 'online', 'sale', 'shopping', 'deal', 'discount', 'tech']
+  },
+
+  // Black History Month
+  'black history': {
+    id: 'black-history',
+    name: 'Black History Month',
+    coreKeywords: [
+      'black', 'african', 'american', 'history', 'heritage', 'culture',
+      'civil rights', 'equality'
+    ],
+    semanticKeywords: [
+      'february', 'pride', 'celebration', 'legacy', 'ancestors', 'freedom',
+      'justice', 'community', 'diversity', 'inclusion', 'leader', 'icon',
+      'movement', 'unity', 'empowerment', 'strength', 'tradition'
+    ],
+    excludedConcepts: [
+      'christmas', 'halloween', 'easter', 'winter', 'snow'
+    ],
+    requiredContexts: ['black', 'african', 'american', 'history', 'heritage', 'culture']
+  },
+
+  // Carnival / Mardi Gras
+  'carnival': {
+    id: 'carnival',
+    name: 'Carnival / Mardi Gras',
+    coreKeywords: [
+      'carnival', 'mardi gras', 'masquerade', 'mask', 'parade', 'festive',
+      'celebration', 'costume'
+    ],
+    semanticKeywords: [
+      'new orleans', 'brazil', 'rio', 'feather', 'beads', 'colorful',
+      'dance', 'music', 'samba', 'party', 'february', 'march', 'tuesday',
+      'king cake', 'float', 'street', 'tradition'
+    ],
+    excludedConcepts: [
+      'business', 'corporate', 'technology', 'office', 'fitness',
+      'christmas', 'halloween'
+    ],
+    requiredContexts: ['carnival', 'mardi gras', 'masquerade', 'parade', 'festive', 'mask', 'costume']
+  },
+
+  // Super Bowl
+  'super bowl': {
+    id: 'super-bowl',
+    name: 'Super Bowl',
+    coreKeywords: [
+      'super bowl', 'football', 'nfl', 'american football', 'touchdown',
+      'championship', 'game', 'sport'
+    ],
+    semanticKeywords: [
+      'stadium', 'team', 'player', 'fan', 'tailgate', 'party', 'tv',
+      'commercial', 'halftime', 'february', 'sunday', 'trophy', 'helmet',
+      'jersey', 'ball', 'quarterback', 'offense', 'defense'
+    ],
+    excludedConcepts: [
+      'christmas', 'halloween', 'easter', 'romantic', 'love',
+      'summer', 'beach'
+    ],
+    requiredContexts: ['super bowl', 'football', 'nfl', 'championship', 'game', 'sport']
   }
 };
 
