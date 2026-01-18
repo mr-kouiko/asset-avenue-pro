@@ -1,8 +1,13 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Download, Loader2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
 import WaveSurfer from 'wavesurfer.js';
 import { useAudioWatermark } from '@/hooks/useAudioWatermark';
+import { toast } from 'sonner';
+
+// Watermark audio URL (same as in useAudioWatermark)
+const WATERMARK_URL = "https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NjU0OTc3NzEsImV4cCI6NDkxOTA5Nzc3MX0.NlfXBYByI1CKvSSMF_TfAC-xtggdyr0861jaWq-HV-k";
 
 interface AudioHeroPlayerProps {
   src: string;
@@ -22,6 +27,7 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Audio watermark - plays at -12dB in background, every 15 seconds
   useAudioWatermark({
@@ -130,6 +136,143 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
     setCurrentTime(seekTime);
   }, [duration]);
 
+  // Download watermarked preview using Web Audio API
+  const handleDownloadWatermarked = useCallback(async () => {
+    if (!src) return;
+    
+    setIsDownloading(true);
+    toast.info('Preparing watermarked preview...');
+
+    try {
+      // Create AudioContext for mixing
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Fetch both audio files
+      const [mainResponse, watermarkResponse] = await Promise.all([
+        fetch(src),
+        fetch(WATERMARK_URL)
+      ]);
+
+      if (!mainResponse.ok || !watermarkResponse.ok) {
+        throw new Error('Failed to fetch audio files');
+      }
+
+      const [mainBuffer, watermarkBuffer] = await Promise.all([
+        mainResponse.arrayBuffer().then(buf => audioContext.decodeAudioData(buf)),
+        watermarkResponse.arrayBuffer().then(buf => audioContext.decodeAudioData(buf))
+      ]);
+
+      // Create offline context for rendering
+      const offlineContext = new OfflineAudioContext(
+        mainBuffer.numberOfChannels,
+        mainBuffer.length,
+        mainBuffer.sampleRate
+      );
+
+      // Create main audio source
+      const mainSource = offlineContext.createBufferSource();
+      mainSource.buffer = mainBuffer;
+      mainSource.connect(offlineContext.destination);
+      mainSource.start(0);
+
+      // Add watermark every 15 seconds
+      const watermarkInterval = 15; // seconds
+      const mainDuration = mainBuffer.duration;
+      
+      for (let t = 2; t < mainDuration; t += watermarkInterval) {
+        const watermarkSource = offlineContext.createBufferSource();
+        watermarkSource.buffer = watermarkBuffer;
+        
+        // Create gain node for watermark volume
+        const gainNode = offlineContext.createGain();
+        gainNode.gain.value = 0.8; // Slightly lower than main
+        
+        watermarkSource.connect(gainNode);
+        gainNode.connect(offlineContext.destination);
+        watermarkSource.start(t);
+      }
+
+      // Render the mixed audio
+      const renderedBuffer = await offlineContext.startRendering();
+
+      // Convert to WAV format
+      const wavBlob = audioBufferToWav(renderedBuffer);
+      
+      // Create download link
+      const url = URL.createObjectURL(wavBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title.replace(/[^a-z0-9]/gi, '_')}_watermarked_preview.wav`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Watermarked preview downloaded!');
+    } catch (err) {
+      console.error('Error creating watermarked preview:', err);
+      toast.error('Failed to create watermarked preview');
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [src, title]);
+
+  // Helper function to convert AudioBuffer to WAV
+  const audioBufferToWav = (buffer: AudioBuffer): Blob => {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    
+    const dataLength = buffer.length * blockAlign;
+    const bufferLength = 44 + dataLength;
+    
+    const arrayBuffer = new ArrayBuffer(bufferLength);
+    const view = new DataView(arrayBuffer);
+    
+    // Write WAV header
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, bufferLength - 8, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); // fmt chunk size
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // Write audio data
+    const channels: Float32Array[] = [];
+    for (let i = 0; i < numChannels; i++) {
+      channels.push(buffer.getChannelData(i));
+    }
+    
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let ch = 0; ch < numChannels; ch++) {
+        const sample = Math.max(-1, Math.min(1, channels[ch][i]));
+        const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, intSample, true);
+        offset += 2;
+      }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  };
+
   if (!src) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#4F46E5]/10 to-[#4F46E5]/5">
@@ -235,6 +378,31 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
               className="w-20 [&_[role=slider]]:bg-slate-400"
             />
           </div>
+        </div>
+
+        {/* Download Watermarked Preview Button */}
+        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <Button
+            onClick={handleDownloadWatermarked}
+            disabled={isLoading || error || isDownloading}
+            variant="outline"
+            className="w-full bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400"
+          >
+            {isDownloading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Preparing watermarked preview...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Download Watermarked Preview (Free)
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+            Preview includes audio watermark for evaluation purposes
+          </p>
         </div>
       </div>
     </div>
