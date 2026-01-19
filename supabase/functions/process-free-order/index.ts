@@ -88,8 +88,8 @@ serve(async (req) => {
       });
     }
 
-    // Verify all items are free
-    const nonFreeItems = submissions?.filter(s => s.price && s.price > 0) || [];
+    // Verify all items are free (price is null, undefined, or 0)
+    const nonFreeItems = submissions?.filter(s => s.price !== null && s.price !== undefined && s.price > 0) || [];
     if (nonFreeItems.length > 0) {
       console.error('[PROCESS-FREE-ORDER] Non-free items detected:', nonFreeItems);
       return new Response(JSON.stringify({ 
@@ -100,6 +100,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('[PROCESS-FREE-ORDER] All items verified as free (price null or 0)');
 
     // Create download records for each item
     const downloadRecords = [];
