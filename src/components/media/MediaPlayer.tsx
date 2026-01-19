@@ -80,7 +80,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   // Preview generator
   const { toast } = useToast();
-  const { isGenerating: isGeneratingPreview, generate } = useVideoPreviewGenerator();
+  const { isGenerating: isGeneratingPreview, state: previewState, generate, cancel: cancelPreview } = useVideoPreviewGenerator();
 
   // Audio watermark hook - only active for audio type
   useAudioWatermark({ 
@@ -91,8 +91,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
   const handleDownloadPreview = useCallback(async () => {
     if (type !== 'video' || !src) return;
+    
+    const toastId = toast({ 
+      title: 'Generating preview…', 
+      description: 'Loading video (0%)', 
+      duration: 60000 // Long duration, we'll dismiss manually
+    });
+    
     try {
-      toast({ title: 'Generating preview…', description: 'Creating full resolution version.', duration: 2000 });
       const blob = await generate({ url: src, durationSec: 6, fps: 24, videoBitsPerSecond: 4000000 });
       const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
       const a = document.createElement('a');
@@ -104,10 +110,16 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       a.click();
       URL.revokeObjectURL(href);
       a.remove();
-      toast({ title: 'Preview ready', description: 'Full resolution version downloaded.', duration: 2500 });
+      toast({ title: 'Preview ready', description: 'Full resolution watermarked preview downloaded.', duration: 3000 });
     } catch (err) {
-      console.error('Preview generation failed:', err);
-      toast({ title: 'Generation failed', description: 'Unable to create preview.', variant: 'destructive' });
+      const errorMessage = err instanceof Error ? err.message : 'Unable to create preview';
+      console.error('Preview generation failed:', errorMessage);
+      toast({ 
+        title: 'Generation failed', 
+        description: errorMessage, 
+        variant: 'destructive',
+        duration: 5000
+      });
     }
   }, [src, type, title, generate, toast]);
 
@@ -599,11 +611,18 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={handleDownloadPreview} disabled={isGeneratingPreview}>
                             {isGeneratingPreview ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                {previewState.stage === 'loading' && 'Loading video...'}
+                                {previewState.stage === 'recording' && `Recording (${previewState.progress}%)`}
+                                {previewState.stage === 'processing' && 'Processing...'}
+                              </>
                             ) : (
-                              <Download className="h-4 w-4 mr-2" />
+                              <>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download preview (full resolution)
+                              </>
                             )}
-                            Download preview (full resolution)
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
