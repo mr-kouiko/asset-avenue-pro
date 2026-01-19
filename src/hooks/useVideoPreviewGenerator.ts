@@ -41,19 +41,41 @@ export function useVideoPreviewGenerator() {
     setState({ isGenerating: true, progress: 0, stage: 'loading' });
     console.log('[VideoPreview] Starting generation for:', url);
 
+    // First, try to fetch the video as a blob to avoid CORS taint issues
+    let blobUrl: string | null = null;
+
     try {
+      // Try to fetch video as blob first - this avoids CORS canvas taint issues
+      try {
+        console.log('[VideoPreview] Attempting to fetch video as blob to avoid CORS...');
+        const response = await fetch(url, { mode: 'cors' });
+        if (response.ok) {
+          const videoBlob = await response.blob();
+          blobUrl = URL.createObjectURL(videoBlob);
+          console.log('[VideoPreview] Video fetched as blob successfully, size:', videoBlob.size);
+          setState(s => ({ ...s, progress: 5 }));
+        }
+      } catch (fetchErr) {
+        console.warn('[VideoPreview] Blob fetch failed, falling back to direct URL:', fetchErr);
+      }
+
       // Create video element
       const video = document.createElement('video');
       video.muted = true;
       video.playsInline = true;
       video.preload = 'auto';
       
-      // ALWAYS use crossOrigin for any external URL to allow canvas capture
-      // Supabase public buckets support CORS, so this is safe
-      video.crossOrigin = 'anonymous';
-      console.log('[VideoPreview] Video element created with crossOrigin=anonymous');
-      
-      video.src = url;
+      // Use blob URL if available (no CORS taint), otherwise use direct URL with crossOrigin
+      if (blobUrl) {
+        video.src = blobUrl;
+        console.log('[VideoPreview] Using blob URL (CORS-safe)');
+      } else {
+        video.crossOrigin = 'anonymous';
+        // Add cache-busting parameter to avoid stale CORS issues
+        const urlSeparator = url.includes('?') ? '&' : '?';
+        video.src = `${url}${urlSeparator}t=${Date.now()}`;
+        console.log('[VideoPreview] Using direct URL with crossOrigin=anonymous');
+      }
 
       // Wait metadata with timeout
       await new Promise<void>((resolve, reject) => {
@@ -315,10 +337,20 @@ export function useVideoPreviewGenerator() {
         throw new Error('Generated preview too small - may be empty frames');
       }
       
+      // Cleanup blob URL if we created one
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      
       setState({ isGenerating: false, progress: 100, stage: 'done' });
       return blob;
       
     } catch (error) {
+      // Cleanup blob URL on error
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[VideoPreview] Generation failed:', errorMessage);
       setState({ isGenerating: false, progress: 0, stage: 'error', error: errorMessage });
