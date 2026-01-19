@@ -183,16 +183,16 @@ export function useVideoPreviewGenerator() {
 
       const chunks: BlobPart[] = [];
       
-      // Try MP4 first (Safari, newer Chrome), fallback to WebM
+      // Prefer MP4 format for maximum compatibility, fallback to WebM
       const mimeTypes = [
+        'video/mp4;codecs=avc1',
+        'video/mp4',
         'video/webm;codecs=vp9',
         'video/webm;codecs=vp8',
         'video/webm',
-        'video/mp4;codecs=avc1',
-        'video/mp4',
       ];
       
-      let selectedMimeType = 'video/webm';
+      let selectedMimeType = 'video/mp4';
       for (const mime of mimeTypes) {
         if (MediaRecorder.isTypeSupported(mime)) {
           selectedMimeType = mime;
