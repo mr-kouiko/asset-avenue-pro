@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { generateSlug, ensureUniqueSlug } from '@/utils/slugGenerator';
+import { generateSlug, ensureUniqueSlug, generateSlugifiedFileName } from '@/utils/slugGenerator';
 
 interface ProductFile {
   id: string;
@@ -177,12 +177,20 @@ export const useProductManager = () => {
       const isVideo = fileType === 'video';
       const isPDF = submission.file.type === 'application/pdf';
       
+      // Generate slugified file name from title (keeps original extension)
+      const slugifiedFileName = generateSlugifiedFileName(
+        submission.productData.title,
+        submission.file.name
+      );
+      
+      console.log('📁 Slugified file name:', slugifiedFileName, '(original:', submission.file.name, ')');
+
       const { error: fileError } = await supabase
         .from('content_files')
         .insert({
           submission_id: submissionData.id,
-          file_name: submission.file.name,
-          file_path: submission.file.url,
+          file_name: slugifiedFileName, // Use slugified name instead of original
+          file_path: submission.file.url, // Keep original file_path (storage URL unchanged)
           file_type: fileType,
           file_format: submission.file.type,
           file_size: submission.file.size,
@@ -192,7 +200,8 @@ export const useProductManager = () => {
           thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
           metadata: {
             isWatermarked: submission.file.isWatermarked || false,
-            isAiGenerated: submission.file.isAiGenerated || false
+            isAiGenerated: submission.file.isAiGenerated || false,
+            originalFileName: submission.file.name // Store original filename in metadata
           }
         });
 

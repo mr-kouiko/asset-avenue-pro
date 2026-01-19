@@ -136,3 +136,26 @@ export function ensureUniqueSlug(baseSlug: string, existingSlugs: string[]): str
   
   return slug;
 }
+
+/**
+ * Generate a slugified file name from title, preserving the original file extension
+ * 
+ * @param title - Product title to slugify
+ * @param originalFileName - Original file name to extract extension from
+ * @returns Slugified file name with original extension
+ * 
+ * @example
+ * generateSlugifiedFileName("Aerial Shot of Speedboat", "image_304d2e.jpg")
+ * // Returns: "aerial-shot-speedboat.jpg"
+ */
+export function generateSlugifiedFileName(title: string, originalFileName: string): string {
+  // Extract the file extension from original filename
+  const lastDotIndex = originalFileName.lastIndexOf('.');
+  const extension = lastDotIndex !== -1 ? originalFileName.slice(lastDotIndex) : '';
+  
+  // Generate slug from title (max 50 chars to leave room for extension)
+  const slug = generateSlug(title, [], 50);
+  
+  // Combine slug with original extension
+  return slug + extension.toLowerCase();
+}
