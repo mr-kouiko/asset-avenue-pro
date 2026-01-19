@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateSlug, ensureUniqueSlug, generateSlugifiedFileName } from '@/utils/slugGenerator';
 
 interface ContentData {
   title: string;
@@ -47,7 +48,19 @@ export const useContentManagement = () => {
 
       // Create content submissions for each uploaded file
       const contentPromises = uploadedFiles.map(async (file) => {
-        // First create the content submission
+        // Generate SEO-friendly slug
+        const baseSlug = generateSlug(contentData.title, contentData.tags || []);
+        
+        // Check for existing slugs to ensure uniqueness
+        const { data: existingSlugs } = await supabase
+          .from('content_submissions')
+          .select('slug')
+          .not('slug', 'is', null);
+        
+        const slugList = existingSlugs?.map(s => s.slug).filter(Boolean) as string[] || [];
+        const uniqueSlug = ensureUniqueSlug(baseSlug, slugList);
+        
+        // First create the content submission with slug
         const { data: submissionData, error: submissionError } = await supabase
           .from('content_submissions')
           .insert({
@@ -57,6 +70,7 @@ export const useContentManagement = () => {
             category_id: contentData.category_id || null,
             price: contentData.price || 0,
             tags: contentData.tags,
+            slug: uniqueSlug,
             status: 'approved' // Auto-approve for now
           })
           .select()
@@ -64,14 +78,17 @@ export const useContentManagement = () => {
 
         if (submissionError) throw submissionError;
 
+        // Generate slugified file name from title
+        const slugifiedFileName = generateSlugifiedFileName(contentData.title, file.name);
+
         // Then create the associated file entry
         const isVideo = file.type.startsWith('video/');
         const { data: fileData, error: fileError } = await supabase
           .from('content_files')
           .insert({
             submission_id: submissionData.id,
-            file_name: file.name,
-            file_path: file.url,
+            file_name: slugifiedFileName, // Use slugified name
+            file_path: file.url, // Keep original file_path unchanged
             file_type: file.type.split('/')[0], // 'image', 'video', etc.
             file_format: file.type,
             file_size: file.size,
@@ -79,7 +96,8 @@ export const useContentManagement = () => {
             preview_path: file.previewUrl || null,
             thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
             metadata: {
-              isWatermarked: file.isWatermarked || false
+              isWatermarked: file.isWatermarked || false,
+              originalFileName: file.name // Store original filename
             }
           })
           .select()
@@ -119,7 +137,19 @@ export const useContentManagement = () => {
 
       // Create content submissions as drafts
       const contentPromises = uploadedFiles.map(async (file) => {
-        // First create the content submission as draft
+        // Generate SEO-friendly slug
+        const baseSlug = generateSlug(contentData.title, contentData.tags || []);
+        
+        // Check for existing slugs to ensure uniqueness
+        const { data: existingSlugs } = await supabase
+          .from('content_submissions')
+          .select('slug')
+          .not('slug', 'is', null);
+        
+        const slugList = existingSlugs?.map(s => s.slug).filter(Boolean) as string[] || [];
+        const uniqueSlug = ensureUniqueSlug(baseSlug, slugList);
+
+        // First create the content submission as draft with slug
         const { data: submissionData, error: submissionError } = await supabase
           .from('content_submissions')
           .insert({
@@ -129,6 +159,7 @@ export const useContentManagement = () => {
             category_id: contentData.category_id || null,
             price: contentData.price || 0,
             tags: contentData.tags,
+            slug: uniqueSlug,
             status: 'draft'
           })
           .select()
@@ -136,14 +167,17 @@ export const useContentManagement = () => {
 
         if (submissionError) throw submissionError;
 
+        // Generate slugified file name from title
+        const slugifiedFileName = generateSlugifiedFileName(contentData.title, file.name);
+
         // Then create the associated file entry
         const isVideo = file.type.startsWith('video/');
         const { data: fileData, error: fileError } = await supabase
           .from('content_files')
           .insert({
             submission_id: submissionData.id,
-            file_name: file.name,
-            file_path: file.url,
+            file_name: slugifiedFileName, // Use slugified name
+            file_path: file.url, // Keep original file_path unchanged
             file_type: file.type.split('/')[0], // 'image', 'video', etc.
             file_format: file.type,
             file_size: file.size,
@@ -151,7 +185,8 @@ export const useContentManagement = () => {
             preview_path: file.previewUrl || null,
             thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
             metadata: {
-              isWatermarked: file.isWatermarked || false
+              isWatermarked: file.isWatermarked || false,
+              originalFileName: file.name // Store original filename
             }
           })
           .select()
