@@ -41,7 +41,7 @@ export const useDirectPurchase = () => {
     selectedLicense: string = 'standard'
   ) => {
     if (!user) {
-      toast.info('Veuillez vous connecter pour acheter ce produit');
+      toast.info('Please log in to purchase this product');
       // Redirect to auth with return URL
       const currentPath = window.location.pathname;
       window.location.href = `/${language}/auth?redirect=${encodeURIComponent(currentPath)}`;
@@ -70,12 +70,12 @@ export const useDirectPurchase = () => {
 
         if (error) {
           console.error('[DIRECT-PURCHASE] Error processing free order:', error);
-          toast.error('Erreur lors du téléchargement gratuit');
+          toast.error('Error processing free download');
           return null;
         }
 
         if (data?.success) {
-          toast.success('Contenu gratuit ajouté à vos téléchargements !');
+          toast.success('Free content added to your downloads!');
           return { ...data, redirect: '/buyer-dashboard' };
         }
 
@@ -108,21 +108,21 @@ export const useDirectPurchase = () => {
 
       if (error) {
         console.error('[DIRECT-PURCHASE] Error creating PayPal order:', error);
-        toast.error('Erreur lors de la création du paiement PayPal');
+        toast.error('Error creating PayPal payment');
         return null;
       }
 
       console.log('[DIRECT-PURCHASE] PayPal order created:', data);
 
       if (data?.approval_url) {
-        toast.success('Redirection vers PayPal...');
+        toast.success('Redirecting to PayPal...');
         window.location.href = data.approval_url;
       }
 
       return data;
     } catch (error) {
       console.error('[DIRECT-PURCHASE] Error in createDirectPayment:', error);
-      toast.error('Erreur lors du paiement');
+      toast.error('Payment error');
       return null;
     } finally {
       setLoading(false);
@@ -131,11 +131,11 @@ export const useDirectPurchase = () => {
 
   const validatePurchaseItem = (item: DirectPurchaseItem) => {
     if (!user) {
-      return { valid: false, error: 'Vous devez être connecté' };
+      return { valid: false, error: 'You must be logged in' };
     }
 
     if (!item.submission_id) {
-      return { valid: false, error: 'ID de produit manquant' };
+      return { valid: false, error: 'Missing product ID' };
     }
 
     // Allow null/undefined prices (license-based pricing)
