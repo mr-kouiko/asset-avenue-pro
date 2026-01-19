@@ -50,40 +50,43 @@ export const useSecureDownload = () => {
     try {
       console.log('Initiating secure download with token...');
       
-      // Step 1: Get the signed download URL from the secure endpoint
-      const response = await fetch(
-        `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/secure-download?token=${downloadToken}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
+      // Step 1: Get the signed download URL from the secure edge function
+      // Note: secure-download has verify_jwt=true, so we must call it via supabase.functions
+      // to ensure the user's JWT is included.
+      const { data, error } = await supabase.functions.invoke(
+        `secure-download?token=${encodeURIComponent(downloadToken)}`,
+        { method: 'GET' }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Download endpoint error:', { status: response.status, errorData });
-        
+      if (error) {
+        const status = (error as any)?.context?.status;
+        let errorData: any = null;
+        try {
+          errorData = await (error as any)?.context?.json?.();
+        } catch {
+          // ignore
+        }
+
         // Provide specific error messages based on status code
-        let errorMessage = errorData.error || 'Download failed';
-        
-        if (response.status === 403) {
+        let errorMessage = errorData?.error || error.message || 'Download failed';
+
+        if (status === 401) {
+          errorMessage = 'Please sign in again to download your file.';
+        } else if (status === 403) {
           errorMessage = 'Access denied. Your download link may have expired or already been used.';
-        } else if (response.status === 404) {
+        } else if (status === 404) {
           errorMessage = 'Download not found. The file may have been removed.';
-        } else if (response.status === 500) {
+        } else if (status === 500) {
           errorMessage = 'Server error. Please try again later or contact support.';
         }
-        
+
+        console.error('Download endpoint error:', { status, errorData, error });
         throw new Error(errorMessage);
       }
 
-      // Step 2: Parse the JSON response to get the signed URL
-      const data = await response.json();
-      console.log('Received download data:', { fileName: data.fileName, fileSize: data.fileSize });
-      
-      if (!data.downloadUrl) {
+      console.log('Received download data:', { fileName: data?.fileName, fileSize: data?.fileSize });
+
+      if (!data?.downloadUrl) {
         throw new Error('No download URL received from server');
       }
 
