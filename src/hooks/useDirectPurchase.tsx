@@ -8,11 +8,28 @@ interface DirectPurchaseItem {
   submission_id: string;
   title: string;
   author: string;
-  price: number;
+  /**
+   * Base product price.
+   * - 0 => explicitly free (bypass PayPal)
+   * - null/undefined => license-based pricing
+   */
+  price: number | null | undefined;
   license_id?: string;
   type: string;
   thumbnail?: string;
 }
+
+const licensePrices = {
+  standard: 15,
+  extended: 45,
+  exclusive: 299,
+} as const;
+
+type LicenseId = keyof typeof licensePrices;
+
+const getLicensePrice = (selectedLicense: string) => {
+  return licensePrices[selectedLicense as LicenseId] ?? licensePrices.standard;
+};
 
 export const useDirectPurchase = () => {
   const { user } = useAuth();
@@ -36,55 +53,75 @@ export const useDirectPurchase = () => {
       console.log('Creating direct payment for item:', item);
       console.log('Selected license:', selectedLicense);
 
-      // License price mapping
-      const licensePrices = {
-        'standard': 15,
-        'extended': 45,
-        'exclusive': 299
-      };
+      // ✅ Free items bypass PayPal entirely
+      if (item.price === 0) {
+        console.log('[DIRECT-PURCHASE] Free item (price=0) — processing free order without PayPal');
 
-      const licensePrice = licensePrices[selectedLicense as keyof typeof licensePrices] || 15;
-      
-      // Handle null/undefined prices - use license price as base
+        const cart_items = [
+          {
+            submission_id: item.submission_id,
+            license_id: selectedLicense,
+          },
+        ];
+
+        const { data, error } = await supabase.functions.invoke('process-free-order', {
+          body: { cart_items },
+        });
+
+        if (error) {
+          console.error('[DIRECT-PURCHASE] Error processing free order:', error);
+          toast.error('Erreur lors du téléchargement gratuit');
+          return null;
+        }
+
+        if (data?.success) {
+          toast.success('Contenu gratuit ajouté à vos téléchargements !');
+          return { ...data, redirect: '/buyer-dashboard' };
+        }
+
+        return data;
+      }
+
+      // Paid / license-priced items → PayPal
+      const licensePrice = getLicensePrice(selectedLicense);
       const basePrice = item.price ?? 0;
       const totalPrice = basePrice > 0 ? basePrice + licensePrice : licensePrice;
-      
-      console.log('Price calculation:', { basePrice, licensePrice, totalPrice });
 
-      // Convert to expected format for marketplace payment
-      const cart_items = [{
-        submission_id: item.submission_id,
-        price: totalPrice,
-        license_id: selectedLicense
-      }];
+      console.log('[DIRECT-PURCHASE] Price calculation:', { basePrice, licensePrice, totalPrice });
+
+      const cart_items = [
+        {
+          submission_id: item.submission_id,
+          price: totalPrice,
+          license_id: selectedLicense,
+        },
+      ];
 
       const { data, error } = await supabase.functions.invoke('create-paypal-order', {
         body: {
           cart_items,
           order_type: 'marketplace',
           success_url: `${window.location.origin}/payment-success`,
-          cancel_url: `${window.location.origin}/product/${item.submission_id}?payment=cancelled`
-        }
+          cancel_url: `${window.location.origin}/product/${item.submission_id}?payment=cancelled`,
+        },
       });
 
       if (error) {
-        console.error('Error creating PayPal order:', error);
+        console.error('[DIRECT-PURCHASE] Error creating PayPal order:', error);
         toast.error('Erreur lors de la création du paiement PayPal');
         return null;
       }
 
-      console.log('PayPal order created:', data);
+      console.log('[DIRECT-PURCHASE] PayPal order created:', data);
 
-      if (data.approval_url) {
-        // Redirect to PayPal Checkout
+      if (data?.approval_url) {
         toast.success('Redirection vers PayPal...');
         window.location.href = data.approval_url;
       }
 
       return data;
-
     } catch (error) {
-      console.error('Error in createDirectPayment:', error);
+      console.error('[DIRECT-PURCHASE] Error in createDirectPayment:', error);
       toast.error('Erreur lors du paiement');
       return null;
     } finally {
@@ -101,9 +138,12 @@ export const useDirectPurchase = () => {
       return { valid: false, error: 'ID de produit manquant' };
     }
 
-    // Allow null/undefined prices (will use license-based pricing)
-    if (item.price !== null && item.price !== undefined && 
-        (typeof item.price !== 'number' || item.price < 0)) {
+    // Allow null/undefined prices (license-based pricing)
+    if (
+      item.price !== null &&
+      item.price !== undefined &&
+      (typeof item.price !== 'number' || item.price < 0)
+    ) {
       return { valid: false, error: 'Invalid price' };
     }
 
@@ -111,13 +151,9 @@ export const useDirectPurchase = () => {
   };
 
   const getItemTotal = (item: DirectPurchaseItem, selectedLicense: string = 'standard') => {
-    const licensePrices = {
-      'standard': 15,
-      'extended': 45,
-      'exclusive': 299
-    };
+    if (item.price === 0) return 0;
 
-    const licensePrice = licensePrices[selectedLicense as keyof typeof licensePrices] || 15;
+    const licensePrice = getLicensePrice(selectedLicense);
     const basePrice = item.price ?? 0;
     return basePrice > 0 ? basePrice + licensePrice : licensePrice;
   };
@@ -126,6 +162,6 @@ export const useDirectPurchase = () => {
     loading,
     createDirectPayment,
     validatePurchaseItem,
-    getItemTotal
+    getItemTotal,
   };
 };
