@@ -130,14 +130,33 @@ async function handleTokenBasedDownload(supabaseClient: any, token: string, req:
       );
     }
 
-    // Determine the correct bucket
-    const bucket = contentFile.metadata?.bucket || "original-files";
+    // Determine the correct bucket and extract relative path
+    // file_path may be a full URL or a relative path
+    let bucket = contentFile.metadata?.bucket || "original-files";
+    let relativePath = contentFile.file_path;
+    
+    // If file_path is a full URL, extract the bucket and relative path
+    if (contentFile.file_path.startsWith('http')) {
+      try {
+        const urlObj = new URL(contentFile.file_path);
+        const pathParts = urlObj.pathname.split('/');
+        // Format: /storage/v1/object/public/{bucket}/{...relativePath}
+        const storageIndex = pathParts.indexOf('storage');
+        if (storageIndex !== -1 && pathParts.length > storageIndex + 4) {
+          bucket = pathParts[storageIndex + 4]; // e.g., "uploads" or "original-files"
+          relativePath = pathParts.slice(storageIndex + 5).join('/'); // Everything after bucket
+        }
+        console.log('Extracted bucket:', bucket, 'relativePath:', relativePath);
+      } catch (e) {
+        console.error('Failed to parse file_path URL:', e);
+      }
+    }
 
     // Generate signed URL (valid for 5 minutes for security)
     const { data: signedUrlData, error: signedUrlError } = await supabaseClient
       .storage
       .from(bucket)
-      .createSignedUrl(contentFile.file_path, 300); // 5 minutes
+      .createSignedUrl(relativePath, 300); // 5 minutes
 
     if (signedUrlError || !signedUrlData) {
       console.error('Failed to generate signed URL:', signedUrlError);
