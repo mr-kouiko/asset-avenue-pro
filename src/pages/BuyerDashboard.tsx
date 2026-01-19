@@ -30,6 +30,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BuyerProfileCard } from "@/components/BuyerProfileCard";
+import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 
 interface Purchase {
   id: string;
@@ -39,9 +40,11 @@ interface Purchase {
     title: string;
     price: number;
     content_files: Array<{
+      id: string;
       file_name: string;
       file_type: string;
       thumbnail_path?: string;
+      is_original?: boolean | null;
     }>;
   };
 }
@@ -133,9 +136,11 @@ const BuyerDashboard = () => {
             title,
             price,
             content_files(
+              id,
               file_name,
               file_type,
-              thumbnail_path
+              thumbnail_path,
+              is_original
             )
           )
         `)
@@ -694,34 +699,63 @@ const BuyerDashboard = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredPurchases.map((purchase) => (
-                        <Card key={purchase.id} className="hover:shadow-md transition-shadow">
-                          <CardContent className="p-4">
-                            <div className="aspect-video bg-muted rounded-md mb-4 flex items-center justify-center">
-                              {purchase.content_submissions?.content_files?.[0]?.thumbnail_path ? (
-                                <img
-                                  src={purchase.content_submissions.content_files[0].thumbnail_path}
-                                  alt={purchase.content_submissions.title}
-                                  className="w-full h-full object-cover rounded-md"
-                                />
-                              ) : (
-                                <Eye className="h-8 w-8 text-muted-foreground" />
-                              )}
-                            </div>
-                            <h3 className="font-medium mb-2">{purchase.content_submissions?.title}</h3>
-                            <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                              <span>{purchase.content_submissions?.content_files?.length || 0} file(s)</span>
-                              <span>{purchase.content_submissions?.price ? `$${purchase.content_submissions.price}` : 'Free'}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Badge variant="default">Downloaded</Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(purchase.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {filteredPurchases.map((purchase) => {
+                        const files = purchase.content_submissions?.content_files || [];
+                        const originalFile = files.find((f) => f.is_original) || files[0];
+
+                        return (
+                          <Card key={purchase.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <Link to={`/product/${purchase.submission_id}`} className="block">
+                                <div className="aspect-video bg-muted rounded-md mb-4 flex items-center justify-center overflow-hidden">
+                                  {files?.[0]?.thumbnail_path ? (
+                                    <img
+                                      src={files[0].thumbnail_path}
+                                      alt={purchase.content_submissions.title}
+                                      className="w-full h-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <Eye className="h-8 w-8 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <h3 className="font-medium mb-2">{purchase.content_submissions?.title}</h3>
+                              </Link>
+
+                              <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+                                <span>{files.length || 0} file(s)</span>
+                                <span>{purchase.content_submissions?.price ? `$${purchase.content_submissions.price}` : 'Free'}</span>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2">
+                                <Badge variant="default">Purchased</Badge>
+                                {originalFile?.id ? (
+                                  <SecureDownloadButton
+                                    contentFileId={originalFile.id}
+                                    fileName={originalFile.file_name}
+                                    size="sm"
+                                  >
+                                    Download
+                                  </SecureDownloadButton>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    onClick={() => toast.error('No downloadable file found for this item')}
+                                  >
+                                    Download
+                                  </Button>
+                                )}
+                              </div>
+
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                Purchased on {new Date(purchase.created_at).toLocaleDateString()}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
