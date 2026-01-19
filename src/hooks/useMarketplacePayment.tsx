@@ -49,7 +49,7 @@ export const useMarketplacePayment = () => {
 
       const cart_items = cartItems.map(item => ({
         submission_id: item.submissionId || item.id,
-        license_id: item.licenseId || 'standard'
+        // Free item: do not pass license_id (downloads.license_id is UUID; "standard" breaks inserts)
       }));
 
       const { data, error } = await supabase.functions.invoke('process-free-order', {

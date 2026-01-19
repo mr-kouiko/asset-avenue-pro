@@ -123,12 +123,15 @@ serve(async (req) => {
       }
 
       // Create new download record
+      // Note: For free items we intentionally do NOT store a license_id.
+      // The downloads.license_id column is a UUID in the DB; the frontend historically sent
+      // strings like "standard", which would fail insertion and result in no downloads.
       const { data: newDownload, error: insertError } = await supabaseAdmin
         .from('downloads')
         .insert({
           user_id: user.id,
           submission_id: item.submission_id,
-          license_id: item.license_id || null,
+          license_id: null,
           expires_at: null, // Free downloads don't expire
         })
         .select('id')
@@ -159,11 +162,15 @@ serve(async (req) => {
       console.warn('[PROCESS-FREE-ORDER] Could not fetch profile for email:', emailError);
     }
 
-    console.log('[PROCESS-FREE-ORDER] Free order completed successfully');
+    const success = errors.length === 0;
+
+    console.log('[PROCESS-FREE-ORDER] Free order completed', success ? 'successfully' : 'with errors');
 
     return new Response(JSON.stringify({
-      success: true,
-      message: 'Free items have been added to your downloads',
+      success,
+      message: success
+        ? 'Free items have been added to your downloads'
+        : 'Some free items could not be added to your downloads',
       downloads: downloadRecords,
       errors: errors.length > 0 ? errors : undefined
     }), {
