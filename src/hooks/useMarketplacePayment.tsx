@@ -21,6 +21,66 @@ export const useMarketplacePayment = () => {
   const { items: cartItems, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
 
+  // Check if all items in cart are free (price = 0)
+  const isCartFree = () => {
+    return cartItems.every(item => !item.price || item.price === 0);
+  };
+
+  // Get the actual total considering free items
+  const getActualTotal = () => {
+    return cartItems.reduce((total, item) => total + (item.price || 0), 0);
+  };
+
+  // Process free order without PayPal
+  const processFreeOrder = async () => {
+    if (!user) {
+      toast.error('You must be logged in to get free content');
+      return null;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Processing free order for', cartItems.length, 'items');
+
+      const cart_items = cartItems.map(item => ({
+        submission_id: item.submissionId || item.id,
+        license_id: item.licenseId || 'standard'
+      }));
+
+      const { data, error } = await supabase.functions.invoke('process-free-order', {
+        body: { cart_items }
+      });
+
+      if (error) {
+        console.error('Error processing free order:', error);
+        toast.error('Error processing free download');
+        return null;
+      }
+
+      console.log('Free order processed:', data);
+
+      if (data.success) {
+        clearCart();
+        toast.success('Free content added to your downloads!');
+        return { success: true, redirect: '/buyer-dashboard' };
+      }
+
+      return data;
+
+    } catch (error) {
+      console.error('Error in processFreeOrder:', error);
+      toast.error('Error processing free download');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createPayment = async (
     successUrl?: string,
     cancelUrl?: string
@@ -35,6 +95,12 @@ export const useMarketplacePayment = () => {
       return null;
     }
 
+    // Check if cart is free - bypass PayPal
+    if (isCartFree()) {
+      console.log('Cart total is $0 - processing as free order');
+      return processFreeOrder();
+    }
+
     try {
       setLoading(true);
       console.log('Creating PayPal payment for', cartItems.length, 'items');
@@ -42,17 +108,13 @@ export const useMarketplacePayment = () => {
 
       // Convert cart items to the expected format with proper price handling
       const cart_items: CartItem[] = cartItems.map(item => {
-        // Ensure we have a valid price (minimum based on license)
+        // Use the actual price - don't override free items
         let finalPrice = item.price || 0;
         
-        // If price is 0 or null, apply license-based pricing
-        if (!finalPrice || finalPrice === 0) {
-          const licensePrices: Record<string, number> = {
-            'standard': 15,
-            'extended': 45,
-            'exclusive': 299
-          };
-          finalPrice = licensePrices[item.licenseId || 'standard'] || 15;
+        // Only apply license-based pricing for paid items with no price set
+        if (finalPrice === 0) {
+          // Keep it free - don't apply license pricing for intentionally free items
+          finalPrice = 0;
         }
 
         console.log(`Item ${item.title}: original price ${item.price}, final price ${finalPrice}, license ${item.licenseId}`);
@@ -226,8 +288,11 @@ export const useMarketplacePayment = () => {
     createPayment,
     createCreditPackPayment,
     capturePayment,
+    processFreeOrder,
     validateCart,
     getTotalAmount,
+    getActualTotal,
+    isCartFree,
     getCommissionAmount,
     getSellerAmount
   };

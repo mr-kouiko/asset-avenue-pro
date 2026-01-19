@@ -8,16 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { useMarketplacePayment } from '@/hooks/useMarketplacePayment';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, ArrowLeft, Shield, AlertTriangle, CheckCircle, Wallet } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, ArrowLeft, Shield, AlertTriangle, CheckCircle, Wallet, Gift, Download } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const Checkout = () => {
   const { user } = useAuth();
   const { items, getTotalPrice } = useCart();
-  const { createPayment, loading, validateCart } = useMarketplacePayment();
+  const { createPayment, loading, validateCart, isCartFree, processFreeOrder } = useMarketplacePayment();
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const isFree = isCartFree();
+  const totalPrice = getTotalPrice();
 
   const handlePayment = async () => {
     setPaymentError(null);
@@ -29,6 +33,17 @@ const Checkout = () => {
       if (!validation.valid) {
         setPaymentError(validation.error || 'Erreur de validation du panier');
         toast.error(validation.error || 'Erreur de validation du panier');
+        return;
+      }
+
+      // Handle free orders differently
+      if (isFree) {
+        const result = await processFreeOrder();
+        if (result?.success) {
+          navigate('/buyer-dashboard');
+        } else if (!result) {
+          setPaymentError('Failed to process free order. Please try again.');
+        }
         return;
       }
 
@@ -153,52 +168,99 @@ const Checkout = () => {
             </Alert>
           )}
 
-          {/* Payment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Paiement sécurisé avec PayPal
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-center py-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-6 w-6 text-[#003087]" />
-                  <span className="text-lg font-semibold text-[#003087]">PayPal</span>
+          {/* Payment - Conditional based on free or paid */}
+          {isFree ? (
+            <Card className="border-green-500/50 bg-green-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-600">
+                  <Gift className="h-5 w-5" />
+                  Free Download
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-center py-4 bg-green-500/10 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Download className="h-6 w-6 text-green-600" />
+                    <span className="text-lg font-semibold text-green-600">No Payment Required</span>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-muted-foreground text-center">
-                Vous allez être redirigé vers PayPal pour finaliser votre paiement de manière sécurisée.
-                Payez avec votre compte PayPal ou par carte bancaire.
-              </p>
-              
-              <Button 
-                onClick={handlePayment}
-                disabled={processing || loading}
-                size="lg"
-                className="w-full relative bg-[#0070ba] hover:bg-[#003087]"
-              >
-                {processing || loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Redirection vers PayPal...
-                  </>
-                ) : (
-                  <>
-                    <Wallet className="h-4 w-4 mr-2" />
-                    Payer {getTotalPrice()}€ avec PayPal
-                  </>
-                )}
-              </Button>
-              
-              <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
-                <CheckCircle className="h-3 w-3" />
-                <span>Paiement sécurisé • Protection acheteur PayPal</span>
-              </div>
-            </CardContent>
-          </Card>
+                <p className="text-muted-foreground text-center">
+                  This content is free! Click the button below to add it to your downloads immediately.
+                </p>
+                
+                <Button 
+                  onClick={handlePayment}
+                  disabled={processing || loading}
+                  size="lg"
+                  className="w-full relative bg-green-600 hover:bg-green-700"
+                >
+                  {processing || loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Get Free Download
+                    </>
+                  )}
+                </Button>
+                
+                <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                  <CheckCircle className="h-3 w-3 text-green-600" />
+                  <span>Instant access • Added to your downloads</span>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Paiement sécurisé avec PayPal
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-center py-4 bg-muted/30 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Wallet className="h-6 w-6 text-[#003087]" />
+                    <span className="text-lg font-semibold text-[#003087]">PayPal</span>
+                  </div>
+                </div>
+
+                <p className="text-muted-foreground text-center">
+                  Vous allez être redirigé vers PayPal pour finaliser votre paiement de manière sécurisée.
+                  Payez avec votre compte PayPal ou par carte bancaire.
+                </p>
+                
+                <Button 
+                  onClick={handlePayment}
+                  disabled={processing || loading}
+                  size="lg"
+                  className="w-full relative bg-[#0070ba] hover:bg-[#003087]"
+                >
+                  {processing || loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Redirection vers PayPal...
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="h-4 w-4 mr-2" />
+                      Payer {totalPrice}€ avec PayPal
+                    </>
+                  )}
+                </Button>
+                
+                <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                  <CheckCircle className="h-3 w-3" />
+                  <span>Paiement sécurisé • Protection acheteur PayPal</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
