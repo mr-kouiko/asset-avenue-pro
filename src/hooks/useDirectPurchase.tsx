@@ -60,7 +60,7 @@ export const useDirectPurchase = () => {
         const cart_items = [
           {
             submission_id: item.submission_id,
-            license_id: selectedLicense,
+            // Free item: do not pass license_id (downloads.license_id is UUID; "standard" breaks inserts)
           },
         ];
 
