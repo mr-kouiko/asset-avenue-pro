@@ -396,18 +396,26 @@ const ProductDetail = () => {
 
   const handleDirectPurchase = async () => {
     if (!product) return;
-    
-    const finalPrice = isVideo ? basePrice : product.price || 0;
-    
-    await createDirectPayment({
+
+    // IMPORTANT:
+    // - price === 0 => explicitly free (bypass PayPal)
+    // - price === null => license-based pricing (PayPal)
+    const finalPrice = isFreeContent ? 0 : (isVideo ? basePrice : product.price);
+
+    const result = await createDirectPayment({
       submission_id: product.id,
       title: product.title,
       author: product.author,
       price: finalPrice,
       license_id: selectedLicense,
       type: product.type,
-      thumbnail: product.thumbnail
+      thumbnail: product.thumbnail,
     }, selectedLicense);
+
+    const redirect = (result as any)?.redirect;
+    if (redirect) {
+      navigate(redirect);
+    }
   };
 
   // Generate product URL for social sharing (productImage already declared at top)
