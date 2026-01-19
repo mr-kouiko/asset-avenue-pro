@@ -1370,6 +1370,10 @@ export type Database = {
         Args: { tags_input: string[]; title_input: string }
         Returns: string
       }
+      generate_slugified_filename: {
+        Args: { original_filename: string; title_input: string }
+        Returns: string
+      }
       get_admin_profiles_safe: {
         Args: never
         Returns: {
