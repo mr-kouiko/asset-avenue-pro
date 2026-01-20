@@ -27,9 +27,9 @@ export const Header = () => {
   const navigate = useNavigate();
   const { content: marketplaceContent } = useMarketplace();
 
-  // Convert to searchable format for suggestions
+  // Convert to searchable format for suggestions - use safe access
   const searchableItems = useMemo(() => 
-    marketplaceContent.map(item => ({
+    (marketplaceContent || []).map(item => ({
       id: item.id,
       title: item.title || '',
       tags: item.tags || [],
