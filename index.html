@@ -42,8 +42,15 @@
     
     <!-- Performance & PWA -->
     <meta name="theme-color" content="#000000" />
+    
+    <!-- DNS Prefetch & Preconnect for critical resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://kdgfpophpoqugtuvfxqx.supabase.co" />
+    <link rel="dns-prefetch" href="https://kdgfpophpoqugtuvfxqx.supabase.co" />
+    
+    <!-- Preload critical hero video poster for LCP -->
+    <link rel="preload" as="image" href="/src/assets/hero-image.jpg" fetchpriority="high" />
   </head>
 
   <body>

@@ -1,28 +1,18 @@
-import { Play, TrendingUp } from "lucide-react";
+import { TrendingUp, Play } from "lucide-react";
 import { useContentStats } from "@/hooks/useContentStats";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
-import { useMarketplace } from "@/hooks/useMarketplace";
 import { useAuth } from "@/hooks/useAuth";
-import { useMemo } from "react";
 import heroImage from "@/assets/hero-image.jpg";
 
 export const HeroSection = () => {
   const { stats, loading } = useContentStats();
   const { language } = useLanguage();
-  const { content: marketplaceContent } = useMarketplace();
   const { user } = useAuth();
 
-  // Convert to searchable format for suggestions
-  const searchableItems = useMemo(() => 
-    marketplaceContent.map(item => ({
-      id: item.id,
-      title: item.title || '',
-      tags: item.tags || [],
-      type: item.type || ''
-    })),
-    [marketplaceContent]
-  );
+  // Empty array for search suggestions - SearchWithSuggestions handles its own data fetching
+  // This avoids loading 200 marketplace items on homepage just for suggestions
+  const searchableItems: { id: string; title: string; tags: string[]; type: string }[] = [];
 
   const content = {
     fr: {
@@ -52,6 +42,7 @@ export const HeroSection = () => {
   };
 
   const t = content[language];
+
   return (
     <section className="relative py-6 sm:py-12 md:py-20 overflow-hidden min-h-[40vh] sm:min-h-[55vh] md:min-h-[70vh] flex items-center">
       {/* Fallback Background for when video fails to load - lowest z-index */}
@@ -66,6 +57,7 @@ export const HeroSection = () => {
         loop
         muted
         playsInline
+        preload="metadata"
         poster={heroImage}
         className="absolute inset-0 w-full h-[120%] sm:h-full object-cover object-center sm:object-center z-[1] -top-[10%] sm:top-0"
       >
@@ -142,6 +134,8 @@ export const HeroSection = () => {
               <img
                 src={heroImage}
                 alt="Hero"
+                loading="eager"
+                fetchPriority="high"
                 className="w-full rounded-2xl shadow-2xl"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl" />

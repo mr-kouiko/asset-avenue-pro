@@ -196,3 +196,5 @@ export const CreateTestAccounts = () => {
     </div>
   );
 };
+
+export default CreateTestAccounts;
