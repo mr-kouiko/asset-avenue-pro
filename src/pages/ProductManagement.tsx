@@ -932,55 +932,59 @@ const ProductManagement = () => {
                           )}
                         </div>
 
-                        {/* AI Detection Status - Read-only (Automatically detected) */}
+                        {/* AI Content Toggle - Creator can override automatic detection */}
                         <div className="md:col-span-2">
-                          <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                          <div className={`flex items-center justify-between p-4 rounded-lg border ${
                             selectedProductData.isAiGenerated 
                               ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800' 
                               : 'bg-muted/50 border-muted'
                           }`}>
-                            <div className={`h-5 w-5 rounded flex items-center justify-center ${
-                              selectedProductData.isAiGenerated 
-                                ? 'bg-purple-500 text-white' 
-                                : 'bg-muted-foreground/20'
-                            }`}>
-                              {selectedProductData.isAiGenerated && (
-                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-sm font-medium flex items-center gap-2">
-                                {selectedProductData.isAiGenerated ? (
-                                  <>
-                                    <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
-                                    AI content detected automatically
-                                  </>
-                                ) : (
-                                  <>
-                                    <Badge variant="outline" className="text-xs">Non-AI</Badge>
-                                    Authentic content
-                                  </>
+                            <div className="flex items-center space-x-3">
+                              <div className={`h-5 w-5 rounded flex items-center justify-center ${
+                                selectedProductData.isAiGenerated 
+                                  ? 'bg-purple-500 text-white' 
+                                  : 'bg-muted-foreground/20'
+                              }`}>
+                                {selectedProductData.isAiGenerated && (
+                                  <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
                                 )}
                               </div>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                🤖 Automatic detection by SightEngine - {selectedProductData.isAiGenerated ? 'This content was identified as AI-generated' : 'No AI markers detected'}
-                              </p>
+                              <div>
+                                <div className="text-sm font-medium flex items-center gap-2">
+                                  {selectedProductData.isAiGenerated ? (
+                                    <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs">Non-AI</Badge>
+                                  )}
+                                  AI-Generated Content
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  🤖 Mark this content as AI-generated
+                                </p>
+                              </div>
                             </div>
-                            {/* Re-analyze button for images and videos */}
-                            {(selectedFile?.type.startsWith('image/') || selectedFile?.type.startsWith('video/')) && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReanalyzeAI(selectedFileId!)}
-                                disabled={isReanalyzing || isDetectingImage || isDetectingVideo}
-                                className="shrink-0"
-                              >
-                                <RefreshCw className={`h-4 w-4 mr-1 ${isReanalyzing ? 'animate-spin' : ''}`} />
-                                {isReanalyzing ? 'Analyzing...' : 'Re-analyze'}
-                              </Button>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {/* Re-analyze button for images and videos */}
+                              {(selectedFile?.type.startsWith('image/') || selectedFile?.type.startsWith('video/')) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleReanalyzeAI(selectedFileId!)}
+                                  disabled={isReanalyzing || isDetectingImage || isDetectingVideo}
+                                  className="shrink-0"
+                                >
+                                  <RefreshCw className={`h-4 w-4 mr-1 ${isReanalyzing ? 'animate-spin' : ''}`} />
+                                  {isReanalyzing ? 'Analyzing...' : 'Re-analyze'}
+                                </Button>
+                              )}
+                              <Switch
+                                checked={selectedProductData.isAiGenerated || false}
+                                onCheckedChange={(checked) => updateProductData(selectedFileId!, { isAiGenerated: checked })}
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* Free Content Toggle */}
@@ -1013,7 +1017,6 @@ const ProductManagement = () => {
                             </p>
                           )}
                         </div>
-                      </div>
                       </div>
 
                       {/* Product Actions */}
