@@ -9,6 +9,7 @@ import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SearchProvider } from "@/hooks/useSearch";
 import { LanguageRedirect } from "@/components/LanguageRedirect";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { lazy, Suspense } from "react";
 
 // Critical above-the-fold components loaded eagerly
@@ -85,105 +86,107 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <AudioPlayerProvider>
-          <TooltipProvider>
-            <LanguageProvider>
-              <SearchProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <AudioPlayerProvider>
+            <TooltipProvider>
+              <LanguageProvider>
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
-                  <LanguageRedirect />
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      {/* Homepage - loaded eagerly for fast initial render */}
-                      <Route path="/" element={<IndexEN />} />
-                      
-                      {/* Marketplace routes */}
-                      <Route path="/marketplace" element={<Marketplace />} />
-                      <Route path="/videos/:searchQuery" element={<Marketplace />} />
-                      <Route path="/photos/:searchQuery" element={<Marketplace />} />
-                      <Route path="/audio/:searchQuery" element={<Marketplace />} />
-                      <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
-                      <Route path="/products/:slug" element={<ProductDetail />} />
-                      <Route path="/product/:id" element={<ProductDetail />} />
-                      
-                      {/* Auth routes */}
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/auth/seller" element={<Auth />} />
-                      <Route path="/auth/callback" element={<AuthCallback />} />
-                      
-                      {/* Dashboard routes */}
-                      <Route path="/dashboard" element={<DashboardRouter />} />
-                      <Route path="/seller-dashboard" element={<SellerDashboard />} />
-                      <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
-                      <Route path="/portfolio" element={<Portfolio />} />
-                      <Route path="/seller/:creatorHash" element={<SellerPortfolio />} />
-                      
-                      {/* E-commerce routes */}
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/payment-success" element={<PaymentSuccess />} />
-                      <Route path="/payment-cancelled" element={<PaymentCancelled />} />
-                      
-                      {/* Creator routes */}
-                      <Route path="/file-upload" element={<FileUpload />} />
-                      <Route path="/product-management" element={<ProductManagement />} />
-                      <Route path="/become-seller" element={<BecomeSeller />} />
-                      <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
-                      <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
-                      
-                      {/* AI/Studio routes (heavy) */}
-                      <Route path="/ai-image-generator" element={<AIImageGenerator />} />
-                      <Route path="/studio-ai" element={<StudioAI />} />
-                      <Route path="/studio-ai/remove-background" element={<RemoveBackground />} />
-                      <Route path="/studio-ai/video-upscale" element={<VideoUpscale />} />
-                      <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
-                      <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
-                      
-                      {/* Content pages */}
-                      <Route path="/support" element={<Support />} />
-                      <Route path="/contact" element={<ContactEN />} />
-                      <Route path="/licenses" element={<Licenses />} />
-                      <Route path="/terms" element={<TermsEN />} />
-                      <Route path="/cookie-policy" element={<CookiePolicyEN />} />
-                      <Route path="/privacy-policy" element={<PrivacyPolicyEN />} />
-                      <Route path="/license-agreement" element={<LicenseAgreementEN />} />
-                      <Route path="/infinity" element={<InfinityEN />} />
-                      <Route path="/packages-pricing" element={<PackagesPricing />} />
-                      <Route path="/about" element={<AboutEN />} />
-                      <Route path="/blog" element={<BlogEN />} />
-                      <Route path="/blog/:slug" element={<BlogArticleEN />} />
-                      <Route path="/buy-credits" element={<BuyCredits />} />
-                      <Route path="/test-accounts" element={<TestAccounts />} />
-                      <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-                      
-                      {/* Admin routes */}
-                      <Route path="/admin" element={
-                        <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
-                          <AdminDashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/create-test-accounts" element={
-                        <ProtectedRoute allowedRoles={['admin']}>
-                          <CreateTestAccounts />
-                        </ProtectedRoute>
-                      } />
-                      
-                      {/* 404 Route */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
+                  <SearchProvider>
+                    <LanguageRedirect />
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        {/* Homepage - loaded eagerly for fast initial render */}
+                        <Route path="/" element={<IndexEN />} />
+                        
+                        {/* Marketplace routes */}
+                        <Route path="/marketplace" element={<Marketplace />} />
+                        <Route path="/videos/:searchQuery" element={<Marketplace />} />
+                        <Route path="/photos/:searchQuery" element={<Marketplace />} />
+                        <Route path="/audio/:searchQuery" element={<Marketplace />} />
+                        <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
+                        <Route path="/products/:slug" element={<ProductDetail />} />
+                        <Route path="/product/:id" element={<ProductDetail />} />
+                        
+                        {/* Auth routes */}
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/auth/seller" element={<Auth />} />
+                        <Route path="/auth/callback" element={<AuthCallback />} />
+                        
+                        {/* Dashboard routes */}
+                        <Route path="/dashboard" element={<DashboardRouter />} />
+                        <Route path="/seller-dashboard" element={<SellerDashboard />} />
+                        <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+                        <Route path="/portfolio" element={<Portfolio />} />
+                        <Route path="/seller/:creatorHash" element={<SellerPortfolio />} />
+                        
+                        {/* E-commerce routes */}
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/payment-success" element={<PaymentSuccess />} />
+                        <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+                        
+                        {/* Creator routes */}
+                        <Route path="/file-upload" element={<FileUpload />} />
+                        <Route path="/product-management" element={<ProductManagement />} />
+                        <Route path="/become-seller" element={<BecomeSeller />} />
+                        <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
+                        <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
+                        
+                        {/* AI/Studio routes (heavy) */}
+                        <Route path="/ai-image-generator" element={<AIImageGenerator />} />
+                        <Route path="/studio-ai" element={<StudioAI />} />
+                        <Route path="/studio-ai/remove-background" element={<RemoveBackground />} />
+                        <Route path="/studio-ai/video-upscale" element={<VideoUpscale />} />
+                        <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
+                        <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
+                        
+                        {/* Content pages */}
+                        <Route path="/support" element={<Support />} />
+                        <Route path="/contact" element={<ContactEN />} />
+                        <Route path="/licenses" element={<Licenses />} />
+                        <Route path="/terms" element={<TermsEN />} />
+                        <Route path="/cookie-policy" element={<CookiePolicyEN />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicyEN />} />
+                        <Route path="/license-agreement" element={<LicenseAgreementEN />} />
+                        <Route path="/infinity" element={<InfinityEN />} />
+                        <Route path="/packages-pricing" element={<PackagesPricing />} />
+                        <Route path="/about" element={<AboutEN />} />
+                        <Route path="/blog" element={<BlogEN />} />
+                        <Route path="/blog/:slug" element={<BlogArticleEN />} />
+                        <Route path="/buy-credits" element={<BuyCredits />} />
+                        <Route path="/test-accounts" element={<TestAccounts />} />
+                        <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+                        
+                        {/* Admin routes */}
+                        <Route path="/admin" element={
+                          <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
+                            <AdminDashboard />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/create-test-accounts" element={
+                          <ProtectedRoute allowedRoles={['admin']}>
+                            <CreateTestAccounts />
+                          </ProtectedRoute>
+                        } />
+                        
+                        {/* 404 Route */}
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  </SearchProvider>
                 </BrowserRouter>
-              </SearchProvider>
-            </LanguageProvider>
-          </TooltipProvider>
-        </AudioPlayerProvider>
-      </CartProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+              </LanguageProvider>
+            </TooltipProvider>
+          </AudioPlayerProvider>
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
