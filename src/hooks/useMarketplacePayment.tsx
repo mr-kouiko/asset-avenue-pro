@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useCart } from './useCart';
@@ -20,15 +20,125 @@ export const useMarketplacePayment = () => {
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+
+  // Fetch user's credit balance
+  const fetchUserCredits = useCallback(async () => {
+    if (!user) {
+      setUserCredits(0);
+      return 0;
+    }
+
+    try {
+      setCreditsLoading(true);
+      const { data, error } = await supabase
+        .from('user_credits')
+        .select('credits_balance')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching credits:', error);
+        return 0;
+      }
+
+      const balance = data?.credits_balance || 0;
+      setUserCredits(balance);
+      return balance;
+    } catch (error) {
+      console.error('Error in fetchUserCredits:', error);
+      return 0;
+    } finally {
+      setCreditsLoading(false);
+    }
+  }, [user]);
+
+  // Fetch credits on mount and when user changes
+  useEffect(() => {
+    fetchUserCredits();
+  }, [fetchUserCredits]);
+
+  // Get the actual total considering free items
+  const getActualTotal = useCallback(() => {
+    return cartItems.reduce((total, item) => total + (item.price || 0), 0);
+  }, [cartItems]);
+
+  // Check if user has enough credits for the cart
+  const canPayWithCredits = useCallback(() => {
+    const total = getActualTotal();
+    return userCredits >= total && total > 0;
+  }, [userCredits, getActualTotal]);
 
   // Check if all items in cart are free (price = 0)
   const isCartFree = () => {
     return cartItems.every(item => !item.price || item.price === 0);
   };
 
-  // Get the actual total considering free items
-  const getActualTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price || 0), 0);
+  // Pay with credits instead of PayPal
+  const payWithCredits = async () => {
+    if (!user) {
+      toast.error('You must be logged in to pay with credits');
+      return null;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      return null;
+    }
+
+    const total = getActualTotal();
+    if (userCredits < total) {
+      toast.error('Insufficient credits');
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Processing credit payment for', cartItems.length, 'items');
+      console.log('Total credits needed:', total);
+
+      const cart_items = cartItems.map(item => ({
+        submission_id: item.submissionId || item.id,
+        price: item.price || 0,
+        license_id: item.licenseId || 'standard'
+      }));
+
+      const { data, error } = await supabase.functions.invoke('pay-with-credits', {
+        body: { cart_items }
+      });
+
+      if (error) {
+        console.error('Error processing credit payment:', error);
+        toast.error('Error processing credit payment');
+        return null;
+      }
+
+      console.log('Credit payment processed:', data);
+
+      if (data.success) {
+        clearCart();
+        // Update local credit balance
+        setUserCredits(data.new_balance || 0);
+        toast.success(`Payment successful! ${data.credits_used} credits used.`);
+        return { success: true, redirect: '/buyer-dashboard', ...data };
+      }
+
+      if (data.error === 'Insufficient credits') {
+        toast.error(`Insufficient credits. You need ${data.required} but only have ${data.available}`);
+        return null;
+      }
+
+      toast.error(data.error || 'Payment failed');
+      return null;
+
+    } catch (error) {
+      console.error('Error in payWithCredits:', error);
+      toast.error('Error processing credit payment');
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Process free order without PayPal
@@ -285,6 +395,11 @@ export const useMarketplacePayment = () => {
 
   return {
     loading,
+    creditsLoading,
+    userCredits,
+    canPayWithCredits,
+    payWithCredits,
+    fetchUserCredits,
     createPayment,
     createCreditPackPayment,
     capturePayment,

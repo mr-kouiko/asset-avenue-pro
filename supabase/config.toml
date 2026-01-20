@@ -121,3 +121,6 @@ verify_jwt = false
 
 [functions.static-category]
 verify_jwt = false
+
+[functions.pay-with-credits]
+verify_jwt = true

@@ -47,7 +47,7 @@ const ProductDetail = () => {
   
   // Hooks for cart and direct purchase
   const { addToCart } = useCart();
-  const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
+  const { createDirectPayment, loading: directPurchaseLoading, userCredits, canPayWithCreditsForItem, payWithCredits, getItemTotal } = useDirectPurchase();
 
   // Redirect from legacy /product/:uuid to SEO-friendly /products/:slug
   useEffect(() => {
@@ -729,7 +729,7 @@ const ProductDetail = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3">
               {isFreeContent ? (
                 <Button 
                   size="lg" 
@@ -751,33 +751,93 @@ const ProductDetail = () => {
                 </Button>
               ) : (
                 <>
-                  <Button 
-                    size="lg" 
-                    className="flex-1"
-                    onClick={handleAddToCart}
-                    disabled={directPurchaseLoading}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to cart
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    onClick={handleDirectPurchase}
-                    disabled={directPurchaseLoading}
-                  >
-                    {directPurchaseLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Redirecting...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Buy now
-                      </>
-                    )}
-                  </Button>
+                  {/* Credit balance indicator */}
+                  {userCredits > 0 && (
+                    <div className="text-sm text-muted-foreground text-center py-2 bg-primary/5 rounded-lg">
+                      Your balance: <span className="font-semibold text-primary">{userCredits} credits</span>
+                    </div>
+                  )}
+                  
+                  {/* Pay with Credits button (primary if user has enough) */}
+                  {canPayWithCreditsForItem({
+                    submission_id: product.id,
+                    title: product.title,
+                    author: product.author,
+                    price: isVideo ? basePrice : product.price,
+                    type: product.type
+                  }, selectedLicense) && (
+                    <Button 
+                      size="lg" 
+                      className="flex-1"
+                      onClick={async () => {
+                        const result = await payWithCredits({
+                          submission_id: product.id,
+                          title: product.title,
+                          author: product.author,
+                          price: isVideo ? basePrice : product.price,
+                          type: product.type,
+                          thumbnail: product.thumbnail,
+                        }, selectedLicense);
+                        if (result?.redirect) navigate(result.redirect);
+                      }}
+                      disabled={directPurchaseLoading}
+                    >
+                      {directPurchaseLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Buy with {getItemTotal({
+                            submission_id: product.id,
+                            title: product.title,
+                            author: product.author,
+                            price: isVideo ? basePrice : product.price,
+                            type: product.type
+                          }, selectedLicense)} Credits
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      size="lg" 
+                      className="flex-1"
+                      variant={canPayWithCreditsForItem({
+                        submission_id: product.id,
+                        title: product.title,
+                        author: product.author,
+                        price: isVideo ? basePrice : product.price,
+                        type: product.type
+                      }, selectedLicense) ? "outline" : "default"}
+                      onClick={handleAddToCart}
+                      disabled={directPurchaseLoading}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Add to cart
+                    </Button>
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      onClick={handleDirectPurchase}
+                      disabled={directPurchaseLoading}
+                    >
+                      {directPurchaseLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Redirecting...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          PayPal
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
