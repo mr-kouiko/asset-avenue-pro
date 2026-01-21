@@ -77,27 +77,28 @@ export function useVideoPreviewGenerator() {
         console.log('[VideoPreview] Using direct URL with crossOrigin=anonymous');
       }
 
-      // Wait metadata with timeout
+      // Wait for metadata AND ensure video is ready to play
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.error('[VideoPreview] Timeout waiting for video metadata');
           reject(new Error('Video load timeout - file may be too large or network is slow'));
-        }, 45000); // Increased timeout for large files
+        }, 45000);
         
-        const onLoaded = () => {
+        const onCanPlay = () => {
           clearTimeout(timeout);
-          console.log('[VideoPreview] Video metadata loaded:', video.videoWidth, 'x', video.videoHeight, 'duration:', video.duration);
+          video.removeEventListener('error', onErr);
+          console.log('[VideoPreview] Video ready to play:', video.videoWidth, 'x', video.videoHeight, 'duration:', video.duration);
           setState(s => ({ ...s, progress: 10 }));
           resolve();
         };
         
         const onErr = (e: Event) => {
           clearTimeout(timeout);
+          video.removeEventListener('canplaythrough', onCanPlay);
           const videoEl = e.target as HTMLVideoElement;
           const error = videoEl?.error;
           console.error('[VideoPreview] Video load error:', error?.code, error?.message);
           
-          // Provide helpful error messages
           let message = 'Failed to load video';
           if (error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
             message = 'Video format not supported by browser';
@@ -109,7 +110,8 @@ export function useVideoPreviewGenerator() {
           reject(new Error(message));
         };
         
-        video.addEventListener('loadedmetadata', onLoaded, { once: true });
+        // Use canplaythrough instead of loadedmetadata for more reliable playback
+        video.addEventListener('canplaythrough', onCanPlay, { once: true });
         video.addEventListener('error', onErr, { once: true });
       });
 
@@ -317,29 +319,54 @@ export function useVideoPreviewGenerator() {
       console.log('[VideoPreview] Starting video playback...');
       setState(s => ({ ...s, progress: 20 }));
       
+      // Reset video to start
+      video.currentTime = 0;
+      
+      // Wait for seek to complete
+      await new Promise<void>((resolve) => {
+        const onSeeked = () => {
+          video.removeEventListener('seeked', onSeeked);
+          resolve();
+        };
+        video.addEventListener('seeked', onSeeked, { once: true });
+        // If already at start, resolve immediately
+        if (video.currentTime === 0) {
+          video.removeEventListener('seeked', onSeeked);
+          resolve();
+        }
+      });
+      
       try {
         await video.play();
-        console.log('[VideoPreview] Video playing');
+        console.log('[VideoPreview] Video playing from:', video.currentTime);
       } catch (playErr) {
         console.warn('[VideoPreview] Play failed:', playErr);
-        // Try to continue anyway - some browsers may still allow frame capture
       }
       
       raf = requestAnimationFrame(draw);
 
-      // Stop after duration or when video ends (whichever first)
-      const stopAfter = Math.min(durationSec, isFinite(video.duration) ? video.duration : durationSec);
-      console.log('[VideoPreview] Recording for', stopAfter, 'seconds');
+      // IMPORTANT: Always use the requested duration, not the video duration
+      // This ensures we get a full 6-second preview regardless of video length
+      const stopAfter = durationSec;
+      console.log('[VideoPreview] Recording for exactly', stopAfter, 'seconds (video duration:', video.duration, ')');
+      
+      // Monitor actual recording time
+      const recordStartTime = Date.now();
       
       // Update progress during recording
       const progressInterval = setInterval(() => {
         if (!abortRef.current) {
-          const currentProgress = Math.min(video.currentTime / stopAfter, 1);
+          const elapsed = (Date.now() - recordStartTime) / 1000;
+          const currentProgress = Math.min(elapsed / stopAfter, 1);
           setState(s => ({ ...s, progress: 20 + Math.round(currentProgress * 60) }));
         }
       }, 200);
       
+      // Wait for the full duration
       await new Promise<void>((resolve) => setTimeout(resolve, stopAfter * 1000));
+      
+      const actualDuration = (Date.now() - recordStartTime) / 1000;
+      console.log('[VideoPreview] Actual recording time:', actualDuration.toFixed(2), 'seconds');
       clearInterval(progressInterval);
 
       if (abortRef.current) throw new Error('Generation cancelled');
