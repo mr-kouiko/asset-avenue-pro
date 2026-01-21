@@ -183,13 +183,13 @@ export function useVideoPreviewGenerator() {
 
       const chunks: BlobPart[] = [];
       
-      // Check all supported MIME types and find the best one
+      // Always prioritize MP4 format for maximum compatibility
       const mimeTypes = [
+        'video/mp4;codecs=avc1',
+        'video/mp4',
         'video/webm;codecs=vp9',
         'video/webm;codecs=vp8',
         'video/webm',
-        'video/mp4;codecs=avc1',
-        'video/mp4',
       ];
       
       let selectedMimeType: string | undefined;
