@@ -20,7 +20,8 @@ import {
   Star,
   Loader2,
   FileVideo,
-  Music
+  Music,
+  Flag
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
 import { MediaPlayer } from "@/components/media/MediaPlayer";
@@ -30,8 +31,11 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
+import { useLikes } from "@/hooks/useLikes";
 import { SocialShareLazy } from "@/components/SocialShareLazy";
 import { useSEO } from "@/hooks/useSEO";
+import { ReportModal } from "@/components/ReportModal";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
 const ProductDetail = () => {
@@ -42,7 +46,10 @@ const ProductDetail = () => {
   const productIdentifier = slug || id || '';
   const { product, loading: productLoading, error } = useProductDetail(productIdentifier);
   const { content: marketplaceContent } = useMarketplace();
+  const { hasUserLiked, toggleLike } = useLikes();
   const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState("standard");
   
   // Hooks for cart and direct purchase
@@ -860,11 +867,16 @@ const ProductDetail = () => {
 
         {/* Tabs Section */}
         <div className="mt-16">
-          <Tabs defaultValue="related" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="reviews" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="related">Similar content</TabsTrigger>
               <TabsTrigger value="author">More from this author</TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="reviews" className="mt-8">
+              <ProductReviews submissionId={product.id} productTitle={product.title} />
+            </TabsContent>
             
             <TabsContent value="related" className="mt-8">
               <h3 className="text-xl font-semibold mb-6">Similar content</h3>
@@ -905,6 +917,20 @@ const ProductDetail = () => {
               )}
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* Report Button */}
+        <div className="mt-8 flex justify-center">
+          <ReportModal submissionId={product.id} contentTitle={product.title}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Flag className="h-4 w-4 mr-2" />
+              Report this content
+            </Button>
+          </ReportModal>
         </div>
       </div>
     </div>

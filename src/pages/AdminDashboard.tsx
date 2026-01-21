@@ -19,7 +19,9 @@ import {
   ShoppingCart,
   BarChart3,
   Lock,
-  Search
+  Search,
+  MessageSquare,
+  Flag
 } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
@@ -28,6 +30,8 @@ import { AdminSecurityLogs } from "@/components/admin/AdminSecurityLogs";
 import { AdminVendorManagement } from "@/components/admin/AdminVendorManagement";
 import { AdminOrdersTracking } from "@/components/admin/AdminOrdersTracking";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { AdminSupportTickets } from "@/components/admin/AdminSupportTickets";
+import { AdminContentReports } from "@/components/admin/AdminContentReports";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,7 +217,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8 mb-6">
+          <TabsList className="grid w-full grid-cols-10 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Vue d'ensemble</span>
@@ -237,6 +241,14 @@ const AdminDashboard = () => {
             <TabsTrigger value="orders" className="flex items-center gap-1">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline">Commandes</span>
+            </TabsTrigger>
+            <TabsTrigger value="support" className="flex items-center gap-1">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Support</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-1">
+              <Flag className="h-4 w-4" />
+              <span className="hidden sm:inline">Signalements</span>
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-1">
               <Shield className="h-4 w-4" />
@@ -457,6 +469,16 @@ const AdminDashboard = () => {
           {/* Orders Tab */}
           <TabsContent value="orders">
             <AdminOrdersTracking />
+          </TabsContent>
+
+          {/* Support Tickets Tab */}
+          <TabsContent value="support">
+            <AdminSupportTickets />
+          </TabsContent>
+
+          {/* Content Reports Tab */}
+          <TabsContent value="reports">
+            <AdminContentReports />
           </TabsContent>
 
           {/* Security Tab */}
