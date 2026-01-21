@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MobileMenu } from "@/components/MobileMenu";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { useMarketplace } from "@/hooks/useMarketplace";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export const Header = () => {
   const { user, signOut, loading, getUserRole } = useAuth();
@@ -105,6 +106,13 @@ export const Header = () => {
               Infinity
             </Link>
           </Button>
+
+          {/* Notifications - Show for logged in users */}
+          {user && (
+            <div className="hidden sm:flex">
+              <NotificationBell />
+            </div>
+          )}
 
           {/* Cart - Show on tablet+ for logged in users */}
           {user && (

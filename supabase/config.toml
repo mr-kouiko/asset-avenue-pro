@@ -148,3 +148,9 @@ verify_jwt = true
 
 [functions.process-free-order]
 verify_jwt = true
+
+[functions.submit-support-ticket]
+verify_jwt = false
+
+[functions.send-admin-notification]
+verify_jwt = false
