@@ -6,11 +6,13 @@ import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
+import { useLikes } from "@/hooks/useLikes";
 import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { AudioContentCard } from "./AudioContentCard";
+import { toast } from "sonner";
 
 interface ContentCardProps {
   id: string;
@@ -76,9 +78,13 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   }
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
+  const { hasUserLiked, toggleLike } = useLikes();
   const { language } = useLanguage();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  
+  const userHasLiked = hasUserLiked(id);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -186,16 +192,19 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
           <Button
             variant="ghost"
             size="sm"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              // Handle like action
+              setLikeLoading(true);
+              await toggleLike(id);
+              setLikeLoading(false);
             }}
+            disabled={likeLoading}
             className="h-8 w-8 md:h-7 md:w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
           >
             <Heart 
               className="h-4 w-4 md:h-3.5 md:w-3.5" 
-              fill={isLiked ? "hsl(var(--stock-blue))" : "none"}
-              color={isLiked ? "hsl(var(--stock-blue))" : "hsl(var(--stock-dark))"}
+              fill={userHasLiked ? "hsl(var(--stock-blue))" : "none"}
+              color={userHasLiked ? "hsl(var(--stock-blue))" : "hsl(var(--stock-dark))"}
             />
           </Button>
         </div>

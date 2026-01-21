@@ -23,14 +23,17 @@ import {
   Crown,
   RefreshCw,
   ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFavorites } from "@/hooks/useFavorites";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BuyerProfileCard } from "@/components/BuyerProfileCard";
 import { SecureDownloadButton } from "@/components/SecureDownloadButton";
+import { ContentCard } from "@/components/ContentCard";
 
 interface Purchase {
   id: string;
@@ -90,6 +93,77 @@ interface Subscription {
   current_period_end: string | null;
   next_billing_date: string | null;
 }
+
+// Favorites Tab Component
+const FavoritesTab = () => {
+  const { getFavoritesWithDetails, loading: favLoading } = useFavorites();
+  const [favoritesData, setFavoritesData] = useState<any[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      setLoadingFavorites(true);
+      const data = await getFavoritesWithDetails();
+      setFavoritesData(data);
+      setLoadingFavorites(false);
+    };
+    loadFavorites();
+  }, [getFavoritesWithDetails]);
+
+  return (
+    <TabsContent value="favorites" className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-primary" />
+            My Favorites
+          </CardTitle>
+          <CardDescription>
+            Content you've saved for later
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingFavorites ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground mt-2">Loading favorites...</p>
+            </div>
+          ) : favoritesData.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No favorites yet</p>
+              <p className="text-sm">Browse the marketplace and click the heart icon to save content</p>
+              <Button className="mt-4" asChild>
+                <Link to="/marketplace">Browse Marketplace</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {favoritesData.map((fav: any) => {
+                const submission = fav.content_submissions;
+                if (!submission) return null;
+                return (
+                  <ContentCard
+                    key={fav.id}
+                    id={submission.id}
+                    slug={submission.slug}
+                    title={submission.title}
+                    author="Creator"
+                    price={submission.price || 0}
+                    type="photo"
+                    thumbnail="/placeholder.svg"
+                    likes={0}
+                    downloads={0}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TabsContent>
+  );
+};
 
 const BuyerDashboard = () => {
   const { user } = useAuth();
@@ -306,8 +380,12 @@ const BuyerDashboard = () => {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="favorites" className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Favorites
+              </TabsTrigger>
               <TabsTrigger value="credits" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
                 Credits
@@ -418,6 +496,9 @@ const BuyerDashboard = () => {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Favorites Tab */}
+            <FavoritesTab />
 
             {/* Credits Tab */}
             <TabsContent value="credits" className="space-y-6">
