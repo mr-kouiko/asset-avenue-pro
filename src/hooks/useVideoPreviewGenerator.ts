@@ -183,32 +183,57 @@ export function useVideoPreviewGenerator() {
 
       const chunks: BlobPart[] = [];
       
-      // Prefer MP4 format for maximum compatibility, fallback to WebM
+      // Check all supported MIME types and find the best one
       const mimeTypes = [
-        'video/mp4;codecs=avc1',
-        'video/mp4',
         'video/webm;codecs=vp9',
         'video/webm;codecs=vp8',
         'video/webm',
+        'video/mp4;codecs=avc1',
+        'video/mp4',
       ];
       
-      let selectedMimeType = 'video/mp4';
+      let selectedMimeType: string | undefined;
       for (const mime of mimeTypes) {
         if (MediaRecorder.isTypeSupported(mime)) {
           selectedMimeType = mime;
-          console.log('[VideoPreview] Using MIME type:', selectedMimeType);
+          console.log('[VideoPreview] Browser supports MIME type:', mime);
           break;
         }
+      }
+      
+      // If no MIME type is supported, try without specifying one (browser default)
+      if (!selectedMimeType) {
+        console.warn('[VideoPreview] No preferred MIME types supported, using browser default');
+        // Check if MediaRecorder is supported at all
+        if (typeof MediaRecorder === 'undefined') {
+          throw new Error('MediaRecorder not supported in this browser. Try Chrome, Firefox, or Edge.');
+        }
+      } else {
+        console.log('[VideoPreview] Selected MIME type:', selectedMimeType);
       }
       
       // Use lower bitrate if on mobile or video is very large
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const adjustedBitrate = isMobile ? Math.min(videoBitsPerSecond, 2_000_000) : videoBitsPerSecond;
       
-      const recorder = new MediaRecorder(stream, {
-        mimeType: selectedMimeType,
+      // Create MediaRecorder with or without explicit MIME type
+      const recorderOptions: MediaRecorderOptions = {
         videoBitsPerSecond: adjustedBitrate,
-      });
+      };
+      if (selectedMimeType) {
+        recorderOptions.mimeType = selectedMimeType;
+      }
+      
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(stream, recorderOptions);
+        console.log('[VideoPreview] MediaRecorder created with mimeType:', recorder.mimeType);
+      } catch (recorderError) {
+        console.warn('[VideoPreview] Failed to create MediaRecorder with options, trying without:', recorderError);
+        // Try creating without any options as last resort
+        recorder = new MediaRecorder(stream);
+        console.log('[VideoPreview] MediaRecorder created with default settings, mimeType:', recorder.mimeType);
+      }
       recorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -217,15 +242,29 @@ export function useVideoPreviewGenerator() {
           console.log('[VideoPreview] Chunk received:', e.data.size, 'bytes');
         }
       };
+      
+      recorder.onerror = (e) => {
+        console.error('[VideoPreview] MediaRecorder error:', e);
+      };
 
-      const recordPromise = new Promise<void>((resolve) => {
+      const recordPromise = new Promise<void>((resolve, reject) => {
         recorder.onstop = () => {
           console.log('[VideoPreview] Recording stopped, total chunks:', chunks.length);
           resolve();
         };
+        recorder.onerror = (e) => {
+          reject(new Error('MediaRecorder error during recording'));
+        };
       });
 
-      recorder.start(500); // Request data every 500ms for better responsiveness
+      // Start recording - use timeslice for more reliable chunk generation
+      try {
+        recorder.start(250); // Request data every 250ms for more reliable chunk capture
+        console.log('[VideoPreview] Recording started, state:', recorder.state);
+      } catch (startError) {
+        console.error('[VideoPreview] Failed to start recording:', startError);
+        throw new Error('Failed to start video recording. Your browser may not support this feature.');
+      }
 
       // Track if we successfully drew any frames
       let framesDrawn = 0;
@@ -324,17 +363,32 @@ export function useVideoPreviewGenerator() {
 
       // Check if we got any data
       if (chunks.length === 0) {
-        throw new Error('No video data recorded - browser may not support this format');
+        // Provide more helpful error message
+        const supportedTypes = mimeTypes.filter(m => {
+          try {
+            return MediaRecorder.isTypeSupported(m);
+          } catch {
+            return false;
+          }
+        });
+        console.error('[VideoPreview] No chunks recorded. Supported types:', supportedTypes);
+        throw new Error(
+          supportedTypes.length === 0
+            ? 'Your browser does not support video recording. Please try Chrome, Firefox, or Edge.'
+            : 'No video data was captured. The video may have CORS restrictions or be in an unsupported format.'
+        );
       }
 
-      const outputMimeType = selectedMimeType.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
+      // Determine output MIME type from what the recorder actually used
+      const actualMimeType = recorder.mimeType || selectedMimeType || 'video/webm';
+      const outputMimeType = actualMimeType.includes('mp4') ? 'video/mp4' : 'video/webm';
       const blob = new Blob(chunks, { type: outputMimeType });
       
-      console.log('[VideoPreview] Generated blob:', blob.size, 'bytes, type:', blob.type);
+      console.log('[VideoPreview] Generated blob:', blob.size, 'bytes, type:', blob.type, 'from recorder mimeType:', actualMimeType);
       
       // Validate blob size (should be at least a few KB for real video)
       if (blob.size < 1000) {
-        throw new Error('Generated preview too small - may be empty frames');
+        throw new Error('Generated preview too small - the video frames may not have been captured correctly');
       }
       
       // Cleanup blob URL if we created one
