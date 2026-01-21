@@ -24,6 +24,7 @@ import {
   RefreshCw,
   ImageIcon,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +35,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BuyerProfileCard } from "@/components/BuyerProfileCard";
 import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { ContentCard } from "@/components/ContentCard";
+import { BuyerOrderHistory } from "@/components/buyer/BuyerOrderHistory";
 
 interface Purchase {
   id: string;
@@ -380,8 +382,12 @@ const BuyerDashboard = () => {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="orders" className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Orders
+              </TabsTrigger>
               <TabsTrigger value="favorites" className="flex items-center gap-2">
                 <Heart className="h-4 w-4" />
                 Favorites
@@ -495,6 +501,11 @@ const BuyerDashboard = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Orders Tab */}
+            <TabsContent value="orders" className="space-y-6">
+              <BuyerOrderHistory />
             </TabsContent>
 
             {/* Favorites Tab */}
