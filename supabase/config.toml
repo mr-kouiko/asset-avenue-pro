@@ -124,3 +124,27 @@ verify_jwt = false
 
 [functions.pay-with-credits]
 verify_jwt = true
+
+[functions.generate-video-preview]
+verify_jwt = true
+
+[functions.generate-video-thumbnail]
+verify_jwt = true
+
+[functions.backfill-video-thumbnails]
+verify_jwt = true
+
+[functions.elevenlabs-tts]
+verify_jwt = true
+
+[functions.image-to-video]
+verify_jwt = true
+
+[functions.remove-background]
+verify_jwt = true
+
+[functions.ensure-creator-role]
+verify_jwt = true
+
+[functions.process-free-order]
+verify_jwt = true
