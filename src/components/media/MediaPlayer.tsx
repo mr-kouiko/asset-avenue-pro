@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw, MoreVertical, Download } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, AlertCircle, RotateCcw, MoreVertical, Download, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { VideoWatermark } from '@/components/VideoWatermark';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/components/ui/use-toast';
+import { useServerVideoPreview } from '@/hooks/useServerVideoPreview';
 import { useVideoPreviewGenerator } from '@/hooks/useVideoPreviewGenerator';
 import { useAudioWatermark } from '@/hooks/useAudioWatermark';
 
@@ -19,6 +20,9 @@ interface MediaPlayerProps {
   muted?: boolean;
   compact?: boolean;
   watermarkSize?: 'normal' | 'large' | 'thumbnail';
+  contentId?: string;      // For server-side preview generation
+  storagePath?: string;    // Storage path for the video (for server-side preview)
+  previewPath?: string;    // Pre-generated preview path (if available)
 }
 
 /** Utility: deduce MIME type from file extension */
@@ -61,6 +65,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   muted = false,
   compact = false,
   watermarkSize = 'normal',
+  contentId,
+  storagePath,
+  previewPath: existingPreviewPath,
 }) => {
   const deviceInfo = useDeviceDetection();
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
@@ -78,9 +85,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  // Preview generator
+  // Preview generators - server-side (preferred) and client-side (fallback)
   const { toast } = useToast();
-  const { isGenerating: isGeneratingPreview, state: previewState, generate, cancel: cancelPreview } = useVideoPreviewGenerator();
+  const serverPreview = useServerVideoPreview();
+  const clientPreview = useVideoPreviewGenerator();
 
   // Audio watermark hook - only active for audio type
   useAudioWatermark({ 
@@ -89,18 +97,95 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     isMuted
   });
 
+  // Determine if preview generation is in progress
+  const isGeneratingPreview = serverPreview.isGenerating || clientPreview.isGenerating;
+  const previewStage = serverPreview.isGenerating 
+    ? serverPreview.stage 
+    : clientPreview.state.stage;
+  const previewProgress = serverPreview.isGenerating 
+    ? serverPreview.progress 
+    : clientPreview.state.progress;
+
   const handleDownloadPreview = useCallback(async () => {
     if (type !== 'video' || !src) return;
     
-    const toastId = toast({ 
+    const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
+
+    // Option 1: If pre-generated preview exists, download directly (instant)
+    if (existingPreviewPath) {
+      console.log('[MediaPlayer] Using pre-generated preview:', existingPreviewPath);
+      const a = document.createElement('a');
+      a.href = existingPreviewPath;
+      a.download = `${filenameBase}_preview.mp4`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast({ 
+        title: 'Preview ready', 
+        description: 'Watermarked preview downloaded.', 
+        duration: 3000 
+      });
+      return;
+    }
+
+    // Option 2: Try server-side generation (preferred - faster, reliable MP4)
+    if (storagePath) {
+      toast({ 
+        title: 'Generating preview…', 
+        description: 'Server processing (720p MP4)', 
+        duration: 60000 
+      });
+      
+      try {
+        const result = await serverPreview.generate({
+          videoPath: storagePath,
+          contentId,
+          duration: 6,
+          resolution: 720,
+        });
+        
+        console.log('[MediaPlayer] Server preview generated:', result);
+        
+        const a = document.createElement('a');
+        a.href = result.previewUrl;
+        a.download = `${filenameBase}_preview.mp4`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        
+        toast({ 
+          title: 'Preview ready', 
+          description: result.cached 
+            ? 'Downloaded from cache.' 
+            : `Generated in ${(result.processingTimeMs / 1000).toFixed(1)}s`, 
+          duration: 3000 
+        });
+        return;
+      } catch (serverErr) {
+        console.warn('[MediaPlayer] Server preview failed, falling back to client-side:', serverErr);
+        // Fall through to client-side generation
+      }
+    }
+
+    // Option 3: Fallback to client-side generation (slower, may produce WebM)
+    toast({ 
       title: 'Generating preview…', 
-      description: 'Loading video (0%)', 
-      duration: 60000 // Long duration, we'll dismiss manually
+      description: 'Processing in browser (720p)', 
+      duration: 60000 
     });
     
     try {
-      const blob = await generate({ url: src, durationSec: 6, fps: 24, videoBitsPerSecond: 4000000 });
-      const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
+      // Use 720p for faster processing
+      const blob = await clientPreview.generate({ 
+        url: src, 
+        durationSec: 6, 
+        targetWidth: 1280, // 720p width
+        fps: 24, 
+        videoBitsPerSecond: 2500000 // 2.5 Mbps for 720p
+      });
+      
       const a = document.createElement('a');
       const href = URL.createObjectURL(blob);
       a.href = href;
@@ -110,10 +195,15 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       a.click();
       URL.revokeObjectURL(href);
       a.remove();
-      toast({ title: 'Preview ready', description: 'Full resolution watermarked preview downloaded.', duration: 3000 });
+      
+      toast({ 
+        title: 'Preview ready', 
+        description: 'Watermarked preview downloaded.', 
+        duration: 3000 
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unable to create preview';
-      console.error('Preview generation failed:', errorMessage);
+      console.error('[MediaPlayer] Preview generation failed:', errorMessage);
       toast({ 
         title: 'Generation failed', 
         description: errorMessage, 
@@ -121,7 +211,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         duration: 5000
       });
     }
-  }, [src, type, title, generate, toast]);
+  }, [src, type, title, existingPreviewPath, storagePath, contentId, serverPreview, clientPreview, toast]);
 
   // User interaction tracking for mobile autoplay restrictions
   const userInteractedRef = useRef<boolean>(false);
@@ -613,14 +703,21 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                             {isGeneratingPreview ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {previewState.stage === 'loading' && 'Loading video...'}
-                                {previewState.stage === 'recording' && `Recording (${previewState.progress}%)`}
-                                {previewState.stage === 'processing' && 'Processing...'}
+                                {previewStage === 'loading' && 'Loading video...'}
+                                {previewStage === 'requesting' && 'Requesting server...'}
+                                {previewStage === 'processing' && `Processing (${previewProgress}%)`}
+                                {previewStage === 'recording' && `Recording (${previewProgress}%)`}
+                                {previewStage === 'downloading' && 'Downloading...'}
+                              </>
+                            ) : existingPreviewPath ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                                Download preview (cached)
                               </>
                             ) : (
                               <>
                                 <Download className="h-4 w-4 mr-2" />
-                                Download preview (full resolution)
+                                Download preview (720p)
                               </>
                             )}
                           </DropdownMenuItem>

@@ -482,15 +482,47 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         }
 
         // Generate thumbnails
-        updateProgress(id, { status: 'processing', progress: 95 });
+        updateProgress(id, { status: 'processing', progress: 90 });
         
         let thumbnailUrl: string | undefined;
+        let previewUrl: string | undefined;
         const mimeType = detectMimeType(file);
         
         if (mimeType.startsWith('image/')) {
           thumbnailUrl = await generateImageThumbnail(file);
         } else if (mimeType.startsWith('video/')) {
           thumbnailUrl = await generateVideoThumbnail(file);
+          
+          // Trigger server-side video preview generation (async, don't wait)
+          updateProgress(id, { status: 'processing', progress: 95 });
+          try {
+            // Extract storage path from URL
+            const urlParts = new URL(url);
+            const storagePath = urlParts.pathname.split('/storage/v1/object/public/uploads/')[1];
+            
+            if (storagePath) {
+              // Fire and forget - preview will be generated in background
+              supabase.functions.invoke('generate-video-preview', {
+                body: { 
+                  videoPath: storagePath,
+                  duration: 6,
+                  resolution: 720
+                },
+              }).then(({ data, error }) => {
+                if (error) {
+                  console.warn('[useEnhancedUpload] Video preview generation failed:', error);
+                } else if (data?.previewUrl) {
+                  console.log('[useEnhancedUpload] Video preview generated:', data.previewUrl);
+                  previewUrl = data.previewUrl;
+                }
+              }).catch(err => {
+                console.warn('[useEnhancedUpload] Video preview request failed:', err);
+              });
+            }
+          } catch (previewError) {
+            console.warn('[useEnhancedUpload] Failed to trigger video preview:', previewError);
+            // Non-blocking - continue with upload completion
+          }
         }
 
         updateProgress(id, { status: 'complete', progress: 100 });
@@ -499,6 +531,7 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
           id,
           url,
           thumbnailUrl,
+          previewUrl,
           fileName: file.name,
           fileType: mimeType,
           fileSize: file.size,
