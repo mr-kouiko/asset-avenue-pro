@@ -75,8 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (existingUser?.user) {
         toast({
-          title: "Compte existant trouvé !",
-          description: "Vous êtes maintenant connecté."
+          title: "Existing account found!",
+          description: "You are now signed in."
         });
         return { error: null };
       }
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('SignUp error details:', error);
         
-        let errorMessage = "Une erreur est survenue lors de l'inscription.";
+        let errorMessage = "An error occurred during sign up.";
         
         if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
           // Try to sign in instead
@@ -123,24 +123,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (!signInError) {
             toast({
-              title: "Connexion réussie !",
-              description: "Votre compte existe déjà. Vous êtes maintenant connecté."
+              title: "Sign in successful!",
+              description: "Your account already exists. You are now signed in."
             });
             return { error: null };
           } else {
-            errorMessage = "Ce compte existe déjà. Vérifiez votre mot de passe ou utilisez 'Mot de passe oublié'.";
+            errorMessage = "This account already exists. Check your password or use 'Forgot password'.";
           }
         } else if (error.message.includes('Password')) {
-          errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
+          errorMessage = "Password must be at least 6 characters.";
         } else if (error.message.includes('Email')) {
-          errorMessage = "L'adresse email n'est pas valide.";
+          errorMessage = "Invalid email address.";
         } else if (error.message.includes('role_audit') || error.message.includes('changed_by')) {
-          errorMessage = "Erreur de configuration. Veuillez réessayer.";
+          errorMessage = "Configuration error. Please try again.";
         }
         
         toast({
           variant: "destructive",
-          title: "Erreur d'inscription",
+          title: "Sign up error",
           description: errorMessage
         });
         return { error };
@@ -149,10 +149,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('SignUp successful');
       
       toast({
-        title: userData.role === 'creator' ? "Demande de vendeur envoyée !" : "Inscription réussie !",
+        title: userData.role === 'creator' ? "Seller request sent!" : "Sign up successful!",
         description: userData.role === 'creator' 
-          ? "Votre compte vendeur a été créé. Vous pouvez maintenant vous connecter et accéder à votre dashboard."
-          : "Bienvenue sur VisuStock ! Vous pouvez maintenant vous connecter et explorer notre marketplace."
+          ? "Your seller account has been created. You can now sign in and access your dashboard."
+          : "Welcome to VisuStock! You can now sign in and explore our marketplace."
       });
 
       return { error: null };
@@ -160,8 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('SignUp exception:', error);
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Une erreur inattendue est survenue. Veuillez réessayer."
+        title: "Error",
+        description: "An unexpected error occurred. Please try again."
       });
       return { error };
     }
@@ -184,18 +184,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         toast({
           variant: "destructive",
-          title: "Erreur de connexion",
+          title: "Sign in error",
           description: error.message === 'Invalid login credentials'
-            ? "Email ou mot de passe incorrect."
-            : "Une erreur est survenue lors de la connexion."
+            ? "Incorrect email or password."
+            : "An error occurred during sign in."
         });
         return { error };
       }
 
       if (data.user) {
         toast({
-          title: "Connexion réussie !",
-          description: "Bienvenue sur VisuStock."
+          title: "Sign in successful!",
+          description: "Welcome to VisuStock."
         });
         // Force page reload for clean state
         setTimeout(() => {
@@ -207,8 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Une erreur inattendue est survenue."
+        title: "Error",
+        description: "An unexpected error occurred."
       });
       return { error };
     }
@@ -269,8 +269,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       toast({
-        title: "Déconnexion réussie",
-        description: "À bientôt sur VisuStock !"
+        title: "Signed out successfully",
+        description: "See you soon on VisuStock!"
       });
       
       // Force page reload for clean state
@@ -278,8 +278,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Une erreur est survenue lors de la déconnexion."
+        title: "Error",
+        description: "An error occurred during sign out."
       });
     }
   };
