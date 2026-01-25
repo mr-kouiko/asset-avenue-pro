@@ -38,6 +38,7 @@ interface SimpleFileUploadProps {
     previewUrl?: string;
     isAiGenerated?: boolean;
     detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+    fileHash?: string;
   }[]) => void;
   maxFiles?: number;
   maxFileSize?: number; // in MB
@@ -174,12 +175,33 @@ export const SimpleFileUpload = ({
   };
 
   // Calculate SHA-256 hash of file for duplicate detection
+  // For large files: hash first 1MB + last 1MB + file size for consistency with useEnhancedUpload
   const calculateFileHash = async (file: File): Promise<string> => {
-    const buffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
+    const HASH_SIZE = 1024 * 1024; // 1MB
+    
+    if (file.size <= HASH_SIZE * 2) {
+      // Small file: hash entire file
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      // Large file: hash first 1MB + last 1MB + file size
+      const firstChunk = await file.slice(0, HASH_SIZE).arrayBuffer();
+      const lastChunk = await file.slice(-HASH_SIZE).arrayBuffer();
+      
+      // Combine: first chunk + last chunk + size as string
+      const sizeBuffer = new TextEncoder().encode(file.size.toString());
+      const combined = new Uint8Array(firstChunk.byteLength + lastChunk.byteLength + sizeBuffer.length);
+      combined.set(new Uint8Array(firstChunk), 0);
+      combined.set(new Uint8Array(lastChunk), firstChunk.byteLength);
+      combined.set(sizeBuffer, firstChunk.byteLength + lastChunk.byteLength);
+      
+      const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      console.log(`🔐 [HASH] Large file hash (first+last+size): ${file.name}, size: ${file.size}`);
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
   };
 
   // Check if file is a duplicate using database function
@@ -351,6 +373,10 @@ export const SimpleFileUpload = ({
         detectedCategory = 'photo';
       }
 
+      // Reuse the file hash calculated at the beginning (line 244) for storage
+      // This ensures consistency and avoids double calculation
+      const fileHashForStorage = fileHash;
+
       // Update file as completed with AI detection and category result
       setFiles(prev => prev.map(f => 
         f.id === uploadFileData.id ? { 
@@ -361,7 +387,8 @@ export const SimpleFileUpload = ({
           isWatermarked: !!processedFile.watermarkedUrl,
           isAiGenerated,
           aiConfidence,
-          detectedCategory
+          detectedCategory,
+          fileHash: fileHashForStorage
         } : f
       ));
 
@@ -384,7 +411,8 @@ export const SimpleFileUpload = ({
           thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
           previewUrl: processedFile.previewUrl,
           isAiGenerated, // AUTOMATIC - no user choice
-          detectedCategory // AUTOMATIC - based on image analysis
+          detectedCategory, // AUTOMATIC - based on image analysis
+          fileHash: fileHashForStorage // CRITICAL: Pass hash for duplicate detection
         }]);
       }
 
