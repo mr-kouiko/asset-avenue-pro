@@ -205,23 +205,45 @@ export const SimpleFileUpload = ({
     }
   };
 
-  // Check if file is a duplicate using database function
-  const checkDuplicate = async (fileHash: string): Promise<{ isDuplicate: boolean; fileName?: string }> => {
+  // Check if file is a duplicate using database function + size fallback
+  const checkDuplicate = async (fileHash: string, fileSize: number): Promise<{ isDuplicate: boolean; fileName?: string }> => {
     try {
-      const { data, error } = await supabase.rpc('check_file_duplicate', { hash_value: fileHash });
+      // First: Check by hash (most reliable)
+      const { data: hashData, error: hashError } = await supabase.rpc('check_file_duplicate', { hash_value: fileHash });
       
-      if (error) {
-        console.error('Duplicate check error:', error);
-        return { isDuplicate: false };
-      }
-      
-      if (data && data.length > 0) {
-        const result = data[0];
+      if (hashError) {
+        console.error('Hash duplicate check error:', hashError);
+      } else if (hashData && hashData.length > 0) {
+        const result = hashData[0];
         if (result.exists_in_content || result.exists_in_uploaded) {
+          console.log(`🔍 [DUPLICATE] Found by HASH: ${result.duplicate_file_name}`);
           return { 
             isDuplicate: true, 
             fileName: result.duplicate_file_name 
           };
+        }
+      }
+      
+      // Second: Check by exact file size (fallback for old files without hash)
+      // Get current user ID for the size check
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: sizeData, error: sizeError } = await supabase.rpc('check_file_duplicate_by_size', { 
+          p_file_size: fileSize,
+          p_user_id: user.id 
+        });
+        
+        if (sizeError) {
+          console.error('Size duplicate check error:', sizeError);
+        } else if (sizeData && sizeData.length > 0) {
+          const result = sizeData[0];
+          if (result.exists_in_content || result.exists_in_uploaded) {
+            console.log(`🔍 [DUPLICATE] Found by SIZE (${fileSize} bytes): ${result.duplicate_file_name}`);
+            return { 
+              isDuplicate: true, 
+              fileName: result.duplicate_file_name 
+            };
+          }
         }
       }
       
@@ -249,7 +271,7 @@ export const SimpleFileUpload = ({
         fileHash = await calculateFileHash(uploadFileData.file);
         console.log(`🔍 [DUPLICATE-FALLBACK] Hash: ${fileHash.substring(0, 16)}...`);
 
-        const { isDuplicate, fileName } = await checkDuplicate(fileHash);
+        const { isDuplicate, fileName } = await checkDuplicate(fileHash, uploadFileData.file.size);
         
         if (isDuplicate) {
           console.warn(`🚫 [DUPLICATE] File rejected: ${uploadFileData.file.name} matches ${fileName}`);
@@ -468,7 +490,7 @@ export const SimpleFileUpload = ({
             const hash = await calculateFileHash(file);
             console.log(`🔍 [EARLY-CHECK] Hash: ${hash.substring(0, 16)}...`);
             
-            const { isDuplicate, fileName } = await checkDuplicate(hash);
+            const { isDuplicate, fileName } = await checkDuplicate(hash, file.size);
             
             if (isDuplicate) {
               console.warn(`🚫 [EARLY-CHECK] Duplicate rejected: ${file.name} matches ${fileName}`);
