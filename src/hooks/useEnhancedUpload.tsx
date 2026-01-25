@@ -142,14 +142,47 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
     }
   }, []);
 
-  // Check for duplicate files
-  const checkDuplicate = useCallback(async (hash: string): Promise<boolean> => {
+  // Check for duplicate files (hash + size fallback for older files without hash)
+  const checkDuplicate = useCallback(async (
+    hash: string, 
+    fileSize: number
+  ): Promise<{ isDuplicate: boolean; fileName?: string }> => {
     try {
-      const { data, error } = await supabase.rpc('check_file_duplicate', { hash_value: hash });
-      if (error) throw error;
-      return data && data.length > 0 && (data[0].exists_in_content || data[0].exists_in_uploaded);
-    } catch {
-      return false;
+      // 1. Primary check: by hash (most reliable)
+      const { data: hashData, error: hashError } = await supabase.rpc(
+        'check_file_duplicate', 
+        { hash_value: hash }
+      );
+      
+      if (!hashError && hashData && hashData.length > 0) {
+        const result = hashData[0];
+        if (result.exists_in_content || result.exists_in_uploaded) {
+          console.log(`🔍 [DUPLICATE] Found by HASH: ${result.duplicate_file_name}`);
+          return { isDuplicate: true, fileName: result.duplicate_file_name };
+        }
+      }
+      
+      // 2. Fallback: by file size (for older files without hash)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: sizeData, error: sizeError } = await supabase.rpc(
+          'check_file_duplicate_by_size', 
+          { p_file_size: fileSize, p_user_id: user.id }
+        );
+        
+        if (!sizeError && sizeData && sizeData.length > 0) {
+          const result = sizeData[0];
+          if (result.exists_in_content || result.exists_in_uploaded) {
+            console.log(`🔍 [DUPLICATE] Found by SIZE: ${result.duplicate_file_name}`);
+            return { isDuplicate: true, fileName: result.duplicate_file_name };
+          }
+        }
+      }
+      
+      return { isDuplicate: false };
+    } catch (error) {
+      console.error('Duplicate check failed:', error);
+      return { isDuplicate: false };
     }
   }, []);
 
@@ -456,12 +489,12 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         continue;
       }
 
-      // Duplicate check
+      // Duplicate check (hash + size fallback)
       try {
         const hash = await calculateFileHash(file);
-        const isDuplicate = await checkDuplicate(hash);
+        const { isDuplicate, fileName } = await checkDuplicate(hash, file.size);
         if (isDuplicate) {
-          toast.error(`Duplicate detected: "${file.name}" already exists`);
+          toast.error(`Duplicate detected: "${file.name}" already exists${fileName ? ` (matches ${fileName})` : ''}`);
           continue;
         }
       } catch (error) {
