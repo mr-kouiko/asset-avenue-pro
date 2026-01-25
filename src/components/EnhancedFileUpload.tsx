@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Upload, X, Pause, Play, RefreshCw, Check, AlertCircle, 
-  Image, Video, Music, FileText, Wifi, WifiOff, Clock
+  Image, Video, Music, FileText, Wifi, WifiOff, Clock, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ export function EnhancedFileUpload({
 }: EnhancedFileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingFilesRef = useRef<File[]>([]);
 
@@ -81,7 +82,7 @@ export function EnhancedFileUpload({
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -91,18 +92,28 @@ export function EnhancedFileUpload({
       if (!isOnline) {
         pendingFilesRef.current = files;
       } else {
-        uploadFiles(files);
+        setIsCheckingDuplicates(true);
+        try {
+          await uploadFiles(files);
+        } finally {
+          setIsCheckingDuplicates(false);
+        }
       }
     }
   }, [maxFiles, isOnline, uploadFiles]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, maxFiles);
     if (files.length > 0) {
       if (!isOnline) {
         pendingFilesRef.current = files;
       } else {
-        uploadFiles(files);
+        setIsCheckingDuplicates(true);
+        try {
+          await uploadFiles(files);
+        } finally {
+          setIsCheckingDuplicates(false);
+        }
       }
     }
     // Reset input
@@ -178,15 +189,22 @@ export function EnhancedFileUpload({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !isCheckingDuplicates && fileInputRef.current?.click()}
         className={cn(
           "relative border-2 border-dashed rounded-xl p-6 sm:p-10 text-center cursor-pointer transition-all duration-200",
           isDragOver 
             ? "border-primary bg-primary/5 scale-[1.02]" 
             : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30",
-          isUploading && "pointer-events-none opacity-50"
+          (isUploading || isCheckingDuplicates) && "pointer-events-none opacity-50"
         )}
       >
+        {/* Loading overlay when checking duplicates */}
+        {isCheckingDuplicates && (
+          <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center rounded-xl z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <p className="text-sm font-medium text-muted-foreground">Checking for duplicates...</p>
+          </div>
+        )}
         <input
           ref={fileInputRef}
           type="file"
