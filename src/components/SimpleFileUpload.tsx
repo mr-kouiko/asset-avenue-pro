@@ -51,6 +51,7 @@ export const SimpleFileUpload = ({
 }: SimpleFileUploadProps) => {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
   const { detectImage } = useAIImageDetection();
@@ -235,32 +236,37 @@ export const SimpleFileUpload = ({
     const startTime = Date.now();
     
     try {
-      // Step 1: Check for duplicates first
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFileData.id ? { ...f, status: 'checking-duplicate', progress: 0 } : f
-      ));
-
-      console.log(`🔍 [DUPLICATE] Calculating hash for: ${uploadFileData.file.name}`);
-      const fileHash = await calculateFileHash(uploadFileData.file);
-      console.log(`🔍 [DUPLICATE] Hash: ${fileHash.substring(0, 16)}...`);
-
-      const { isDuplicate, fileName } = await checkDuplicate(fileHash);
+      // Use pre-calculated hash from early detection, or calculate if not available
+      let fileHash = uploadFileData.fileHash;
       
-      if (isDuplicate) {
-        console.warn(`🚫 [DUPLICATE] File rejected: ${uploadFileData.file.name} matches ${fileName}`);
+      if (!fileHash) {
+        // Fallback: calculate hash if not already done (shouldn't happen with early detection)
         setFiles(prev => prev.map(f => 
-          f.id === uploadFileData.id ? { 
-            ...f, 
-            status: 'error', 
-            error: `Duplicate detected: This file already exists${fileName ? ` (${fileName})` : ''}`,
-            fileHash
-          } : f
+          f.id === uploadFileData.id ? { ...f, status: 'checking-duplicate', progress: 0 } : f
         ));
-        toast.error(`🚫 Duplicate rejected: ${uploadFileData.file.name}`);
-        return;
+
+        console.log(`🔍 [DUPLICATE-FALLBACK] Calculating hash for: ${uploadFileData.file.name}`);
+        fileHash = await calculateFileHash(uploadFileData.file);
+        console.log(`🔍 [DUPLICATE-FALLBACK] Hash: ${fileHash.substring(0, 16)}...`);
+
+        const { isDuplicate, fileName } = await checkDuplicate(fileHash);
+        
+        if (isDuplicate) {
+          console.warn(`🚫 [DUPLICATE] File rejected: ${uploadFileData.file.name} matches ${fileName}`);
+          setFiles(prev => prev.map(f => 
+            f.id === uploadFileData.id ? { 
+              ...f, 
+              status: 'error', 
+              error: `Duplicate detected: This file already exists${fileName ? ` (${fileName})` : ''}`,
+              fileHash
+            } : f
+          ));
+          toast.error(`🚫 Duplicate rejected: ${uploadFileData.file.name}`);
+          return;
+        }
       }
 
-      // Update status to uploading
+      // Update status to uploading (hash already verified in early detection)
       setFiles(prev => prev.map(f => 
         f.id === uploadFileData.id ? { ...f, status: 'uploading', progress: 0, fileHash } : f
       ));
@@ -429,33 +435,94 @@ export const SimpleFileUpload = ({
     }
   };
 
-  const handleFiles = useCallback((fileList: FileList) => {
-    const newFiles: UploadFile[] = [];
+  // EARLY DUPLICATE DETECTION - Check duplicates BEFORE adding to queue
+  const handleFiles = useCallback(async (fileList: FileList) => {
     const currentFileCount = files.length;
-
-    for (let i = 0; i < fileList.length && newFiles.length + currentFileCount < maxFiles; i++) {
-      const file = fileList[i];
-      const error = validateFile(file);
-      
-      const uploadFile: UploadFile = {
-        file,
-        id: `${Date.now()}-${i}-${Math.random().toString(36).substring(2)}`,
-        progress: 0,
-        status: error ? 'error' : 'pending',
-        error
-      };
-
-      newFiles.push(uploadFile);
-
-      // Preview generation disabled - upload files without preview URLs
-    }
-
+    const filesToProcess = Array.from(fileList).slice(0, maxFiles - currentFileCount);
+    
     if (fileList.length + currentFileCount > maxFiles) {
       toast.error(`Maximum ${maxFiles} files allowed`);
     }
 
-    setFiles(prev => [...prev, ...newFiles]);
-  }, [files.length, maxFiles]);
+    if (filesToProcess.length === 0) return;
+
+    // Show checking state
+    setIsCheckingDuplicates(true);
+    
+    try {
+      const newFiles: UploadFile[] = [];
+      let duplicatesRejected = 0;
+
+      // Process all files in parallel for speed
+      const checkResults = await Promise.all(
+        filesToProcess.map(async (file, i) => {
+          // First validate file type/size
+          const validationError = validateFile(file);
+          if (validationError) {
+            return { file, error: validationError, isDuplicate: false, hash: undefined };
+          }
+
+          // Calculate hash and check duplicate
+          try {
+            console.log(`🔍 [EARLY-CHECK] Calculating hash for: ${file.name}`);
+            const hash = await calculateFileHash(file);
+            console.log(`🔍 [EARLY-CHECK] Hash: ${hash.substring(0, 16)}...`);
+            
+            const { isDuplicate, fileName } = await checkDuplicate(hash);
+            
+            if (isDuplicate) {
+              console.warn(`🚫 [EARLY-CHECK] Duplicate rejected: ${file.name} matches ${fileName}`);
+              return { 
+                file, 
+                error: `Duplicate: already exists${fileName ? ` (${fileName})` : ''}`,
+                isDuplicate: true,
+                hash,
+                existingFileName: fileName
+              };
+            }
+            
+            return { file, error: undefined, isDuplicate: false, hash };
+          } catch (hashError) {
+            console.error(`Hash calculation failed for ${file.name}:`, hashError);
+            // Allow upload if hash check fails
+            return { file, error: undefined, isDuplicate: false, hash: undefined };
+          }
+        })
+      );
+
+      // Process results
+      checkResults.forEach((result, i) => {
+        if (result.isDuplicate) {
+          duplicatesRejected++;
+          toast.error(`🚫 Duplicate rejected: ${result.file.name}`);
+          return; // Skip duplicates entirely
+        }
+
+        const uploadFile: UploadFile = {
+          file: result.file,
+          id: `${Date.now()}-${i}-${Math.random().toString(36).substring(2)}`,
+          progress: 0,
+          status: result.error ? 'error' : 'pending',
+          error: result.error,
+          fileHash: result.hash
+        };
+
+        newFiles.push(uploadFile);
+      });
+
+      // Summary toast for multiple files
+      if (duplicatesRejected > 0 && filesToProcess.length > 1) {
+        const accepted = filesToProcess.length - duplicatesRejected;
+        toast.info(`${accepted} file(s) ready, ${duplicatesRejected} duplicate(s) rejected`);
+      }
+
+      if (newFiles.length > 0) {
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    } finally {
+      setIsCheckingDuplicates(false);
+    }
+  }, [files.length, maxFiles, validateFile, calculateFileHash, checkDuplicate]);
 
   const handleUploadAll = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending');
@@ -482,18 +549,18 @@ export const SimpleFileUpload = ({
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles.length > 0) {
-      handleFiles(droppedFiles);
+      await handleFiles(droppedFiles);
     }
   }, [handleFiles]);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFiles(e.target.files);
+      await handleFiles(e.target.files);
     }
   };
 
@@ -505,14 +572,22 @@ export const SimpleFileUpload = ({
     <div className="space-y-4">
       {/* Drop Zone - Always visible */}
       <Card 
-        className={`border-2 border-dashed transition-colors p-8 text-center cursor-pointer ${
+        className={`border-2 border-dashed transition-colors p-8 text-center cursor-pointer relative ${
           isDragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-        }`}
+        } ${isCheckingDuplicates ? 'pointer-events-none' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !isCheckingDuplicates && fileInputRef.current?.click()}
       >
+        {/* Loading overlay when checking duplicates */}
+        {isCheckingDuplicates && (
+          <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center rounded-lg z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <p className="text-sm font-medium text-muted-foreground">Checking for duplicates...</p>
+          </div>
+        )}
+        
         <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <div className="space-y-2">
           <p className="text-lg font-medium">
