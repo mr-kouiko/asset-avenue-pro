@@ -1,6 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +13,7 @@ interface ProtectedAdminRouteProps {
 }
 
 export const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { user, loading: authLoading, isAdmin, roleLoading } = useAuth();
   const { toast } = useToast();
   const [isVerified, setIsVerified] = useState(false);
   const [verifying, setVerifying] = useState(true);
