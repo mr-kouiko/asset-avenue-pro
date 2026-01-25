@@ -21,6 +21,7 @@ interface UploadedFileData {
   isWatermarked?: boolean;
   isAiGenerated?: boolean;
   detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+  fileHash?: string;
 }
 
 const FileUpload = () => {
@@ -62,6 +63,7 @@ const FileUpload = () => {
         preview_url: file.previewUrl,
         thumbnail_url: file.thumbnailUrl,
         is_watermarked: file.isWatermarked || false,
+        file_hash: file.fileHash || null, // CRITICAL: Save hash for duplicate detection
         status: 'completed'
       }));
 

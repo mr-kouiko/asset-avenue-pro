@@ -113,11 +113,33 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
   }, []);
 
   // Calculate file hash for duplicate detection
+  // For large files: hash first 1MB + last 1MB + file size for better uniqueness
   const calculateFileHash = useCallback(async (file: File): Promise<string> => {
-    const buffer = await file.slice(0, 1024 * 1024).arrayBuffer(); // Hash first 1MB
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const HASH_SIZE = 1024 * 1024; // 1MB
+    
+    if (file.size <= HASH_SIZE * 2) {
+      // Small file: hash entire file
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      // Large file: hash first 1MB + last 1MB + file size
+      const firstChunk = await file.slice(0, HASH_SIZE).arrayBuffer();
+      const lastChunk = await file.slice(-HASH_SIZE).arrayBuffer();
+      
+      // Combine: first chunk + last chunk + size as string
+      const sizeBuffer = new TextEncoder().encode(file.size.toString());
+      const combined = new Uint8Array(firstChunk.byteLength + lastChunk.byteLength + sizeBuffer.length);
+      combined.set(new Uint8Array(firstChunk), 0);
+      combined.set(new Uint8Array(lastChunk), firstChunk.byteLength);
+      combined.set(sizeBuffer, firstChunk.byteLength + lastChunk.byteLength);
+      
+      const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      console.log(`🔐 [HASH] Large file hash (first+last+size): ${file.name}, size: ${file.size}`);
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
   }, []);
 
   // Check for duplicate files

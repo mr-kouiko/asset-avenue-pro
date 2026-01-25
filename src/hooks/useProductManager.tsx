@@ -13,6 +13,7 @@ interface ProductFile {
   thumbnailUrl?: string;
   isWatermarked?: boolean;
   isAiGenerated?: boolean;
+  fileHash?: string;
 }
 
 interface ProductMetadata {
@@ -194,6 +195,7 @@ export const useProductManager = () => {
           file_type: fileType,
           file_format: submission.file.type,
           file_size: submission.file.size,
+          file_hash: submission.file.fileHash || null, // CRITICAL: Save hash for duplicate detection
           is_original: true,
           preview_path: submission.file.previewUrl,
           // For videos: use thumbnailUrl, for PDFs: use thumbnailUrl (cover), for images: use previewUrl
