@@ -37,23 +37,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    let isMounted = true;
+    let initialSessionChecked = false;
+
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        if (!isMounted) return;
+        
+        // Only update state if we've already checked the initial session
+        // OR if this is a definitive auth event (not just TOKEN_REFRESHED on mount)
+        if (initialSessionChecked || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          console.log('Auth state change:', event, session?.user?.email);
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
       }
     );
 
-    // Then check for existing session
+    // Check for existing session - this is the source of truth on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      console.log('Initial session check:', session?.user?.email || 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      initialSessionChecked = true;
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, userData: any) => {
