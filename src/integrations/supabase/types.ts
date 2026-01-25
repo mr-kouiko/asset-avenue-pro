@@ -1587,6 +1587,15 @@ export type Database = {
           exists_in_uploaded: boolean
         }[]
       }
+      check_file_duplicate_by_size: {
+        Args: { p_file_size: number; p_user_id: string }
+        Returns: {
+          duplicate_file_name: string
+          duplicate_user_id: string
+          exists_in_content: boolean
+          exists_in_uploaded: boolean
+        }[]
+      }
       clean_for_slug: { Args: { text_input: string }; Returns: string }
       create_secure_download_token: {
         Args: { content_file_id_param: string; user_id_param?: string }
