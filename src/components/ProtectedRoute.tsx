@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,30 +15,7 @@ export function ProtectedRoute({
   allowedRoles, 
   fallbackMessage = "Vous n'avez pas les permissions nécessaires pour accéder à cette page."
 }: ProtectedRouteProps) {
-  const { user, loading, getUserRole } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [roleLoading, setRoleLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      if (!user) {
-        setRoleLoading(false);
-        return;
-      }
-      
-      try {
-        const role = await getUserRole();
-        setUserRole(role);
-      } catch (error) {
-        console.error('Error fetching user role:', error);
-        setUserRole(null);
-      } finally {
-        setRoleLoading(false);
-      }
-    };
-
-    fetchUserRole();
-  }, [user, getUserRole]);
+  const { user, loading, role, roleLoading } = useAuth();
 
   if (loading || roleLoading) {
     return (
@@ -71,7 +47,7 @@ export function ProtectedRoute({
     );
   }
 
-  if (!userRole || !allowedRoles.includes(userRole)) {
+  if (!role || !allowedRoles.includes(role)) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -82,7 +58,7 @@ export function ProtectedRoute({
             {fallbackMessage}
           </p>
           <p className="text-sm text-muted-foreground mb-8">
-            Rôle actuel: {userRole || 'Non défini'} | Rôles requis: {allowedRoles.join(', ')}
+            Rôle actuel: {role || 'Non défini'} | Rôles requis: {allowedRoles.join(', ')}
           </p>
           <Button size="lg" asChild>
             <Link to="/">Retour à l'accueil</Link>

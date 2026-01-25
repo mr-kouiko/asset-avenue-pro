@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
@@ -7,14 +7,24 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  role: string | null;
+  roleLoading: boolean;
+  isAdmin: boolean;
+  isCreator: boolean;
+  isClient: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: (intendedRole?: 'client' | 'creator') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   getUserRole: () => Promise<string | null>;
+  refreshRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Key for cross-tab role synchronization
+const ROLE_STORAGE_KEY = 'visustock_user_role';
+const ROLE_TIMESTAMP_KEY = 'visustock_role_timestamp';
 
 // Clean up auth state utility
 export const cleanupAuthState = () => {
@@ -23,6 +33,9 @@ export const cleanupAuthState = () => {
       localStorage.removeItem(key);
     }
   });
+  // Also clear role cache on cleanup
+  localStorage.removeItem(ROLE_STORAGE_KEY);
+  localStorage.removeItem(ROLE_TIMESTAMP_KEY);
   Object.keys(sessionStorage || {}).forEach((key) => {
     if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
       sessionStorage.removeItem(key);
@@ -34,7 +47,114 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
   const { toast } = useToast();
+
+  // Fetch role from database
+  const fetchRole = useCallback(async (userId: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return null;
+      }
+      
+      const fetchedRole = data?.role || null;
+      
+      // Cache role in localStorage for cross-tab sync
+      if (fetchedRole) {
+        localStorage.setItem(ROLE_STORAGE_KEY, fetchedRole);
+        localStorage.setItem(ROLE_TIMESTAMP_KEY, Date.now().toString());
+      } else {
+        localStorage.removeItem(ROLE_STORAGE_KEY);
+        localStorage.removeItem(ROLE_TIMESTAMP_KEY);
+      }
+      
+      return fetchedRole;
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      return null;
+    }
+  }, []);
+
+  // Load cached role from localStorage (for new tabs)
+  const loadCachedRole = useCallback((): string | null => {
+    const cachedRole = localStorage.getItem(ROLE_STORAGE_KEY);
+    const timestamp = localStorage.getItem(ROLE_TIMESTAMP_KEY);
+    
+    // Cache valid for 5 minutes
+    if (cachedRole && timestamp) {
+      const age = Date.now() - parseInt(timestamp, 10);
+      if (age < 5 * 60 * 1000) {
+        return cachedRole;
+      }
+    }
+    return null;
+  }, []);
+
+  // Refresh role from database
+  const refreshRole = useCallback(async () => {
+    if (!user) {
+      setRole(null);
+      setRoleLoading(false);
+      return;
+    }
+    
+    setRoleLoading(true);
+    const newRole = await fetchRole(user.id);
+    setRole(newRole);
+    setRoleLoading(false);
+  }, [user, fetchRole]);
+
+  // Handle user/session changes - fetch role
+  useEffect(() => {
+    if (user) {
+      // First, try to load from cache for instant UI
+      const cachedRole = loadCachedRole();
+      if (cachedRole) {
+        setRole(cachedRole);
+        setRoleLoading(false);
+        // Still refresh from DB in background to ensure freshness
+        fetchRole(user.id).then((freshRole) => {
+          if (freshRole !== cachedRole) {
+            setRole(freshRole);
+          }
+        });
+      } else {
+        // No cache, fetch from DB
+        setRoleLoading(true);
+        fetchRole(user.id).then((fetchedRole) => {
+          setRole(fetchedRole);
+          setRoleLoading(false);
+        });
+      }
+    } else {
+      setRole(null);
+      setRoleLoading(false);
+      localStorage.removeItem(ROLE_STORAGE_KEY);
+      localStorage.removeItem(ROLE_TIMESTAMP_KEY);
+    }
+  }, [user, fetchRole, loadCachedRole]);
+
+  // Cross-tab synchronization via storage event
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === ROLE_STORAGE_KEY) {
+        const newRole = event.newValue;
+        console.log('Role synced from another tab:', newRole);
+        setRole(newRole);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,6 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
+          
+          // Clear role on sign out
+          if (event === 'SIGNED_OUT') {
+            setRole(null);
+            setRoleLoading(false);
+            localStorage.removeItem(ROLE_STORAGE_KEY);
+            localStorage.removeItem(ROLE_TIMESTAMP_KEY);
+          }
         }
       }
     );
@@ -300,37 +428,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Legacy method for backward compatibility
   const getUserRole = async (): Promise<string | null> => {
     if (!user) return null;
     
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching user role:', error);
-        return null;
-      }
-      
-      return data?.role || null;
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-      return null;
-    }
+    // Return cached role if available
+    if (role) return role;
+    
+    // Otherwise fetch fresh
+    return await fetchRole(user.id);
   };
+
+  // Computed role flags
+  const isAdmin = role === 'admin';
+  const isCreator = role === 'creator';
+  const isClient = role === 'client';
 
   const value = {
     user,
     session,
     loading,
+    role,
+    roleLoading,
+    isAdmin,
+    isCreator,
+    isClient,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     getUserRole,
+    refreshRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

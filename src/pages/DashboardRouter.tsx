@@ -1,14 +1,12 @@
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
 import { Navigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { Header } from '@/components/Header';
 
 const DashboardRouter = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { role, loading: roleLoading, isAdmin, isCreator, isClient } = useUserRole();
+  const { user, loading, role, roleLoading, isAdmin, isCreator, isClient } = useAuth();
 
-  if (authLoading || roleLoading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />

@@ -20,10 +20,9 @@ import { useMarketplace } from "@/hooks/useMarketplace";
 import { NotificationBell } from "@/components/NotificationBell";
 
 export const Header = () => {
-  const { user, signOut, loading, getUserRole } = useAuth();
+  const { user, signOut, loading, role } = useAuth();
   const { getItemCount } = useCart();
   const { language, setLanguage, t } = useLanguage();
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const navigate = useNavigate();
   const { content: marketplaceContent } = useMarketplace();
@@ -39,17 +38,8 @@ export const Header = () => {
     [marketplaceContent]
   );
 
-  useEffect(() => {
-    const fetchRole = async () => {
-      if (user) {
-        const role = await getUserRole();
-        setUserRole(role);
-      } else {
-        setUserRole(null);
-      }
-    };
-    fetchRole();
-  }, [user, getUserRole]);
+  // Use role directly from auth context - no need for separate fetch
+  const userRole = role;
 
   if (loading) {
     return (
