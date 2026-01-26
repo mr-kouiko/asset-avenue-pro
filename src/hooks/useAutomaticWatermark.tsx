@@ -198,10 +198,12 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
     const results: ProcessedFile[] = [];
 
     try {
-      // Refresh session to ensure valid token for uploads
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      // IMPORTANT: Use getSession() instead of refreshSession() to avoid triggering
+      // onAuthStateChange events that would cause component re-renders and data loss
+      // during active uploads. Supabase auto-refreshes tokens in the background.
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
-        throw new Error('Session refresh failed. Please login again.');
+        throw new Error('Session expired. Please login again.');
       }
 
       const { data: { user } } = await supabase.auth.getUser();
