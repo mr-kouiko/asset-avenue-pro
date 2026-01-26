@@ -391,7 +391,9 @@ function extractVideoTaxonomy(content: MarketplaceContent): {
     format: [] as string[],
     effects: [] as string[],
     platform: [] as string[],
-    isAiGenerated: content.isAiGenerated || false,
+    // CRITICAL: Only use the explicit database flag, never infer from tags
+    // This ensures the "AI Generated" filter shows ONLY products explicitly marked as AI
+    isAiGenerated: content.isAiGenerated === true,
     isLoopable: false,
     hasPeople: false,
     hasCopySpace: false,
@@ -410,9 +412,8 @@ function extractVideoTaxonomy(content: MarketplaceContent): {
         if (!arr.includes(mapping.value)) {
           arr.push(mapping.value);
         }
-        if (mapping.category === "aiVideos") {
-          result.isAiGenerated = true;
-        }
+        // NOTE: We no longer set isAiGenerated based on tags here
+        // The aiVideos array is still populated for subcategory filtering
         if (mapping.value === "loopable") {
           result.isLoopable = true;
         }
@@ -477,7 +478,9 @@ function extractPhotoTaxonomy(content: MarketplaceContent): {
     style: [] as string[],
     format: [] as string[],
     color: [] as string[],
-    isAiGenerated: content.isAiGenerated || false,
+    // CRITICAL: Only use the explicit database flag, never infer from tags
+    // This ensures the "AI Generated" filter shows ONLY products explicitly marked as AI
+    isAiGenerated: content.isAiGenerated === true,
     hasPeople: false,
     numberOfPeople: null as string | null,
     hasCopySpace: false,
@@ -496,9 +499,8 @@ function extractPhotoTaxonomy(content: MarketplaceContent): {
         if (!arr.includes(mapping.value)) {
           arr.push(mapping.value);
         }
-        if (mapping.category === "aiPhotos") {
-          result.isAiGenerated = true;
-        }
+        // NOTE: We no longer set isAiGenerated based on tags here
+        // The aiPhotos array is still populated for subcategory filtering (AI Portraits, etc.)
       }
     }
     
@@ -582,8 +584,18 @@ export function applyVideoHardFilters(
     }
     
     if (filters.aiVideos.length > 0) {
-      const matches = filters.aiVideos.some(f => taxonomy.aiVideos.includes(f));
-      if (!matches) return false;
+      // AI subcategory filter: MUST be explicitly marked as AI-generated
+      // AND match the subcategory (cinematic, avatars, etc.)
+      // The "ai-generated" option shows ALL AI videos regardless of subcategory
+      if (!taxonomy.isAiGenerated) return false;
+      
+      // If "ai-generated" is selected, show all AI content
+      // Otherwise check for specific subcategories
+      const hasGenericAiFilter = filters.aiVideos.includes("ai-generated");
+      if (!hasGenericAiFilter) {
+        const matches = filters.aiVideos.some(f => taxonomy.aiVideos.includes(f));
+        if (!matches) return false;
+      }
     }
     
     if (filters.style.length > 0) {
@@ -665,8 +677,18 @@ export function applyPhotoHardFilters(
     }
     
     if (filters.aiPhotos.length > 0) {
-      const matches = filters.aiPhotos.some(f => taxonomy.aiPhotos.includes(f));
-      if (!matches) return false;
+      // AI subcategory filter: MUST be explicitly marked as AI-generated
+      // AND match the subcategory (portraits, landscapes, etc.)
+      // The "ai-generated" option shows ALL AI photos regardless of subcategory
+      if (!taxonomy.isAiGenerated) return false;
+      
+      // If "ai-generated" is selected, show all AI content
+      // Otherwise check for specific subcategories
+      const hasGenericAiFilter = filters.aiPhotos.includes("ai-generated");
+      if (!hasGenericAiFilter) {
+        const matches = filters.aiPhotos.some(f => taxonomy.aiPhotos.includes(f));
+        if (!matches) return false;
+      }
     }
     
     if (filters.subject.length > 0) {
