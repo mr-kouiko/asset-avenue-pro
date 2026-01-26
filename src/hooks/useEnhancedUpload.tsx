@@ -143,37 +143,47 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
   }, []);
 
   // Check for duplicate files (hash + size fallback for older files without hash)
+  // Now includes file_type to allow same content in different formats (e.g., image source + video from image)
   const checkDuplicate = useCallback(async (
     hash: string, 
-    fileSize: number
+    fileSize: number,
+    fileType: string
   ): Promise<{ isDuplicate: boolean; fileName?: string }> => {
     try {
-      // 1. Primary check: by hash (most reliable)
+      // Normalize file type to category (image, video, audio, document)
+      const normalizedType = fileType.startsWith('image/') ? 'image' 
+        : fileType.startsWith('video/') ? 'video'
+        : fileType.startsWith('audio/') ? 'audio'
+        : 'document';
+      
+      console.log(`🔍 [DUPLICATE-CHECK] Hash: ${hash.substring(0, 16)}..., Size: ${fileSize}, Type: ${normalizedType}`);
+      
+      // 1. Primary check: by hash + type (most reliable)
       const { data: hashData, error: hashError } = await supabase.rpc(
         'check_file_duplicate', 
-        { hash_value: hash }
+        { hash_value: hash, file_type_param: normalizedType }
       );
       
       if (!hashError && hashData && hashData.length > 0) {
         const result = hashData[0];
         if (result.exists_in_content || result.exists_in_uploaded) {
-          console.log(`🔍 [DUPLICATE] Found by HASH: ${result.duplicate_file_name}`);
+          console.log(`🔍 [DUPLICATE] Found by HASH+TYPE: ${result.duplicate_file_name}`);
           return { isDuplicate: true, fileName: result.duplicate_file_name };
         }
       }
       
-      // 2. Fallback: by file size (for older files without hash)
+      // 2. Fallback: by file size + type (for older files without hash)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: sizeData, error: sizeError } = await supabase.rpc(
           'check_file_duplicate_by_size', 
-          { p_file_size: fileSize, p_user_id: user.id }
+          { p_file_size: fileSize, p_user_id: user.id, p_file_type: normalizedType }
         );
         
         if (!sizeError && sizeData && sizeData.length > 0) {
           const result = sizeData[0];
           if (result.exists_in_content || result.exists_in_uploaded) {
-            console.log(`🔍 [DUPLICATE] Found by SIZE: ${result.duplicate_file_name}`);
+            console.log(`🔍 [DUPLICATE] Found by SIZE+TYPE: ${result.duplicate_file_name}`);
             return { isDuplicate: true, fileName: result.duplicate_file_name };
           }
         }
@@ -489,10 +499,11 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         continue;
       }
 
-      // Duplicate check (hash + size fallback)
+      // Duplicate check (hash + size + type fallback)
       try {
         const hash = await calculateFileHash(file);
-        const { isDuplicate, fileName } = await checkDuplicate(hash, file.size);
+        const mimeType = detectMimeType(file);
+        const { isDuplicate, fileName } = await checkDuplicate(hash, file.size, mimeType);
         if (isDuplicate) {
           toast.error(`Duplicate detected: "${file.name}" already exists${fileName ? ` (matches ${fileName})` : ''}`);
           continue;
