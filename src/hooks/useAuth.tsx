@@ -165,8 +165,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         if (!isMounted) return;
         
+        // CRITICAL: Ignore TOKEN_REFRESHED events to prevent data loss during uploads
+        // Token refresh happens in the background and shouldn't trigger re-renders
+        // which would reset component state (like upload progress)
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('Auth token refreshed silently (no re-render)');
+          // Only update session reference silently without triggering state update
+          // The session is already updated internally by Supabase client
+          return;
+        }
+        
         // Only update state if we've already checked the initial session
-        // OR if this is a definitive auth event (not just TOKEN_REFRESHED on mount)
+        // OR if this is a definitive auth event (SIGNED_IN or SIGNED_OUT)
         if (initialSessionChecked || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
           console.log('Auth state change:', event, session?.user?.email);
           setSession(session);
