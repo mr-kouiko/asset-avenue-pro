@@ -1,19 +1,30 @@
 /**
- * Structured Filtering Engine
+ * Structured Filtering Engine v2
  * 
- * Hard filters (category, use case, AI type, content type) use EXACT MATCHING
- * Keywords are used ONLY for ranking within the valid result set
+ * PRINCIPLES:
+ * 1. Source-of-truth flags (isAiGenerated) come ONLY from database metadata
+ * 2. Tag-based taxonomy is for subcategory/style filtering, not for determining metadata flags
+ * 3. All tag matching is case-insensitive
+ * 4. Hard filters use exact matching with AND logic
+ * 5. If no assets match, return empty state - never guess
  * 
  * Filtering Hierarchy:
  * 1. Hard Filters (AND logic) - Must match ALL selected criteria
  * 2. Soft Signals (ranking) - Keywords only affect sort order
- * 
- * If no assets match, return empty state - never guess
  */
 
 import type { VideoFilters } from "@/components/VideoFiltersPanel";
 import type { PhotoFilters } from "@/components/PhotoFiltersPanel";
 import type { MarketplaceContent } from "@/hooks/useMarketplace";
+
+// Debug mode - set to true during development to see filter matching
+const DEBUG_FILTERS = false;
+
+function debugLog(message: string, ...args: any[]) {
+  if (DEBUG_FILTERS) {
+    console.log(`🔍 [FILTER] ${message}`, ...args);
+  }
+}
 
 // ============================================================================
 // NORMALIZED TAXONOMY
@@ -150,24 +161,29 @@ const TAG_TO_VIDEO_TAXONOMY: Record<string, { category: VideoTaxonomyKey; value:
   "corporate": [{ category: "useCase", value: "business-corporate" }],
   "business": [{ category: "useCase", value: "business-corporate" }],
   "office": [{ category: "useCase", value: "business-corporate" }],
+  "professional": [{ category: "useCase", value: "business-corporate" }],
   "startup": [{ category: "useCase", value: "startup-saas" }],
   "saas": [{ category: "useCase", value: "startup-saas" }],
   "tech": [{ category: "useCase", value: "startup-saas" }],
+  "technology": [{ category: "useCase", value: "startup-saas" }],
+  "innovation": [{ category: "useCase", value: "startup-saas" }],
   "product": [{ category: "useCase", value: "ecommerce-product" }],
   "ecommerce": [{ category: "useCase", value: "ecommerce-product" }],
+  "e-commerce": [{ category: "useCase", value: "ecommerce-product" }],
   "real estate": [{ category: "useCase", value: "real-estate" }],
   "property": [{ category: "useCase", value: "real-estate" }],
+  "architecture": [{ category: "useCase", value: "real-estate" }],
+  "modern architecture": [{ category: "useCase", value: "real-estate" }],
   "luxury": [{ category: "useCase", value: "luxury-lifestyle" }],
   "lifestyle": [{ category: "useCase", value: "luxury-lifestyle" }],
   "motivation": [{ category: "useCase", value: "motivation-success" }],
   "inspirational": [{ category: "useCase", value: "motivation-success" }],
   "success": [{ category: "useCase", value: "motivation-success" }],
   
-  // AI Video mappings
+  // AI Video mappings (NOTE: These only populate aiVideos array, NOT isAiGenerated flag)
   "ai": [{ category: "aiVideos", value: "ai-generated" }],
   "ai generated": [{ category: "aiVideos", value: "ai-generated" }],
   "ai-generated": [{ category: "aiVideos", value: "ai-generated" }],
-  "generated": [{ category: "aiVideos", value: "ai-generated" }],
   "sora": [{ category: "aiVideos", value: "ai-generated" }],
   "runway": [{ category: "aiVideos", value: "ai-generated" }],
   "pika": [{ category: "aiVideos", value: "ai-generated" }],
@@ -180,11 +196,13 @@ const TAG_TO_VIDEO_TAXONOMY: Record<string, { category: VideoTaxonomyKey; value:
   "background loop": [{ category: "aiVideos", value: "ai-backgrounds" }],
   "motion graphics": [{ category: "aiVideos", value: "ai-motion-graphics" }],
   "mograph": [{ category: "aiVideos", value: "ai-motion-graphics" }],
+  "3d render": [{ category: "aiVideos", value: "ai-motion-graphics" }],
   
-  // Style mappings
+  // Style mappings - expanded with real database tags
   "cinematic": [{ category: "style", value: "cinematic" }],
   "film": [{ category: "style", value: "cinematic" }],
   "movie": [{ category: "style", value: "cinematic" }],
+  "golden hour": [{ category: "style", value: "cinematic" }],
   "minimal": [{ category: "style", value: "minimal" }],
   "minimalist": [{ category: "style", value: "minimal" }],
   "clean": [{ category: "style", value: "minimal" }],
@@ -195,13 +213,25 @@ const TAG_TO_VIDEO_TAXONOMY: Record<string, { category: VideoTaxonomyKey; value:
   "artistic": [{ category: "style", value: "abstract" }],
   "documentary": [{ category: "style", value: "documentary" }],
   "reportage": [{ category: "style", value: "documentary" }],
+  "timelapse": [{ category: "style", value: "documentary" }],
   "urban": [{ category: "style", value: "urban-street" }],
   "street": [{ category: "style", value: "urban-street" }],
   "city": [{ category: "style", value: "urban-street" }],
+  "cityscape": [{ category: "style", value: "urban-street" }],
+  "skyline": [{ category: "style", value: "urban-street" }],
+  "metropolis": [{ category: "style", value: "urban-street" }],
+  "downtown": [{ category: "style", value: "urban-street" }],
+  "skyscrapers": [{ category: "style", value: "urban-street" }],
   "nature": [{ category: "style", value: "nature-travel" }],
   "travel": [{ category: "style", value: "nature-travel" }],
-  "landscape video": [{ category: "style", value: "nature-travel" }],
+  "tourism": [{ category: "style", value: "nature-travel" }],
+  "landscape": [{ category: "style", value: "nature-travel" }],
   "outdoor": [{ category: "style", value: "nature-travel" }],
+  "wilderness": [{ category: "style", value: "nature-travel" }],
+  "desert": [{ category: "style", value: "nature-travel" }],
+  "adventure": [{ category: "style", value: "nature-travel" }],
+  "exploration": [{ category: "style", value: "nature-travel" }],
+  "sunset": [{ category: "style", value: "nature-travel" }],
   
   // Format mappings
   "vertical": [{ category: "format", value: "vertical" }],
@@ -214,6 +244,7 @@ const TAG_TO_VIDEO_TAXONOMY: Record<string, { category: VideoTaxonomyKey; value:
   "16:9": [{ category: "format", value: "horizontal" }],
   "4k": [{ category: "format", value: "4k" }],
   "uhd": [{ category: "format", value: "4k" }],
+  "high resolution": [{ category: "format", value: "4k" }],
   "loop": [{ category: "format", value: "loopable" }],
   "loopable": [{ category: "format", value: "loopable" }],
   "seamless": [{ category: "format", value: "loopable" }],
@@ -237,7 +268,7 @@ const TAG_TO_VIDEO_TAXONOMY: Record<string, { category: VideoTaxonomyKey; value:
 // ============================================================================
 
 const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value: string }[]> = {
-  // Use Case mappings
+  // Use Case mappings - expanded with real database tags
   "social": [{ category: "useCase", value: "social-media" }],
   "instagram": [{ category: "useCase", value: "social-media" }],
   "facebook": [{ category: "useCase", value: "social-media" }],
@@ -246,16 +277,22 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   "header": [{ category: "useCase", value: "website-hero" }],
   "marketing": [{ category: "useCase", value: "marketing-ads" }],
   "advertisement": [{ category: "useCase", value: "marketing-ads" }],
+  "commercial": [{ category: "useCase", value: "marketing-ads" }],
   "blog": [{ category: "useCase", value: "blog-editorial" }],
   "article": [{ category: "useCase", value: "blog-editorial" }],
+  "editorial": [{ category: "useCase", value: "blog-editorial" }, { category: "style", value: "editorial" }],
   "presentation": [{ category: "useCase", value: "presentation" }],
   "powerpoint": [{ category: "useCase", value: "presentation" }],
   "print": [{ category: "useCase", value: "print" }],
   "packaging": [{ category: "useCase", value: "print" }],
   "ecommerce": [{ category: "useCase", value: "ecommerce" }],
+  "e-commerce": [{ category: "useCase", value: "ecommerce" }],
   "product": [{ category: "useCase", value: "ecommerce" }],
+  "stock": [{ category: "useCase", value: "marketing-ads" }],
+  "stock footage": [{ category: "useCase", value: "marketing-ads" }],
+  "stock video": [{ category: "useCase", value: "marketing-ads" }],
   
-  // AI Photo mappings
+  // AI Photo mappings (NOTE: These only populate aiPhotos array, NOT isAiGenerated flag)
   "ai": [{ category: "aiPhotos", value: "ai-generated" }],
   "ai generated": [{ category: "aiPhotos", value: "ai-generated" }],
   "ai-generated": [{ category: "aiPhotos", value: "ai-generated" }],
@@ -267,24 +304,37 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   "ai abstract": [{ category: "aiPhotos", value: "ai-abstract" }],
   "ai product": [{ category: "aiPhotos", value: "ai-product" }],
   "concept art": [{ category: "aiPhotos", value: "ai-concept" }],
+  "3d render": [{ category: "aiPhotos", value: "ai-generated" }],
   
-  // Subject mappings
+  // Subject mappings - expanded with real database tags
   "people": [{ category: "subject", value: "people" }],
   "person": [{ category: "subject", value: "people" }],
   "portrait": [{ category: "subject", value: "people" }, { category: "format", value: "vertical" }],
   "face": [{ category: "subject", value: "people" }],
+  "man": [{ category: "subject", value: "people" }],
+  "woman": [{ category: "subject", value: "people" }],
+  "businessman": [{ category: "subject", value: "people" }, { category: "subject", value: "business" }],
+  "traditional clothing": [{ category: "subject", value: "people" }],
   "business": [{ category: "subject", value: "business" }],
   "corporate": [{ category: "subject", value: "business" }],
   "office": [{ category: "subject", value: "business" }],
+  "professional": [{ category: "subject", value: "business" }, { category: "style", value: "professional" }],
+  "logistics": [{ category: "subject", value: "business" }],
+  "supply chain": [{ category: "subject", value: "business" }],
+  "industrial": [{ category: "subject", value: "business" }],
   "nature": [{ category: "subject", value: "nature" }],
   "landscape": [{ category: "subject", value: "nature" }, { category: "format", value: "horizontal" }],
   "outdoor": [{ category: "subject", value: "nature" }],
   "forest": [{ category: "subject", value: "nature" }],
   "mountain": [{ category: "subject", value: "nature" }],
+  "desert": [{ category: "subject", value: "nature" }],
+  "wilderness": [{ category: "subject", value: "nature" }],
   "technology": [{ category: "subject", value: "technology" }],
   "tech": [{ category: "subject", value: "technology" }],
   "computer": [{ category: "subject", value: "technology" }],
   "digital": [{ category: "subject", value: "technology" }],
+  "innovation": [{ category: "subject", value: "technology" }],
+  "infrastructure": [{ category: "subject", value: "technology" }],
   "food": [{ category: "subject", value: "food-drink" }],
   "drink": [{ category: "subject", value: "food-drink" }],
   "restaurant": [{ category: "subject", value: "food-drink" }],
@@ -293,16 +343,25 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   "vacation": [{ category: "subject", value: "travel" }],
   "tourism": [{ category: "subject", value: "travel" }],
   "destination": [{ category: "subject", value: "travel" }],
+  "exploration": [{ category: "subject", value: "travel" }],
+  "adventure": [{ category: "subject", value: "travel" }],
+  "voyage": [{ category: "subject", value: "travel" }],
   "architecture": [{ category: "subject", value: "architecture" }],
   "building": [{ category: "subject", value: "architecture" }],
   "interior": [{ category: "subject", value: "architecture" }],
   "exterior": [{ category: "subject", value: "architecture" }],
+  "modern architecture": [{ category: "subject", value: "architecture" }],
+  "skyline": [{ category: "subject", value: "architecture" }],
+  "skyscrapers": [{ category: "subject", value: "architecture" }],
+  "cityscape": [{ category: "subject", value: "architecture" }],
+  "landmark": [{ category: "subject", value: "architecture" }],
   "abstract": [{ category: "subject", value: "abstract" }],
   "pattern": [{ category: "subject", value: "abstract" }],
   "texture": [{ category: "subject", value: "abstract" }],
   "lifestyle": [{ category: "subject", value: "lifestyle" }],
   "home": [{ category: "subject", value: "lifestyle" }],
   "family": [{ category: "subject", value: "lifestyle" }],
+  "culture": [{ category: "subject", value: "lifestyle" }],
   "sports": [{ category: "subject", value: "sports" }],
   "fitness": [{ category: "subject", value: "sports" }],
   "exercise": [{ category: "subject", value: "sports" }],
@@ -313,14 +372,14 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   "school": [{ category: "subject", value: "education" }],
   "learning": [{ category: "subject", value: "education" }],
   
-  // Style mappings
-  "professional": [{ category: "style", value: "professional" }],
+  // Style mappings - expanded with real database tags
+  // Note: "professional" is already defined in subject mappings with both subject and style
   "studio": [{ category: "style", value: "professional" }],
   "candid": [{ category: "style", value: "candid" }],
   "natural": [{ category: "style", value: "candid" }],
   "spontaneous": [{ category: "style", value: "candid" }],
-  "editorial": [{ category: "style", value: "editorial" }],
-  "magazine": [{ category: "style", value: "editorial" }],
+  // Note: "editorial" is already defined in use case mappings
+  "magazine": [{ category: "style", value: "editorial" }, { category: "useCase", value: "blog-editorial" }],
   "artistic": [{ category: "style", value: "artistic" }],
   "creative": [{ category: "style", value: "artistic" }],
   "vintage": [{ category: "style", value: "vintage" }],
@@ -337,7 +396,7 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   "dark": [{ category: "style", value: "moody" }],
   "atmospheric": [{ category: "style", value: "moody" }],
   
-  // Format mappings (without duplicates from subject)
+  // Format mappings
   "horizontal": [{ category: "format", value: "horizontal" }],
   "widescreen": [{ category: "format", value: "horizontal" }],
   "16:9": [{ category: "format", value: "horizontal" }],
@@ -347,14 +406,17 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   "1:1": [{ category: "format", value: "square" }],
   "panoramic": [{ category: "format", value: "panoramic" }],
   "wide": [{ category: "format", value: "panoramic" }],
+  "aerial view": [{ category: "format", value: "panoramic" }],
   
-  // Color mappings (without duplicates)
+  // Color mappings
   "warm": [{ category: "color", value: "warm" }],
   "orange": [{ category: "color", value: "warm" }],
   "sunset": [{ category: "color", value: "warm" }],
+  "golden hour": [{ category: "color", value: "warm" }, { category: "style", value: "dramatic" }],
   "cool": [{ category: "color", value: "cool" }],
   "blue": [{ category: "color", value: "cool" }],
   "cold": [{ category: "color", value: "cool" }],
+  "blue sky": [{ category: "color", value: "cool" }],
   "neutral": [{ category: "color", value: "neutral" }],
   "muted": [{ category: "color", value: "neutral" }],
   "vibrant": [{ category: "color", value: "vibrant" }, { category: "style", value: "bright" }],
