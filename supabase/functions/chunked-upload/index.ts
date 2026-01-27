@@ -13,6 +13,127 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const BUCKET_TEMP = "temp-chunks";
 const BUCKET_FINAL = "uploads";
 
+// ============= SECURITY: File size limits per content type =============
+const MAX_FILE_SIZE: Record<string, number> = {
+  video: 2 * 1024 * 1024 * 1024,   // 2GB for videos (high-res content)
+  image: 50 * 1024 * 1024,          // 50MB for images
+  audio: 100 * 1024 * 1024,         // 100MB for audio
+  document: 50 * 1024 * 1024,       // 50MB for documents
+  default: 50 * 1024 * 1024,        // 50MB default
+};
+
+// Rate limiting: Track upload sessions per user (in-memory cache with TTL)
+const uploadRateLimits = new Map<string, { count: number; resetTime: number }>();
+const MAX_UPLOADS_PER_HOUR = 50;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+// Daily upload quota per user (tracked in database)
+const DAILY_UPLOAD_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5GB per day
+
+// Magic bytes for content validation
+const MAGIC_BYTES: Record<string, Uint8Array[]> = {
+  'image/jpeg': [new Uint8Array([0xFF, 0xD8, 0xFF])],
+  'image/png': [new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])],
+  'image/gif': [new Uint8Array([0x47, 0x49, 0x46, 0x38])],
+  'image/webp': [new Uint8Array([0x52, 0x49, 0x46, 0x46])], // RIFF header
+  'video/mp4': [
+    new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]), // ftyp
+    new Uint8Array([0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70]), // ftyp
+    new Uint8Array([0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70]), // ftyp
+  ],
+  'audio/mpeg': [
+    new Uint8Array([0xFF, 0xFB]), // MP3 frame sync
+    new Uint8Array([0xFF, 0xFA]), // MP3 frame sync
+    new Uint8Array([0xFF, 0xF3]), // MP3 frame sync
+    new Uint8Array([0x49, 0x44, 0x33]), // ID3 tag
+  ],
+  'application/pdf': [new Uint8Array([0x25, 0x50, 0x44, 0x46])], // %PDF
+};
+
+// Check rate limit for user
+function checkRateLimit(userId: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const userLimit = uploadRateLimits.get(userId);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    // Reset or create new limit
+    uploadRateLimits.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: MAX_UPLOADS_PER_HOUR - 1 };
+  }
+  
+  if (userLimit.count >= MAX_UPLOADS_PER_HOUR) {
+    console.log(`⚠️ Rate limit exceeded for user: ${userId}`);
+    return { allowed: false, remaining: 0 };
+  }
+  
+  userLimit.count++;
+  return { allowed: true, remaining: MAX_UPLOADS_PER_HOUR - userLimit.count };
+}
+
+// Validate file content against magic bytes
+function validateMagicBytes(data: Uint8Array, expectedMimeType: string): boolean {
+  const patterns = MAGIC_BYTES[expectedMimeType];
+  if (!patterns) {
+    // No pattern defined, skip validation
+    return true;
+  }
+  
+  for (const pattern of patterns) {
+    if (data.length >= pattern.length) {
+      let matches = true;
+      for (let i = 0; i < pattern.length; i++) {
+        if (data[i] !== pattern[i]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        console.log(`✅ Magic bytes validated for ${expectedMimeType}`);
+        return true;
+      }
+    }
+  }
+  
+  console.log(`❌ Magic bytes validation failed for ${expectedMimeType}`);
+  return false;
+}
+
+// Get file size limit based on content type
+function getFileSizeLimit(mimeType: string): number {
+  if (mimeType.startsWith('video/')) return MAX_FILE_SIZE.video;
+  if (mimeType.startsWith('image/')) return MAX_FILE_SIZE.image;
+  if (mimeType.startsWith('audio/')) return MAX_FILE_SIZE.audio;
+  if (mimeType === 'application/pdf' || mimeType.startsWith('text/')) return MAX_FILE_SIZE.document;
+  return MAX_FILE_SIZE.default;
+}
+
+// Check user's daily upload quota
+async function checkDailyQuota(userId: string, fileSize: number): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Query today's uploads for this user
+  const { data, error } = await supabase
+    .from('file_uploads')
+    .select('file_size')
+    .eq('user_id', userId)
+    .gte('created_at', `${today}T00:00:00.000Z`);
+  
+  if (error) {
+    console.error('Error checking daily quota:', error);
+    // Allow on error to not block legitimate uploads
+    return { allowed: true, used: 0, limit: DAILY_UPLOAD_QUOTA_BYTES };
+  }
+  
+  const usedToday = (data || []).reduce((sum, row) => sum + (row.file_size || 0), 0);
+  const allowed = (usedToday + fileSize) <= DAILY_UPLOAD_QUOTA_BYTES;
+  
+  if (!allowed) {
+    console.log(`⚠️ Daily quota exceeded for user ${userId}: ${usedToday} + ${fileSize} > ${DAILY_UPLOAD_QUOTA_BYTES}`);
+  }
+  
+  return { allowed, used: usedToday, limit: DAILY_UPLOAD_QUOTA_BYTES };
+}
+
 // Vérifie que les buckets existent (crée-les si manquants)
 async function ensureBucketExists(bucket: string) {
   const { data, error } = await supabase.storage.getBucket(bucket);
@@ -134,6 +255,28 @@ function checkAuth(req: Request): boolean {
   return false;
 }
 
+// Extract user ID from JWT token in authorization header
+async function extractUserId(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  
+  const token = authHeader.replace("Bearer ", "");
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      console.log("⚠️ Could not extract user from token:", error?.message);
+      return null;
+    }
+    return user.id;
+  } catch (err) {
+    console.log("⚠️ Error extracting user ID:", err);
+    return null;
+  }
+}
+
 // Memory-efficient merge: download and upload chunks one at a time
 // to avoid memory limit issues with large files
 async function mergeChunks(uploadId: string, fileName: string): Promise<string> {
@@ -156,6 +299,27 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
   );
 
   console.log(`📦 [Merge] Found ${sorted.length} chunks to merge`);
+  
+  // SECURITY: Validate first chunk's magic bytes before processing all chunks
+  const expectedMimeType = detectMimeType(fileName);
+  console.log(`🔍 [Merge] Validating magic bytes for ${expectedMimeType}`);
+  
+  // Download first chunk for validation
+  const { data: firstChunkData, error: firstChunkError } = await supabase.storage
+    .from(BUCKET_TEMP)
+    .download(`${uploadId}/${sorted[0].name}`);
+  
+  if (firstChunkError) throw firstChunkError;
+  
+  const firstChunkBytes = new Uint8Array(await firstChunkData.arrayBuffer());
+  
+  // Validate magic bytes (content-type verification)
+  if (!validateMagicBytes(firstChunkBytes, expectedMimeType)) {
+    // Cleanup chunks before throwing error
+    console.log(`⚠️ [Merge] Magic bytes validation failed - cleaning up chunks`);
+    await cleanupChunks(uploadId, sorted);
+    throw new Error(`File content does not match expected type: ${expectedMimeType}. File may be corrupted or have incorrect extension.`);
+  }
 
   // For small files (< 50MB estimated), use the fast in-memory method
   // For larger files, use streaming approach
@@ -164,11 +328,11 @@ async function mergeChunks(uploadId: string, fileName: string): Promise<string> 
 
   if (estimatedSize < MAX_MEMORY_SIZE) {
     console.log(`📦 [Merge] Using in-memory merge for small file`);
-    return await mergeChunksInMemory(uploadId, fileName, sorted, startTime);
+    return await mergeChunksInMemory(uploadId, fileName, sorted, startTime, firstChunkBytes);
   }
 
   console.log(`📦 [Merge] Using streaming merge for large file (${sorted.length} chunks)`);
-  return await mergeChunksStreaming(uploadId, fileName, sorted, startTime);
+  return await mergeChunksStreaming(uploadId, fileName, sorted, startTime, firstChunkBytes);
 }
 
 // Fast in-memory merge for smaller files
@@ -176,15 +340,24 @@ async function mergeChunksInMemory(
   uploadId: string, 
   fileName: string, 
   sorted: any[], 
-  startTime: number
+  startTime: number,
+  firstChunkBytes?: Uint8Array
 ): Promise<string> {
   const BATCH_SIZE = 5; // Smaller batch for safety
   const fileChunks: Uint8Array[] = new Array(sorted.length);
+  
+  // Use pre-downloaded first chunk if available
+  if (firstChunkBytes) {
+    fileChunks[0] = firstChunkBytes;
+    console.log(`✓ [Merge] Using pre-downloaded first chunk`);
+  }
 
-  for (let i = 0; i < sorted.length; i += BATCH_SIZE) {
+  for (let i = firstChunkBytes ? 1 : 0; i < sorted.length; i += BATCH_SIZE) {
     const batch = sorted.slice(i, Math.min(i + BATCH_SIZE, sorted.length));
     const batchPromises = batch.map(async (chunk, batchIdx) => {
       const globalIdx = i + batchIdx;
+      if (globalIdx === 0 && firstChunkBytes) return; // Skip first chunk if already downloaded
+      
       const { data, error: downloadErr } = await supabase.storage
         .from(BUCKET_TEMP)
         .download(`${uploadId}/${chunk.name}`);
@@ -232,7 +405,8 @@ async function mergeChunksStreaming(
   uploadId: string, 
   fileName: string, 
   sorted: any[], 
-  startTime: number
+  startTime: number,
+  firstChunkBytes?: Uint8Array
 ): Promise<string> {
   // For very large files, we need to use a different approach:
   // Copy chunks to final bucket with numbered names, then use resumable upload
@@ -241,7 +415,16 @@ async function mergeChunksStreaming(
   const MINI_BATCH_SIZE = 3; // Process 3 chunks at a time (~18MB in memory max)
   const allChunkData: Uint8Array[] = [];
   
-  for (let i = 0; i < sorted.length; i += MINI_BATCH_SIZE) {
+  // Use pre-downloaded first chunk if available
+  if (firstChunkBytes) {
+    allChunkData.push(firstChunkBytes);
+    console.log(`✓ [Merge] Using pre-downloaded first chunk`);
+  }
+  
+  // Start from index 1 if first chunk is already downloaded
+  const startIndex = firstChunkBytes ? 1 : 0;
+  
+  for (let i = startIndex; i < sorted.length; i += MINI_BATCH_SIZE) {
     const batch = sorted.slice(i, Math.min(i + MINI_BATCH_SIZE, sorted.length));
     
     // Download this mini-batch sequentially to control memory
@@ -337,14 +520,65 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+    
+    // Extract user ID for rate limiting and quota tracking
+    const userId = await extractUserId(req);
 
     await ensureBucketExists(BUCKET_TEMP);
     await ensureBucketExists(BUCKET_FINAL);
 
-    // Init upload
+    // Init upload (legacy URL parameter method)
     if (action === "init-upload" && req.method === "POST") {
       const body = await req.json();
       const uploadId = body.uploadId || body.body?.uploadId;
+      const fileName = body.fileName || body.body?.fileName;
+      const fileSize = body.fileSize || body.body?.fileSize;
+      
+      // Apply rate limiting if we have a user ID
+      if (userId) {
+        const rateCheck = checkRateLimit(userId);
+        if (!rateCheck.allowed) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Rate limit exceeded. Please wait before starting more uploads.",
+              retryAfter: 3600 
+            }),
+            { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+      
+      // Validate file size if provided
+      if (fileSize && fileName) {
+        const mimeType = detectMimeType(fileName);
+        const maxSize = getFileSizeLimit(mimeType);
+        if (fileSize > maxSize) {
+          return new Response(
+            JSON.stringify({ 
+              error: `File too large. Maximum size for ${mimeType.split('/')[0]} is ${(maxSize / 1024 / 1024).toFixed(0)}MB`,
+              maxSize: maxSize,
+              actualSize: fileSize
+            }),
+            { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+        
+        // Check daily quota
+        if (userId) {
+          const quotaCheck = await checkDailyQuota(userId, fileSize);
+          if (!quotaCheck.allowed) {
+            return new Response(
+              JSON.stringify({ 
+                error: "Daily upload quota exceeded. Please try again tomorrow.",
+                used: quotaCheck.used,
+                limit: quotaCheck.limit
+              }),
+              { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+            );
+          }
+        }
+      }
+      
       return new Response(
         JSON.stringify({ success: true, uploadId }),
         { headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -359,6 +593,54 @@ serve(async (req) => {
       // Init upload
       if (body.action === "init-upload") {
         const uploadId = body.uploadId || body.body?.uploadId;
+        const fileName = body.fileName || body.body?.fileName;
+        const fileSize = body.fileSize || body.body?.fileSize;
+        
+        // Apply rate limiting if we have a user ID
+        if (userId) {
+          const rateCheck = checkRateLimit(userId);
+          if (!rateCheck.allowed) {
+            return new Response(
+              JSON.stringify({ 
+                error: "Rate limit exceeded. Please wait before starting more uploads.",
+                retryAfter: 3600 
+              }),
+              { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+            );
+          }
+        }
+        
+        // Validate file size if provided
+        if (fileSize && fileName) {
+          const mimeType = detectMimeType(fileName);
+          const maxSize = getFileSizeLimit(mimeType);
+          if (fileSize > maxSize) {
+            return new Response(
+              JSON.stringify({ 
+                error: `File too large. Maximum size for ${mimeType.split('/')[0]} is ${(maxSize / 1024 / 1024).toFixed(0)}MB`,
+                maxSize: maxSize,
+                actualSize: fileSize
+              }),
+              { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } }
+            );
+          }
+          
+          // Check daily quota
+          if (userId) {
+            const quotaCheck = await checkDailyQuota(userId, fileSize);
+            if (!quotaCheck.allowed) {
+              return new Response(
+                JSON.stringify({ 
+                  error: "Daily upload quota exceeded. Please try again tomorrow.",
+                  used: quotaCheck.used,
+                  limit: quotaCheck.limit
+                }),
+                { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+              );
+            }
+          }
+        }
+        
         return new Response(
           JSON.stringify({ success: true, uploadId }),
           { headers: { "Content-Type": "application/json", ...corsHeaders } }
