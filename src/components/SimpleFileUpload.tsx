@@ -686,7 +686,7 @@ export const SimpleFileUpload = ({
                     <div className="mt-2">
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Loader2 className="h-3 w-3 animate-spin" />
-                        Vérification des doublons...
+                        Checking for duplicates...
                       </p>
                     </div>
                   )}

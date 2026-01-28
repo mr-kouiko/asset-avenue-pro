@@ -34,7 +34,7 @@ const SellerRegistrationSuccess = () => {
 
         if (data.success) {
           setStatus("success");
-          toast.success("Félicitations! Vous êtes maintenant vendeur.");
+          toast.success("Congratulations! You are now a seller.");
         } else {
           throw new Error(data.error || "Verification failed");
         }
@@ -57,27 +57,27 @@ const SellerRegistrationSuccess = () => {
             {status === "loading" && (
               <>
                 <Loader2 className="h-16 w-16 animate-spin mx-auto text-primary mb-4" />
-                <CardTitle>Vérification du paiement...</CardTitle>
+                <CardTitle>Verifying payment...</CardTitle>
                 <CardDescription>
-                  Veuillez patienter pendant que nous confirmons votre inscription.
+                  Please wait while we confirm your registration.
                 </CardDescription>
               </>
             )}
             {status === "success" && (
               <>
                 <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
-                <CardTitle>Bienvenue, Vendeur!</CardTitle>
+                <CardTitle>Welcome, Seller!</CardTitle>
                 <CardDescription>
-                  Votre compte vendeur a été activé avec succès.
+                  Your seller account has been successfully activated.
                 </CardDescription>
               </>
             )}
             {status === "error" && (
               <>
                 <XCircle className="h-16 w-16 mx-auto text-destructive mb-4" />
-                <CardTitle>Erreur de vérification</CardTitle>
+                <CardTitle>Verification Error</CardTitle>
                 <CardDescription>
-                  {errorMessage || "Une erreur est survenue lors de la vérification."}
+                  {errorMessage || "An error occurred during verification."}
                 </CardDescription>
               </>
             )}
@@ -86,17 +86,17 @@ const SellerRegistrationSuccess = () => {
             {status === "success" && (
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Vous pouvez maintenant commencer à vendre vos créations sur VisuStock.
+                  You can now start selling your creations on VisuStock.
                 </p>
                 <Button onClick={() => navigate("/seller-dashboard")} className="w-full">
-                  Accéder à mon tableau de bord
+                  Go to my Dashboard
                 </Button>
               </div>
             )}
             {status === "error" && (
               <div className="space-y-4">
                 <Button onClick={() => navigate("/")} variant="outline" className="w-full">
-                  Retour à l'accueil
+                  Back to Home
                 </Button>
               </div>
             )}

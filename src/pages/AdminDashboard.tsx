@@ -182,7 +182,7 @@ const AdminDashboard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Lock className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
-          <p className="text-muted-foreground">Vérification des autorisations...</p>
+          <p className="text-muted-foreground">Verifying permissions...</p>
         </div>
       </div>
     );
