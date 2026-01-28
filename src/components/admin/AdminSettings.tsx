@@ -217,7 +217,7 @@ export const AdminSettings = () => {
             Outils de maintenance
           </CardTitle>
           <CardDescription>
-            Tâches de maintenance et réparation système
+            System maintenance and repair tasks
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -225,14 +225,14 @@ export const AdminSettings = () => {
             <div className="flex-1">
               <h4 className="font-medium mb-1 flex items-center gap-2">
                 <Zap className="h-4 w-4" />
-                Régénérer les miniatures vidéo
+                Regenerate Video Thumbnails
               </h4>
               <p className="text-sm text-muted-foreground">
-                Génère des miniatures pour toutes les vidéos sans miniature valide.
+                Generate thumbnails for all videos without valid thumbnails.
               </p>
             </div>
             <Button variant="outline" onClick={regenerateThumbnails}>
-              Exécuter
+              Run
             </Button>
           </div>
           
@@ -240,10 +240,10 @@ export const AdminSettings = () => {
             <div className="flex-1">
               <h4 className="font-medium mb-1 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                Vérification de sécurité
+                Security Check
               </h4>
               <p className="text-sm text-muted-foreground">
-                Analyse les patterns d'accès suspects et les anomalies.
+                Analyzes suspicious access patterns and anomalies.
               </p>
             </div>
             <Button 
@@ -251,13 +251,13 @@ export const AdminSettings = () => {
               onClick={async () => {
                 try {
                   await supabase.rpc('check_admin_access_patterns');
-                  toast.success('Vérification de sécurité terminée');
+                  toast.success('Security check completed');
                 } catch (error) {
-                  toast.error('Erreur lors de la vérification');
+                  toast.error('Error during security check');
                 }
               }}
             >
-              Analyser
+              Analyze
             </Button>
           </div>
         </CardContent>

@@ -31,8 +31,8 @@ export const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
       if (user.email !== AUTHORIZED_ADMIN_EMAIL) {
         toast({
           variant: "destructive",
-          title: "Accès refusé",
-          description: "Cette zone est réservée à l'administrateur exclusif."
+          title: "Access Denied",
+          description: "This area is reserved for the exclusive administrator."
         });
         setVerifying(false);
         return;
@@ -48,8 +48,8 @@ export const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
       if (error || roleData?.role !== 'admin') {
         toast({
           variant: "destructive",
-          title: "Accès refusé",
-          description: "Rôle administrateur non vérifié."
+          title: "Access Denied",
+          description: "Administrator role not verified."
         });
         setVerifying(false);
         return;
@@ -79,7 +79,7 @@ export const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
         <div className="text-center">
           <Lock className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Vérification des autorisations administrateur...</p>
+          <p className="text-muted-foreground">Verifying administrator permissions...</p>
         </div>
       </div>
     );
