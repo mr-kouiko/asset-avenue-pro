@@ -128,22 +128,16 @@ export class StreamingUploadHandler {
     return chunks;
   }
 
-  // Ensure session has enough TTL; refresh if near expiry
+  // Ensure session is valid - Supabase auto-refreshes tokens internally
+  // CRITICAL: Never call refreshSession() as it triggers SIGNED_IN events that reset UI state
   private static async ensureFreshSession(minTTLSeconds = 120) {
     const { data: { session } } = await supabase.auth.getSession();
-    const now = Math.floor(Date.now() / 1000);
-    const exp = session?.expires_at ?? 0;
     if (!session?.user) {
       throw new Error('User not authenticated');
     }
-    if (exp - now < minTTLSeconds) {
-      const { error } = await supabase.auth.refreshSession();
-      if (error) {
-        console.warn('⚠️ Failed to refresh session proactively:', error);
-      } else {
-        console.log('🔄 Session refreshed (proactive)');
-      }
-    }
+    // Supabase client automatically handles token refresh in background
+    // We just need to verify the session is valid
+    console.log('✓ Session validated for upload');
   }
 
   /**
@@ -664,13 +658,14 @@ export class StreamingUploadHandler {
     console.log(`☁️ [R2 Chunked] Starting chunked upload: ${finalPath} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     
     try {
-      // Refresh session to get a fresh token for long uploads
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      // CRITICAL: Use getSession() instead of refreshSession() to prevent SIGNED_IN events
+      // that would trigger auth state changes and reset the upload UI
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session?.user) {
-        throw new Error('Failed to refresh authentication session');
+        throw new Error('Authentication session not found');
       }
       const user = session.user;
-      console.log('🔄 Session refreshed for long upload');
+      console.log('✓ Session validated for long upload');
 
       onProgress?.(5);
       
@@ -685,14 +680,14 @@ export class StreamingUploadHandler {
       // Upload chunks directly to Supabase Storage (bypass edge function)
       let uploadedChunks = 0;
       for (let i = 0; i < totalChunks; i++) {
-        // Refresh session every 10 chunks to keep token fresh
+        // Validate session every 10 chunks (Supabase auto-refreshes internally)
+        // CRITICAL: Never call refreshSession() as it triggers SIGNED_IN events
         if (i > 0 && i % 10 === 0) {
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.warn('⚠️ Failed to refresh session during upload:', refreshError);
-          } else {
-            console.log('🔄 Session refreshed during upload');
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user) {
+            throw new Error('Session expired during upload');
           }
+          console.log('✓ Session validated during upload');
         }
 
         const chunk = chunks[i];
