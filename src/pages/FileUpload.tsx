@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -41,9 +41,16 @@ const FileUpload = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [showExistingDrafts, setShowExistingDrafts] = useState(false);
+  
+  // Guard: ensure initialization only runs once per mount
+  const hasInitialized = useRef(false);
 
   // Initialize: load existing drafts and recover orphaned uploads
   useEffect(() => {
+    // Prevent re-runs from callback recreation or parent re-renders
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const initialize = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -76,7 +83,7 @@ const FileUpload = () => {
     };
 
     initialize();
-  }, [loadDrafts, recoverOrphanedUploads]);
+  }, []); // Empty deps - runs once, guard prevents re-runs
 
   // Create a draft when user starts uploading (if not already created)
   const ensureDraftExists = useCallback(async (): Promise<string | null> => {
