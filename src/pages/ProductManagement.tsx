@@ -70,6 +70,7 @@ const ProductManagement = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null); // Track current draft
   
   const hasInitializedRef = useRef(false);
   
@@ -77,12 +78,12 @@ const ProductManagement = () => {
     // Prevent multiple initializations
     if (hasInitializedRef.current) return;
     
-    // Check if we're in edit mode
+    // Check if we're in edit mode or have a draft ID
     const editingData = sessionStorage.getItem('editingSubmission');
+    const storedDraftId = sessionStorage.getItem('currentDraftId');
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
     
     if (!storedFiles) {
-      // No files found, redirect to upload page
       toast.error("No files found. Please upload your files first.");
       navigate('/file-upload');
       return;
@@ -91,10 +92,18 @@ const ProductManagement = () => {
     // Mark as initialized immediately to prevent re-runs
     hasInitializedRef.current = true;
     
+    // Set draft ID for later use in publishing
+    if (storedDraftId) {
+      setCurrentDraftId(storedDraftId);
+      console.log('📝 Using draft ID:', storedDraftId);
+    }
+    
     if (editingData) {
       const editData = JSON.parse(editingData);
       setIsEditMode(true);
       setEditingSubmissionId(editData.submissionId);
+      // Use the editing submission ID as the draft ID
+      setCurrentDraftId(editData.submissionId);
     }
     
     const files = JSON.parse(storedFiles);
@@ -393,7 +402,8 @@ const ProductManagement = () => {
         category_id: finalCategoryId || undefined,
         tags: productData.tags,
         isFreeContent: productData.isFreeContent || false
-      }
+      },
+      draftId: currentDraftId || undefined // Pass draft ID if available
     });
 
     if (success) {
@@ -413,6 +423,7 @@ const ProductManagement = () => {
       if (updatedFiles.length === 0) {
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('editingSubmission');
+        sessionStorage.removeItem('currentDraftId');
         toast.success("All products have been published! Redirecting to your portfolio...");
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
@@ -520,7 +531,8 @@ const ProductManagement = () => {
             category_id: productData.category || undefined,
             tags: productData.tags,
             isFreeContent: productData.isFreeContent || false
-          }
+          },
+          draftId: currentDraftId || undefined // Pass draft ID
         });
 
         if (success) {
@@ -551,6 +563,7 @@ const ProductManagement = () => {
       if (updatedFiles.length === 0) {
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('editingSubmission');
+        sessionStorage.removeItem('currentDraftId');
         toast.success("All products have been published! Redirecting to your portfolio...");
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {

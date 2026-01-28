@@ -1296,6 +1296,7 @@ export type Database = {
       uploaded_files: {
         Row: {
           created_at: string
+          draft_id: string | null
           file_hash: string | null
           file_name: string
           file_size: number
@@ -1311,6 +1312,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          draft_id?: string | null
           file_hash?: string | null
           file_name: string
           file_size: number
@@ -1326,6 +1328,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          draft_id?: string | null
           file_hash?: string | null
           file_name?: string
           file_size?: number
@@ -1339,7 +1342,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "uploaded_files_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_credits: {
         Row: {
