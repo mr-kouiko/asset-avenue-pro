@@ -3,16 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CreditCard, Loader2, Store, Upload, Wallet } from "lucide-react";
+import { Check, CreditCard, Loader2, Store, Upload, Wallet, Crown, Gift } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSellerCount } from "@/hooks/useSellerCount";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { FoundingMemberBanner } from "@/components/seller/FoundingMemberBanner";
 
 const BecomeSeller = () => {
   const navigate = useNavigate();
   const { user, signInWithGoogle } = useAuth();
   const { isCreator, isAdmin } = useUserRole();
+  const { spotsRemaining, limit, isFreeRegistration, isLoading: countLoading, refetch } = useSellerCount();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBecomeSeller = async () => {
@@ -25,27 +28,55 @@ const BecomeSeller = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("seller-registration-payment");
+      // Check if free registration is available
+      if (isFreeRegistration) {
+        // Use free registration flow
+        const { data, error } = await supabase.functions.invoke("register-free-seller");
 
-      if (error) {
-        throw new Error(error.message);
-      }
+        if (error) {
+          throw new Error(error.message);
+        }
 
-      if (data.url) {
-        window.location.href = data.url;
+        if (data.success) {
+          toast.success("🎉 " + data.message);
+          // Refresh user role
+          window.location.href = "/seller-dashboard";
+        } else if (data.requiresPayment) {
+          // Promotion ended, need to pay
+          await handlePaidRegistration();
+        } else {
+          throw new Error(data.error || "Registration failed");
+        }
       } else {
-        throw new Error("No checkout URL received");
+        // Paid registration flow
+        await handlePaidRegistration();
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error("An error occurred. Please try again.");
+      toast.error(error instanceof Error ? error.message : "An error occurred. Please try again.");
+      // Refetch in case the count changed
+      refetch();
+    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePaidRegistration = async () => {
+    const { data, error } = await supabase.functions.invoke("seller-registration-payment");
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error("No checkout URL received");
     }
   };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    // Pass 'creator' role to indicate seller intent
     await signInWithGoogle('creator');
     setIsLoading(false);
   };
@@ -80,12 +111,19 @@ const BecomeSeller = () => {
       <Header />
       <div className="container py-16">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4">Become a Seller on VisuStock</h1>
             <p className="text-xl text-muted-foreground">
               Sell your photos, videos and creations to thousands of buyers
             </p>
           </div>
+
+          {/* Founding Member Banner */}
+          <FoundingMemberBanner 
+            spotsRemaining={spotsRemaining ?? 0} 
+            totalSpots={limit ?? 100}
+            isLoading={countLoading}
+          />
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             <Card>
@@ -125,50 +163,95 @@ const BecomeSeller = () => {
             </Card>
           </div>
 
-          <Card className="max-w-md mx-auto">
+          {/* Registration Card */}
+          <Card className={`max-w-md mx-auto ${isFreeRegistration ? 'border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/10' : ''}`}>
             <CardHeader className="text-center">
-              <CreditCard className="h-12 w-12 mx-auto text-primary mb-4" />
-              <CardTitle>Registration Fee</CardTitle>
-              <CardDescription>
-                A one-time payment to access all seller features
-              </CardDescription>
+              {isFreeRegistration ? (
+                <>
+                  <div className="relative">
+                    <Crown className="h-12 w-12 mx-auto text-emerald-500 mb-4" />
+                    <Gift className="h-6 w-6 absolute -top-1 -right-1 text-amber-500 animate-bounce" style={{ left: '58%' }} />
+                  </div>
+                  <CardTitle className="text-2xl">
+                    <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                      Founding Creator
+                    </span>
+                  </CardTitle>
+                  <CardDescription>
+                    Join the first 100 creators for free!
+                  </CardDescription>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-12 w-12 mx-auto text-primary mb-4" />
+                  <CardTitle>Registration Fee</CardTitle>
+                  <CardDescription>
+                    A one-time payment to access all seller features
+                  </CardDescription>
+                </>
+              )}
             </CardHeader>
             <CardContent className="text-center space-y-6">
+              {/* Price display */}
               <div>
-                <span className="text-5xl font-bold">€15</span>
-                <span className="text-muted-foreground ml-2">one-time payment</span>
+                {isFreeRegistration ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-2xl text-muted-foreground line-through">€15</span>
+                    <span className="text-5xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                      FREE
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-5xl font-bold">€15</span>
+                    <span className="text-muted-foreground ml-2">one-time payment</span>
+                  </>
+                )}
               </div>
               
               <ul className="text-left space-y-2">
                 <li className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                   <span>Unlimited access to seller platform</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                   <span>Unlimited file uploads</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                   <span>Analytics dashboard</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                   <span>Priority support</span>
                 </li>
+                {isFreeRegistration && (
+                  <li className="flex items-center gap-2">
+                    <Crown className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      Founding Creator badge
+                    </span>
+                  </li>
+                )}
               </ul>
 
               {user ? (
                 <Button 
                   onClick={handleBecomeSeller} 
-                  disabled={isLoading}
-                  className="w-full"
+                  disabled={isLoading || countLoading}
+                  className={`w-full ${isFreeRegistration ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white' : ''}`}
                   size="lg"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Redirecting...
+                      {isFreeRegistration ? "Registering..." : "Redirecting..."}
+                    </>
+                  ) : isFreeRegistration ? (
+                    <>
+                      <Crown className="mr-2 h-4 w-4" />
+                      Become a Founding Creator - Free!
                     </>
                   ) : (
                     <>
