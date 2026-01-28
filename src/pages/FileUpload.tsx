@@ -28,10 +28,79 @@ const FileUpload = () => {
   const navigate = useNavigate();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [recoveredCount, setRecoveredCount] = useState(0);
 
-  // Initialize with empty state - this is a fresh upload session
+  // Recover pending uploads on page load (files uploaded but not yet linked to products)
   useEffect(() => {
-    setIsLoading(false);
+    const recoverPendingUploads = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Find files uploaded in the last 24 hours that aren't linked to any content_files
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        const { data: pendingFiles, error } = await supabase
+          .from('uploaded_files')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .gte('created_at', twentyFourHoursAgo)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error recovering pending uploads:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        if (pendingFiles && pendingFiles.length > 0) {
+          // Check which files are NOT yet linked to content_files
+          const { data: linkedFiles } = await supabase
+            .from('content_files')
+            .select('file_path')
+            .in('file_path', pendingFiles.map(f => f.file_url));
+
+          const linkedPaths = new Set(linkedFiles?.map(f => f.file_path) || []);
+          
+          // Filter to only unlinked files
+          const unlinkedFiles = pendingFiles.filter(f => !linkedPaths.has(f.file_url));
+
+          if (unlinkedFiles.length > 0) {
+            console.log(`🔄 Recovering ${unlinkedFiles.length} pending uploads`);
+            
+            const recoveredFiles: UploadedFileData[] = unlinkedFiles.map(file => ({
+              id: file.id,
+              url: file.file_url,
+              name: file.file_name,
+              type: file.file_type,
+              size: file.file_size,
+              previewUrl: file.preview_url || undefined,
+              thumbnailUrl: file.thumbnail_url || undefined,
+              isWatermarked: file.is_watermarked || false,
+              fileHash: file.file_hash || undefined,
+            }));
+
+            setUploadedFiles(recoveredFiles);
+            setRecoveredCount(unlinkedFiles.length);
+            
+            // Notify user about recovered files
+            toast.info(`🔄 Recovered ${unlinkedFiles.length} file(s) from your previous session`, {
+              duration: 5000,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error in recoverPendingUploads:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    recoverPendingUploads();
   }, []);
 
   const handleFilesUploaded = async (files: UploadedFileData[]) => {
@@ -145,20 +214,29 @@ const FileUpload = () => {
         <Navigation />
         
         <div className="container py-8 max-w-4xl">
-          <div className="mb-8">
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-              <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
-              <span>File Upload</span>
-              <ArrowRight className="h-4 w-4" />
-              <span className="px-3 py-1 rounded-full bg-muted">2</span>
-              <span>Product Management</span>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Checking for pending uploads...</p>
+              </div>
             </div>
-            
-            <h1 className="text-3xl font-bold mb-2">Upload Your Files</h1>
-            <p className="text-muted-foreground">
-              Start by uploading all your digital files. You can then configure each product individually.
-            </p>
-          </div>
+          ) : (
+            <>
+              <div className="mb-8">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
+                  <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
+                  <span>File Upload</span>
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="px-3 py-1 rounded-full bg-muted">2</span>
+                  <span>Product Management</span>
+                </div>
+                
+                <h1 className="text-3xl font-bold mb-2">Upload Your Files</h1>
+                <p className="text-muted-foreground">
+                  Start by uploading all your digital files. You can then configure each product individually.
+                </p>
+              </div>
 
           <div className="space-y-6">
             {/* File Upload Section */}
@@ -187,6 +265,11 @@ const FileUpload = () => {
                   <Check className="h-5 w-5 text-green-500" />
                   <h3 className="text-lg font-semibold">
                     Uploaded Files ({uploadedFiles.length})
+                    {recoveredCount > 0 && (
+                      <span className="ml-2 text-sm font-normal text-amber-600">
+                        ({recoveredCount} recovered from previous session)
+                      </span>
+                    )}
                   </h3>
                 </div>
                 
@@ -261,6 +344,8 @@ const FileUpload = () => {
               </ul>
             </Card>
           </div>
+            </>
+          )}
         </div>
       </div>
     </ProtectedRoute>
