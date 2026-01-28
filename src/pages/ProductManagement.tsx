@@ -1137,9 +1137,6 @@ const ProductManagement = () => {
                       controls={true}
                       watermarkSize="normal"
                     />
-                    <div className="p-2 text-xs text-gray-400 break-all">
-                      URL: {previewFile.url}
-                    </div>
                   </div>
                 )}
                 
