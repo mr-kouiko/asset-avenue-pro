@@ -27,10 +27,37 @@ interface ProductMetadata {
 interface ProductSubmission {
   file: ProductFile;
   productData: ProductMetadata;
+  draftId?: string; // Optional: if provided, update existing draft instead of creating new
 }
 
 export const useProductManager = () => {
   const [loading, setLoading] = useState(false);
+
+  const ensureCreatorRole = async (userId: string): Promise<boolean> => {
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const resp = await fetch('https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/ensure-creator-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({})
+      });
+      if (!resp.ok) {
+        console.error('Role upgrade function error');
+        return false;
+      }
+    }
+    return true;
+  };
 
   const saveProductDraft = async (submission: ProductSubmission): Promise<boolean> => {
     setLoading(true);
@@ -39,52 +66,48 @@ export const useProductManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Ensure user has creator role before saving draft
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
-        // Promote to creator via secure Edge Function (uses service role)
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const resp = await fetch('https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/ensure-creator-role', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({})
-        });
-        if (!resp.ok) {
-          const msg = await resp.text();
-          console.error('Role upgrade function error:', msg);
-          throw new Error('Impossible de mettre à niveau le rôle utilisateur. Contactez le support.');
-        }
+      if (!(await ensureCreatorRole(user.id))) {
+        throw new Error('Unable to upgrade user role');
       }
 
-      // Create content submission as draft
-      const { error } = await supabase
-        .from('content_submissions')
-        .insert({
-          creator_id: user.id,
-          title: submission.productData.title,
-          description: submission.productData.description,
-          category_id: submission.productData.category_id || null,
-          tags: submission.productData.tags,
-          status: 'draft'
-        });
+      // If draftId is provided, update existing draft
+      if (submission.draftId) {
+        const { error } = await supabase
+          .from('content_submissions')
+          .update({
+            title: submission.productData.title,
+            description: submission.productData.description,
+            category_id: submission.productData.category_id || null,
+            tags: submission.productData.tags,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', submission.draftId)
+          .eq('creator_id', user.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success(`Draft updated: ${submission.productData.title}`);
+      } else {
+        // Create new draft
+        const { error } = await supabase
+          .from('content_submissions')
+          .insert({
+            creator_id: user.id,
+            title: submission.productData.title,
+            description: submission.productData.description,
+            category_id: submission.productData.category_id || null,
+            tags: submission.productData.tags,
+            status: 'draft'
+          });
 
-      toast.success(`Brouillon sauvegardé: ${submission.productData.title}`);
+        if (error) throw error;
+        toast.success(`Draft saved: ${submission.productData.title}`);
+      }
+      
       return true;
 
     } catch (error) {
       console.error('Save draft error:', error);
-      toast.error(`Erreur lors de la sauvegarde: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(`Error saving draft: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
       setLoading(false);
@@ -98,34 +121,11 @@ export const useProductManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Ensure user has creator role before publishing
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!existingRole || (existingRole.role !== 'creator' && existingRole.role !== 'admin')) {
-        // Promote to creator via secure Edge Function (uses service role)
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const resp = await fetch('https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/ensure-creator-role', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({})
-        });
-        if (!resp.ok) {
-          const msg = await resp.text();
-          console.error('Role upgrade function error:', msg);
-          throw new Error('Impossible de mettre à niveau le rôle utilisateur. Contactez le support.');
-        }
+      if (!(await ensureCreatorRole(user.id))) {
+        throw new Error('Unable to upgrade user role');
       }
 
       // Determine product price
-      // Free content = price 0, eBooks default to $3.99, others null
       let productPrice: number | null = null;
       if (submission.productData.isFreeContent) {
         productPrice = 0;
@@ -150,71 +150,135 @@ export const useProductManager = () => {
       
       console.log('🔗 Generated SEO slug:', uniqueSlug);
 
-      // Create content submission with slug
-      const { data: submissionData, error: submissionError } = await supabase
-        .from('content_submissions')
-        .insert({
-          creator_id: user.id,
-          title: submission.productData.title,
-          description: submission.productData.description,
-          category_id: submission.productData.category_id || null,
-          tags: submission.productData.tags,
-          price: productPrice,
-          slug: uniqueSlug,
-          status: 'approved' // Auto-approve for now
-        })
-        .select()
-        .single();
+      let submissionId: string;
 
-      if (submissionError) throw submissionError;
+      // If draftId is provided, update existing draft to published
+      if (submission.draftId) {
+        const { data: updatedSubmission, error: updateError } = await supabase
+          .from('content_submissions')
+          .update({
+            title: submission.productData.title,
+            description: submission.productData.description,
+            category_id: submission.productData.category_id || null,
+            tags: submission.productData.tags,
+            price: productPrice,
+            slug: uniqueSlug,
+            status: 'approved',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', submission.draftId)
+          .eq('creator_id', user.id)
+          .select()
+          .single();
 
-      // Determine file type for database
-      let fileType = submission.file.type.split('/')[0]; // 'image', 'video', etc.
-      if (submission.file.type === 'application/pdf') {
-        fileType = 'document'; // Store PDFs as 'document' type
+        if (updateError) throw updateError;
+        submissionId = updatedSubmission.id;
+        console.log('📝 Updated draft to published:', submissionId);
+      } else {
+        // Create new content submission
+        const { data: submissionData, error: submissionError } = await supabase
+          .from('content_submissions')
+          .insert({
+            creator_id: user.id,
+            title: submission.productData.title,
+            description: submission.productData.description,
+            category_id: submission.productData.category_id || null,
+            tags: submission.productData.tags,
+            price: productPrice,
+            slug: uniqueSlug,
+            status: 'approved'
+          })
+          .select()
+          .single();
+
+        if (submissionError) throw submissionError;
+        submissionId = submissionData.id;
       }
 
-      // Create content file entry with proper thumbnail handling
+      // Determine file type for database
+      let fileType = submission.file.type.split('/')[0];
+      if (submission.file.type === 'application/pdf') {
+        fileType = 'document';
+      }
+
       const isVideo = fileType === 'video';
       const isPDF = submission.file.type === 'application/pdf';
       
-      // Generate slugified file name from title (keeps original extension)
       const slugifiedFileName = generateSlugifiedFileName(
         submission.productData.title,
         submission.file.name
       );
       
-      console.log('📁 Slugified file name:', slugifiedFileName, '(original:', submission.file.name, ')');
+      console.log('📁 Slugified file name:', slugifiedFileName);
 
-      const { error: fileError } = await supabase
+      // Check if content_file already exists for this submission
+      const { data: existingFile } = await supabase
         .from('content_files')
-        .insert({
-          submission_id: submissionData.id,
-          file_name: slugifiedFileName, // Use slugified name instead of original
-          file_path: submission.file.url, // Keep original file_path (storage URL unchanged)
-          file_type: fileType,
-          file_format: submission.file.type,
-          file_size: submission.file.size,
-          file_hash: submission.file.fileHash || null, // CRITICAL: Save hash for duplicate detection
-          is_original: true,
-          preview_path: submission.file.previewUrl,
-          // For videos: use thumbnailUrl, for PDFs: use thumbnailUrl (cover), for images: use previewUrl
-          thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
-          metadata: {
-            isWatermarked: submission.file.isWatermarked || false,
-            isAiGenerated: submission.file.isAiGenerated || false,
-            originalFileName: submission.file.name // Store original filename in metadata
-          }
-        });
+        .select('id')
+        .eq('submission_id', submissionId)
+        .maybeSingle();
 
-      if (fileError) throw fileError;
+      if (existingFile) {
+        // Update existing file entry
+        const { error: fileError } = await supabase
+          .from('content_files')
+          .update({
+            file_name: slugifiedFileName,
+            file_path: submission.file.url,
+            file_type: fileType,
+            file_format: submission.file.type,
+            file_size: submission.file.size,
+            file_hash: submission.file.fileHash || null,
+            preview_path: submission.file.previewUrl,
+            thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
+            metadata: {
+              isWatermarked: submission.file.isWatermarked || false,
+              isAiGenerated: submission.file.isAiGenerated || false,
+              originalFileName: submission.file.name
+            }
+          })
+          .eq('id', existingFile.id);
 
-      toast.success(`✅ Produit publié avec succès: ${submission.productData.title}`);
+        if (fileError) throw fileError;
+      } else {
+        // Create new content file entry
+        const { error: fileError } = await supabase
+          .from('content_files')
+          .insert({
+            submission_id: submissionId,
+            file_name: slugifiedFileName,
+            file_path: submission.file.url,
+            file_type: fileType,
+            file_format: submission.file.type,
+            file_size: submission.file.size,
+            file_hash: submission.file.fileHash || null,
+            is_original: true,
+            preview_path: submission.file.previewUrl,
+            thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
+            metadata: {
+              isWatermarked: submission.file.isWatermarked || false,
+              isAiGenerated: submission.file.isAiGenerated || false,
+              originalFileName: submission.file.name
+            }
+          });
+
+        if (fileError) throw fileError;
+      }
+
+      // Clean up: remove from uploaded_files since it's now in content_files
+      if (submission.file.id) {
+        await supabase
+          .from('uploaded_files')
+          .delete()
+          .eq('id', submission.file.id);
+      }
+
+      toast.success(`✅ Product published: ${submission.productData.title}`);
       return true;
 
     } catch (error) {
       console.error('Publish error:', error);
-      toast.error(`Erreur lors de la publication: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(`Publish error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
       setLoading(false);
