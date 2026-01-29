@@ -69,21 +69,27 @@ export const AdminBulkExport = () => {
         throw new Error('Not authenticated');
       }
 
-      // Export in batch of 25 videos max to avoid CPU timeout
-      const response = await supabase.functions.invoke('bulk-export-watermarks', {
-        body: { platform: 'admin_dashboard', format: 'mp4', batchSize: 25 }
+      // Use fetch directly to handle binary response
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/bulk-export-watermarks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({ platform: 'admin_dashboard', format: 'mp4', batchSize: 25 })
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Export failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(errorData.error || 'Export failed');
       }
 
-      // Check if we got a JSON response (no new videos) or a blob (ZIP file)
-      const contentType = response.data?.constructor?.name;
+      const contentType = response.headers.get('Content-Type');
       
-      if (contentType === 'Blob' || response.data instanceof Blob) {
+      if (contentType?.includes('application/zip')) {
         // It's a ZIP file - trigger download
-        const blob = response.data as Blob;
+        const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -94,22 +100,24 @@ export const AdminBulkExport = () => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        // Check remaining count from headers (if available via data attributes)
-        return { success: true, isZip: true, count: 25 };
+        // Get remaining count from headers
+        const remainingCount = parseInt(response.headers.get('X-Remaining-Count') || '0', 10);
+        const exportCount = parseInt(response.headers.get('X-Export-Count') || '25', 10);
+        return { success: true, isZip: true, count: exportCount, remaining: remainingCount };
       } else {
-        // It's a JSON response
-        return response.data;
+        // It's a JSON response (no new videos)
+        return await response.json();
       }
     },
     onSuccess: (result) => {
       if (result?.count === 0) {
         toast.info('No new watermarked previews to export');
       } else if (result?.isZip) {
-        const remainingCount = (unexportedCount || 0) - 25;
+        const remainingCount = result?.remaining ?? 0;
         if (remainingCount > 0) {
-          toast.success(`Batch exported! ${remainingCount} videos remaining. Click again to export more.`);
+          toast.success(`Batch exported (${result?.count || 25} files)! ${remainingCount} videos remaining. Click again to export more.`);
         } else {
-          toast.success('Export complete! ZIP file downloaded.');
+          toast.success(`Export complete! ${result?.count || 25} files downloaded.`);
         }
       } else {
         toast.success('Export complete!');
