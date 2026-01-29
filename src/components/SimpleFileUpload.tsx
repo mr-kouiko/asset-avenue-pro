@@ -417,6 +417,47 @@ export const SimpleFileUpload = ({
       // This ensures consistency and avoids double calculation
       const fileHashForStorage = fileHash;
 
+      // CRITICAL: Save file to database IMMEDIATELY after storage upload
+      // This ensures file record exists even if page refreshes before parent callback completes
+      let dbFileId = uploadFileData.id;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const fileRecord = {
+            user_id: user.id,
+            file_name: uploadFileData.file.name,
+            file_type: detectedMimeType,
+            file_url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
+            file_size: uploadFileData.file.size,
+            preview_url: processedFile.previewUrl || null,
+            thumbnail_url: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl || null,
+            is_watermarked: !!processedFile.watermarkedUrl,
+            file_hash: fileHashForStorage || null,
+            draft_id: null, // Will be linked later by parent
+            status: 'completed'
+          };
+          
+          console.log('💾 [IMMEDIATE-SAVE] Saving file to database:', uploadFileData.file.name);
+          
+          const { data: insertedFile, error: insertError } = await supabase
+            .from('uploaded_files')
+            .insert(fileRecord)
+            .select('id')
+            .single();
+          
+          if (insertError) {
+            console.error('❌ [IMMEDIATE-SAVE] Database insert failed:', insertError);
+            // Don't fail the upload - file is in storage and can be recovered
+          } else if (insertedFile) {
+            dbFileId = insertedFile.id;
+            console.log('✅ [IMMEDIATE-SAVE] File saved to DB with ID:', dbFileId);
+          }
+        }
+      } catch (dbError) {
+        console.error('❌ [IMMEDIATE-SAVE] Database save error:', dbError);
+        // Don't fail the upload - file is in storage
+      }
+
       // Update file as completed with AI detection and category result
       setFiles(prev => prev.map(f => 
         f.id === uploadFileData.id ? { 
@@ -439,9 +480,10 @@ export const SimpleFileUpload = ({
       toast.success(`✅ ${uploadFileData.file.name}${aiLabel} - Stocké dans ${storageLocation}`);
 
       // Notify parent component with correct file type, AI detection, and category result
+      // Use the database ID if available (ensures proper linking to drafts)
       if (onFilesUploaded) {
         onFilesUploaded([{
-          id: uploadFileData.id,
+          id: dbFileId, // Use DB ID for proper draft linking
           url: processedFile.watermarkedUrl || processedFile.thumbnailUrl!,
           name: uploadFileData.file.name,
           type: detectedMimeType,

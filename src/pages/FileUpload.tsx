@@ -113,51 +113,33 @@ const FileUpload = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.warning("Files uploaded but not saved - please login");
+        toast.warning("Files uploaded but not linked - please login");
         return;
       }
 
-      // Save files to uploaded_files table WITH draft_id
-      const filesToInsert = files.map(file => ({
-        user_id: user.id,
-        file_name: file.name,
-        file_type: file.type,
-        file_url: file.url,
-        file_size: file.size,
-        preview_url: file.previewUrl,
-        thumbnail_url: file.thumbnailUrl,
-        is_watermarked: file.isWatermarked || false,
-        file_hash: file.fileHash || null,
-        draft_id: draftId, // CRITICAL: Link to draft immediately
-        status: 'completed'
-      }));
-
-      console.log('💾 Saving files with draft_id:', draftId);
-
-      const { data: insertedFiles, error } = await supabase
-        .from('uploaded_files')
-        .insert(filesToInsert)
-        .select();
-
-      if (error) {
-        console.error('Error saving files to database:', error);
-        toast.warning("Files ready but database save failed - you can still continue");
-        return;
-      }
-
-      console.log('✅ Files saved with draft_id:', insertedFiles);
+      // Files are already saved to uploaded_files table by SimpleFileUpload
+      // Now we just need to LINK them to the draft by updating draft_id
+      const fileIds = files.map(f => f.id);
       
-      // Update state with database IDs
-      if (insertedFiles && insertedFiles.length > 0) {
-        setUploadedFiles(prev => prev.map(file => {
-          const dbFile = insertedFiles.find(df => df.file_url === file.url);
-          if (dbFile) {
-            return { ...file, id: dbFile.id };
-          }
-          return file;
-        }));
+      console.log('🔗 Linking files to draft:', draftId, 'File IDs:', fileIds);
+
+      const { error: linkError } = await supabase
+        .from('uploaded_files')
+        .update({ draft_id: draftId })
+        .in('id', fileIds);
+
+      if (linkError) {
+        console.error('Error linking files to draft:', linkError);
+        // Try individual updates as fallback (in case some IDs are client-side)
+        for (const file of files) {
+          await supabase
+            .from('uploaded_files')
+            .update({ draft_id: draftId })
+            .eq('file_url', file.url);
+        }
       }
 
+      console.log('✅ Files linked to draft:', draftId);
       toast.success(`${files.length} file(s) uploaded and linked to draft`);
     } catch (error) {
       console.error('Error in handleFilesUploaded:', error);
