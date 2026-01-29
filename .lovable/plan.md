@@ -1,118 +1,65 @@
 
-# Fix "Verifying permissions..." Loading Flicker
+# Fix: Role Race Condition in Protected Routes
 
 ## Problem
-
-The "Verifying permissions..." loading screen appears too frequently because the role loading state (`roleLoading`) always starts as `true`, even when a valid cached role exists in localStorage. This causes a visible loading flash on every protected page navigation.
-
-## Root Cause
-
-```text
-Current Flow (problematic):
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. Component mounts → roleLoading = true (hardcoded)            │
-│ 2. First render → Shows "Verifying permissions..." spinner      │
-│ 3. useEffect runs → Checks localStorage cache                   │
-│ 4. If cache valid → setRoleLoading(false)                       │
-│ 5. Second render → Finally shows content                        │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-The cache check happens inside a `useEffect`, which runs **after** the first render. This guarantees at least one render showing the loading spinner.
+After removing the "Verifying permissions..." loading screen, protected routes now show "Access Denied" before the role has been fetched from the database. This happens when:
+- The localStorage cache is empty or expired
+- The role is still being fetched (`roleLoading = true`)
+- But the `loading` check (auth only) passes, so the route renders
+- At that moment, `role` is `null`, triggering the "Access Denied" screen
 
 ## Solution
-
-Use React's **lazy state initialization** to check localStorage **synchronously** during the initial `useState` call. If a valid cached role exists, the component never enters the loading state.
-
-```text
-Fixed Flow (instant):
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. Component mounts → Check cache in useState initializer       │
-│ 2. If cache valid → roleLoading = false, role = cachedValue     │
-│ 3. First render → Shows content immediately (no spinner!)       │
-│ 4. Background refresh → Updates if role changed in DB           │
-└─────────────────────────────────────────────────────────────────┘
-```
+Keep the `roleLoading` check but **return `null`** instead of showing a loading spinner. This preserves the seamless experience while preventing the false "Access Denied" error.
 
 ## Changes
 
-### File: `src/hooks/useAuth.tsx`
+### File: `src/components/ProtectedRoute.tsx`
 
-1. **Create helper function** to check localStorage cache synchronously (moved outside component to avoid re-creation):
-
+**Before:**
 ```typescript
-// Helper to get cached role synchronously (for initial state)
-const getCachedRoleSync = (): { role: string | null; isValid: boolean } => {
-  try {
-    const cachedRole = localStorage.getItem(ROLE_STORAGE_KEY);
-    const timestamp = localStorage.getItem(ROLE_TIMESTAMP_KEY);
-    
-    if (cachedRole && timestamp) {
-      const age = Date.now() - parseInt(timestamp, 10);
-      if (age < 5 * 60 * 1000) { // 5 minutes
-        return { role: cachedRole, isValid: true };
-      }
-    }
-  } catch {
-    // localStorage not available
-  }
-  return { role: null, isValid: false };
-};
+if (loading) {
+  return null;
+}
 ```
 
-2. **Use lazy initialization** for `role` and `roleLoading` states:
-
+**After:**
 ```typescript
-// Before (always starts loading):
-const [role, setRole] = useState<string | null>(null);
-const [roleLoading, setRoleLoading] = useState(true);
-
-// After (uses cache if valid):
-const [role, setRole] = useState<string | null>(() => {
-  const cached = getCachedRoleSync();
-  return cached.role;
-});
-
-const [roleLoading, setRoleLoading] = useState(() => {
-  const cached = getCachedRoleSync();
-  // If we have a valid cache, no loading needed initially
-  return !cached.isValid;
-});
+// Wait for auth AND role loading - return null for seamless experience
+if (loading || roleLoading) {
+  return null;
+}
 ```
 
-3. **Optimize the role-fetching useEffect** to skip redundant work when cache was already applied:
+### File: `src/pages/DashboardRouter.tsx`
 
+**Before:**
 ```typescript
-useEffect(() => {
-  if (user) {
-    const cachedRole = loadCachedRole();
-    if (cachedRole) {
-      // Only update if different from initial state
-      if (role !== cachedRole) {
-        setRole(cachedRole);
-      }
-      if (roleLoading) {
-        setRoleLoading(false);
-      }
-      // Background refresh...
-    }
-    // ...
-  }
-}, [user, ...]);
+if (loading) {
+  return null;
+}
 ```
 
-## Expected Behavior After Fix
+**After:**
+```typescript
+// Wait for auth AND role loading to prevent false "no role" state
+if (loading || roleLoading) {
+  return null;
+}
+```
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| Navigate to protected page (cache valid) | 200-500ms spinner flash | Instant content |
-| Navigate to protected page (cache expired) | Spinner until DB response | Spinner until DB response |
-| First visit (no cache) | Spinner until DB response | Spinner until DB response |
-| Tab switch with cached role | Brief spinner flash | Instant content |
+### File: `src/components/ProtectedAdminRoute.tsx`
 
-## Technical Notes
+No changes needed - it already correctly handles the verification flow.
 
-- **Lazy initialization** (`useState(() => ...)`) runs synchronously during the initial render, before any effects
-- The cache is still validated in the background via the existing `fetchRole()` call
-- Cross-tab synchronization remains intact via the `storage` event listener
-- No changes needed to `ProtectedRoute`, `ProtectedAdminRoute`, or `DashboardRouter` - they'll automatically benefit from the faster auth context
+## Expected Behavior
+
+| Scenario | Before (Broken) | After (Fixed) |
+|----------|-----------------|---------------|
+| Valid cache exists | ✅ Instant access | ✅ Instant access |
+| Cache expired, DB has role | ❌ Shows "Access Denied" briefly | ✅ Brief blank, then access |
+| No role in DB | ✅ Shows "Access Denied" | ✅ Shows "Access Denied" |
+
+The key difference: returning `null` during `roleLoading` prevents the false negative where a user with a valid role sees "Access Denied" because the fetch hasn't completed yet.
+
+## Technical Note
+The lazy initialization (`getCachedRoleSync`) ensures that **most of the time** users with a valid cache won't see any delay. This fix only affects the edge case where the cache is empty or expired.
