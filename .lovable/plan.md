@@ -1,78 +1,118 @@
 
+# Fix "Verifying permissions..." Loading Flicker
 
-# Update All 2024 Dates to 2026
+## Problem
 
-VisuStock launched in 2026 - all references to 2024 must be updated for brand consistency.
+The "Verifying permissions..." loading screen appears too frequently because the role loading state (`roleLoading`) always starts as `true`, even when a valid cached role exists in localStorage. This causes a visible loading flash on every protected page navigation.
 
-## Files to Update
+## Root Cause
 
-### 1. Legal Pages (English) - "Last updated" dates
+```text
+Current Flow (problematic):
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. Component mounts → roleLoading = true (hardcoded)            │
+│ 2. First render → Shows "Verifying permissions..." spinner      │
+│ 3. useEffect runs → Checks localStorage cache                   │
+│ 4. If cache valid → setRoleLoading(false)                       │
+│ 5. Second render → Finally shows content                        │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-| File | Current | Updated |
-|------|---------|---------|
-| `src/pages/en/CookiePolicyEN.tsx` | January 15, 2024 | January 15, 2026 |
-| `src/pages/en/PrivacyPolicyEN.tsx` | January 15, 2024 | January 15, 2026 |
-| `src/pages/en/TermsEN.tsx` | January 15, 2024 | January 15, 2026 |
-| `src/pages/en/LicenseAgreementEN.tsx` | January 15, 2024 | January 15, 2026 |
+The cache check happens inside a `useEffect`, which runs **after** the first render. This guarantees at least one render showing the loading spinner.
 
----
+## Solution
 
-### 2. Copyright Notices
+Use React's **lazy state initialization** to check localStorage **synchronously** during the initial `useState` call. If a valid cached role exists, the component never enters the loading state.
 
-| File | Current | Updated |
-|------|---------|---------|
-| `src/pages/en/AboutEN.tsx` | © 2024 VisuStock | © 2026 VisuStock |
-| `src/pages/en/IndexEN.tsx` | © 2024 VisuStock | © 2026 VisuStock |
+```text
+Fixed Flow (instant):
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. Component mounts → Check cache in useState initializer       │
+│ 2. If cache valid → roleLoading = false, role = cachedValue     │
+│ 3. First render → Shows content immediately (no spinner!)       │
+│ 4. Background refresh → Updates if role changed in DB           │
+└─────────────────────────────────────────────────────────────────┘
+```
 
----
+## Changes
 
-### 3. Blog Article Content (`src/pages/en/BlogArticleEN.tsx`)
+### File: `src/hooks/useAuth.tsx`
 
-This file contains the full article content for the blog detail pages (separate from the index listings in BlogEN.tsx which are already updated to 2026).
+1. **Create helper function** to check localStorage cache synchronously (moved outside component to avoid re-creation):
 
-#### Article Slugs & Titles
-- `stock-photography-tips-composition-lighting-guide-2024` → `stock-photography-tips-composition-lighting-guide-2026`
-- Title: "Mastering Stock Photography in **2024**" → "Mastering Stock Photography in **2026**"
+```typescript
+// Helper to get cached role synchronously (for initial state)
+const getCachedRoleSync = (): { role: string | null; isValid: boolean } => {
+  try {
+    const cachedRole = localStorage.getItem(ROLE_STORAGE_KEY);
+    const timestamp = localStorage.getItem(ROLE_TIMESTAMP_KEY);
+    
+    if (cachedRole && timestamp) {
+      const age = Date.now() - parseInt(timestamp, 10);
+      if (age < 5 * 60 * 1000) { // 5 minutes
+        return { role: cachedRole, isValid: true };
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  return { role: null, isValid: false };
+};
+```
 
-#### Article Publish/Update Dates
-| Article | Current Dates | Updated Dates |
-|---------|---------------|---------------|
-| Photography Guide | 2024-01-10 | 2026-01-10 |
-| Video Trends | 2024-01-08 | 2026-01-08 |
-| AI Transforming Industry | 2024-01-05 | 2026-01-05 |
-| Color Psychology | 2024-01-03 | 2026-01-03 |
-| Success Stories | 2024-01-01 | 2026-01-01 |
+2. **Use lazy initialization** for `role` and `roleLoading` states:
 
-#### Content References
-- "Trending Themes for 2024" → "Trending Themes for 2026"
-- "Top Video Trends for 2024" → "Top Video Trends for 2026"
+```typescript
+// Before (always starts loading):
+const [role, setRole] = useState<string | null>(null);
+const [roleLoading, setRoleLoading] = useState(true);
 
----
+// After (uses cache if valid):
+const [role, setRole] = useState<string | null>(() => {
+  const cached = getCachedRoleSync();
+  return cached.role;
+});
 
-### 4. Technical Configuration
+const [roleLoading, setRoleLoading] = useState(() => {
+  const cached = getCachedRoleSync();
+  // If we have a valid cache, no loading needed initially
+  return !cached.isValid;
+});
+```
 
-| File | Current | Updated |
-|------|---------|---------|
-| `src/components/media/StreamingUploadHandler.tsx` | `'temp-upload-key-2024'` | `'temp-upload-key-2026'` |
+3. **Optimize the role-fetching useEffect** to skip redundant work when cache was already applied:
 
----
+```typescript
+useEffect(() => {
+  if (user) {
+    const cachedRole = loadCachedRole();
+    if (cachedRole) {
+      // Only update if different from initial state
+      if (role !== cachedRole) {
+        setRole(cachedRole);
+      }
+      if (roleLoading) {
+        setRoleLoading(false);
+      }
+      // Background refresh...
+    }
+    // ...
+  }
+}, [user, ...]);
+```
 
-## Summary
+## Expected Behavior After Fix
 
-| Category | Files | Changes |
-|----------|-------|---------|
-| Legal Pages | 4 files | Update "Last updated" date |
-| Copyright | 2 files | Update © year |
-| Blog Articles | 1 file | Update slugs, titles, dates, content |
-| Technical | 1 file | Update API key string |
-| **Total** | **8 files** | All 2024 → 2026 |
+| Scenario | Before | After |
+|----------|--------|-------|
+| Navigate to protected page (cache valid) | 200-500ms spinner flash | Instant content |
+| Navigate to protected page (cache expired) | Spinner until DB response | Spinner until DB response |
+| First visit (no cache) | Spinner until DB response | Spinner until DB response |
+| Tab switch with cached role | Brief spinner flash | Instant content |
 
----
+## Technical Notes
 
-## Technical Details
-
-All changes are simple string replacements:
-- `2024` → `2026` in date strings
-- `2024-01-XX` → `2026-01-XX` in ISO date formats
-- Slug URLs will change (old URLs will 404 - consider redirects if SEO is a concern)
-
+- **Lazy initialization** (`useState(() => ...)`) runs synchronously during the initial render, before any effects
+- The cache is still validated in the background via the existing `fetchRole()` call
+- Cross-tab synchronization remains intact via the `storage` event listener
+- No changes needed to `ProtectedRoute`, `ProtectedAdminRoute`, or `DashboardRouter` - they'll automatically benefit from the faster auth context
