@@ -26,6 +26,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const ROLE_STORAGE_KEY = 'visustock_user_role';
 const ROLE_TIMESTAMP_KEY = 'visustock_role_timestamp';
 
+// Helper to get cached role synchronously (for initial state - avoids loading flash)
+const getCachedRoleSync = (): { role: string | null; isValid: boolean } => {
+  try {
+    const cachedRole = localStorage.getItem(ROLE_STORAGE_KEY);
+    const timestamp = localStorage.getItem(ROLE_TIMESTAMP_KEY);
+    
+    if (cachedRole && timestamp) {
+      const age = Date.now() - parseInt(timestamp, 10);
+      if (age < 5 * 60 * 1000) { // 5 minutes
+        return { role: cachedRole, isValid: true };
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  return { role: null, isValid: false };
+};
+
 // Clean up auth state utility
 export const cleanupAuthState = () => {
   Object.keys(localStorage).forEach((key) => {
@@ -47,8 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
-  const [roleLoading, setRoleLoading] = useState(true);
+  
+  // Use lazy initialization to check cache synchronously - prevents loading flash
+  const [role, setRole] = useState<string | null>(() => getCachedRoleSync().role);
+  const [roleLoading, setRoleLoading] = useState(() => !getCachedRoleSync().isValid);
+  
   const { toast } = useToast();
 
   // Fetch role from database
