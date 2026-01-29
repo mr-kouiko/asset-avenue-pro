@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 // Helper to get upload API key from environment or fallback
 const getUploadApiKey = async (): Promise<string> => {
   // For now, use a temporary API key - this should be moved to a secure environment variable
-  return 'temp-upload-key-2024';
+  return 'temp-upload-key-2026';
 };
 
 interface UploadChunk {

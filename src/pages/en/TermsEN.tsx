@@ -13,7 +13,7 @@ const TermsEN = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
           <p className="text-muted-foreground">
-            Last updated: January 15, 2024
+            Last updated: January 15, 2026
           </p>
         </div>
 

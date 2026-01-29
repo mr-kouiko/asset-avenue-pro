@@ -244,7 +244,7 @@ const AboutEN = () => {
                 </Button>
               </div>
               <div className="mt-8 pt-6 border-t text-sm text-muted-foreground">
-                <p>&copy; 2024 VisuStock. Empowering creativity worldwide.</p>
+                <p>&copy; 2026 VisuStock. Empowering creativity worldwide.</p>
               </div>
             </CardContent>
           </Card>

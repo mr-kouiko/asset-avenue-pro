@@ -161,7 +161,7 @@ const IndexEN = () => {
               </div>
             </div>
             <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-              <p>&copy; 2024 VisuStock. All rights reserved.</p>
+              <p>&copy; 2026 VisuStock. All rights reserved.</p>
             </div>
           </div>
         </footer>
