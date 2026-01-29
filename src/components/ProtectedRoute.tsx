@@ -17,8 +17,8 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading, role, roleLoading } = useAuth();
 
-  // Wait for auth loading only, trust cached role for instant display
-  if (loading) {
+  // Wait for auth AND role loading - return null for seamless experience
+  if (loading || roleLoading) {
     return null;
   }
 

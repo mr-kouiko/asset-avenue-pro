@@ -6,8 +6,8 @@ import { Header } from '@/components/Header';
 const DashboardRouter = () => {
   const { user, loading, role, roleLoading, isAdmin, isCreator, isClient } = useAuth();
 
-  // Wait for auth loading only, trust cached role for instant redirect
-  if (loading) {
+  // Wait for auth AND role loading to prevent false "no role" state
+  if (loading || roleLoading) {
     return null;
   }
 
