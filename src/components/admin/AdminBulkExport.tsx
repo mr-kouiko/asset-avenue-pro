@@ -59,7 +59,7 @@ export const AdminBulkExport = () => {
     }
   });
 
-  // Bulk export mutation
+  // Bulk export mutation - processes in batches of 25 to avoid timeout
   const exportMutation = useMutation({
     mutationFn: async () => {
       setIsExporting(true);
@@ -69,8 +69,9 @@ export const AdminBulkExport = () => {
         throw new Error('Not authenticated');
       }
 
+      // Export in batch of 25 videos max to avoid CPU timeout
       const response = await supabase.functions.invoke('bulk-export-watermarks', {
-        body: { platform: 'admin_dashboard', format: 'mp4' }
+        body: { platform: 'admin_dashboard', format: 'mp4', batchSize: 25 }
       });
 
       if (response.error) {
@@ -93,7 +94,8 @@ export const AdminBulkExport = () => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        return { success: true, isZip: true };
+        // Check remaining count from headers (if available via data attributes)
+        return { success: true, isZip: true, count: 25 };
       } else {
         // It's a JSON response
         return response.data;
@@ -103,7 +105,12 @@ export const AdminBulkExport = () => {
       if (result?.count === 0) {
         toast.info('No new watermarked previews to export');
       } else if (result?.isZip) {
-        toast.success('Export complete! ZIP file downloaded.');
+        const remainingCount = (unexportedCount || 0) - 25;
+        if (remainingCount > 0) {
+          toast.success(`Batch exported! ${remainingCount} videos remaining. Click again to export more.`);
+        } else {
+          toast.success('Export complete! ZIP file downloaded.');
+        }
       } else {
         toast.success('Export complete!');
       }
@@ -178,7 +185,7 @@ export const AdminBulkExport = () => {
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Exporter en ZIP ({unexportedCount})
+                    Exporter en ZIP ({Math.min(unexportedCount, 25)}/{unexportedCount})
                   </>
                 )}
               </Button>

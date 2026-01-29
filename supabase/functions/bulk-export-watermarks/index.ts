@@ -10,6 +10,7 @@ const corsHeaders = {
 interface ExportRequest {
   platform?: string;
   format?: string;
+  batchSize?: number; // Max videos per export (default 25)
 }
 
 interface VideoPreview {
@@ -19,6 +20,70 @@ interface VideoPreview {
   preview_path: string;
   file_size: number;
   created_at: string;
+}
+
+// Parallel download helper with concurrency limit
+async function downloadFilesInParallel(
+  videos: VideoPreview[],
+  supabase: any,
+  maxConcurrent: number = 5
+): Promise<{ video: VideoPreview; data: ArrayBuffer | null; error?: string }[]> {
+  const results: { video: VideoPreview; data: ArrayBuffer | null; error?: string }[] = [];
+  
+  for (let i = 0; i < videos.length; i += maxConcurrent) {
+    const batch = videos.slice(i, i + maxConcurrent);
+    const batchResults = await Promise.all(
+      batch.map(async (video) => {
+        try {
+          if (!video.preview_path) {
+            return { video, data: null, error: 'No preview path' };
+          }
+
+          let fileUrl = video.preview_path;
+          
+          // If it's a relative path, construct full URL
+          if (!fileUrl.startsWith('http')) {
+            const pathParts = fileUrl.split('/');
+            const bucketName = pathParts[0];
+            const filePath = pathParts.slice(1).join('/');
+            
+            const { data: signedData, error: signedError } = await supabase
+              .storage
+              .from(bucketName)
+              .createSignedUrl(filePath, 3600);
+            
+            if (signedError || !signedData?.signedUrl) {
+              const { data: publicData } = supabase
+                .storage
+                .from(bucketName)
+                .getPublicUrl(filePath);
+              
+              fileUrl = publicData?.publicUrl || '';
+            } else {
+              fileUrl = signedData.signedUrl;
+            }
+          }
+
+          if (!fileUrl) {
+            return { video, data: null, error: 'Could not resolve file URL' };
+          }
+
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            return { video, data: null, error: `HTTP ${response.status}` };
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          return { video, data: arrayBuffer };
+        } catch (err) {
+          return { video, data: null, error: String(err) };
+        }
+      })
+    );
+    results.push(...batchResults);
+  }
+  
+  return results;
 }
 
 serve(async (req) => {
@@ -71,16 +136,18 @@ serve(async (req) => {
     // Parse request body
     let platform = 'bulk_export';
     let format = 'mp4';
+    let batchSize = 25; // Default batch size to avoid CPU timeout
     
     try {
       const body: ExportRequest = await req.json();
       platform = body.platform || 'bulk_export';
       format = body.format || 'mp4';
+      batchSize = Math.min(body.batchSize || 25, 50); // Max 50 per batch
     } catch {
       // Use defaults if no body
     }
 
-    console.log(`[bulk-export] Starting export for admin: ${user.id}`);
+    console.log(`[bulk-export] Starting export for admin: ${user.id}, batchSize: ${batchSize}`);
 
     // Get unexported watermarked previews using the secure function
     const { data: previews, error: previewsError } = await supabase
@@ -94,20 +161,25 @@ serve(async (req) => {
       );
     }
 
-    const videoList = (previews as VideoPreview[]) || [];
+    const allVideos = (previews as VideoPreview[]) || [];
     
-    if (videoList.length === 0) {
+    if (allVideos.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'No new watermarked previews to export',
-          count: 0 
+          count: 0,
+          remaining: 0
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[bulk-export] Found ${videoList.length} unexported previews`);
+    // Take only batchSize videos to avoid CPU timeout
+    const videoList = allVideos.slice(0, batchSize);
+    const remaining = allVideos.length - batchSize;
+
+    console.log(`[bulk-export] Processing ${videoList.length} of ${allVideos.length} unexported previews`);
 
     // Generate batch ID
     const batchId = crypto.randomUUID();
@@ -117,69 +189,18 @@ serve(async (req) => {
     const successfulIds: string[] = [];
     const errors: { id: string; error: string }[] = [];
 
-    // Fetch and add each video to the ZIP
-    for (const video of videoList) {
-      try {
-        if (!video.preview_path) {
-          errors.push({ id: video.id, error: 'No preview path' });
-          continue;
-        }
+    // Download files in parallel with concurrency limit
+    const downloadResults = await downloadFilesInParallel(videoList, supabase, 5);
 
-        // Handle different path formats
-        let fileUrl = video.preview_path;
-        
-        // If it's a relative path, construct full URL
-        if (!fileUrl.startsWith('http')) {
-          // Extract bucket and path from storage path
-          const pathParts = fileUrl.split('/');
-          const bucketName = pathParts[0];
-          const filePath = pathParts.slice(1).join('/');
-          
-          const { data: signedData, error: signedError } = await supabase
-            .storage
-            .from(bucketName)
-            .createSignedUrl(filePath, 3600); // 1 hour expiry
-          
-          if (signedError || !signedData?.signedUrl) {
-            // Try public URL instead
-            const { data: publicData } = supabase
-              .storage
-              .from(bucketName)
-              .getPublicUrl(filePath);
-            
-            fileUrl = publicData?.publicUrl || '';
-          } else {
-            fileUrl = signedData.signedUrl;
-          }
-        }
-
-        if (!fileUrl) {
-          errors.push({ id: video.id, error: 'Could not resolve file URL' });
-          continue;
-        }
-
-        console.log(`[bulk-export] Downloading: ${video.file_name}`);
-        
-        // Fetch the video file
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          errors.push({ id: video.id, error: `HTTP ${response.status}` });
-          continue;
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        
-        // Generate safe filename
-        const safeFileName = `${video.id}_${video.file_name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        
-        // Add to ZIP
-        zip.file(safeFileName, arrayBuffer);
-        successfulIds.push(video.id);
-        
-        console.log(`[bulk-export] Added to ZIP: ${safeFileName}`);
-      } catch (err) {
-        console.error(`[bulk-export] Error processing video ${video.id}:`, err);
-        errors.push({ id: video.id, error: String(err) });
+    for (const result of downloadResults) {
+      if (result.data) {
+        const safeFileName = `${result.video.id}_${result.video.file_name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        zip.file(safeFileName, result.data);
+        successfulIds.push(result.video.id);
+        console.log(`[bulk-export] Added: ${safeFileName}`);
+      } else {
+        errors.push({ id: result.video.id, error: result.error || 'Unknown error' });
+        console.error(`[bulk-export] Failed: ${result.video.id} - ${result.error}`);
       }
     }
 
@@ -195,15 +216,15 @@ serve(async (req) => {
 
     console.log(`[bulk-export] Generating ZIP with ${successfulIds.length} files`);
 
-    // Generate ZIP blob
+    // Generate ZIP blob with faster compression
     const zipBlob = await zip.generateAsync({ 
       type: 'arraybuffer',
       compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
+      compressionOptions: { level: 1 } // Fastest compression
     });
 
     // Log the export
-    const { data: logResult, error: logError } = await supabase
+    const { error: logError } = await supabase
       .rpc('log_watermark_export', {
         p_video_ids: successfulIds,
         p_batch_id: batchId,
@@ -213,10 +234,9 @@ serve(async (req) => {
 
     if (logError) {
       console.error('[bulk-export] Error logging export:', logError);
-      // Continue anyway - the ZIP was generated successfully
     }
 
-    console.log(`[bulk-export] Export complete. Batch ID: ${batchId}, Files: ${successfulIds.length}`);
+    console.log(`[bulk-export] Export complete. Batch ID: ${batchId}, Files: ${successfulIds.length}, Remaining: ${remaining}`);
 
     // Return the ZIP file
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -231,6 +251,7 @@ serve(async (req) => {
         'X-Batch-Id': batchId,
         'X-Export-Count': String(successfulIds.length),
         'X-Error-Count': String(errors.length),
+        'X-Remaining-Count': String(remaining > 0 ? remaining : 0),
       }
     });
 
