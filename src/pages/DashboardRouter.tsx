@@ -6,16 +6,9 @@ import { Header } from '@/components/Header';
 const DashboardRouter = () => {
   const { user, loading, role, roleLoading, isAdmin, isCreator, isClient } = useAuth();
 
-  if (loading || roleLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container py-16 text-center">
-          <div className="animate-spin h-12 w-12 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Redirecting to your dashboard...</p>
-        </div>
-      </div>
-    );
+  // Wait for auth loading only, trust cached role for instant redirect
+  if (loading) {
+    return null;
   }
 
   if (!user) {

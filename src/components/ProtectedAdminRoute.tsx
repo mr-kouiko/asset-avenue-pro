@@ -72,17 +72,9 @@ export const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
     verifyAdminAccess();
   }, [user, authLoading, roleLoading, toast]);
 
-  // Show loading while checking authentication and roles
-  if (authLoading || roleLoading || verifying) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Lock className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Verifying administrator permissions...</p>
-        </div>
-      </div>
-    );
+  // Wait for auth loading and admin verification, but don't show loading UI
+  if (authLoading || verifying) {
+    return null;
   }
 
   // Redirect to home if not authenticated
