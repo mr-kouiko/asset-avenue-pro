@@ -31,18 +31,18 @@ const articleContent: Record<string, {
   content: string;
   relatedArticles: { slug: string; title: string }[];
 }> = {
-  "stock-photography-tips-composition-lighting-guide-2024": {
+  "stock-photography-tips-composition-lighting-guide-2026": {
     id: "1",
-    slug: "stock-photography-tips-composition-lighting-guide-2024",
-    title: "Mastering Stock Photography in 2024: A Complete Guide for Creators",
+    slug: "stock-photography-tips-composition-lighting-guide-2026",
+    title: "Mastering Stock Photography in 2026: A Complete Guide for Creators",
     excerpt: "Learn the essential techniques and strategies to create compelling stock images that sell.",
     category: "Photography",
     author: "Sarah Chen",
     authorRole: "Senior Photography Editor",
     authorBio: "Sarah has been curating and creating stock photography for over 15 years. She's helped thousands of photographers improve their craft and increase their sales.",
     authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-    publishDate: "2024-01-10",
-    updatedDate: "2024-01-10",
+    publishDate: "2026-01-10",
+    updatedDate: "2026-01-10",
     readTime: 12,
     image: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=1200&h=600&fit=crop",
     tags: ["Photography", "Tips", "Beginners", "Composition"],
@@ -83,7 +83,7 @@ Natural light remains king for most stock photography, but understanding how to 
 
 ## Content That Sells
 
-### Trending Themes for 2024
+### Trending Themes for 2026
 
 Based on our market research, these themes are experiencing high demand:
 
@@ -146,8 +146,8 @@ Remember: Every expert was once a beginner. Start where you are, use what you ha
     authorRole: "Video Content Strategist",
     authorBio: "Marcus leads video content strategy at VisuStock, helping creators understand market demands and optimize their video portfolios.",
     authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-    publishDate: "2024-01-08",
-    updatedDate: "2024-01-08",
+    publishDate: "2026-01-08",
+    updatedDate: "2026-01-08",
     readTime: 8,
     image: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1200&h=600&fit=crop",
     tags: ["Video", "Trends", "Strategy", "Marketing"],
@@ -156,7 +156,7 @@ Remember: Every expert was once a beginner. Start where you are, use what you ha
 
 Video content consumption has exploded, and with it, the demand for high-quality stock footage. Understanding current trends is essential for creators who want to maximize their earnings.
 
-## Top Video Trends for 2024
+## Top Video Trends for 2026
 
 ### 1. Vertical Video Dominance
 
@@ -225,7 +225,7 @@ Focus on evergreen content that remains relevant regardless of trends. Combine t
 The stock video market continues to grow exponentially. By staying ahead of trends, maintaining technical excellence, and building a diverse portfolio, you can establish a sustainable income stream from your video content.
     `,
     relatedArticles: [
-      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2026", title: "Mastering Stock Photography in 2026" },
       { slug: "stock-audio-music-sound-effects-podcast-production", title: "The Audio Content Revolution" },
     ]
   },
@@ -239,8 +239,8 @@ The stock video market continues to grow exponentially. By staying ahead of tren
     authorRole: "Technology Analyst",
     authorBio: "Dr. Rodriguez researches the intersection of AI and creative industries, advising companies on ethical technology integration.",
     authorAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop",
-    publishDate: "2024-01-05",
-    updatedDate: "2024-01-05",
+    publishDate: "2026-01-05",
+    updatedDate: "2026-01-05",
     readTime: 15,
     image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&h=600&fit=crop",
     tags: ["AI", "Technology", "Future", "Innovation"],
@@ -341,8 +341,8 @@ AI is not the end of human creativity—it's a new chapter. By embracing these t
     authorRole: "Creative Director",
     authorBio: "Yuki is a Creative Director with 20 years of experience in visual design. She specializes in color theory and brand identity development.",
     authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    publishDate: "2024-01-03",
-    updatedDate: "2024-01-03",
+    publishDate: "2026-01-03",
+    updatedDate: "2026-01-03",
     readTime: 10,
     image: "https://images.unsplash.com/photo-1525909002-1b05e0c869d8?w=1200&h=600&fit=crop",
     tags: ["Design", "Color Theory", "Psychology", "Branding"],
@@ -453,7 +453,7 @@ Mastering color psychology transforms good content into great content. By unders
 Color is not just visual—it's emotional. Use it wisely.
     `,
     relatedArticles: [
-      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2026", title: "Mastering Stock Photography in 2026" },
       { slug: "ai-creative-tools-generative-art-future-content-creation", title: "How AI is Transforming the Creative Industry" },
     ]
   },
@@ -467,8 +467,8 @@ Color is not just visual—it's emotional. Use it wisely.
     authorRole: "Community Manager",
     authorBio: "James manages the VisuStock creator community, connecting with thousands of contributors and sharing their inspiring success stories.",
     authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-    publishDate: "2024-01-01",
-    updatedDate: "2024-01-01",
+    publishDate: "2026-01-01",
+    updatedDate: "2026-01-01",
     readTime: 14,
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=600&fit=crop",
     tags: ["Success", "Income", "Inspiration", "Career"],
@@ -598,7 +598,7 @@ Passive income through stock content is real—but it requires active effort upf
 Your success story starts with your first upload. What are you waiting for?
     `,
     relatedArticles: [
-      { slug: "stock-photography-tips-composition-lighting-guide-2024", title: "Mastering Stock Photography in 2024" },
+      { slug: "stock-photography-tips-composition-lighting-guide-2026", title: "Mastering Stock Photography in 2026" },
       { slug: "creative-workflow-productivity-burnout-prevention-tips", title: "Creating a Sustainable Creative Workflow" },
     ]
   },
