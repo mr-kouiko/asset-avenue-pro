@@ -1480,6 +1480,56 @@ export type Database = {
         }
         Relationships: []
       }
+      watermark_exports: {
+        Row: {
+          admin_id: string
+          created_at: string
+          export_batch_id: string
+          exported_at: string
+          file_hash: string | null
+          file_name: string | null
+          file_size: number | null
+          format: string
+          id: string
+          platform: string
+          video_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          export_batch_id: string
+          exported_at?: string
+          file_hash?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          format?: string
+          id?: string
+          platform?: string
+          video_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          export_batch_id?: string
+          exported_at?: string
+          file_hash?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          format?: string
+          id?: string
+          platform?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watermark_exports_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "content_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       creator_profiles_public: {
@@ -1805,6 +1855,28 @@ export type Database = {
           seo_title: string
         }[]
       }
+      get_unexported_watermarked_previews: {
+        Args: never
+        Returns: {
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          preview_path: string
+          submission_id: string
+        }[]
+      }
+      get_watermark_export_history: {
+        Args: never
+        Returns: {
+          admin_id: string
+          export_batch_id: string
+          exported_at: string
+          platform: string
+          total_size: number
+          video_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1824,6 +1896,15 @@ export type Database = {
       log_sensitive_access: {
         Args: { access_type: string; details?: Json; target_resource: string }
         Returns: boolean
+      }
+      log_watermark_export: {
+        Args: {
+          p_batch_id: string
+          p_format?: string
+          p_platform?: string
+          p_video_ids: string[]
+        }
+        Returns: number
       }
       mark_download_token_used: {
         Args: { token_param: string }
