@@ -415,28 +415,34 @@ const Marketplace = () => {
   }, [marketplaceContent, searchableContent, searchQuery, selectedCategory, videoFilters, photoFilters, isVideoSection, isPhotoSection, searchParams, priceFilter]);
 
   // Sort the filtered content
-  const sortedContent = [...filteredContent].sort((a, b) => {
-    switch (sortBy) {
-      case "popular":
-        // Sort by downloads + likes
-        const popularityA = (a.downloads || 0) + (a.likes || 0);
-        const popularityB = (b.downloads || 0) + (b.likes || 0);
-        return popularityB - popularityA;
-      case "recent":
-        // Sort by upload date (most recent first)
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return dateB - dateA;
-      case "price-low":
-        // Sort by price ascending
-        return (a.price || 0) - (b.price || 0);
-      case "price-high":
-        // Sort by price descending
-        return (b.price || 0) - (a.price || 0);
-      default:
-        return 0;
-    }
-  });
+  // Sort the filtered content - memoized to ensure proper React updates
+  const sortedContent = useMemo(() => {
+    return [...filteredContent].sort((a, b) => {
+      switch (sortBy) {
+        case "popular":
+          // Sort by downloads + likes
+          const popularityA = (a.downloads || 0) + (a.likes || 0);
+          const popularityB = (b.downloads || 0) + (b.likes || 0);
+          return popularityB - popularityA;
+        case "recent":
+          // Sort by upload date (most recent first)
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateB - dateA;
+        case "price-low":
+          // Sort by price ascending
+          return (a.price || 0) - (b.price || 0);
+        case "price-high":
+          // Sort by price descending
+          return (b.price || 0) - (a.price || 0);
+        default:
+          // Default to most recent if no valid sort option
+          const defaultDateA = new Date(a.created_at || 0).getTime();
+          const defaultDateB = new Date(b.created_at || 0).getTime();
+          return defaultDateB - defaultDateA;
+      }
+    });
+  }, [filteredContent, sortBy]);
 
   // Check if we're viewing audio content
   const isAudioSection = selectedCategory === "audio" || 
