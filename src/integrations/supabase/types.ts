@@ -504,6 +504,176 @@ export type Database = {
         }
         Relationships: []
       }
+      integrity_issues: {
+        Row: {
+          age_hours: number | null
+          bucket_name: string | null
+          created_at: string
+          description: string
+          detected_at: string
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          issue_type: string
+          record_id: string | null
+          resolution_action: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          scan_id: string | null
+          severity: string
+          status: string
+          table_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          age_hours?: number | null
+          bucket_name?: string | null
+          created_at?: string
+          description: string
+          detected_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          issue_type: string
+          record_id?: string | null
+          resolution_action?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scan_id?: string | null
+          severity?: string
+          status?: string
+          table_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          age_hours?: number | null
+          bucket_name?: string | null
+          created_at?: string
+          description?: string
+          detected_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          issue_type?: string
+          record_id?: string | null
+          resolution_action?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scan_id?: string | null
+          severity?: string
+          status?: string
+          table_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrity_issues_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "integrity_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrity_scanner_config: {
+        Row: {
+          admin_email_notifications: boolean
+          enabled: boolean
+          id: string
+          max_issues_before_alert: number
+          notify_on_critical: boolean
+          scan_interval_minutes: number
+          stuck_upload_timeout_hours: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          admin_email_notifications?: boolean
+          enabled?: boolean
+          id?: string
+          max_issues_before_alert?: number
+          notify_on_critical?: boolean
+          scan_interval_minutes?: number
+          stuck_upload_timeout_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          admin_email_notifications?: boolean
+          enabled?: boolean
+          id?: string
+          max_issues_before_alert?: number
+          notify_on_critical?: boolean
+          scan_interval_minutes?: number
+          stuck_upload_timeout_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      integrity_scans: {
+        Row: {
+          admin_id: string | null
+          broken_records_count: number | null
+          buckets_scanned: string[] | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          orphaned_files_count: number | null
+          scan_duration_ms: number | null
+          started_at: string
+          status: string
+          stuck_uploads_count: number | null
+          total_db_records: number | null
+          total_storage_files: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          admin_id?: string | null
+          broken_records_count?: number | null
+          buckets_scanned?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          orphaned_files_count?: number | null
+          scan_duration_ms?: number | null
+          started_at?: string
+          status?: string
+          stuck_uploads_count?: number | null
+          total_db_records?: number | null
+          total_storage_files?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          admin_id?: string | null
+          broken_records_count?: number | null
+          buckets_scanned?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          orphaned_files_count?: number | null
+          scan_duration_ms?: number | null
+          started_at?: string
+          status?: string
+          stuck_uploads_count?: number | null
+          total_db_records?: number | null
+          total_storage_files?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       licenses: {
         Row: {
           created_at: string
