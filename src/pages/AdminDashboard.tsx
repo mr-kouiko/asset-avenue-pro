@@ -22,7 +22,8 @@ import {
   Search,
   MessageSquare,
   Flag,
-  FileArchive
+  FileArchive,
+  HardDrive
 } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
@@ -34,6 +35,7 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminSupportTickets } from "@/components/admin/AdminSupportTickets";
 import { AdminContentReports } from "@/components/admin/AdminContentReports";
 import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
+import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -219,7 +221,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-11 mb-6">
+          <TabsList className="grid w-full grid-cols-12 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Vue d'ensemble</span>
@@ -263,6 +265,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="export" className="flex items-center gap-1">
               <FileArchive className="h-4 w-4" />
               <span className="hidden sm:inline">Export</span>
+            </TabsTrigger>
+            <TabsTrigger value="integrity" className="flex items-center gap-1">
+              <HardDrive className="h-4 w-4" />
+              <span className="hidden sm:inline">Integrity</span>
             </TabsTrigger>
           </TabsList>
 
@@ -500,6 +506,11 @@ const AdminDashboard = () => {
           {/* Bulk Export Tab */}
           <TabsContent value="export">
             <AdminBulkExport />
+          </TabsContent>
+
+          {/* Integrity Scanner Tab */}
+          <TabsContent value="integrity">
+            <AdminIntegrityPanel />
           </TabsContent>
         </Tabs>
       </div>
