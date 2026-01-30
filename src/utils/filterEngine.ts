@@ -309,7 +309,8 @@ const TAG_TO_PHOTO_TAXONOMY: Record<string, { category: PhotoTaxonomyKey; value:
   // Subject mappings - expanded with real database tags
   "people": [{ category: "subject", value: "people" }],
   "person": [{ category: "subject", value: "people" }],
-  "portrait": [{ category: "subject", value: "people" }, { category: "format", value: "vertical" }],
+  // "portrait" = portrait photography (photos OF people), NOT portrait orientation
+  "portrait": [{ category: "subject", value: "people" }],
   "face": [{ category: "subject", value: "people" }],
   "man": [{ category: "subject", value: "people" }],
   "woman": [{ category: "subject", value: "people" }],
@@ -582,9 +583,12 @@ function extractPhotoTaxonomy(content: MarketplaceContent): {
       result.hasCopySpace = true;
     }
     
-    if (["vertical", "portrait", "9:16"].includes(tag)) {
+    // Orientation detection - using ONLY explicit orientation tags
+    // IMPORTANT: "portrait" is excluded because it's ambiguous (portrait photography ≠ portrait orientation)
+    // "landscape" is also excluded as it can mean nature scenery, not horizontal orientation
+    if (["vertical", "9:16", "2:3", "3:4", "4:5"].includes(tag)) {
       result.orientation = "vertical";
-    } else if (["horizontal", "landscape", "16:9"].includes(tag)) {
+    } else if (["horizontal", "16:9", "3:2", "4:3", "5:4", "21:9"].includes(tag)) {
       result.orientation = "horizontal";
     } else if (["square", "1:1"].includes(tag)) {
       result.orientation = "square";
