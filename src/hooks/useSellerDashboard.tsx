@@ -184,7 +184,7 @@ export const useSellerDashboard = () => {
         return;
       }
 
-      // Second query: Fetch files for these submissions
+      // Second query: Fetch files for these submissions from content_files
       const submissionIds = submissions.map(s => s.id);
       console.log('🔍 [SELLER-DASHBOARD] Fetching files for submission IDs:', submissionIds);
 
@@ -206,16 +206,51 @@ export const useSellerDashboard = () => {
         console.error('❌ [SELLER-DASHBOARD] RLS ERROR on content_files:', filesError);
       }
 
-      // Map files to submissions
+      // Third query: Also fetch files from uploaded_files (for recovered drafts)
+      console.log('🔍 [SELLER-DASHBOARD] Fetching uploaded_files for draft IDs...');
+      const { data: uploadedFiles, error: uploadedFilesError } = await supabase
+        .from('uploaded_files')
+        .select('*')
+        .in('draft_id', submissionIds);
+
+      if (uploadedFilesError) {
+        console.error('❌ [SELLER-DASHBOARD] RLS ERROR on uploaded_files:', uploadedFilesError);
+      } else {
+        console.log(`📁 [SELLER-DASHBOARD] Uploaded files result: ${uploadedFiles?.length || 0} files`);
+      }
+
+      // Map files to submissions (combining both sources)
       const submissionsWithFiles = submissions.map(submission => {
-        const submissionFiles = files?.filter(f => f.submission_id === submission.id) || [];
-        console.log(`📋 [SELLER-DASHBOARD] Submission "${submission.title}" (${submission.id}) has ${submissionFiles.length} files`);
-        submissionFiles.forEach(file => {
-          console.log(`  📄 [SELLER-DASHBOARD] File: ${file.file_name} | Path: ${file.file_path} | Preview: ${file.is_preview} | Original: ${file.is_original}`);
+        // First check content_files
+        const contentFilesForSubmission = files?.filter(f => f.submission_id === submission.id) || [];
+        
+        // Then check uploaded_files (for recovered drafts)
+        const uploadedFilesForSubmission = uploadedFiles?.filter(f => f.draft_id === submission.id) || [];
+        
+        // Convert uploaded_files to content_files format if needed
+        const convertedUploadedFiles: ContentFile[] = uploadedFilesForSubmission.map(uf => ({
+          id: uf.id,
+          file_name: uf.file_name,
+          file_path: uf.file_url,
+          file_type: uf.file_type,
+          file_size: uf.file_size,
+          is_preview: false,
+          is_original: true,
+          thumbnail_path: uf.thumbnail_url || undefined,
+          preview_path: uf.preview_url || undefined,
+          created_at: uf.created_at
+        }));
+        
+        // Combine files from both sources
+        const allFiles = [...contentFilesForSubmission, ...convertedUploadedFiles];
+        
+        console.log(`📋 [SELLER-DASHBOARD] Submission "${submission.title}" (${submission.id}) has ${allFiles.length} files (${contentFilesForSubmission.length} from content_files, ${uploadedFilesForSubmission.length} from uploaded_files)`);
+        allFiles.forEach(file => {
+          console.log(`  📄 [SELLER-DASHBOARD] File: ${file.file_name} | Path: ${file.file_path}`);
         });
         return {
           ...submission,
-          content_files: submissionFiles
+          content_files: allFiles
         };
       });
 
