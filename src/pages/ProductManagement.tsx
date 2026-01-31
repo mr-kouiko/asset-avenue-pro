@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useProductManager } from "@/hooks/useProductManager";
+import { useDraftManager, DraftProduct } from "@/hooks/useDraftManager";
 import { supabase } from '@/integrations/supabase/client';
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import AudioPlayer from 'react-h5-audio-player';
@@ -71,12 +72,110 @@ const ProductManagement = () => {
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null); // Track current draft
+  const [allDrafts, setAllDrafts] = useState<DraftProduct[]>([]); // All available drafts for navigation
+  const [currentDraftIndex, setCurrentDraftIndex] = useState(0); // Current position in drafts list
+  
+  const { loadDrafts } = useDraftManager();
   
   const hasInitializedRef = useRef(false);
-  
+
+  // Load all drafts for navigation
+  const loadAllDraftsForNavigation = useCallback(async () => {
+    const drafts = await loadDrafts();
+    const draftsWithFiles = drafts.filter(d => d.files.length > 0);
+    setAllDrafts(draftsWithFiles);
+    
+    // Find current draft index
+    if (currentDraftId) {
+      const idx = draftsWithFiles.findIndex(d => d.id === currentDraftId);
+      if (idx !== -1) {
+        setCurrentDraftIndex(idx);
+      }
+    }
+    
+    return draftsWithFiles;
+  }, [loadDrafts, currentDraftId]);
+
+  // Switch to a different draft
+  const switchToDraft = useCallback((draft: DraftProduct) => {
+    // Save current draft ID
+    setCurrentDraftId(draft.id);
+    sessionStorage.setItem('currentDraftId', draft.id);
+    
+    // Convert draft files to UploadedFileData format
+    const files = draft.files.map(f => ({
+      id: f.id,
+      url: f.url,
+      name: f.name,
+      type: f.type,
+      size: f.size,
+      previewUrl: f.previewUrl,
+      thumbnailUrl: f.thumbnailUrl,
+      isWatermarked: f.isWatermarked
+    }));
+    
+    setUploadedFiles(files);
+    sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(files));
+    
+    // Store editing data
+    sessionStorage.setItem('editingSubmission', JSON.stringify({
+      submissionId: draft.id,
+      title: draft.title,
+      description: draft.description,
+      category: draft.category_id,
+      tags: draft.tags,
+      status: draft.status
+    }));
+    
+    setIsEditMode(true);
+    setEditingSubmissionId(draft.id);
+    
+    // Initialize product data for the new draft
+    const initialData: Record<string, ProductData> = {};
+    files.forEach((file) => {
+      initialData[file.id] = {
+        fileId: file.id,
+        title: draft.title || file.name.replace(/\.[^/.]+$/, ''),
+        description: draft.description || '',
+        category: draft.category_id || '',
+        tags: draft.tags || [],
+        currentTag: '',
+        status: (draft.status as 'draft' | 'published' | 'pending') || 'draft',
+        isAiGenerated: false
+      };
+    });
+    
+    setProductsData(initialData);
+    
+    if (files.length > 0) {
+      setSelectedFileId(files[0].id);
+    }
+    
+    // Update current draft index
+    const idx = allDrafts.findIndex(d => d.id === draft.id);
+    if (idx !== -1) {
+      setCurrentDraftIndex(idx);
+    }
+    
+    toast.info(`Switched to: ${draft.title}`);
+  }, [allDrafts]);
+
+  // Navigate to previous draft
+  const goToPreviousDraft = useCallback(() => {
+    if (currentDraftIndex > 0 && allDrafts.length > 0) {
+      switchToDraft(allDrafts[currentDraftIndex - 1]);
+    }
+  }, [currentDraftIndex, allDrafts, switchToDraft]);
+
+  // Navigate to next draft
+  const goToNextDraft = useCallback(() => {
+    if (currentDraftIndex < allDrafts.length - 1 && allDrafts.length > 0) {
+      switchToDraft(allDrafts[currentDraftIndex + 1]);
+    }
+  }, [currentDraftIndex, allDrafts, switchToDraft]);
+
   useEffect(() => {
     // Prevent multiple initializations
-    if (hasInitializedRef.current) return;
     
     // Check if we're in edit mode or have a draft ID
     const editingData = sessionStorage.getItem('editingSubmission');
@@ -221,9 +320,18 @@ const ProductManagement = () => {
     if (files.length > 0) {
       setSelectedFileId(files[0].id);
     }
+    // Load all drafts for navigation after initialization
+    loadAllDraftsForNavigation();
     
     // Don't clear sessionStorage here - keep it until save/cancel
   }, [navigate]);
+
+  // Reload drafts list when currentDraftId changes
+  useEffect(() => {
+    if (hasInitializedRef.current && currentDraftId) {
+      loadAllDraftsForNavigation();
+    }
+  }, [currentDraftId]);
 
   const selectedFile = uploadedFiles.find(f => f.id === selectedFileId);
   const selectedProductData = selectedFileId ? productsData[selectedFileId] : null;
@@ -712,6 +820,61 @@ const ProductManagement = () => {
               Progress: {completedProducts}/{uploadedFiles.length} products configured
             </p>
           </div>
+
+          {/* Draft Navigation Bar */}
+          {allDrafts.length > 1 && (
+            <Card className="p-3 mb-6 bg-muted/50 border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-primary" />
+                  <span className="font-medium">
+                    Draft {currentDraftIndex + 1} of {allDrafts.length}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    — Navigate between your pending drafts
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPreviousDraft}
+                    disabled={currentDraftIndex === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <Select
+                    value={currentDraftId || ''}
+                    onValueChange={(value) => {
+                      const draft = allDrafts.find(d => d.id === value);
+                      if (draft) switchToDraft(draft);
+                    }}
+                  >
+                    <SelectTrigger className="w-[250px]">
+                      <SelectValue placeholder="Select a draft" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allDrafts.map((draft, idx) => (
+                        <SelectItem key={draft.id} value={draft.id}>
+                          {idx + 1}. {draft.title.substring(0, 30)}{draft.title.length > 30 ? '...' : ''} ({draft.files.length} file{draft.files.length > 1 ? 's' : ''})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextDraft}
+                    disabled={currentDraftIndex === allDrafts.length - 1}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Panel - File List */}
