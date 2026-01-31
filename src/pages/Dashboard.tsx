@@ -105,10 +105,10 @@ const Dashboard = () => {
 
       console.log('✅ [DASHBOARD] Submission loaded:', submission.title);
 
-      // Query 2: Get files separately
+      // Query 2: Get files - first try content_files, then fallback to uploaded_files (for drafts)
       console.log('📁 [DASHBOARD] Querying content_files...');
       const filesStart = Date.now();
-      const { data: contentFiles, error: filesError } = await supabase
+      let { data: contentFiles, error: filesError } = await supabase
         .from('content_files')
         .select('*')
         .eq('submission_id', normalizedId);
@@ -124,27 +124,66 @@ const Dashboard = () => {
         console.error('❌ [DASHBOARD] RLS ERROR on content_files:', filesError);
       }
 
+      // Fallback: Check uploaded_files if no content_files found (for recovered drafts)
+      let formattedFilesFromUploads: typeof contentFiles = null;
       if (!contentFiles || contentFiles.length === 0) {
-        console.warn('⚠️ [DASHBOARD] No files found for submission');
+        console.log('📁 [DASHBOARD] No content_files, checking uploaded_files...');
+        const { data: uploadedFilesData, error: uploadedError } = await supabase
+          .from('uploaded_files')
+          .select('*')
+          .eq('draft_id', normalizedId);
+        
+        if (uploadedError) {
+          console.error('❌ [DASHBOARD] RLS ERROR on uploaded_files:', uploadedError);
+        }
+        
+        if (uploadedFilesData && uploadedFilesData.length > 0) {
+          console.log('✅ [DASHBOARD] Found files in uploaded_files:', uploadedFilesData.length);
+          // We'll handle the format conversion differently for uploaded_files
+          formattedFilesFromUploads = uploadedFilesData as any;
+        }
+      }
+
+      if ((!contentFiles || contentFiles.length === 0) && (!formattedFilesFromUploads || formattedFilesFromUploads.length === 0)) {
+        console.warn('⚠️ [DASHBOARD] No files found for submission in either table');
         toast.error('No files found for this product');
         return;
       }
-
-      contentFiles.forEach(file => {
-        console.log(`  📄 [DASHBOARD] File: ${file.file_name} | Path: ${file.file_path} | Bucket: uploads`);
-      });
-
-      // Format files for ProductManagement
-      const formattedFiles = contentFiles.map((file: any) => ({
-        id: file.id,
-        url: file.file_path,
-        name: file.file_name,
-        type: file.file_type,
-        size: file.file_size,
-        isWatermarked: !file.is_original,
-        thumbnailUrl: file.thumbnail_path,
-        previewUrl: file.preview_path
-      }));
+      
+      // Determine which files to use and format accordingly
+      let formattedFiles;
+      if (contentFiles && contentFiles.length > 0) {
+        // Use content_files format
+        contentFiles.forEach(file => {
+          console.log(`  📄 [DASHBOARD] File: ${file.file_name} | Path: ${file.file_path} | Bucket: uploads`);
+        });
+        formattedFiles = contentFiles.map((file: any) => ({
+          id: file.id,
+          url: file.file_path,
+          name: file.file_name,
+          type: file.file_type,
+          size: file.file_size,
+          isWatermarked: !file.is_original,
+          thumbnailUrl: file.thumbnail_path,
+          previewUrl: file.preview_path
+        }));
+      } else {
+        // Use uploaded_files format (for recovered drafts)
+        const uploadedData = formattedFilesFromUploads as any[];
+        uploadedData.forEach(file => {
+          console.log(`  📄 [DASHBOARD] File (from uploaded_files): ${file.file_name} | URL: ${file.file_url}`);
+        });
+        formattedFiles = uploadedData.map((file: any) => ({
+          id: file.id,
+          url: file.file_url,
+          name: file.file_name,
+          type: file.file_type,
+          size: file.file_size,
+          isWatermarked: file.is_watermarked || false,
+          thumbnailUrl: file.thumbnail_url,
+          previewUrl: file.preview_url
+        }));
+      }
 
       const totalTime = Date.now() - startTime;
       console.log(`✅ [DASHBOARD] Total load time: ${totalTime}ms`);
