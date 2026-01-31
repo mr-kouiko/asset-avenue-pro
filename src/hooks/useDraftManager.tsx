@@ -240,14 +240,29 @@ export const useDraftManager = () => {
         return [];
       }
 
-      // Check which are NOT linked to content_files
+      // Check which are NOT linked to content_files by path
       const { data: linkedFiles } = await supabase
         .from('content_files')
         .select('file_path')
         .in('file_path', orphanedFiles.map(f => f.file_url));
 
       const linkedPaths = new Set(linkedFiles?.map(f => f.file_path) || []);
-      const trulyOrphaned = orphanedFiles.filter(f => !linkedPaths.has(f.file_url));
+      
+      // ALSO exclude files whose size matches any approved content_files
+      // This prevents recovering files that are actually duplicates of published products
+      const { data: approvedFileSizes } = await supabase
+        .from('content_files')
+        .select('file_size')
+        .in('submission_id', 
+          (await supabase.from('content_submissions').select('id').eq('status', 'approved')).data?.map(s => s.id) || []
+        );
+
+      const publishedSizes = new Set(approvedFileSizes?.map(f => f.file_size) || []);
+      
+      // Filter: not linked by path AND size doesn't match any published content
+      const trulyOrphaned = orphanedFiles.filter(f => 
+        !linkedPaths.has(f.file_url) && !publishedSizes.has(f.file_size)
+      );
 
       if (trulyOrphaned.length === 0) return [];
 
