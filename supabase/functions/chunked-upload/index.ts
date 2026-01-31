@@ -31,16 +31,14 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const DAILY_UPLOAD_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5GB per day
 
 // Magic bytes for content validation
+// NOTE: For MP4/MOV, we only check for 'ftyp' at offset 4-7 (not the size bytes)
+// because the box size varies depending on the encoder
 const MAGIC_BYTES: Record<string, Uint8Array[]> = {
   'image/jpeg': [new Uint8Array([0xFF, 0xD8, 0xFF])],
   'image/png': [new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])],
   'image/gif': [new Uint8Array([0x47, 0x49, 0x46, 0x38])],
   'image/webp': [new Uint8Array([0x52, 0x49, 0x46, 0x46])], // RIFF header
-  'video/mp4': [
-    new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]), // ftyp
-    new Uint8Array([0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70]), // ftyp
-    new Uint8Array([0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70]), // ftyp
-  ],
+  // For video/mp4, we use a special check - see validateMagicBytes
   'audio/mpeg': [
     new Uint8Array([0xFF, 0xFB]), // MP3 frame sync
     new Uint8Array([0xFF, 0xFA]), // MP3 frame sync
@@ -72,9 +70,35 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number }
 
 // Validate file content against magic bytes
 function validateMagicBytes(data: Uint8Array, expectedMimeType: string): boolean {
+  // Special handling for MP4/MOV - check for 'ftyp' at offset 4-7
+  // MP4 files have: [4 bytes size][ftyp][brand]
+  // The 'ftyp' signature is at bytes 4-7, not at start
+  if (expectedMimeType === 'video/mp4' || expectedMimeType === 'video/quicktime') {
+    if (data.length >= 8) {
+      // Check for 'ftyp' at offset 4 (0x66=f, 0x74=t, 0x79=y, 0x70=p)
+      const hasFtyp = data[4] === 0x66 && data[5] === 0x74 && data[6] === 0x79 && data[7] === 0x70;
+      if (hasFtyp) {
+        console.log(`✅ Magic bytes validated for ${expectedMimeType} (ftyp box found)`);
+        return true;
+      }
+      // Some MP4s start with 'moov' or 'free' box - also valid
+      const hasMoov = data[4] === 0x6D && data[5] === 0x6F && data[6] === 0x6F && data[7] === 0x76;
+      const hasFree = data[4] === 0x66 && data[5] === 0x72 && data[6] === 0x65 && data[7] === 0x65;
+      const hasMdat = data[4] === 0x6D && data[5] === 0x64 && data[6] === 0x61 && data[7] === 0x74;
+      if (hasMoov || hasFree || hasMdat) {
+        console.log(`✅ Magic bytes validated for ${expectedMimeType} (${hasMoov ? 'moov' : hasFree ? 'free' : 'mdat'} box found)`);
+        return true;
+      }
+    }
+    console.log(`❌ Magic bytes validation failed for ${expectedMimeType} - no valid MP4 box header found`);
+    console.log(`   First 12 bytes: ${Array.from(data.slice(0, 12)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+    return false;
+  }
+  
   const patterns = MAGIC_BYTES[expectedMimeType];
   if (!patterns) {
     // No pattern defined, skip validation
+    console.log(`⚠️ No magic bytes pattern for ${expectedMimeType}, skipping validation`);
     return true;
   }
   
@@ -95,6 +119,7 @@ function validateMagicBytes(data: Uint8Array, expectedMimeType: string): boolean
   }
   
   console.log(`❌ Magic bytes validation failed for ${expectedMimeType}`);
+  console.log(`   First 12 bytes: ${Array.from(data.slice(0, 12)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
   return false;
 }
 
