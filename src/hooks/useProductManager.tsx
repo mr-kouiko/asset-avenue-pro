@@ -266,11 +266,20 @@ export const useProductManager = () => {
       }
 
       // Clean up: remove from uploaded_files since it's now in content_files
+      // Also clean up any uploaded_files that were linked to this draft
       if (submission.file.id) {
         await supabase
           .from('uploaded_files')
           .delete()
           .eq('id', submission.file.id);
+      }
+      
+      // Clean up all uploaded_files linked to this submission (draft)
+      if (submission.draftId) {
+        await supabase
+          .from('uploaded_files')
+          .delete()
+          .eq('draft_id', submission.draftId);
       }
 
       toast.success(`✅ Product published: ${submission.productData.title}`);
