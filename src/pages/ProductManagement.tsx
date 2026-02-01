@@ -36,6 +36,7 @@ interface UploadedFileData {
   previewUrl?: string;
   isAiGenerated?: boolean;
   detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+  submissionId?: string; // Track which draft/submission this file belongs to
 }
 
 interface ProductData {
@@ -102,7 +103,7 @@ const ProductManagement = () => {
     setCurrentDraftId(draft.id);
     sessionStorage.setItem('currentDraftId', draft.id);
     
-    // Convert draft files to UploadedFileData format
+    // Convert draft files to UploadedFileData format - include submissionId for each file
     const files = draft.files.map(f => ({
       id: f.id,
       url: f.url,
@@ -111,7 +112,8 @@ const ProductManagement = () => {
       size: f.size,
       previewUrl: f.previewUrl,
       thumbnailUrl: f.thumbnailUrl,
-      isWatermarked: f.isWatermarked
+      isWatermarked: f.isWatermarked,
+      submissionId: draft.id // Track which draft this file belongs to
     }));
     
     setUploadedFiles(files);
@@ -542,7 +544,14 @@ const ProductManagement = () => {
   };
 
   const handleUpdateSubmission = async (fileId: string) => {
-    if (!editingSubmissionId) return;
+    const file = uploadedFiles.find(f => f.id === fileId);
+    // Use the file's own submissionId if available, otherwise fallback to editingSubmissionId
+    const targetSubmissionId = file?.submissionId || editingSubmissionId;
+    
+    if (!targetSubmissionId) {
+      toast.error('No product to update');
+      return;
+    }
     
     try {
       const productData = productsData[fileId];
@@ -563,7 +572,8 @@ const ProductManagement = () => {
         return;
       }
 
-      console.log('🔄 Updating submission:', editingSubmissionId);
+      console.log('🔄 Updating submission:', targetSubmissionId);
+      console.log('📁 File submissionId:', file?.submissionId, '| Global editingSubmissionId:', editingSubmissionId);
       console.log('👤 User ID:', user.id);
       console.log('📝 Updates:', { title: productData.title, category: productData.category, tags: productData.tags });
 
@@ -576,7 +586,7 @@ const ProductManagement = () => {
           tags: productData.tags,
           updated_at: new Date().toISOString()
         })
-        .eq('id', editingSubmissionId)
+        .eq('id', targetSubmissionId)
         .eq('creator_id', user.id) // Security: ensure user owns this submission
         .select()
         .single();
