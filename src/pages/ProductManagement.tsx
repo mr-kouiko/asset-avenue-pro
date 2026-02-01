@@ -181,6 +181,7 @@ const ProductManagement = () => {
     
     // Check if we're in edit mode or have a draft ID
     const editingData = sessionStorage.getItem('editingSubmission');
+    const editData = editingData ? JSON.parse(editingData) : null;
     const storedDraftId = sessionStorage.getItem('currentDraftId');
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
     
@@ -199,24 +200,31 @@ const ProductManagement = () => {
       console.log('📝 Using draft ID:', storedDraftId);
     }
     
-    if (editingData) {
-      const editData = JSON.parse(editingData);
+    if (editData) {
       setIsEditMode(true);
       setEditingSubmissionId(editData.submissionId);
       // Use the editing submission ID as the draft ID
       setCurrentDraftId(editData.submissionId);
     }
-    
-    const files = JSON.parse(storedFiles);
-    setUploadedFiles(files);
+
+    const rawFiles = JSON.parse(storedFiles) as UploadedFileData[];
+    // Normalize: ensure every file carries its parent submissionId.
+    // This prevents stale sessionStorage (e.g. after switching accounts) from falling back to a wrong submission ID.
+    const normalizedFiles: UploadedFileData[] = rawFiles.map((f) => ({
+      ...f,
+      submissionId: f.submissionId || editData?.submissionId || storedDraftId || undefined,
+    }));
+
+    setUploadedFiles(normalizedFiles);
+    // Persist normalized version so subsequent actions don't rely on fallbacks.
+    sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(normalizedFiles));
     
     // Initialize products data
     const initialData: Record<string, ProductData> = {};
     
     // If in edit mode, load existing data
-    if (editingData) {
-      const editData = JSON.parse(editingData);
-      files.forEach((file: UploadedFileData) => {
+    if (editData) {
+      normalizedFiles.forEach((file: UploadedFileData) => {
         initialData[file.id] = {
           fileId: file.id,
           title: editData.title || '',
@@ -231,7 +239,7 @@ const ProductManagement = () => {
       });
     } else {
       // Auto-detect category for new uploads
-      files.forEach((file: UploadedFileData) => {
+      normalizedFiles.forEach((file: UploadedFileData) => {
         let autoCategory = '';
         
         // PRIORITY 1: Use detected category from upload process (illustration detection)
@@ -319,8 +327,8 @@ const ProductManagement = () => {
     setProductsData(initialData);
     
     // Select first file by default
-    if (files.length > 0) {
-      setSelectedFileId(files[0].id);
+    if (normalizedFiles.length > 0) {
+      setSelectedFileId(normalizedFiles[0].id);
     }
     // Load all drafts for navigation after initialization
     loadAllDraftsForNavigation();
@@ -471,18 +479,66 @@ const ProductManagement = () => {
   };
 
 
-  const handlePublish = async (fileId: string) => {
-    // If in edit mode, update the submission instead
-    if (isEditMode && editingSubmissionId) {
-      await handleUpdateSubmission(fileId);
-      return;
+  const resolveOwnedSubmissionIdForUser = async (
+    userId: string,
+    candidateIds: Array<string | undefined | null>
+  ): Promise<string | null> => {
+    const ordered = (candidateIds.filter(Boolean) as string[]).filter(
+      (id, idx, arr) => arr.indexOf(id) === idx
+    );
+    if (ordered.length === 0) return null;
+
+    const { data, error } = await supabase
+      .from('content_submissions')
+      .select('id')
+      .in('id', ordered)
+      .eq('creator_id', userId);
+
+    if (error) {
+      console.error('❌ Failed to resolve owned submission id:', error);
+      return null;
     }
-    
-    // Original publish logic for new submissions
+
+    const owned = new Set((data || []).map((r) => r.id));
+    return ordered.find((id) => owned.has(id)) ?? null;
+  };
+
+
+  const handlePublish = async (fileId: string) => {
     const productData = productsData[fileId];
     const file = uploadedFiles.find(f => f.id === fileId);
     
     if (!productData || !file) return;
+
+    // If we're editing an already published product, publish should behave like "update".
+    // But if we're editing a draft, publish should actually publish.
+    const isDraftLikeStatus = productData.status === 'draft' || productData.status === 'pending';
+    if (isEditMode && editingSubmissionId && !isDraftLikeStatus) {
+      await handleUpdateSubmission(fileId);
+      return;
+    }
+
+    // Resolve a draft id that is actually owned by the current user (protects against stale sessionStorage)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('You must be logged in');
+      return;
+    }
+
+    const ownedDraftId = await resolveOwnedSubmissionIdForUser(user.id, [
+      file.submissionId,
+      currentDraftId,
+      editingSubmissionId
+    ]);
+
+    if (!ownedDraftId) {
+      sessionStorage.removeItem('editingSubmission');
+      sessionStorage.removeItem('pendingUploadedFiles');
+      sessionStorage.removeItem('currentDraftId');
+      toast.error("Your editing session is no longer valid. Please reopen the product from your Dashboard.");
+      navigate('/dashboard');
+      return;
+    }
 
     if (!productData.title.trim() || !productData.description.trim()) {
       toast.error("Title and description are required to publish");
@@ -513,7 +569,7 @@ const ProductManagement = () => {
         tags: productData.tags,
         isFreeContent: productData.isFreeContent || false
       },
-      draftId: currentDraftId || undefined // Pass draft ID if available
+      draftId: ownedDraftId // Always use a draft that belongs to the current user
     });
 
     if (success) {
@@ -545,13 +601,7 @@ const ProductManagement = () => {
 
   const handleUpdateSubmission = async (fileId: string) => {
     const file = uploadedFiles.find(f => f.id === fileId);
-    // Use the file's own submissionId if available, otherwise fallback to editingSubmissionId
-    const targetSubmissionId = file?.submissionId || editingSubmissionId;
     
-    if (!targetSubmissionId) {
-      toast.error('No product to update');
-      return;
-    }
     
     try {
       const productData = productsData[fileId];
@@ -569,6 +619,21 @@ const ProductManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('You must be logged in');
+        return;
+      }
+
+      const targetSubmissionId = await resolveOwnedSubmissionIdForUser(user.id, [
+        file?.submissionId,
+        currentDraftId,
+        editingSubmissionId
+      ]);
+
+      if (!targetSubmissionId) {
+        sessionStorage.removeItem('editingSubmission');
+        sessionStorage.removeItem('pendingUploadedFiles');
+        sessionStorage.removeItem('currentDraftId');
+        toast.error("Your editing session is no longer valid. Please reopen the product from your Dashboard.");
+        navigate('/dashboard');
         return;
       }
 
@@ -650,7 +715,7 @@ const ProductManagement = () => {
             tags: productData.tags,
             isFreeContent: productData.isFreeContent || false
           },
-          draftId: currentDraftId || undefined // Pass draft ID
+          draftId: file.submissionId || currentDraftId || editingSubmissionId || undefined // Prefer per-file submissionId
         });
 
         if (success) {
