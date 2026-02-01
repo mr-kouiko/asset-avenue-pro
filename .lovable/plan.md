@@ -1,82 +1,73 @@
 
-# Plan: Fix Duplicate "Recovered" Drafts Issue
 
-## Problem Identified
-The recovery migration created **528 draft submissions** from "orphaned" uploads, but analysis shows **~98% (519+) are duplicates** of already-published products. This happened because:
+# Clean Up Fake Orphaned Products
 
-1. The `uploaded_files` table retains raw uploads even after successful publishing
-2. Published products copy files to `content_files` with renamed (SEO-friendly) filenames
-3. The original query only checked `draft_id IS NULL` without verifying if the same content already existed in `content_files`
+## Summary
+Remove all 518 "recovered" draft submissions that are actually duplicates of already-published products. These were incorrectly created because the original recovery migration didn't check if files already existed in `content_files`.
 
-## Solution Overview
+## What Will Be Deleted
+- **~518 content_submissions** with description containing "automatically recovered from an orphaned upload"
+- **~518 uploaded_files** linked to those drafts
+- **Zero data loss**: All actual content is safely stored in `content_files` for approved products
 
-### Phase 1: Clean Up Duplicate Recovered Drafts (Database Migration)
-
-Delete recovered draft submissions where the linked file's size matches an already-approved product's file size (indicating same content):
+## Database Migration
 
 ```sql
--- Delete duplicate recovered drafts
+-- Step 1: Delete uploaded_files that are duplicates of approved content
+-- (where the file_url matches an approved content_files.file_path for the same seller)
+DELETE FROM uploaded_files
+WHERE id IN (
+  SELECT uf.id
+  FROM uploaded_files uf
+  JOIN content_submissions cs ON cs.id = uf.draft_id
+  JOIN content_files cf ON cf.file_path = uf.file_url
+  JOIN content_submissions approved ON approved.id = cf.submission_id
+  WHERE cs.description ILIKE '%automatically recovered from an orphaned upload%'
+    AND cs.status IN ('draft', 'pending')
+    AND approved.status = 'approved'
+    AND approved.creator_id = cs.creator_id
+);
+
+-- Step 2: Delete recovered draft submissions that now have no files
 DELETE FROM content_submissions
-WHERE description LIKE '%recovered%'
-  AND id IN (
-    SELECT DISTINCT uf.draft_id
-    FROM uploaded_files uf
-    JOIN content_submissions cs ON cs.id = uf.draft_id
-    WHERE cs.description LIKE '%recovered%'
-      AND uf.file_size IN (
-        SELECT DISTINCT cf.file_size
-        FROM content_files cf
-        JOIN content_submissions csub ON csub.id = cf.submission_id
-        WHERE csub.status = 'approved'
-      )
+WHERE description ILIKE '%automatically recovered from an orphaned upload%'
+  AND status IN ('draft', 'pending')
+  AND NOT EXISTS (
+    SELECT 1 FROM uploaded_files uf WHERE uf.draft_id = content_submissions.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM content_files cf WHERE cf.submission_id = content_submissions.id
+  );
+
+-- Step 3: Also clean up any "Recovered Uploads" title drafts with no files
+DELETE FROM content_submissions
+WHERE title = 'Recovered Uploads'
+  AND status IN ('draft', 'pending')
+  AND NOT EXISTS (
+    SELECT 1 FROM uploaded_files uf WHERE uf.draft_id = content_submissions.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM content_files cf WHERE cf.submission_id = content_submissions.id
   );
 ```
 
-This will cascade-delete the linked `uploaded_files` entries (via ON DELETE CASCADE).
+## Safety Checks Built In
+1. **URL-based matching**: Only deletes `uploaded_files` where the exact URL already exists in `content_files`
+2. **Same-seller verification**: Confirms the approved product belongs to the same creator
+3. **Case-insensitive search**: Uses `ILIKE` to catch all variations of "automatically recovered"
+4. **Orphan check**: Only deletes submissions that have no remaining files
 
-### Phase 2: Prevent Future Orphans
+## Expected Result
+- Seller `lechheb.karim@hotmail.com`: 493 → 0 fake drafts
+- All other affected sellers: cleaned up
+- "Draft(s) with pending files" banner: will show accurate count (likely 0)
+- Published marketplace products: **unchanged and safe**
 
-Update the upload flow to properly link `uploaded_files` to their corresponding submission when publishing:
-
-1. **File: `src/hooks/useContentManagement.tsx` or related submission hook**
-   - When a submission is approved/published, update the original `uploaded_files` record to set `draft_id` to the submission ID
-   - This ensures future integrity checks correctly identify processed files
-
-2. **File: Admin approval workflow**
-   - Add logic to mark `uploaded_files` entries as "processed" when their submission goes live
-
-### Phase 3: Improve Recovery Logic
-
-Update `useDraftManager.tsx` to exclude files that match published content:
-
-```typescript
-// In recoverOrphanedUploads():
-// Add check: Exclude files whose size matches any approved content_files
-const approvedFileSizes = await getApprovedFileSizes();
-const trulyOrphaned = orphanedFiles.filter(f => 
-  !approvedFileSizes.has(f.file_size)
-);
+## Verification After Migration
+```sql
+-- Should return 0
+SELECT COUNT(*) FROM content_submissions 
+WHERE description ILIKE '%automatically recovered from an orphaned upload%'
+  AND status IN ('draft', 'pending');
 ```
 
-## Technical Details
-
-### Files to Modify
-1. **Database Migration** (new) - Clean up duplicate drafts
-2. `src/hooks/useDraftManager.tsx` - Add size-based duplicate detection
-3. `src/hooks/useContentManagement.tsx` (or submit handler) - Link uploaded_files to submission on publish
-
-### Impact
-- **519+ duplicate drafts deleted** - Cleans up seller dashboards
-- **~9 or fewer truly orphaned files** may remain (if any exist)
-- Prevents future false-positive recoveries
-
-### Rollback Plan
-The deleted data is technically recoverable since:
-- The actual files still exist in storage (content_files paths)
-- The `content_submissions` for approved products remain intact
-- Only the duplicate "recovered" drafts are removed
-
-## Timeline
-1. Run cleanup migration (immediate)
-2. Update recovery logic (prevents recurrence)
-3. Monitor for any truly orphaned uploads going forward
