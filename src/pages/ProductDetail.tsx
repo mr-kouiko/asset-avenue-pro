@@ -522,9 +522,9 @@ const ProductDetail = () => {
           />
         </div>
         
-        {/* Audio/Video indicator badge */}
+        {/* Audio/Video indicator badge - positioned top-left to avoid overlapping play controls */}
         {product.type === 'video' && (
-          <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg">
+          <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 shadow-lg z-10">
             <FileVideo className="h-3 w-3" />
             Video {resolution || 'HD'}
           </div>
