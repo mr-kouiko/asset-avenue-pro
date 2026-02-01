@@ -165,7 +165,8 @@ const Dashboard = () => {
           size: file.file_size,
           isWatermarked: !file.is_original,
           thumbnailUrl: file.thumbnail_path,
-          previewUrl: file.preview_path
+          previewUrl: file.preview_path,
+          submissionId: submission.id // Track which submission this file belongs to
         }));
       } else {
         // Use uploaded_files format (for recovered drafts)
@@ -181,7 +182,8 @@ const Dashboard = () => {
           size: file.file_size,
           isWatermarked: file.is_watermarked || false,
           thumbnailUrl: file.thumbnail_url,
-          previewUrl: file.preview_url
+          previewUrl: file.preview_url,
+          submissionId: submission.id // Track which submission this file belongs to
         }));
       }
 
