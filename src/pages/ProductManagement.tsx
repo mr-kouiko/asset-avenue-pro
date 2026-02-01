@@ -481,26 +481,57 @@ const ProductManagement = () => {
 
   const resolveOwnedSubmissionIdForUser = async (
     userId: string,
-    candidateIds: Array<string | undefined | null>
+    candidateIds: Array<string | undefined | null>,
+    fileId?: string
   ): Promise<string | null> => {
     const ordered = (candidateIds.filter(Boolean) as string[]).filter(
       (id, idx, arr) => arr.indexOf(id) === idx
     );
-    if (ordered.length === 0) return null;
+    
+    console.log('🔍 [RESOLVE] Checking candidate IDs:', ordered, 'for user:', userId);
+    
+    // If we have candidate IDs, check if user owns them
+    if (ordered.length > 0) {
+      const { data, error } = await supabase
+        .from('content_submissions')
+        .select('id')
+        .in('id', ordered)
+        .eq('creator_id', userId);
 
-    const { data, error } = await supabase
+      if (error) {
+        console.error('❌ Failed to resolve owned submission id:', error);
+      } else if (data && data.length > 0) {
+        const owned = new Set((data || []).map((r) => r.id));
+        const match = ordered.find((id) => owned.has(id));
+        if (match) {
+          console.log('✅ [RESOLVE] Found owned submission:', match);
+          return match;
+        }
+      }
+    }
+    
+    // Fallback: Check if any of the user's draft submissions contain the file
+    // This handles cases where sessionStorage is stale but the file is still linked
+    console.log('🔄 [RESOLVE] Fallback - checking user drafts...');
+    const { data: userDrafts, error: draftsError } = await supabase
       .from('content_submissions')
       .select('id')
-      .in('id', ordered)
-      .eq('creator_id', userId);
-
-    if (error) {
-      console.error('❌ Failed to resolve owned submission id:', error);
+      .eq('creator_id', userId)
+      .in('status', ['draft', 'pending']);
+    
+    if (draftsError) {
+      console.error('❌ Failed to fetch user drafts:', draftsError);
       return null;
     }
-
-    const owned = new Set((data || []).map((r) => r.id));
-    return ordered.find((id) => owned.has(id)) ?? null;
+    
+    if (userDrafts && userDrafts.length > 0) {
+      console.log('📋 [RESOLVE] User has', userDrafts.length, 'draft(s)');
+      // Return the first draft - the user can select which to publish from their dashboard
+      return userDrafts[0].id;
+    }
+    
+    console.log('❌ [RESOLVE] No owned drafts found for user');
+    return null;
   };
 
 
@@ -529,14 +560,19 @@ const ProductManagement = () => {
       file.submissionId,
       currentDraftId,
       editingSubmissionId
-    ]);
+    ], fileId);
+
+    console.log('📝 [PUBLISH] Resolved draft ID:', ownedDraftId);
+    console.log('📁 [PUBLISH] File submissionId:', file.submissionId);
+    console.log('🗂️ [PUBLISH] currentDraftId:', currentDraftId);
+    console.log('✏️ [PUBLISH] editingSubmissionId:', editingSubmissionId);
 
     if (!ownedDraftId) {
       sessionStorage.removeItem('editingSubmission');
       sessionStorage.removeItem('pendingUploadedFiles');
       sessionStorage.removeItem('currentDraftId');
-      toast.error("Your editing session is no longer valid. Please reopen the product from your Dashboard.");
-      navigate('/dashboard');
+      toast.error("No draft found to publish. Please upload your files again.");
+      navigate('/file-upload');
       return;
     }
 
@@ -626,13 +662,13 @@ const ProductManagement = () => {
         file?.submissionId,
         currentDraftId,
         editingSubmissionId
-      ]);
+      ], fileId);
 
       if (!targetSubmissionId) {
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('currentDraftId');
-        toast.error("Your editing session is no longer valid. Please reopen the product from your Dashboard.");
+        toast.error("No draft found to update. Please try again from your Dashboard.");
         navigate('/dashboard');
         return;
       }
