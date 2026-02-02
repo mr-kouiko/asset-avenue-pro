@@ -72,9 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const { toast } = useToast();
 
-  // Fetch role from database
-  const fetchRole = useCallback(async (userId: string): Promise<string | null> => {
+  // Fetch role from database with retry logic for reliability
+  const fetchRole = useCallback(async (userId: string, retryCount = 0): Promise<string | null> => {
     try {
+      console.log(`[Auth] Fetching role for user ${userId} (attempt ${retryCount + 1})`);
+      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -82,24 +84,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('[Auth] Error fetching user role:', error);
+        // Retry once on error (network issues, etc.)
+        if (retryCount < 1) {
+          console.log('[Auth] Retrying role fetch...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return fetchRole(userId, retryCount + 1);
+        }
         return null;
       }
       
       const fetchedRole = data?.role || null;
+      console.log(`[Auth] Role fetched: ${fetchedRole}`);
       
       // Cache role in localStorage for cross-tab sync
       if (fetchedRole) {
         localStorage.setItem(ROLE_STORAGE_KEY, fetchedRole);
         localStorage.setItem(ROLE_TIMESTAMP_KEY, Date.now().toString());
       } else {
+        // Clear stale cache if no role found
         localStorage.removeItem(ROLE_STORAGE_KEY);
         localStorage.removeItem(ROLE_TIMESTAMP_KEY);
       }
       
       return fetchedRole;
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      console.error('[Auth] Error fetching user role:', error);
+      // Retry once on exception
+      if (retryCount < 1) {
+        console.log('[Auth] Retrying role fetch after exception...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchRole(userId, retryCount + 1);
+      }
       return null;
     }
   }, []);
@@ -136,25 +152,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle user/session changes - fetch role
   useEffect(() => {
     if (user) {
-      // First, try to load from cache for instant UI
       const cachedRole = loadCachedRole();
+      
+      // Always fetch from DB to ensure freshness, but show cache immediately if available
       if (cachedRole) {
         setRole(cachedRole);
         setRoleLoading(false);
-        // Still refresh from DB in background to ensure freshness
-        fetchRole(user.id).then((freshRole) => {
-          if (freshRole !== cachedRole) {
-            setRole(freshRole);
-          }
-        });
+        console.log(`[Auth] Using cached role: ${cachedRole}, refreshing from DB...`);
       } else {
-        // No cache, fetch from DB
+        // No cache - show loading state
         setRoleLoading(true);
-        fetchRole(user.id).then((fetchedRole) => {
-          setRole(fetchedRole);
-          setRoleLoading(false);
-        });
+        console.log('[Auth] No cached role, fetching from DB...');
       }
+      
+      // Always fetch fresh role from database
+      fetchRole(user.id).then((freshRole) => {
+        if (freshRole) {
+          if (freshRole !== cachedRole) {
+            console.log(`[Auth] Role updated: ${cachedRole} -> ${freshRole}`);
+          }
+          setRole(freshRole);
+        } else if (!cachedRole) {
+          // Only set null if we had no cache AND DB returned nothing
+          console.warn('[Auth] No role found in DB for user:', user.id);
+          setRole(null);
+        }
+        // Keep cached role if DB fetch failed but cache was valid
+        setRoleLoading(false);
+      });
     } else {
       setRole(null);
       setRoleLoading(false);
