@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, X, FileText, Image, Film, Music, AlertCircle, Check, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
+// Session storage key for backup of active uploads
+const ACTIVE_UPLOADS_KEY = 'activeUploads';
 
 interface UploadFile {
   id: string;
@@ -56,6 +58,41 @@ export const SimpleFileUpload = ({
   const { processFiles, isProcessing } = useAutomaticWatermark();
   const { detectImage } = useAIImageDetection();
   const { detectVideo } = useAIVideoDetection();
+  
+  // ANTI-REMOUNT PROTECTION: Warn user if uploads were interrupted
+  useEffect(() => {
+    const saved = sessionStorage.getItem(ACTIVE_UPLOADS_KEY);
+    if (saved) {
+      try {
+        const activeUploads = JSON.parse(saved);
+        if (activeUploads.length > 0) {
+          toast.warning(`⚠️ ${activeUploads.length} upload(s) interrompu(s) - veuillez réessayer`);
+        }
+      } catch (e) {
+        console.error('Failed to parse activeUploads from sessionStorage:', e);
+      }
+      sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+    }
+  }, []);
+  
+  // BACKUP: Save active uploads to sessionStorage for crash recovery
+  useEffect(() => {
+    const activeUploads = files.filter(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'detecting-ai' || f.status === 'checking-duplicate');
+    
+    if (activeUploads.length > 0) {
+      sessionStorage.setItem(ACTIVE_UPLOADS_KEY, JSON.stringify(
+        activeUploads.map(f => ({
+          id: f.id,
+          name: f.file.name,
+          progress: f.progress,
+          status: f.status
+        }))
+      ));
+    } else {
+      // Clear backup when no active uploads
+      sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+    }
+  }, [files]);
   
 
   const acceptedTypes = [

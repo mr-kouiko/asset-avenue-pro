@@ -44,11 +44,15 @@ const FileUpload = () => {
   
   // Guard: ensure initialization only runs once per mount
   const hasInitialized = useRef(false);
+  
+  // CRITICAL: Track if uploads are in progress to prevent state updates that cause re-renders
+  const isUploadingRef = useRef(false);
 
   // Initialize: load existing drafts and recover orphaned uploads
   useEffect(() => {
     // Prevent re-runs from callback recreation or parent re-renders
-    if (hasInitialized.current) return;
+    // Also skip if uploads are in progress to prevent disruption
+    if (hasInitialized.current || isUploadingRef.current) return;
     hasInitialized.current = true;
 
     const initialize = async () => {
@@ -97,20 +101,24 @@ const FileUpload = () => {
     return newDraftId;
   }, [currentDraftId, createDraft]);
 
-  const handleFilesUploaded = async (files: UploadedFileData[]) => {
+  // STABILIZED callback - uses refs to track upload state without causing re-renders
+  const handleFilesUploaded = useCallback(async (files: UploadedFileData[]) => {
     console.log('📥 handleFilesUploaded called with files:', files);
     
-    // CRITICAL: Ensure draft exists BEFORE processing files
-    const draftId = await ensureDraftExists();
-    if (!draftId) {
-      toast.error("Failed to create draft. Please try again.");
-      return;
-    }
-    
-    // Update state first so the UI shows progress
-    setUploadedFiles(prev => [...prev, ...files]);
+    // Mark that uploads are in progress - prevents initialization from re-running
+    isUploadingRef.current = true;
     
     try {
+      // CRITICAL: Ensure draft exists BEFORE processing files
+      const draftId = await ensureDraftExists();
+      if (!draftId) {
+        toast.error("Failed to create draft. Please try again.");
+        return;
+      }
+      
+      // Update state first so the UI shows progress
+      setUploadedFiles(prev => [...prev, ...files]);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.warning("Files uploaded but not linked - please login");
@@ -144,8 +152,11 @@ const FileUpload = () => {
     } catch (error) {
       console.error('Error in handleFilesUploaded:', error);
       toast.warning("Files ready - you can continue despite the error");
+    } finally {
+      // Allow state updates again once upload handling is complete
+      isUploadingRef.current = false;
     }
-  };
+  }, [ensureDraftExists]);
 
   const handleContinueToProducts = () => {
     if (uploadedFiles.length === 0 && !currentDraftId) {
@@ -292,6 +303,7 @@ const FileUpload = () => {
                   </div>
                   
                   <SimpleFileUpload 
+                    key="simple-file-upload-stable"
                     onFilesUploaded={handleFilesUploaded} 
                     maxFiles={100} 
                     maxFileSize={1000} 

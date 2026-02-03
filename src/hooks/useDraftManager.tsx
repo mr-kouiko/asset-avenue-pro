@@ -123,9 +123,12 @@ export const useDraftManager = () => {
 
   /**
    * Load all drafts for the current user, including their linked files
+   * @param options.skipStateUpdate - If true, returns data without calling setDrafts (prevents re-renders during uploads)
    */
-  const loadDrafts = useCallback(async (): Promise<DraftProduct[]> => {
-    setLoading(true);
+  const loadDrafts = useCallback(async (options?: { skipStateUpdate?: boolean }): Promise<DraftProduct[]> => {
+    if (!options?.skipStateUpdate) {
+      setLoading(true);
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -144,7 +147,9 @@ export const useDraftManager = () => {
       }
 
       if (!submissions || submissions.length === 0) {
-        setDrafts([]);
+        if (!options?.skipStateUpdate) {
+          setDrafts([]);
+        }
         return [];
       }
 
@@ -206,13 +211,18 @@ export const useDraftManager = () => {
         };
       });
 
-      setDrafts(draftsWithFiles);
+      // Only update state if not skipped (prevents re-renders during active uploads)
+      if (!options?.skipStateUpdate) {
+        setDrafts(draftsWithFiles);
+      }
       return draftsWithFiles;
     } catch (error) {
       console.error('Load drafts error:', error);
       return [];
     } finally {
-      setLoading(false);
+      if (!options?.skipStateUpdate) {
+        setLoading(false);
+      }
     }
   }, []);
 
