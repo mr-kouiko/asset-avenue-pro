@@ -1,162 +1,136 @@
 
-# Plan de correction : Disparition des uploads en cours
+# Plan de correction : Message "uploads interrompus" erroné
 
-## Diagnostic du problème
+## Diagnostic
 
-L'analyse du code révèle **plusieurs causes probables** de la disparition des uploads en cours :
+Le message "2 uploads interrompus" apparaît à cause d'un **bug de timing** dans le système de backup sessionStorage :
 
-### Cause principale : Re-render du composant qui réinitialise l'état local
-
-Le composant `SimpleFileUpload.tsx` stocke les fichiers en cours d'upload dans un état local React (`useState`). Si le composant parent (`FileUpload.tsx`) se re-render, le composant enfant peut être démonté et remonté, **perdant tout l'état des uploads en cours**.
-
-**Problèmes identifiés :**
-
-1. **FileUpload.tsx - Effet de bord potentiel (lignes 48-86)** :
-   - Le `useEffect` d'initialisation charge les drafts et récupère les fichiers orphelins
-   - Si `loadDrafts()` ou `recoverOrphanedUploads()` provoquent un re-render via `setDrafts()`, cela peut réinitialiser `SimpleFileUpload`
-
-2. **useDraftManager.tsx - `setDrafts` dans `loadDrafts` (ligne 209)** :
-   - Appeler `setDrafts(draftsWithFiles)` déclenche un re-render du parent
-   - Si cela arrive pendant un upload, le composant `SimpleFileUpload` perd son état
-
-3. **SimpleFileUpload.tsx - État local volatil (ligne 52)** :
-   - `const [files, setFiles] = useState<UploadFile[]>([])` est réinitialisé à chaque remontage
-   - Aucune persistance de l'état d'upload en cours
-
-### Scénarios de reproduction
+### Scénario problématique
 
 ```text
-1. Utilisateur sélectionne 5 fichiers → Upload démarre
-2. Pendant l'upload, une fonction async (loadDrafts, recoverOrphanedUploads) termine
-3. setDrafts() est appelé → FileUpload.tsx re-render
-4. SimpleFileUpload est remonté → files = [] → Uploads "disparaissent"
+1. Uploads démarrent → sessionStorage contient 2 fichiers actifs
+2. Parent re-render → SimpleFileUpload est remonté
+3. Nouveau composant monte avec files = []
+4. useEffect de récupération lit sessionStorage → Trouve 2 fichiers
+5. Affiche "2 uploads interrompus" MAIS ces uploads se sont peut-être terminés correctement
 ```
 
----
+### Cause racine
+
+Le nettoyage du sessionStorage dépend du state `files` qui est **réinitialisé à vide** lors d'un remontage. Le composant ne peut pas distinguer :
+- Un vrai crash/interruption (fichiers non terminés)
+- Un remontage après uploads réussis (fichiers terminés côté serveur)
 
 ## Solution proposée
 
-### 1. Stabiliser le composant FileUpload avec useRef pour l'état critique
+### 1. Vérifier si les fichiers existent vraiment avant d'afficher l'avertissement
 
-Empêcher les re-renders du parent de perturber les uploads en cours.
-
-**Fichier : `src/pages/FileUpload.tsx`**
-
-```typescript
-// Ajouter une ref pour tracker si des uploads sont en cours
-const isUploadingRef = useRef(false);
-
-// Modifier handleFilesUploaded pour tracker l'état d'upload
-const handleFilesUploaded = async (files: UploadedFileData[]) => {
-  isUploadingRef.current = true;
-  // ... logique existante ...
-  isUploadingRef.current = false;
-};
-
-// Modifier l'initialisation pour ne pas recharger si upload en cours
-useEffect(() => {
-  if (hasInitialized.current || isUploadingRef.current) return;
-  // ...
-}, []);
-```
-
-### 2. Ajouter une clé stable au composant SimpleFileUpload
-
-Empêcher le remontage accidentel du composant.
-
-**Fichier : `src/pages/FileUpload.tsx`**
-
-```tsx
-// Utiliser une clé stable basée sur le session/user pour éviter les remontages
-<SimpleFileUpload 
-  key="simple-file-upload-stable"  // Clé fixe pour éviter remontage
-  onFilesUploaded={handleFilesUploaded} 
-  maxFiles={100} 
-  maxFileSize={1000} 
-/>
-```
-
-### 3. Mémoriser les callbacks avec useCallback stable
-
-Éviter que les changements de référence des callbacks ne provoquent des re-renders.
-
-**Fichier : `src/pages/FileUpload.tsx`**
-
-```typescript
-// Utiliser useCallback avec dépendances stables
-const handleFilesUploaded = useCallback(async (files: UploadedFileData[]) => {
-  // Utiliser refs au lieu de state pour les valeurs qui changent
-}, [ensureDraftExists]);  // Dépendances minimales
-```
-
-### 4. Différer les mises à jour d'état non-critiques
-
-Éviter les `setDrafts` pendant les uploads.
-
-**Fichier : `src/hooks/useDraftManager.tsx`**
-
-```typescript
-// Option: retourner les données sans setDrafts si demandé
-const loadDrafts = useCallback(async (options?: { skipStateUpdate?: boolean }): Promise<DraftProduct[]> => {
-  // ...
-  if (!options?.skipStateUpdate) {
-    setDrafts(draftsWithFiles);
-  }
-  return draftsWithFiles;
-}, []);
-```
-
-### 5. Ajouter une protection anti-remontage dans SimpleFileUpload
-
-Persister l'état d'upload en cours dans sessionStorage comme backup.
+Modifier l'effet de récupération pour vérifier dans la base de données si les fichiers ont été uploadés avec succès.
 
 **Fichier : `src/components/SimpleFileUpload.tsx`**
 
 ```typescript
-// Sauvegarder l'état des uploads actifs
+// ANTI-REMOUNT PROTECTION: Warn user ONLY if uploads were truly interrupted
 useEffect(() => {
-  if (files.some(f => f.status === 'uploading' || f.status === 'processing')) {
-    sessionStorage.setItem('activeUploads', JSON.stringify(
-      files.filter(f => f.status !== 'completed').map(f => ({
+  const checkInterruptedUploads = async () => {
+    const saved = sessionStorage.getItem(ACTIVE_UPLOADS_KEY);
+    if (!saved) return;
+    
+    try {
+      const activeUploads = JSON.parse(saved);
+      if (activeUploads.length === 0) {
+        sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+        return;
+      }
+      
+      // CRITICAL: Check if these uploads actually completed
+      // If they exist in uploaded_files table, they weren't truly interrupted
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+        return;
+      }
+      
+      // Query recent uploads to see if these files completed
+      const recentTime = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // Last 10 mins
+      const { data: recentFiles } = await supabase
+        .from('uploaded_files')
+        .select('file_name')
+        .eq('user_id', user.id)
+        .gte('created_at', recentTime);
+      
+      const completedNames = new Set((recentFiles || []).map(f => f.file_name));
+      const trulyInterrupted = activeUploads.filter(
+        (u: { name: string }) => !completedNames.has(u.name)
+      );
+      
+      if (trulyInterrupted.length > 0) {
+        toast.warning(`⚠️ ${trulyInterrupted.length} upload(s) interrompu(s) - veuillez réessayer`);
+      }
+    } catch (e) {
+      console.error('Failed to verify interrupted uploads:', e);
+    }
+    
+    // Always clear after checking
+    sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+  };
+  
+  checkInterruptedUploads();
+}, []);
+```
+
+### 2. Ajouter un timestamp au backup pour éviter les faux positifs
+
+**Fichier : `src/components/SimpleFileUpload.tsx`**
+
+```typescript
+// BACKUP: Save active uploads with timestamp
+useEffect(() => {
+  const activeUploads = files.filter(f => 
+    f.status === 'uploading' || f.status === 'processing' || 
+    f.status === 'detecting-ai' || f.status === 'checking-duplicate'
+  );
+  
+  if (activeUploads.length > 0) {
+    sessionStorage.setItem(ACTIVE_UPLOADS_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      files: activeUploads.map(f => ({
         id: f.id,
         name: f.file.name,
         progress: f.progress,
         status: f.status
       }))
-    ));
+    }));
+  } else {
+    sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
   }
 }, [files]);
-
-// Avertir l'utilisateur si des uploads étaient en cours
-useEffect(() => {
-  const saved = sessionStorage.getItem('activeUploads');
-  if (saved) {
-    const activeUploads = JSON.parse(saved);
-    if (activeUploads.length > 0) {
-      toast.warning(`⚠️ ${activeUploads.length} upload(s) interrompu(s) - veuillez réessayer`);
-      sessionStorage.removeItem('activeUploads');
-    }
-  }
-}, []);
 ```
 
----
+### 3. Ignorer les backups trop anciens
+
+```typescript
+// Dans checkInterruptedUploads:
+const backupData = JSON.parse(saved);
+const backupAge = Date.now() - (backupData.timestamp || 0);
+
+// Ignore backups older than 10 minutes (uploads likely completed or abandoned)
+if (backupAge > 10 * 60 * 1000) {
+  sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+  return;
+}
+```
 
 ## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/FileUpload.tsx` | Ajouter `isUploadingRef`, clé stable, mémorisation callbacks |
-| `src/components/SimpleFileUpload.tsx` | Backup sessionStorage, protection anti-remontage |
-| `src/hooks/useDraftManager.tsx` | Option `skipStateUpdate` pour `loadDrafts` |
+| `src/components/SimpleFileUpload.tsx` | Vérification DB avant avertissement, timestamp backup, expiration |
 
----
+## Résumé
 
-## Résumé technique
+Le problème vient du fait que le système de protection affiche un avertissement **sans vérifier** si les uploads ont réellement échoué. La solution :
 
-Le problème vient d'un **re-render du composant parent** pendant les uploads, causé par des mises à jour d'état asynchrones (`setDrafts`). La solution consiste à :
-
-1. **Stabiliser les références** des composants et callbacks
-2. **Différer les mises à jour d'état** non-critiques pendant les uploads
-3. **Ajouter un backup sessionStorage** pour détecter les interruptions
-4. **Utiliser des refs** pour tracker l'état d'upload sans provoquer de re-renders
+1. **Vérifier dans la base de données** si les fichiers existent avant d'alerter l'utilisateur
+2. **Ajouter un timestamp** au backup pour ignorer les données périmées
+3. **Toujours nettoyer** le sessionStorage après vérification
