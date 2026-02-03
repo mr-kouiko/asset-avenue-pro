@@ -1,73 +1,162 @@
 
+# Plan de correction : Disparition des uploads en cours
 
-# Clean Up Fake Orphaned Products
+## Diagnostic du problème
 
-## Summary
-Remove all 518 "recovered" draft submissions that are actually duplicates of already-published products. These were incorrectly created because the original recovery migration didn't check if files already existed in `content_files`.
+L'analyse du code révèle **plusieurs causes probables** de la disparition des uploads en cours :
 
-## What Will Be Deleted
-- **~518 content_submissions** with description containing "automatically recovered from an orphaned upload"
-- **~518 uploaded_files** linked to those drafts
-- **Zero data loss**: All actual content is safely stored in `content_files` for approved products
+### Cause principale : Re-render du composant qui réinitialise l'état local
 
-## Database Migration
+Le composant `SimpleFileUpload.tsx` stocke les fichiers en cours d'upload dans un état local React (`useState`). Si le composant parent (`FileUpload.tsx`) se re-render, le composant enfant peut être démonté et remonté, **perdant tout l'état des uploads en cours**.
 
-```sql
--- Step 1: Delete uploaded_files that are duplicates of approved content
--- (where the file_url matches an approved content_files.file_path for the same seller)
-DELETE FROM uploaded_files
-WHERE id IN (
-  SELECT uf.id
-  FROM uploaded_files uf
-  JOIN content_submissions cs ON cs.id = uf.draft_id
-  JOIN content_files cf ON cf.file_path = uf.file_url
-  JOIN content_submissions approved ON approved.id = cf.submission_id
-  WHERE cs.description ILIKE '%automatically recovered from an orphaned upload%'
-    AND cs.status IN ('draft', 'pending')
-    AND approved.status = 'approved'
-    AND approved.creator_id = cs.creator_id
-);
+**Problèmes identifiés :**
 
--- Step 2: Delete recovered draft submissions that now have no files
-DELETE FROM content_submissions
-WHERE description ILIKE '%automatically recovered from an orphaned upload%'
-  AND status IN ('draft', 'pending')
-  AND NOT EXISTS (
-    SELECT 1 FROM uploaded_files uf WHERE uf.draft_id = content_submissions.id
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM content_files cf WHERE cf.submission_id = content_submissions.id
-  );
+1. **FileUpload.tsx - Effet de bord potentiel (lignes 48-86)** :
+   - Le `useEffect` d'initialisation charge les drafts et récupère les fichiers orphelins
+   - Si `loadDrafts()` ou `recoverOrphanedUploads()` provoquent un re-render via `setDrafts()`, cela peut réinitialiser `SimpleFileUpload`
 
--- Step 3: Also clean up any "Recovered Uploads" title drafts with no files
-DELETE FROM content_submissions
-WHERE title = 'Recovered Uploads'
-  AND status IN ('draft', 'pending')
-  AND NOT EXISTS (
-    SELECT 1 FROM uploaded_files uf WHERE uf.draft_id = content_submissions.id
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM content_files cf WHERE cf.submission_id = content_submissions.id
-  );
+2. **useDraftManager.tsx - `setDrafts` dans `loadDrafts` (ligne 209)** :
+   - Appeler `setDrafts(draftsWithFiles)` déclenche un re-render du parent
+   - Si cela arrive pendant un upload, le composant `SimpleFileUpload` perd son état
+
+3. **SimpleFileUpload.tsx - État local volatil (ligne 52)** :
+   - `const [files, setFiles] = useState<UploadFile[]>([])` est réinitialisé à chaque remontage
+   - Aucune persistance de l'état d'upload en cours
+
+### Scénarios de reproduction
+
+```text
+1. Utilisateur sélectionne 5 fichiers → Upload démarre
+2. Pendant l'upload, une fonction async (loadDrafts, recoverOrphanedUploads) termine
+3. setDrafts() est appelé → FileUpload.tsx re-render
+4. SimpleFileUpload est remonté → files = [] → Uploads "disparaissent"
 ```
 
-## Safety Checks Built In
-1. **URL-based matching**: Only deletes `uploaded_files` where the exact URL already exists in `content_files`
-2. **Same-seller verification**: Confirms the approved product belongs to the same creator
-3. **Case-insensitive search**: Uses `ILIKE` to catch all variations of "automatically recovered"
-4. **Orphan check**: Only deletes submissions that have no remaining files
+---
 
-## Expected Result
-- Seller `lechheb.karim@hotmail.com`: 493 → 0 fake drafts
-- All other affected sellers: cleaned up
-- "Draft(s) with pending files" banner: will show accurate count (likely 0)
-- Published marketplace products: **unchanged and safe**
+## Solution proposée
 
-## Verification After Migration
-```sql
--- Should return 0
-SELECT COUNT(*) FROM content_submissions 
-WHERE description ILIKE '%automatically recovered from an orphaned upload%'
-  AND status IN ('draft', 'pending');
+### 1. Stabiliser le composant FileUpload avec useRef pour l'état critique
+
+Empêcher les re-renders du parent de perturber les uploads en cours.
+
+**Fichier : `src/pages/FileUpload.tsx`**
+
+```typescript
+// Ajouter une ref pour tracker si des uploads sont en cours
+const isUploadingRef = useRef(false);
+
+// Modifier handleFilesUploaded pour tracker l'état d'upload
+const handleFilesUploaded = async (files: UploadedFileData[]) => {
+  isUploadingRef.current = true;
+  // ... logique existante ...
+  isUploadingRef.current = false;
+};
+
+// Modifier l'initialisation pour ne pas recharger si upload en cours
+useEffect(() => {
+  if (hasInitialized.current || isUploadingRef.current) return;
+  // ...
+}, []);
 ```
 
+### 2. Ajouter une clé stable au composant SimpleFileUpload
+
+Empêcher le remontage accidentel du composant.
+
+**Fichier : `src/pages/FileUpload.tsx`**
+
+```tsx
+// Utiliser une clé stable basée sur le session/user pour éviter les remontages
+<SimpleFileUpload 
+  key="simple-file-upload-stable"  // Clé fixe pour éviter remontage
+  onFilesUploaded={handleFilesUploaded} 
+  maxFiles={100} 
+  maxFileSize={1000} 
+/>
+```
+
+### 3. Mémoriser les callbacks avec useCallback stable
+
+Éviter que les changements de référence des callbacks ne provoquent des re-renders.
+
+**Fichier : `src/pages/FileUpload.tsx`**
+
+```typescript
+// Utiliser useCallback avec dépendances stables
+const handleFilesUploaded = useCallback(async (files: UploadedFileData[]) => {
+  // Utiliser refs au lieu de state pour les valeurs qui changent
+}, [ensureDraftExists]);  // Dépendances minimales
+```
+
+### 4. Différer les mises à jour d'état non-critiques
+
+Éviter les `setDrafts` pendant les uploads.
+
+**Fichier : `src/hooks/useDraftManager.tsx`**
+
+```typescript
+// Option: retourner les données sans setDrafts si demandé
+const loadDrafts = useCallback(async (options?: { skipStateUpdate?: boolean }): Promise<DraftProduct[]> => {
+  // ...
+  if (!options?.skipStateUpdate) {
+    setDrafts(draftsWithFiles);
+  }
+  return draftsWithFiles;
+}, []);
+```
+
+### 5. Ajouter une protection anti-remontage dans SimpleFileUpload
+
+Persister l'état d'upload en cours dans sessionStorage comme backup.
+
+**Fichier : `src/components/SimpleFileUpload.tsx`**
+
+```typescript
+// Sauvegarder l'état des uploads actifs
+useEffect(() => {
+  if (files.some(f => f.status === 'uploading' || f.status === 'processing')) {
+    sessionStorage.setItem('activeUploads', JSON.stringify(
+      files.filter(f => f.status !== 'completed').map(f => ({
+        id: f.id,
+        name: f.file.name,
+        progress: f.progress,
+        status: f.status
+      }))
+    ));
+  }
+}, [files]);
+
+// Avertir l'utilisateur si des uploads étaient en cours
+useEffect(() => {
+  const saved = sessionStorage.getItem('activeUploads');
+  if (saved) {
+    const activeUploads = JSON.parse(saved);
+    if (activeUploads.length > 0) {
+      toast.warning(`⚠️ ${activeUploads.length} upload(s) interrompu(s) - veuillez réessayer`);
+      sessionStorage.removeItem('activeUploads');
+    }
+  }
+}, []);
+```
+
+---
+
+## Fichiers à modifier
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/FileUpload.tsx` | Ajouter `isUploadingRef`, clé stable, mémorisation callbacks |
+| `src/components/SimpleFileUpload.tsx` | Backup sessionStorage, protection anti-remontage |
+| `src/hooks/useDraftManager.tsx` | Option `skipStateUpdate` pour `loadDrafts` |
+
+---
+
+## Résumé technique
+
+Le problème vient d'un **re-render du composant parent** pendant les uploads, causé par des mises à jour d'état asynchrones (`setDrafts`). La solution consiste à :
+
+1. **Stabiliser les références** des composants et callbacks
+2. **Différer les mises à jour d'état** non-critiques pendant les uploads
+3. **Ajouter un backup sessionStorage** pour détecter les interruptions
+4. **Utiliser des refs** pour tracker l'état d'upload sans provoquer de re-renders
