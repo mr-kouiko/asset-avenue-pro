@@ -108,7 +108,7 @@ export const SimpleFileUpload = ({
         
         if (trulyInterrupted.length > 0) {
           console.log('[UPLOAD-RECOVERY] Truly interrupted uploads:', trulyInterrupted.map((u: { name: string }) => u.name));
-          toast.warning(`⚠️ ${trulyInterrupted.length} upload(s) interrompu(s) - veuillez réessayer`);
+          toast.warning(`⚠️ ${trulyInterrupted.length} upload(s) interrupted - please try again`);
         } else {
           console.log('[UPLOAD-RECOVERY] All uploads completed successfully, no warning needed');
         }
