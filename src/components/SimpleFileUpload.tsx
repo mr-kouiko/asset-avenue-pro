@@ -59,35 +59,87 @@ export const SimpleFileUpload = ({
   const { detectImage } = useAIImageDetection();
   const { detectVideo } = useAIVideoDetection();
   
-  // ANTI-REMOUNT PROTECTION: Warn user if uploads were interrupted
+  // ANTI-REMOUNT PROTECTION: Warn user ONLY if uploads were truly interrupted
   useEffect(() => {
-    const saved = sessionStorage.getItem(ACTIVE_UPLOADS_KEY);
-    if (saved) {
+    const checkInterruptedUploads = async () => {
+      const saved = sessionStorage.getItem(ACTIVE_UPLOADS_KEY);
+      if (!saved) return;
+      
       try {
-        const activeUploads = JSON.parse(saved);
-        if (activeUploads.length > 0) {
-          toast.warning(`⚠️ ${activeUploads.length} upload(s) interrompu(s) - veuillez réessayer`);
+        const backupData = JSON.parse(saved);
+        
+        // Support both old format (array) and new format (object with timestamp)
+        const activeUploads = Array.isArray(backupData) ? backupData : backupData.files || [];
+        const backupTimestamp = backupData.timestamp || 0;
+        
+        if (activeUploads.length === 0) {
+          sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+          return;
+        }
+        
+        // Ignore backups older than 10 minutes (uploads likely completed or abandoned)
+        const backupAge = Date.now() - backupTimestamp;
+        if (backupTimestamp && backupAge > 10 * 60 * 1000) {
+          console.log('[UPLOAD-RECOVERY] Backup too old, ignoring:', backupAge / 1000, 'seconds');
+          sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+          return;
+        }
+        
+        // CRITICAL: Check if these uploads actually completed in the database
+        // If they exist in uploaded_files table, they weren't truly interrupted
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
+          return;
+        }
+        
+        // Query recent uploads to see if these files completed
+        const recentTime = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // Last 10 mins
+        const { data: recentFiles } = await supabase
+          .from('uploaded_files')
+          .select('file_name')
+          .eq('user_id', user.id)
+          .gte('created_at', recentTime);
+        
+        const completedNames = new Set((recentFiles || []).map(f => f.file_name));
+        const trulyInterrupted = activeUploads.filter(
+          (u: { name: string }) => !completedNames.has(u.name)
+        );
+        
+        if (trulyInterrupted.length > 0) {
+          console.log('[UPLOAD-RECOVERY] Truly interrupted uploads:', trulyInterrupted.map((u: { name: string }) => u.name));
+          toast.warning(`⚠️ ${trulyInterrupted.length} upload(s) interrompu(s) - veuillez réessayer`);
+        } else {
+          console.log('[UPLOAD-RECOVERY] All uploads completed successfully, no warning needed');
         }
       } catch (e) {
-        console.error('Failed to parse activeUploads from sessionStorage:', e);
+        console.error('Failed to verify interrupted uploads:', e);
       }
+      
+      // Always clear after checking
       sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
-    }
+    };
+    
+    checkInterruptedUploads();
   }, []);
   
-  // BACKUP: Save active uploads to sessionStorage for crash recovery
+  // BACKUP: Save active uploads to sessionStorage with timestamp for crash recovery
   useEffect(() => {
-    const activeUploads = files.filter(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'detecting-ai' || f.status === 'checking-duplicate');
+    const activeUploads = files.filter(f => 
+      f.status === 'uploading' || f.status === 'processing' || 
+      f.status === 'detecting-ai' || f.status === 'checking-duplicate'
+    );
     
     if (activeUploads.length > 0) {
-      sessionStorage.setItem(ACTIVE_UPLOADS_KEY, JSON.stringify(
-        activeUploads.map(f => ({
+      sessionStorage.setItem(ACTIVE_UPLOADS_KEY, JSON.stringify({
+        timestamp: Date.now(),
+        files: activeUploads.map(f => ({
           id: f.id,
           name: f.file.name,
           progress: f.progress,
           status: f.status
         }))
-      ));
+      }));
     } else {
       // Clear backup when no active uploads
       sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
