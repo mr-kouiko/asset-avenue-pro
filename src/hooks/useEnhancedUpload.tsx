@@ -56,6 +56,8 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const pausedUploadsRef = useRef<Set<string>>(new Set());
   const networkSpeedRef = useRef<number>(1000000); // Start with 1MB/s estimate
+  const uploadQueueRef = useRef<{ file: File; id: string }[]>([]);
+  const activeUploadsCountRef = useRef<number>(0);
 
   // Adaptive chunk size based on network speed
   const getOptimalChunkSize = useCallback((fileSize: number): number => {
@@ -466,16 +468,122 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
     });
   }, []);
 
-  // Main upload function
-  const uploadFiles = useCallback(async (files: File[]): Promise<UploadResult[]> => {
-    if (isUploading) {
-      toast.error('Upload already in progress');
-      return [];
-    }
+  // Process a single file from the queue
+  const processFile = useCallback(async (
+    item: { file: File; id: string },
+    results: UploadResult[]
+  ): Promise<void> => {
+    const { file, id } = item;
+    const abortController = new AbortController();
+    abortControllersRef.current.set(id, abortController);
 
-    setIsUploading(true);
+    try {
+      updateProgress(id, { status: 'uploading', progress: 5 });
+
+      // Choose upload method based on file size
+      const threshold = 20 * 1024 * 1024; // 20MB
+      let url: string;
+      
+      if (file.size < threshold) {
+        url = await uploadFileDirect(file, id, abortController.signal);
+      } else {
+        url = await uploadFileChunked(file, id, abortController.signal);
+      }
+
+      // Generate thumbnails
+      updateProgress(id, { status: 'processing', progress: 90 });
+      
+      let thumbnailUrl: string | undefined;
+      let previewUrl: string | undefined;
+      const mimeType = detectMimeType(file);
+      
+      if (mimeType.startsWith('image/')) {
+        thumbnailUrl = await generateImageThumbnail(file);
+      } else if (mimeType.startsWith('video/')) {
+        thumbnailUrl = await generateVideoThumbnail(file);
+        
+        // Trigger server-side video preview generation (async, don't wait)
+        updateProgress(id, { status: 'processing', progress: 95 });
+        try {
+          // Extract storage path from URL
+          const urlParts = new URL(url);
+          const storagePath = urlParts.pathname.split('/storage/v1/object/public/uploads/')[1];
+          
+          if (storagePath) {
+            // Fire and forget - preview will be generated in background
+            supabase.functions.invoke('generate-video-preview', {
+              body: { 
+                videoPath: storagePath,
+                duration: 6,
+                resolution: 720
+              },
+            }).then(({ data, error }) => {
+              if (error) {
+                console.warn('[useEnhancedUpload] Video preview generation failed:', error);
+              } else if (data?.previewUrl) {
+                console.log('[useEnhancedUpload] Video preview generated:', data.previewUrl);
+                previewUrl = data.previewUrl;
+              }
+            }).catch(err => {
+              console.warn('[useEnhancedUpload] Video preview request failed:', err);
+            });
+          }
+        } catch (previewError) {
+          console.warn('[useEnhancedUpload] Failed to trigger video preview:', previewError);
+          // Non-blocking - continue with upload completion
+        }
+      }
+
+      updateProgress(id, { status: 'complete', progress: 100 });
+
+      results.push({
+        id,
+        url,
+        thumbnailUrl,
+        previewUrl,
+        fileName: file.name,
+        fileType: mimeType,
+        fileSize: file.size,
+      });
+
+      toast.success(`Uploaded "${file.name}"`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      updateProgress(id, { status: 'error', error: errorMessage });
+      onError?.(error instanceof Error ? error : new Error(errorMessage), file);
+      toast.error(`Failed to upload "${file.name}": ${errorMessage}`);
+    } finally {
+      abortControllersRef.current.delete(id);
+    }
+  }, [updateProgress, uploadFileDirect, uploadFileChunked, detectMimeType, generateImageThumbnail, generateVideoThumbnail, onError]);
+
+  // Process the upload queue
+  const processQueue = useCallback(async (results: UploadResult[]): Promise<void> => {
+    while (uploadQueueRef.current.length > 0 && activeUploadsCountRef.current < maxConcurrent) {
+      const item = uploadQueueRef.current.shift();
+      if (!item) break;
+      
+      activeUploadsCountRef.current++;
+      
+      processFile(item, results).finally(() => {
+        activeUploadsCountRef.current--;
+        
+        // Continue processing queue
+        if (uploadQueueRef.current.length > 0) {
+          processQueue(results);
+        } else if (activeUploadsCountRef.current === 0) {
+          // All uploads complete
+          setIsUploading(false);
+          onComplete?.(results);
+        }
+      });
+    }
+  }, [maxConcurrent, processFile, onComplete]);
+
+  // Main upload function - now supports adding files to existing queue
+  const uploadFiles = useCallback(async (files: File[]): Promise<UploadResult[]> => {
     const results: UploadResult[] = [];
-    const validFiles: { file: File; id: string }[] = [];
+    const newValidFiles: { file: File; id: string }[] = [];
 
     // Validate files and check for duplicates
     for (const file of files) {
@@ -502,7 +610,6 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
       // Duplicate check (hash + size + type fallback)
       try {
         const hash = await calculateFileHash(file);
-        const mimeType = detectMimeType(file);
         const { isDuplicate, fileName } = await checkDuplicate(hash, file.size, mimeType);
         if (isDuplicate) {
           toast.error(`Duplicate detected: "${file.name}" already exists${fileName ? ` (matches ${fileName})` : ''}`);
@@ -512,7 +619,7 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         console.warn('Duplicate check failed, proceeding with upload');
       }
 
-      validFiles.push({ file, id: fileId });
+      newValidFiles.push({ file, id: fileId });
       
       setUploads(prev => [...prev, {
         fileId,
@@ -525,121 +632,28 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
       }]);
     }
 
-    // Process uploads with concurrency limit
-    const uploadQueue = [...validFiles];
-    const activeUploads: Promise<void>[] = [];
-
-    const processFile = async (item: { file: File; id: string }) => {
-      const { file, id } = item;
-      const abortController = new AbortController();
-      abortControllersRef.current.set(id, abortController);
-
-      try {
-        updateProgress(id, { status: 'uploading', progress: 5 });
-
-        // Choose upload method based on file size
-        const threshold = 20 * 1024 * 1024; // 20MB
-        let url: string;
-        
-        if (file.size < threshold) {
-          url = await uploadFileDirect(file, id, abortController.signal);
-        } else {
-          url = await uploadFileChunked(file, id, abortController.signal);
-        }
-
-        // Generate thumbnails
-        updateProgress(id, { status: 'processing', progress: 90 });
-        
-        let thumbnailUrl: string | undefined;
-        let previewUrl: string | undefined;
-        const mimeType = detectMimeType(file);
-        
-        if (mimeType.startsWith('image/')) {
-          thumbnailUrl = await generateImageThumbnail(file);
-        } else if (mimeType.startsWith('video/')) {
-          thumbnailUrl = await generateVideoThumbnail(file);
-          
-          // Trigger server-side video preview generation (async, don't wait)
-          updateProgress(id, { status: 'processing', progress: 95 });
-          try {
-            // Extract storage path from URL
-            const urlParts = new URL(url);
-            const storagePath = urlParts.pathname.split('/storage/v1/object/public/uploads/')[1];
-            
-            if (storagePath) {
-              // Fire and forget - preview will be generated in background
-              supabase.functions.invoke('generate-video-preview', {
-                body: { 
-                  videoPath: storagePath,
-                  duration: 6,
-                  resolution: 720
-                },
-              }).then(({ data, error }) => {
-                if (error) {
-                  console.warn('[useEnhancedUpload] Video preview generation failed:', error);
-                } else if (data?.previewUrl) {
-                  console.log('[useEnhancedUpload] Video preview generated:', data.previewUrl);
-                  previewUrl = data.previewUrl;
-                }
-              }).catch(err => {
-                console.warn('[useEnhancedUpload] Video preview request failed:', err);
-              });
-            }
-          } catch (previewError) {
-            console.warn('[useEnhancedUpload] Failed to trigger video preview:', previewError);
-            // Non-blocking - continue with upload completion
-          }
-        }
-
-        updateProgress(id, { status: 'complete', progress: 100 });
-
-        results.push({
-          id,
-          url,
-          thumbnailUrl,
-          previewUrl,
-          fileName: file.name,
-          fileType: mimeType,
-          fileSize: file.size,
-        });
-
-        toast.success(`Uploaded "${file.name}"`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-        updateProgress(id, { status: 'error', error: errorMessage });
-        onError?.(error instanceof Error ? error : new Error(errorMessage), file);
-        toast.error(`Failed to upload "${file.name}": ${errorMessage}`);
-      } finally {
-        abortControllersRef.current.delete(id);
-      }
-    };
-
-    // Start initial batch
-    while (uploadQueue.length > 0 && activeUploads.length < maxConcurrent) {
-      const item = uploadQueue.shift()!;
-      const promise = processFile(item).finally(() => {
-        const index = activeUploads.indexOf(promise);
-        if (index > -1) activeUploads.splice(index, 1);
-        
-        // Start next upload if queue not empty
-        if (uploadQueue.length > 0 && activeUploads.length < maxConcurrent) {
-          const nextItem = uploadQueue.shift()!;
-          const nextPromise = processFile(nextItem);
-          activeUploads.push(nextPromise);
-        }
-      });
-      activeUploads.push(promise);
+    if (newValidFiles.length === 0) {
+      return results;
     }
 
-    await Promise.all(activeUploads);
+    // Add to queue
+    uploadQueueRef.current.push(...newValidFiles);
+    
+    // Start processing if not already uploading
+    if (!isUploading) {
+      setIsUploading(true);
+      processQueue(results);
+    } else {
+      // If already uploading, processQueue will pick up new items automatically
+      // But we should trigger it to check for available slots
+      processQueue(results);
+    }
 
-    setIsUploading(false);
-    onComplete?.(results);
+    // Return empty immediately - results will be provided via onComplete callback
     return results;
   }, [
-    isUploading, maxFileSize, maxConcurrent, generateFileId, detectMimeType,
-    calculateFileHash, checkDuplicate, updateProgress, uploadFileDirect,
-    uploadFileChunked, generateImageThumbnail, generateVideoThumbnail, onError, onComplete
+    maxFileSize, generateFileId, detectMimeType,
+    calculateFileHash, checkDuplicate, isUploading, processQueue
   ]);
 
   // Pause upload
@@ -669,6 +683,8 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
     abortControllersRef.current.forEach(controller => controller.abort());
     abortControllersRef.current.clear();
     pausedUploadsRef.current.clear();
+    uploadQueueRef.current = [];
+    activeUploadsCountRef.current = 0;
     setUploads([]);
     setIsUploading(false);
   }, []);
