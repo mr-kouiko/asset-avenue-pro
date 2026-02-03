@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 export const Navigation = () => {
   const { stats, loading } = useContentStats();
   const { language, t } = useLanguage();
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
   
   const categories = [
     { name: t('nav.photos'), icon: Camera, count: loading ? "..." : stats.photos.toString(), category: "photo" },
@@ -36,7 +36,7 @@ export const Navigation = () => {
                 <Link to={`/marketplace?category=${category.category}`}>
                   <Icon className="h-4 w-4" />
                   <span className="text-sm">{category.name}</span>
-                  {user && (
+                  {isAdmin && (
                     <span className="text-xs text-muted-foreground hidden sm:inline">
                       {category.count}
                     </span>
