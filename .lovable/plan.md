@@ -1,136 +1,112 @@
 
-# Plan de correction : Message "uploads interrompus" erroné
+# Plan: Make Collections Visible to Marketplace Visitors
 
-## Diagnostic
+## Overview
+The 10 thematic collections (Business, Technology, Nature, Travel, etc.) currently exist only as static SEO pages (`/s/collections/:slug`) but are completely invisible to visitors browsing the React app. This plan adds multiple discovery points for collections throughout the frontend.
 
-Le message "2 uploads interrompus" apparaît à cause d'un **bug de timing** dans le système de backup sessionStorage :
+## Technical Details
 
-### Scénario problématique
+### 1. Add Collections Section to Homepage
+**File:** `src/pages/en/IndexEN.tsx`
+
+Add a new "Explore Collections" section between the "Explore by Category" and "Why Choose VisuStock?" sections:
+- Grid layout showing all 10 collection cards
+- Each card links to `/s/collections/:slug`
+- Visual icons or subtle styling to differentiate from categories
+- Imported from the shared `seoCollections` data
+
+### 2. Create Reusable Collections Grid Component
+**File:** `src/components/CollectionsGrid.tsx` (new)
+
+A reusable component that displays collection cards:
+- Imports `seoCollections` from `src/data/seoCollections.ts`
+- Configurable number of items to display
+- Links to `/s/collections/:slug` for each collection
+- Responsive grid (2 cols mobile, 5 cols desktop)
+
+### 3. Add Collections Tab to Homepage Tabs
+**File:** `src/components/HomepageTabs.tsx`
+
+Extend the existing tab system:
+- Add a 4th "Collections" tab alongside Trending, Free Stock, Calendar
+- Display curated collection cards when selected
+- Use the CollectionsGrid component
+
+### 4. Add Collections to Footer Navigation
+**File:** `src/pages/en/IndexEN.tsx`
+
+Add a "Collections" column to the footer with top collections:
+- Business, Technology, Nature, Travel, Lifestyle (top 5 by priority)
+- Links to `/s/collections/:slug`
+
+### 5. Add Collections to Main Navigation
+**File:** `src/components/Navigation.tsx`
+
+Add a "Collections" link to the navigation bar:
+- Single link to `/s/collections` (index page)
+- Or dropdown with popular collections
+
+### 6. Add Collections Navigation to Header (Mobile Menu)
+**File:** `src/components/MobileMenu.tsx`
+
+Add collections section to mobile menu for mobile discovery.
+
+### 7. Create React Collections Index Page
+**File:** `src/pages/Collections.tsx` (new)
+
+A React page at `/collections` that displays all 10 collections:
+- Full grid of all collection cards
+- Links to static `/s/collections/:slug` pages
+- SEO metadata for the index page
+
+### 8. Update App Router
+**File:** `src/App.tsx`
+
+Add route for the new Collections index page:
+```
+<Route path="/collections" element={<Collections />} />
+```
+
+## Implementation Summary
 
 ```text
-1. Uploads démarrent → sessionStorage contient 2 fichiers actifs
-2. Parent re-render → SimpleFileUpload est remonté
-3. Nouveau composant monte avec files = []
-4. useEffect de récupération lit sessionStorage → Trouve 2 fichiers
-5. Affiche "2 uploads interrompus" MAIS ces uploads se sont peut-être terminés correctement
++------------------------+     +------------------------+
+|      Homepage          |     |     Mobile Menu        |
+|  - Collections Grid    |     |  - Collections Link    |
++------------------------+     +------------------------+
+          |                              |
+          v                              v
++------------------------+     +------------------------+
+|   Navigation Bar       |     |     Footer             |
+|  - Collections Link    |     |  - Top 5 Collections   |
++------------------------+     +------------------------+
+          |
+          v
++------------------------+
+|   /collections (React) |
+|   All 10 collections   |
++------------------------+
+          |
+          v
++------------------------+
+|  /s/collections/:slug  |
+|  (Static SEO pages)    |
++------------------------+
 ```
 
-### Cause racine
+## Files to Create
+1. `src/components/CollectionsGrid.tsx` - Reusable grid component
+2. `src/pages/Collections.tsx` - React collections index page
 
-Le nettoyage du sessionStorage dépend du state `files` qui est **réinitialisé à vide** lors d'un remontage. Le composant ne peut pas distinguer :
-- Un vrai crash/interruption (fichiers non terminés)
-- Un remontage après uploads réussis (fichiers terminés côté serveur)
+## Files to Modify
+1. `src/pages/en/IndexEN.tsx` - Add collections section + footer links
+2. `src/components/HomepageTabs.tsx` - Add Collections tab
+3. `src/components/Navigation.tsx` - Add Collections nav link
+4. `src/components/MobileMenu.tsx` - Add Collections to mobile menu
+5. `src/App.tsx` - Add /collections route
 
-## Solution proposée
-
-### 1. Vérifier si les fichiers existent vraiment avant d'afficher l'avertissement
-
-Modifier l'effet de récupération pour vérifier dans la base de données si les fichiers ont été uploadés avec succès.
-
-**Fichier : `src/components/SimpleFileUpload.tsx`**
-
-```typescript
-// ANTI-REMOUNT PROTECTION: Warn user ONLY if uploads were truly interrupted
-useEffect(() => {
-  const checkInterruptedUploads = async () => {
-    const saved = sessionStorage.getItem(ACTIVE_UPLOADS_KEY);
-    if (!saved) return;
-    
-    try {
-      const activeUploads = JSON.parse(saved);
-      if (activeUploads.length === 0) {
-        sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
-        return;
-      }
-      
-      // CRITICAL: Check if these uploads actually completed
-      // If they exist in uploaded_files table, they weren't truly interrupted
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
-        return;
-      }
-      
-      // Query recent uploads to see if these files completed
-      const recentTime = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // Last 10 mins
-      const { data: recentFiles } = await supabase
-        .from('uploaded_files')
-        .select('file_name')
-        .eq('user_id', user.id)
-        .gte('created_at', recentTime);
-      
-      const completedNames = new Set((recentFiles || []).map(f => f.file_name));
-      const trulyInterrupted = activeUploads.filter(
-        (u: { name: string }) => !completedNames.has(u.name)
-      );
-      
-      if (trulyInterrupted.length > 0) {
-        toast.warning(`⚠️ ${trulyInterrupted.length} upload(s) interrompu(s) - veuillez réessayer`);
-      }
-    } catch (e) {
-      console.error('Failed to verify interrupted uploads:', e);
-    }
-    
-    // Always clear after checking
-    sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
-  };
-  
-  checkInterruptedUploads();
-}, []);
-```
-
-### 2. Ajouter un timestamp au backup pour éviter les faux positifs
-
-**Fichier : `src/components/SimpleFileUpload.tsx`**
-
-```typescript
-// BACKUP: Save active uploads with timestamp
-useEffect(() => {
-  const activeUploads = files.filter(f => 
-    f.status === 'uploading' || f.status === 'processing' || 
-    f.status === 'detecting-ai' || f.status === 'checking-duplicate'
-  );
-  
-  if (activeUploads.length > 0) {
-    sessionStorage.setItem(ACTIVE_UPLOADS_KEY, JSON.stringify({
-      timestamp: Date.now(),
-      files: activeUploads.map(f => ({
-        id: f.id,
-        name: f.file.name,
-        progress: f.progress,
-        status: f.status
-      }))
-    }));
-  } else {
-    sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
-  }
-}, [files]);
-```
-
-### 3. Ignorer les backups trop anciens
-
-```typescript
-// Dans checkInterruptedUploads:
-const backupData = JSON.parse(saved);
-const backupAge = Date.now() - (backupData.timestamp || 0);
-
-// Ignore backups older than 10 minutes (uploads likely completed or abandoned)
-if (backupAge > 10 * 60 * 1000) {
-  sessionStorage.removeItem(ACTIVE_UPLOADS_KEY);
-  return;
-}
-```
-
-## Fichiers à modifier
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/SimpleFileUpload.tsx` | Vérification DB avant avertissement, timestamp backup, expiration |
-
-## Résumé
-
-Le problème vient du fait que le système de protection affiche un avertissement **sans vérifier** si les uploads ont réellement échoué. La solution :
-
-1. **Vérifier dans la base de données** si les fichiers existent avant d'alerter l'utilisateur
-2. **Ajouter un timestamp** au backup pour ignorer les données périmées
-3. **Toujours nettoyer** le sessionStorage après vérification
+## SEO Benefits
+- Creates internal links from high-traffic pages to collection hubs
+- Improves crawl efficiency with clear navigation paths
+- Helps resolve "Crawled – currently not indexed" by strengthening PageRank flow
+- Users can now discover and navigate to collections naturally
