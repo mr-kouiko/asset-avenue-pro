@@ -170,12 +170,12 @@ const IndexEN = () => {
                     .slice(0, 5)
                     .map((collection) => (
                       <li key={collection.id}>
-                        <a 
-                          href={`/s/collections/${collection.slug}`} 
+                        <Link 
+                          to={`/collections/${collection.slug}`} 
                           className="text-muted-foreground hover:text-foreground"
                         >
                           {collection.name}
-                        </a>
+                        </Link>
                       </li>
                     ))}
                 </ul>

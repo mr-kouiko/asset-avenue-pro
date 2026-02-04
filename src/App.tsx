@@ -74,6 +74,7 @@ const AboutEN = lazy(() => import("./pages/en/AboutEN"));
 const BlogEN = lazy(() => import("./pages/en/BlogEN"));
 const BlogArticleEN = lazy(() => import("./pages/en/BlogArticleEN"));
 const Collections = lazy(() => import("./pages/Collections"));
+const CollectionDetail = lazy(() => import("./pages/CollectionDetail"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -160,6 +161,7 @@ const App = () => (
                         <Route path="/blog" element={<BlogEN />} />
                         <Route path="/blog/:slug" element={<BlogArticleEN />} />
                         <Route path="/collections" element={<Collections />} />
+                        <Route path="/collections/:slug" element={<CollectionDetail />} />
                         <Route path="/buy-credits" element={<BuyCredits />} />
                         <Route path="/test-accounts" element={<TestAccounts />} />
                         <Route path="/subscription-success" element={<SubscriptionSuccess />} />
