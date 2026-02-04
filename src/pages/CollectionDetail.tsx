@@ -55,9 +55,8 @@ interface Product {
 }
 
 const ProductCard = memo(({ product }: { product: Product }) => {
-  const thumbnailUrl = product.thumbnail_path 
-    ? `https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/content-files/${product.thumbnail_path}`
-    : '/placeholder.svg';
+  // thumbnail_path already contains full URL from database - use directly
+  const thumbnailUrl = product.thumbnail_path || '/placeholder.svg';
 
   return (
     <Link to={`/product/${product.slug}`} className="group block">
