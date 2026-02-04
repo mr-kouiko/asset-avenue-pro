@@ -9,6 +9,8 @@ Allow: /products/
 Allow: /s/products/
 Allow: /s/categories/
 Allow: /s/categories
+Allow: /s/collections/
+Allow: /s/collections
 Allow: /about
 Allow: /contact
 Allow: /support

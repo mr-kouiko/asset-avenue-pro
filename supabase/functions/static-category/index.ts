@@ -312,6 +312,16 @@ function buildStaticCategoryHtml(opts: {
     .faq details { margin-bottom: 1rem; }
     .faq summary { cursor: pointer; font-weight: 600; }
     
+    .collections-nav {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: var(--card);
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+    .collections-nav h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--muted); }
+    .collections-nav a { margin-right: 0.25rem; }
+    
     .spa-link {
       display: inline-block;
       margin-top: 2rem;
@@ -364,6 +374,18 @@ function buildStaticCategoryHtml(opts: {
       </div>
       
       <a href="${spaUrl}" class="spa-link">Open in App for Filters →</a>
+      
+      <nav class="collections-nav">
+        <h3>Explore Collections</h3>
+        <p>
+          <a href="${SITE_URL}${STATIC_PREFIX}/collections/business">Business</a> · 
+          <a href="${SITE_URL}${STATIC_PREFIX}/collections/technology">Technology</a> · 
+          <a href="${SITE_URL}${STATIC_PREFIX}/collections/nature">Nature</a> · 
+          <a href="${SITE_URL}${STATIC_PREFIX}/collections/travel">Travel</a> · 
+          <a href="${SITE_URL}${STATIC_PREFIX}/collections/lifestyle">Lifestyle</a> · 
+          <a href="${SITE_URL}${STATIC_PREFIX}/collections">All Collections →</a>
+        </p>
+      </nav>
       
       ${internalLinksHtml}
       ${faqHtml}

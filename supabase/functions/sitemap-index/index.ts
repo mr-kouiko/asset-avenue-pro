@@ -30,6 +30,10 @@ Deno.serve(async (req) => {
     <loc>${FUNCTIONS_URL}/sitemap-products</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>${FUNCTIONS_URL}/sitemap-collections</loc>
+    <lastmod>${now}</lastmod>
+  </sitemap>
 </sitemapindex>`;
 
   return new Response(xml, {
