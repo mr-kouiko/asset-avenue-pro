@@ -616,18 +616,33 @@ Deno.serve(async (req) => {
       return new Response("Collection not found", { status: 404, headers: corsHeaders });
     }
 
-    // Build search query from collection's search terms
-    const searchTerms = collection.searchQueries.join(' | ');
+    // Build OR query from ALL collection search terms
+    // Match any term in title, description, or tags
+    const orConditions = collection.searchQueries
+      .flatMap(term => [
+        `title.ilike.%${term}%`,
+        `description.ilike.%${term}%`,
+        `tags.cs.{${term}}`,
+      ])
+      .join(',');
     
-    // Fetch products matching search queries
-    const { data: products } = await supabase
+    console.log(`[static-collection] Searching with terms: ${collection.searchQueries.join(', ')}`);
+    
+    // Fetch products matching ANY of the search queries
+    const { data: products, error } = await supabase
       .from("content_submissions")
       .select("id, title, slug, price, content_files(thumbnail_path)")
       .eq("status", "approved")
       .not("slug", "is", null)
-      .or(`title.ilike.%${collection.searchQueries[0]}%,description.ilike.%${collection.searchQueries[0]}%,tags.cs.{${collection.searchQueries[0]}}`)
+      .or(orConditions)
       .order("created_at", { ascending: false })
       .limit(48);
+    
+    if (error) {
+      console.error(`[static-collection] Query error:`, error);
+    }
+    
+    console.log(`[static-collection] Found ${products?.length || 0} products for ${collection.name}`);
 
     const mappedProducts: Product[] = (products || []).map((p: any) => ({
       id: p.id,
