@@ -6,8 +6,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSEO } from "@/hooks/useSEO";
+import { useSEONoIndex } from "@/hooks/useSEONoIndex";
 import { supabase } from "@/integrations/supabase/client";
-import { getCollectionBySlug, getRelatedCollections, seoCollections } from "@/data/seoCollections";
+import { getCollectionBySlug, getRelatedCollections } from "@/data/seoCollections";
+import { 
+  filterProductsForCollection,
+  shouldNoIndexCollection,
+  shouldShowEmptyState,
+  MIN_ITEMS_FOR_INDEX,
+} from "@/utils/collectionMatcher";
 import { 
   Briefcase, 
   Cpu, 
@@ -19,7 +26,8 @@ import {
   Users, 
   Music, 
   Palette,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from "lucide-react";
 import { memo } from "react";
 
@@ -43,6 +51,7 @@ interface Product {
   slug: string;
   price: number | null;
   thumbnail_path: string | null;
+  confidenceScore: number;
 }
 
 const ProductCard = memo(({ product }: { product: Product }) => {
@@ -86,13 +95,14 @@ const CollectionDetail = () => {
   const collection = slug ? getCollectionBySlug(slug) : undefined;
   const relatedCollections = slug ? getRelatedCollections(slug) : [];
 
-  // Fetch products matching collection search queries
+  // Fetch ALL approved products, then filter with confidence scoring
   const { data: products, isLoading } = useQuery({
-    queryKey: ['collection-products', slug],
+    queryKey: ['collection-products-v2', slug],
     queryFn: async () => {
       if (!collection) return [];
       
-      // Build OR query from all collection search terms
+      // Fetch broad set of candidates using OR query
+      // The confidence scorer will filter down to relevant items
       const orConditions = collection.searchQueries
         .flatMap(term => [
           `title.ilike.%${term}%`,
@@ -106,6 +116,8 @@ const CollectionDetail = () => {
         .select(`
           id,
           title,
+          description,
+          tags,
           slug,
           price,
           content_files(thumbnail_path)
@@ -113,25 +125,38 @@ const CollectionDetail = () => {
         .eq('status', 'approved')
         .not('slug', 'is', null)
         .or(orConditions)
-        .order('created_at', { ascending: false })
-        .limit(48);
+        .limit(200); // Fetch more candidates for filtering
 
       if (error) {
         console.error('Error fetching collection products:', error);
         return [];
       }
 
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        price: p.price,
-        thumbnail_path: p.content_files?.[0]?.thumbnail_path || null,
-      })) as Product[];
+      // Apply confidence-based filtering
+      const filteredProducts = filterProductsForCollection(
+        data || [],
+        collection,
+        15 // Minimum confidence score
+      );
+
+      // Log for debugging (remove in production)
+      console.log(`[Collection: ${collection.id}] Candidates: ${data?.length}, After filtering: ${filteredProducts.length}`);
+
+      return filteredProducts.slice(0, 48); // Limit display to 48
     },
     enabled: !!collection,
     staleTime: 5 * 60 * 1000,
   });
+
+  // SEO: Apply noindex for thin collections
+  const validItemCount = products?.length || 0;
+  const shouldNoIndex = shouldNoIndexCollection(validItemCount);
+  const showEmptyState = shouldShowEmptyState(validItemCount);
+
+  useSEONoIndex(
+    shouldNoIndex && !isLoading,
+    `Collection "${collection?.name}" has only ${validItemCount} valid items (minimum: ${MIN_ITEMS_FOR_INDEX})`
+  );
 
   useSEO({
     title: collection?.title || 'Collection | VisuStock',
@@ -213,22 +238,30 @@ const CollectionDetail = () => {
                 </div>
               ))}
             </div>
+          ) : showEmptyState ? (
+            // Empty state - not enough quality content
+            <div className="text-center py-16 bg-muted/30 rounded-lg border border-dashed">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Coming Soon</h3>
+              <p className="text-muted-foreground text-lg mb-6 max-w-md mx-auto">
+                We're curating high-quality {collection.name.toLowerCase()} content for this collection.
+                Check back soon or explore our marketplace.
+              </p>
+              <Link 
+                to="/marketplace" 
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Browse Marketplace
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           ) : products && products.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12 bg-muted/30 rounded-lg">
-              <p className="text-muted-foreground text-lg mb-4">
-                No products found in this collection yet.
-              </p>
-              <Link to="/marketplace" className="text-primary hover:underline">
-                Browse all products →
-              </Link>
-            </div>
-          )}
+          ) : null}
         </section>
 
         {/* Related Collections */}
@@ -263,8 +296,8 @@ const CollectionDetail = () => {
           </section>
         )}
 
-        {/* FAQ Section */}
-        {collection.faq.length > 0 && (
+        {/* FAQ Section - only show if we have content */}
+        {collection.faq.length > 0 && !showEmptyState && (
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Frequently Asked Questions</h2>
             <div className="space-y-4">
