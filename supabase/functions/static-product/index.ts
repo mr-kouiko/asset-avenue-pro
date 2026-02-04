@@ -491,7 +491,40 @@ Deno.serve(async (req) => {
       }
 
       console.log(`[static-product] Product not found: ${slug}`);
-      return new Response("Product not found", { status: 404, headers: corsHeaders });
+      // Return proper 404 HTML page (not just text)
+      const notFoundHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Product Not Found | VisuStock</title>
+  <meta name="robots" content="noindex, follow">
+  <meta name="description" content="The product you're looking for doesn't exist or has been removed.">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f0f23; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { text-align: center; max-width: 400px; padding: 2rem; }
+    h1 { font-size: 4rem; color: #6366f1; margin-bottom: 1rem; }
+    p { color: #94a3b8; margin-bottom: 1.5rem; }
+    a { color: #6366f1; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .btn { display: inline-block; padding: 0.75rem 1.5rem; background: #6366f1; color: white; border-radius: 0.5rem; margin: 0.5rem; }
+    .btn:hover { background: #4f46e5; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>404</h1>
+    <h2>Product Not Found</h2>
+    <p>This product doesn't exist or has been removed from our marketplace.</p>
+    <a href="${SITE_URL}/marketplace" class="btn">Browse Marketplace</a>
+    <a href="${SITE_URL}" class="btn">Go Home</a>
+  </div>
+</body>
+</html>`;
+      return new Response(notFoundHtml, { 
+        status: 404, 
+        headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } 
+      });
     }
 
     // Fetch all categories

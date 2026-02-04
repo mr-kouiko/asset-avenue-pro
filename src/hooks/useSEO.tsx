@@ -72,7 +72,7 @@ export const useSEO = (config: SEOConfig) => {
     const updateLinkTag = (rel: string, href: string, hreflang?: string) => {
       const selector = hreflang 
         ? `link[rel="${rel}"][hreflang="${hreflang}"]`
-        : `link[rel="${rel}"]`;
+        : `link[rel="${rel}"]:not([hreflang])`;
       
       let element = document.querySelector(selector) as HTMLLinkElement;
       
@@ -86,12 +86,17 @@ export const useSEO = (config: SEOConfig) => {
       element.href = href;
     };
 
-    // Construct full URL
-    const fullUrl = `${BASE_URL}${location.pathname}`;
+    // Construct full URL - strip query params for canonical
+    const pathWithoutParams = location.pathname;
+    const fullUrl = `${BASE_URL}${pathWithoutParams}`;
+
+    // Build canonical URL (always without query params for SEO)
+    const canonicalUrl = fullUrl;
 
     // Basic meta tags
     updateMetaTag('description', description, false);
-    updateMetaTag('robots', noindex ? 'noindex, nofollow' : 'index, follow', false);
+    updateMetaTag('robots', noindex ? 'noindex, follow' : 'index, follow', false);
+    updateMetaTag('googlebot', noindex ? 'noindex, follow' : 'index, follow', false);
     
     if (author) {
       updateMetaTag('author', author, false);
@@ -101,12 +106,12 @@ export const useSEO = (config: SEOConfig) => {
       updateMetaTag('keywords', tags.join(', '), false);
     }
 
-    // Canonical URL
-    updateLinkTag('canonical', fullUrl);
+    // Canonical URL - self-referencing, always points to clean URL
+    updateLinkTag('canonical', canonicalUrl);
 
-    // Hreflang tags for English only
-    updateLinkTag('alternate', fullUrl, 'en');
-    updateLinkTag('alternate', fullUrl, 'x-default');
+    // Hreflang tags for internationalization
+    updateLinkTag('alternate', canonicalUrl, 'en');
+    updateLinkTag('alternate', canonicalUrl, 'x-default');
 
     // Open Graph meta tags
     updateMetaTag('og:title', title);

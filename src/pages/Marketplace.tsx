@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
+import { useSEONoIndex, shouldNoIndexPage } from "@/hooks/useSEONoIndex";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { fuzzySearch, type SearchableContent, type ScoredResult } from "@/utils/fuzzySearch";
 import { themeSearch, shouldUseThemeSearch, findThemeForQuery } from "@/utils/themeSearch";
@@ -29,8 +30,16 @@ import {
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  
+  // Detect if page has filters/search that should not be indexed
+  const hasFilterParams = useMemo(() => {
+    const paramsToCheck = ['price', 'format', 'license', 'orientation', 'duration', 'search', 'sort', 'page', 'theme'];
+    return paramsToCheck.some(param => searchParams.has(param));
+  }, [searchParams]);
 
-  // SEO Configuration
+  // SEO Configuration - base marketplace page
   useSEO({
     title: language === 'en'
       ? "Marketplace - Browse Creative Content"
@@ -38,15 +47,14 @@ const Marketplace = () => {
     description: language === 'en'
       ? "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects."
       : "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects.",
-    type: 'website'
+    type: 'website',
+    noindex: hasFilterParams // noindex filter variations
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("popular");
   const [categories, setCategories] = useState([
     { value: "all", label: "All Categories", count: "0" }
   ]);
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
   const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
   
   // Compute initial category from URL
@@ -448,6 +456,18 @@ const Marketplace = () => {
   const isAudioSection = selectedCategory === "audio" || 
     filteredContent.some(content => content.type === "audio");
 
+  // Apply noindex for soft 404 scenarios (empty results with search/filters)
+  const hasEmptyResults = !loading && sortedContent.length === 0;
+  const shouldApplyNoIndex = shouldNoIndexPage({
+    hasResults: sortedContent.length > 0,
+    resultCount: sortedContent.length,
+    minResultsForIndex: 1,
+    hasFilters: hasFilterParams,
+    hasSearch: !!searchQuery.trim(),
+  });
+  useSEONoIndex(shouldApplyNoIndex || hasEmptyResults, 
+    hasEmptyResults ? 'Empty results (soft 404)' : 'Filter/search variation');
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -720,8 +740,12 @@ const Marketplace = () => {
           </div>
         ) : sortedContent.length === 0 ? (
           <div className="text-center py-16">
+            {/* SEO: Empty state signals to search engines this is a thin page */}
             <div className="text-stock-dark/60 text-lg">No content found</div>
             <p className="text-stock-dark/40 mt-2">Try adjusting your search filters</p>
+            <p className="text-stock-dark/30 mt-4 text-sm">
+              Browse our <a href="/marketplace" className="text-primary hover:underline">marketplace</a> to discover creative content.
+            </p>
           </div>
         ) : (
           <>

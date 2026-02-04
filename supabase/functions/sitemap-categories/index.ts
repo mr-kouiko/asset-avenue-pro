@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const SITE_URL = "https://visustock.com";
+const STATIC_PREFIX = "/s"; // SEO canonical URLs use /s/ prefix
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -29,32 +30,46 @@ Deno.serve(async (req) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `;
 
-    // Add category pages (only categories with products)
+    // Add categories index page
+    xml += `  <url>
+    <loc>${SITE_URL}${STATIC_PREFIX}/categories</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+`;
+
+    // Add category pages (only categories with approved products)
     if (categories) {
       for (const cat of categories) {
-        // Check if category has products
+        // Check if category has approved products
         const { count } = await supabase
           .from("content_submissions")
           .select("*", { count: "exact", head: true })
           .eq("category_id", cat.id)
-          .eq("status", "approved");
+          .eq("status", "approved")
+          .not("slug", "is", null);
 
+        // Only include categories with at least 1 product (avoid soft 404s)
         if (count && count > 0) {
-          // Static page is the canonical URL for SEO
+          // Use static page URL as canonical
           xml += `  <url>
-    <loc>${SITE_URL}/s/categories/${cat.slug}</loc>
+    <loc>${SITE_URL}${STATIC_PREFIX}/categories/${cat.slug}</loc>
     <lastmod>${now}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 `;
+        } else {
+          console.log(`[sitemap-categories] Skipping empty category: ${cat.name} (0 products)`);
         }
       }
     }
 
     xml += `</urlset>`;
 
-    console.log(`[sitemap-categories] Generated with ${categories?.length || 0} categories`);
+    const includedCount = (xml.match(/<url>/g) || []).length;
+    console.log(`[sitemap-categories] Generated with ${includedCount} URLs (${categories?.length || 0} total categories)`);
 
     return new Response(xml, {
       headers: { ...corsHeaders, "Cache-Control": "public, max-age=3600" },

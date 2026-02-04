@@ -1,10 +1,14 @@
 # VisuStock Robots.txt
-# Last updated: 2026-01-15
+# Last updated: 2026-02-04
+# Optimized for Google Search Console indexing
 
 User-agent: *
 Allow: /
 Allow: /marketplace
 Allow: /products/
+Allow: /s/products/
+Allow: /s/categories/
+Allow: /s/categories
 Allow: /about
 Allow: /contact
 Allow: /support
@@ -13,6 +17,8 @@ Allow: /packages-pricing
 Allow: /ai-image-generator
 Allow: /buy-credits
 Allow: /en/
+Allow: /blog
+Allow: /blog/
 
 # Disallow private/authenticated routes
 Disallow: /admin
@@ -43,9 +49,10 @@ Disallow: /seller-registration-cancelled
 Disallow: /portfolio
 Disallow: /test-accounts
 Disallow: /create-test-accounts
+Disallow: /studio-ai
 
-# Block low-value filter combinations (crawl trap prevention)
-# Only category facets are allowed for indexing
+# Block low-value filter/search pages (crawl trap prevention)
+# These return 200 but have duplicate or thin content
 Disallow: /marketplace?*price=*
 Disallow: /marketplace?*format=*
 Disallow: /marketplace?*license=*
@@ -54,9 +61,21 @@ Disallow: /marketplace?*duration=*
 Disallow: /marketplace?*search=*
 Disallow: /marketplace?*sort=*
 Disallow: /marketplace?*page=*
+Disallow: /marketplace?*theme=*
 
-# Allow high-value category facets
+# Block SEO-unfriendly search routes
+Disallow: /videos/*
+Disallow: /photos/*
+Disallow: /audio/*
+Disallow: /ebooks/*
+
+# Block legacy UUID-based product URLs (redirects exist)
+Disallow: /product/
+
+# Allow only clean category facets
 Allow: /marketplace?category=*
+
+# ===== AI Crawlers (Allowed) =====
 
 # OpenAI / ChatGPT
 User-agent: GPTBot
@@ -96,6 +115,5 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-# Sitemaps (split by type for scalability)
+# Sitemaps - split by type for scalability
 Sitemap: https://visustock.com/sitemap.xml
-Sitemap: https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/sitemap-index

@@ -5,6 +5,7 @@ const corsHeaders = {
 };
 
 const SITE_URL = "https://visustock.com";
+const STATIC_PREFIX = "/s";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,23 +14,39 @@ Deno.serve(async (req) => {
 
   const now = new Date().toISOString().split("T")[0];
 
+  // Only include indexable, content-rich pages
+  // Exclude: auth pages, dashboards, filter variations, search pages
   const pages = [
+    // Core pages (highest priority)
     { url: "/", priority: "1.0", changefreq: "daily" },
     { url: "/marketplace", priority: "0.9", changefreq: "hourly" },
-    { url: "/s/categories", priority: "0.9", changefreq: "daily" }, // Static categories index
+    { url: `${STATIC_PREFIX}/categories`, priority: "0.9", changefreq: "daily" },
+    
+    // English homepage
     { url: "/en", priority: "1.0", changefreq: "daily" },
+    
+    // About & Info pages
     { url: "/about", priority: "0.7", changefreq: "monthly" },
     { url: "/en/about", priority: "0.7", changefreq: "monthly" },
     { url: "/contact", priority: "0.6", changefreq: "monthly" },
     { url: "/en/contact", priority: "0.6", changefreq: "monthly" },
+    
+    // Commercial pages
     { url: "/packages-pricing", priority: "0.8", changefreq: "weekly" },
     { url: "/licenses", priority: "0.6", changefreq: "monthly" },
     { url: "/ai-image-generator", priority: "0.8", changefreq: "weekly" },
     { url: "/buy-credits", priority: "0.7", changefreq: "weekly" },
+    
+    // Support
     { url: "/support", priority: "0.5", changefreq: "monthly" },
+    
+    // Blog (if exists)
+    { url: "/blog", priority: "0.7", changefreq: "weekly" },
+    
+    // Legal pages (low priority but required)
     { url: "/terms", priority: "0.3", changefreq: "yearly" },
     { url: "/en/terms", priority: "0.3", changefreq: "yearly" },
-    { url: "/privacy", priority: "0.3", changefreq: "yearly" },
+    { url: "/privacy-policy", priority: "0.3", changefreq: "yearly" },
     { url: "/en/privacy", priority: "0.3", changefreq: "yearly" },
     { url: "/cookie-policy", priority: "0.3", changefreq: "yearly" },
     { url: "/en/cookie-policy", priority: "0.3", changefreq: "yearly" },
