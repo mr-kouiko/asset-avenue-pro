@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ContentCard } from '@/components/ContentCard';
 import { CalendarCurations } from '@/components/CalendarCurations';
+import { CollectionsGrid } from '@/components/CollectionsGrid';
 import { useTrendingContent } from '@/hooks/useTrendingContent';
 import { useFreeContent } from '@/hooks/useFreeContent';
 
@@ -38,12 +39,15 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
     <section className={`py-16 bg-surface ${className || ''}`}>
       <div className="container">
         <Tabs defaultValue="trending" className="w-full">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-8 h-14 p-1.5">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-4 mb-8 h-14 p-1.5">
             <TabsTrigger value="trending" className="py-3 text-sm sm:text-base font-bold">
               Trending
             </TabsTrigger>
             <TabsTrigger value="free" className="py-3 text-sm sm:text-base font-bold">
               Free Stock
+            </TabsTrigger>
+            <TabsTrigger value="collections" className="py-3 text-sm sm:text-base font-bold">
+              Collections
             </TabsTrigger>
             <TabsTrigger value="calendar" className="py-3 text-sm sm:text-base font-bold">
               Calendar
@@ -124,6 +128,19 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
             ) : (
               <EmptyState message="No free content available yet. Check back soon!" />
             )}
+          </TabsContent>
+
+          {/* Collections Tab */}
+          <TabsContent value="collections" className="mt-0">
+            <CollectionsGrid limit={10} />
+            <div className="text-center mt-8">
+              <Button variant="outline" asChild>
+                <a href="/collections" className="inline-flex items-center gap-2">
+                  View All Collections
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
           </TabsContent>
 
           {/* Calendar Curations Tab */}
