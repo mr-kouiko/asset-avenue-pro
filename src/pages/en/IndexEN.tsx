@@ -2,14 +2,16 @@ import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
 import { HomepageTabs } from "@/components/HomepageTabs";
+import { CollectionsGrid } from "@/components/CollectionsGrid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useContentStats } from "@/hooks/useContentStats";
 import { useAuth } from "@/hooks/useAuth";
-import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart } from "lucide-react";
+import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
+import { seoCollections } from "@/data/seoCollections";
 
 const IndexEN = () => {
   const { stats } = useContentStats();
@@ -65,8 +67,23 @@ const IndexEN = () => {
           </div>
         </section>
 
-        {/* Features */}
+        {/* Collections Section */}
         <section className="py-16 bg-surface">
+          <div className="container">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">Explore Collections</h2>
+              <a 
+                href="/collections" 
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                View All <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+            <CollectionsGrid limit={5} />
+          </div>
+        </section>
+        {/* Features */}
+        <section className="py-16">
           <div className="container">
             <h2 className="text-3xl font-bold text-center mb-12">Why Choose VisuStock?</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -127,8 +144,8 @@ const IndexEN = () => {
         {/* Footer */}
         <footer className="bg-muted py-12">
           <div className="container">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div className="flex items-start">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+              <div className="col-span-2 md:col-span-1 flex items-start">
                 <Link to="/en" className="mr-5 flex-shrink-0">
                   <img 
                     src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
@@ -143,6 +160,24 @@ const IndexEN = () => {
                   <li><Link to="/en/marketplace" className="text-muted-foreground hover:text-foreground">Browse Content</Link></li>
                   <li><Link to="/en/packages-pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link></li>
                   <li><Link to="/en/infinity" className="text-muted-foreground hover:text-foreground">Infinity</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-4">Collections</h4>
+                <ul className="space-y-2 text-sm">
+                  {seoCollections
+                    .sort((a, b) => b.priority - a.priority)
+                    .slice(0, 5)
+                    .map((collection) => (
+                      <li key={collection.id}>
+                        <a 
+                          href={`/s/collections/${collection.slug}`} 
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          {collection.name}
+                        </a>
+                      </li>
+                    ))}
                 </ul>
               </div>
               <div>
