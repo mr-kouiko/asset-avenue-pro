@@ -45,6 +45,89 @@ function markdownToHtml(markdown: string): string {
     .replace(/^(.+)$/gm, "<p>$1</p>");
 }
 
+// SEO collections for internal linking
+const collectionLinks = [
+  { slug: 'business', name: 'Business' },
+  { slug: 'technology', name: 'Technology' },
+  { slug: 'nature', name: 'Nature' },
+  { slug: 'travel', name: 'Travel' },
+  { slug: 'food', name: 'Food & Cuisine' },
+  { slug: 'health-wellness', name: 'Health & Wellness' },
+  { slug: 'education', name: 'Education' },
+  { slug: 'lifestyle', name: 'Lifestyle' },
+  { slug: 'music-audio', name: 'Music & Audio' },
+  { slug: 'abstract-backgrounds', name: 'Abstract & Backgrounds' },
+];
+
+// Generate unique content based on product data
+function generateProductContent(product: { title: string; description?: string; tags?: string[]; price?: number }, category?: Category): string {
+  const tags = product.tags || [];
+  const categoryName = category?.name || 'Creative';
+  const priceText = product.price ? `€${product.price}` : 'Free';
+  
+  const usageContexts = [
+    'websites and landing pages',
+    'social media campaigns',
+    'marketing materials',
+    'presentations and pitch decks',
+    'digital advertising',
+    'blog posts and articles',
+    'email newsletters',
+    'e-commerce stores'
+  ];
+  
+  // Select 3-4 random usage contexts based on title hash
+  const hash = product.title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const selectedUsages = usageContexts.filter((_, i) => (hash + i) % 3 === 0).slice(0, 4);
+  
+  return `
+    <section class="product-context">
+      <h2>About This ${categoryName} Asset</h2>
+      <p><strong>${esc(product.title)}</strong> is a professional-grade ${categoryName.toLowerCase()} asset available for immediate download. ${product.description ? esc(product.description) : ''}</p>
+      
+      <h3>Perfect For</h3>
+      <ul>
+        ${selectedUsages.map(u => `<li>${u}</li>`).join('')}
+      </ul>
+      
+      ${tags.length > 0 ? `
+        <h3>Keywords</h3>
+        <p>This asset is tagged with: ${tags.slice(0, 8).map(t => `<strong>${esc(t)}</strong>`).join(', ')}.</p>
+      ` : ''}
+      
+      <h3>Licensing</h3>
+      <p>Available at <strong>${priceText}</strong> with commercial licensing options. Our Standard License covers most business uses, while the Extended License allows unlimited commercial applications.</p>
+    </section>
+  `;
+}
+
+// Generate auto FAQ based on product type
+function generateAutoFAQ(product: { title: string; price?: number }, category?: Category): Array<{ question: string; answer: string }> {
+  const categoryName = category?.name?.toLowerCase() || 'content';
+  const priceText = product.price ? `€${product.price}` : 'free';
+  
+  return [
+    {
+      question: `What license do I need for "${product.title}"?`,
+      answer: `This ${categoryName} comes with a Standard License for most commercial uses. For unlimited commercial applications or resale, consider our Extended License.`
+    },
+    {
+      question: `Can I use this ${categoryName} commercially?`,
+      answer: `Yes! All our content includes commercial licensing. The Standard License covers websites, social media, marketing materials, and more.`
+    },
+    {
+      question: `What format is this ${categoryName} available in?`,
+      answer: `Download includes high-resolution files in industry-standard formats. After purchase, you'll have immediate access to all available formats.`
+    },
+    {
+      question: `Is this ${categoryName} ${priceText}?`,
+      answer: product.price 
+        ? `Yes, this asset is priced at ${priceText}. We also offer subscription plans for frequent downloaders.`
+        : `Yes, this asset is completely free to download and use according to our license terms.`
+    }
+  ];
+}
+
 function buildStaticProductHtml(opts: {
   product: {
     id: string;
@@ -113,23 +196,24 @@ function buildStaticProductHtml(opts: {
     ],
   };
 
-  // Add FAQ schema if present
-  let faqSchemaScript = "";
-  if (seoMetadata?.faq_schema?.length) {
-    const faqSchema = {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: seoMetadata.faq_schema.map(faq => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: faq.answer
-        }
-      }))
-    };
-    faqSchemaScript = `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`;
-  }
+  // Add FAQ schema - use admin-configured or auto-generated
+  const faqItems = seoMetadata?.faq_schema?.length 
+    ? seoMetadata.faq_schema 
+    : generateAutoFAQ(product, category);
+  
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map(faq => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer
+      }
+    }))
+  };
+  const faqSchemaScript = `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`;
 
   // Build breadcrumb HTML
   const breadcrumbHtml = breadcrumbs.map((b, i) => 
@@ -160,29 +244,32 @@ function buildStaticProductHtml(opts: {
       </section>` 
     : '';
 
-  // Build SEO content if present
+  // Build SEO content - use admin-configured or auto-generated
   const seoContentHtml = seoMetadata?.seo_content 
     ? `<article class="seo-content">${markdownToHtml(seoMetadata.seo_content)}</article>` 
-    : '';
+    : generateProductContent(product, category);
 
-  // Build internal links if present
+  // Build internal links if present from admin, otherwise add collection links
   const internalLinksHtml = seoMetadata?.internal_links?.length
     ? `<nav class="internal-links" aria-label="Related content">
         ${seoMetadata.internal_links.map(link => 
           `<p>${esc(link.context).replace(esc(link.anchor), `<a href="${SITE_URL}${link.url}">${esc(link.anchor)}</a>`)}</p>`
         ).join('')}
       </nav>`
-    : '';
+    : `<nav class="internal-links" aria-label="Explore collections">
+        <h3>Explore Collections</h3>
+        <p>${collectionLinks.slice(0, 6).map(c => 
+          `<a href="${SITE_URL}${STATIC_PREFIX}/collections/${c.slug}">${c.name}</a>`
+        ).join(' · ')}</p>
+      </nav>`;
 
-  // Build FAQ section if present
-  const faqHtml = seoMetadata?.faq_schema?.length
-    ? `<section class="faq" aria-label="FAQ">
-        <h2>Frequently Asked Questions</h2>
-        ${seoMetadata.faq_schema.map(faq => 
-          `<details><summary>${esc(faq.question)}</summary><p>${esc(faq.answer)}</p></details>`
-        ).join('')}
-      </section>`
-    : '';
+  // Build FAQ section - always show (auto-generated if no admin config)
+  const faqHtml = `<section class="faq" aria-label="FAQ">
+      <h2>Frequently Asked Questions</h2>
+      ${faqItems.map(faq => 
+        `<details><summary>${esc(faq.question)}</summary><p>${esc(faq.answer)}</p></details>`
+      ).join('')}
+    </section>`;
 
   // Build category navigation
   const categoryNav = categories.slice(0, 8).map(c => 
@@ -343,7 +430,7 @@ function buildStaticProductHtml(opts: {
     
     .category-link { color: var(--muted); font-size: 0.875rem; margin-bottom: 0.5rem; display: block; }
     
-    .seo-content, .faq, .internal-links { 
+    .seo-content, .product-context, .faq, .internal-links { 
       margin-top: 2rem; 
       grid-column: 1 / -1;
       padding: 2rem;
@@ -351,10 +438,16 @@ function buildStaticProductHtml(opts: {
       border-radius: 1rem;
       border: 1px solid var(--border);
     }
-    .seo-content p, .faq p, .internal-links p { margin-bottom: 1rem; color: var(--muted); }
-    .faq h2 { margin-bottom: 1rem; }
+    .seo-content p, .product-context p, .faq p, .internal-links p { margin-bottom: 1rem; color: var(--muted); }
+    .seo-content strong, .product-context strong { color: var(--text); }
+    .product-context h2, .product-context h3 { margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.25rem; }
+    .product-context h3 { font-size: 1.1rem; }
+    .product-context ul { list-style: disc; margin-left: 1.5rem; color: var(--muted); }
+    .product-context li { margin-bottom: 0.5rem; }
+    .faq h2, .internal-links h3 { margin-bottom: 1rem; }
     .faq details { margin-bottom: 1rem; }
-    .faq summary { cursor: pointer; font-weight: 600; }
+    .faq summary { cursor: pointer; font-weight: 600; padding: 0.5rem 0; }
+    .internal-links a { margin-right: 0.5rem; }
     
     .related {
       grid-column: 1 / -1;
