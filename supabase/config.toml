@@ -154,3 +154,9 @@ verify_jwt = false
 
 [functions.send-admin-notification]
 verify_jwt = false
+
+[functions.static-collection]
+verify_jwt = false
+
+[functions.sitemap-collections]
+verify_jwt = false

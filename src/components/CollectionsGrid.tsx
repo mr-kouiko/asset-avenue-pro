@@ -37,7 +37,7 @@ const CollectionCard = memo(({ collection }: CollectionCardProps) => {
   
   return (
     <a 
-      href={`/s/collections/${collection.slug}`}
+      href={`/collections/${collection.slug}`}
       className="block group"
     >
       <Card className="h-full hover:shadow-lg transition-all duration-300 group-hover:border-primary/50">
