@@ -168,82 +168,94 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
   return (
     <div 
-      className="flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md"
-      style={{ backgroundColor: '#F9FAFB' }}
+      className="relative overflow-hidden flex flex-col rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md bg-white border border-stock-border/50 hover:border-stock-blue/20"
+      style={{ boxShadow: 'var(--card-shadow)' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
-      {/* Left Section: Play Button */}
-      <Button
-        variant="default"
-        size="icon"
-        onClick={handlePlayPause}
-        className="h-12 w-12 rounded-full flex-shrink-0 shadow-md transition-transform hover:scale-105"
-        style={{ backgroundColor: '#4F46E5' }}
-      >
-        {playing ? (
-          <Pause className="h-5 w-5 text-white" fill="white" />
-        ) : (
-          <Play className="h-5 w-5 text-white ml-0.5" fill="white" />
-        )}
-      </Button>
+      {/* Thumbnail area - maintains consistent aspect ratio with other cards */}
+      <div className="relative bg-stock-gray overflow-hidden" style={{ aspectRatio: 'var(--thumbnail-aspect)' }}>
+        {/* Album art / thumbnail background */}
+        <div 
+          className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"
+        >
+          {/* Large centered play button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePlayPause}
+            className="h-16 w-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-transform hover:scale-110"
+          >
+            {playing ? (
+              <Pause className="h-8 w-8 text-white" fill="white" />
+            ) : (
+              <Play className="h-8 w-8 text-white ml-1" fill="white" />
+            )}
+          </Button>
+        </div>
 
-      {/* Left Section: Meta Data */}
-      <div className="flex flex-col min-w-[120px] flex-shrink-0">
-        <h3 className="font-medium text-sm line-clamp-1" style={{ color: '#374151' }}>
-          {title}
-        </h3>
-        <p className="text-xs" style={{ color: '#9CA3AF' }}>Music</p>
+        {/* Waveform overlay at bottom of thumbnail area */}
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/50 to-transparent">
+          <div 
+            ref={waveformRef} 
+            className="absolute bottom-1 left-2 right-2 h-10"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+
+        {/* Type Badge */}
+        <div className="absolute top-2 left-2">
+          <span className="bg-white/95 text-stock-dark text-[10px] px-2 py-0.5 font-medium rounded shadow-sm">
+            AUDIO
+          </span>
+        </div>
+
+        {/* Duration badge */}
+        {audioDuration && (
+          <div className="absolute top-2 right-2">
+            <span className="bg-black/60 text-white text-[10px] px-2 py-0.5 font-medium rounded">
+              {audioDuration}
+            </span>
+          </div>
+        )}
+
+        {/* Quick actions - visible on hover */}
+        <div className={`absolute bottom-2 right-2 transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-100 md:opacity-0'}`}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleAddToCart}
+            className="h-8 w-8 md:h-7 md:w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
+          >
+            <Download className="h-4 w-4 md:h-3.5 md:w-3.5 text-stock-dark" />
+          </Button>
+        </div>
       </div>
 
-      {/* Center Section: Timer */}
-      <span className="text-xs flex-shrink-0 whitespace-nowrap" style={{ color: '#6B7280' }}>
-        {currentTime} / {audioDuration || "0:00"}
-      </span>
+      {/* Metadata - matches ContentCard style */}
+      <div className="p-2.5 md:p-3 space-y-1.5 md:space-y-2">
+        <div>
+          <h3 className="font-medium text-sm text-stock-dark leading-tight line-clamp-2 min-h-[2.5rem]">
+            {title}
+          </h3>
+          <p className="text-xs text-stock-dark/60 mt-1 font-medium truncate">{author}</p>
+        </div>
 
-      {/* Center Section: Waveform */}
-      <div 
-        ref={waveformRef} 
-        className="flex-1 h-12 cursor-pointer min-w-[100px]"
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      {/* Right Section: BPM */}
-      {bpm && (
-        <span className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>
-          {bpm} BPM
-        </span>
-      )}
-
-      {/* Right Section: Action Group */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Bookmark/Save Icon */}
-        <button
-          onClick={(e) => e.stopPropagation()}
-          className="p-2 rounded-full transition-colors hover:bg-gray-200"
-        >
-          <Bookmark className="h-5 w-5" style={{ color: '#6B7280' }} />
-        </button>
-
-        {/* Circle/Contrast Icon */}
-        <button
-          onClick={(e) => e.stopPropagation()}
-          className="p-2 rounded-full transition-colors hover:bg-gray-200"
-        >
-          <Circle className="h-5 w-5" style={{ color: '#6B7280' }} />
-        </button>
-
-        {/* Download Button */}
-        <Button
-          variant="default"
-          size="icon"
-          onClick={handleAddToCart}
-          className="h-10 w-10 rounded-full shadow-sm transition-transform hover:scale-105"
-          style={{ backgroundColor: '#10B981' }}
-        >
-          <Download className="h-4 w-4 text-white" />
-        </Button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3 text-xs text-stock-dark/50">
+            <span className="flex items-center gap-1">
+              <Heart className="h-3 w-3" />
+              {likes}
+            </span>
+            {bpm && (
+              <span>{bpm} BPM</span>
+            )}
+          </div>
+          <div className="font-bold text-sm text-stock-dark">
+            {price === null || price === 0 ? 'Free' : `${price}€`}
+          </div>
+        </div>
       </div>
     </div>
   );
