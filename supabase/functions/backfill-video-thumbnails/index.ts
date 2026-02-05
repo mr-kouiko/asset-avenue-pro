@@ -27,9 +27,10 @@ interface ProcessResult {
 }
 
 /**
- * Quick check if thumbnail exists and is accessible
+ * Check if thumbnail exists AND is valid (not empty/corrupt)
+ * Returns true only if file exists and has substantial content
  */
-async function thumbnailExists(
+async function thumbnailIsValid(
   supabaseClient: ReturnType<typeof createClient>,
   thumbnailPath: string | null
 ): Promise<boolean> {
@@ -44,15 +45,25 @@ async function thumbnailExists(
       else return false;
     }
 
-    // Just check if file exists with a HEAD-like operation
+    // Download and verify content exists and is valid
     const { data, error } = await supabaseClient
       .storage
       .from('thumbnails')
       .download(storagePath);
 
-    // If downloadable and has content, it exists
-    return !error && data && data.size > 1000;
-  } catch {
+    if (error || !data) return false;
+    
+    // Must be at least 5KB for a real JPEG thumbnail
+    // And less than 50KB is suspicious for a real frame
+    const size = data.size;
+    if (size < 5000) {
+      console.log(`[Validation] Thumbnail too small: ${size} bytes - ${storagePath}`);
+      return false;
+    }
+    
+    return true;
+  } catch (e) {
+    console.log(`[Validation] Check failed: ${e}`);
     return false;
   }
 }
@@ -136,19 +147,12 @@ serve(async (req) => {
 
     console.log(`🎬 Backfill: limit=${limit}, force=${forceRegenerate}, skipExisting=${skipExisting}`);
 
-    // Fetch video files
-    let query = supabaseClient
+    // Fetch video files - always get all videos and validate individually
+    const { data: videoFiles, error: fetchError } = await supabaseClient
       .from('content_files')
       .select('id, file_name, file_path, thumbnail_path, metadata')
       .ilike('file_type', 'video%')
       .limit(limit);
-
-    // If not forcing, only get videos without thumbnails
-    if (!forceRegenerate && skipExisting) {
-      query = query.is('thumbnail_path', null);
-    }
-
-    const { data: videoFiles, error: fetchError } = await query;
 
     if (fetchError) throw new Error(`Fetch failed: ${fetchError.message}`);
     if (!videoFiles?.length) {
@@ -160,18 +164,28 @@ serve(async (req) => {
 
     console.log(`📹 Found ${videoFiles.length} video(s)`);
 
-    // Filter out videos with existing valid thumbnails (if not forcing)
-    let videosToProcess: VideoFile[] = videoFiles;
+    // Validate ALL thumbnails - check if they actually exist and are valid
+    let videosToProcess: VideoFile[] = [];
     
-    if (!forceRegenerate && !skipExisting) {
-      const validChecks = await Promise.all(
+    if (forceRegenerate) {
+      // Force mode: process everything
+      videosToProcess = videoFiles;
+      console.log(`🔄 Force mode: will regenerate all ${videoFiles.length} thumbnails`);
+    } else {
+      // Smart mode: validate each thumbnail exists and is valid
+      console.log(`🔍 Validating thumbnails...`);
+      
+      const validationResults = await Promise.all(
         videoFiles.map(async (v) => ({
           video: v,
-          exists: await thumbnailExists(supabaseClient, v.thumbnail_path)
+          isValid: await thumbnailIsValid(supabaseClient, v.thumbnail_path)
         }))
       );
-      videosToProcess = validChecks.filter(c => !c.exists).map(c => c.video);
-      console.log(`🔍 After validation: ${videosToProcess.length} need processing`);
+      
+      videosToProcess = validationResults.filter(r => !r.isValid).map(r => r.video);
+      const validCount = validationResults.filter(r => r.isValid).length;
+      
+      console.log(`✅ Valid: ${validCount}, ❌ Need regeneration: ${videosToProcess.length}`);
     }
 
     if (!videosToProcess.length) {
