@@ -500,9 +500,10 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
       if (mimeType.startsWith('image/')) {
         thumbnailUrl = await generateImageThumbnail(file);
       } else if (mimeType.startsWith('video/')) {
+        // Generate client-side thumbnail as immediate fallback
         thumbnailUrl = await generateVideoThumbnail(file);
         
-        // Trigger server-side video preview generation (async, don't wait)
+        // Trigger server-side processing (async, don't wait)
         updateProgress(id, { status: 'processing', progress: 95 });
         try {
           // Extract storage path from URL
@@ -510,7 +511,30 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
           const storagePath = urlParts.pathname.split('/storage/v1/object/public/uploads/')[1];
           
           if (storagePath) {
-            // Fire and forget - preview will be generated in background
+            // Generate output path for thumbnail
+            const pathParts = storagePath.split('/');
+            const userId = pathParts[0] || 'unknown';
+            const thumbnailPath = `${userId}/thumbnails/${id}_smart_thumbnail.jpg`;
+            
+            // Fire server-side smart thumbnail generation (validates for blank/white frames)
+            supabase.functions.invoke('generate-video-thumbnail', {
+              body: { 
+                videoPath: storagePath,
+                outputPath: thumbnailPath,
+                smartDetection: true  // Enable smart frame detection
+              },
+            }).then(({ data, error }) => {
+              if (error) {
+                console.warn('[useEnhancedUpload] Smart thumbnail generation failed:', error);
+              } else if (data?.thumbnailUrl) {
+                console.log('[useEnhancedUpload] Smart thumbnail generated:', data.thumbnailUrl);
+                // Note: This updates the content_files record via the upload handler
+              }
+            }).catch(err => {
+              console.warn('[useEnhancedUpload] Smart thumbnail request failed:', err);
+            });
+            
+            // Also generate video preview
             supabase.functions.invoke('generate-video-preview', {
               body: { 
                 videoPath: storagePath,
@@ -529,7 +553,7 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
             });
           }
         } catch (previewError) {
-          console.warn('[useEnhancedUpload] Failed to trigger video preview:', previewError);
+          console.warn('[useEnhancedUpload] Failed to trigger video processing:', previewError);
           // Non-blocking - continue with upload completion
         }
       }
