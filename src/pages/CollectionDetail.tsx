@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 import { WatermarkedVideoThumbnail } from "@/components/WatermarkedVideoThumbnail";
+import { VideoWatermark } from "@/components/VideoWatermark";
 
 // Map collection IDs to icons
 const collectionIcons: Record<string, React.ElementType> = {
@@ -73,14 +74,17 @@ const ProductCard = memo(({ product }: { product: Product }) => {
               className="w-full h-full"
             />
           ) : (
-            <img 
-              src={thumbnailUrl}
-              alt={product.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-              onContextMenu={(e) => e.preventDefault()}
-              onDragStart={(e) => e.preventDefault()}
-            />
+            <>
+              <img 
+                src={thumbnailUrl}
+                alt={product.title}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+              />
+              <VideoWatermark size="thumbnail" />
+            </>
           )}
           {product.price === 0 && (
             <Badge className="absolute top-2 left-2 bg-green-600">Free</Badge>
