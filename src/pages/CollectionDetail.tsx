@@ -52,7 +52,7 @@ interface Product {
   title: string;
   slug: string;
   price: number | null;
-  thumbnail_path: string | null;
+  file_path: string | null; thumbnail_path: string | null;
   preview_path: string | null;
   file_type: string | null;
   confidenceScore: number;
@@ -60,7 +60,7 @@ interface Product {
 
 const ProductCard = memo(({ product }: { product: Product }) => {
   const thumbnailUrl = product.thumbnail_path || '/placeholder.svg';
-  const isVideo = product.file_type?.startsWith('video/');
+  const isVideo = (product.file_type || '').toLowerCase().startsWith('video');
 
   return (
     <Link to={`/product/${product.slug}`} className="group block">
@@ -70,7 +70,7 @@ const ProductCard = memo(({ product }: { product: Product }) => {
             <WatermarkedVideoThumbnail 
               thumbnail={thumbnailUrl}
               title={product.title}
-              videoUrl={product.preview_path || undefined}
+              videoUrl={product.preview_path || product.file_path || undefined}
               className="w-full h-full"
             />
           ) : (
@@ -137,7 +137,7 @@ const CollectionDetail = () => {
           tags,
           slug,
           price,
-          content_files(thumbnail_path, preview_path, file_type)
+          content_files(thumbnail_path, preview_path, file_type, file_path)
         `)
         .eq('status', 'approved')
         .not('slug', 'is', null)

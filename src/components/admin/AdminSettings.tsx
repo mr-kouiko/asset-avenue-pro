@@ -90,7 +90,7 @@ export const AdminSettings = () => {
     try {
       toast.loading('Génération des miniatures en cours...');
       const { data, error } = await supabase.functions.invoke('backfill-video-thumbnails', {
-        body: {}
+        body: { limit: 200, offset: 0, skipExisting: false }
       });
       
       if (error) throw error;
