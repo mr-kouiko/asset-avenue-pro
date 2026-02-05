@@ -30,6 +30,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { memo } from "react";
+import { WatermarkedVideoThumbnail } from "@/components/WatermarkedVideoThumbnail";
 
 // Map collection IDs to icons
 const collectionIcons: Record<string, React.ElementType> = {
@@ -51,23 +52,34 @@ interface Product {
   slug: string;
   price: number | null;
   thumbnail_path: string | null;
+  preview_path: string | null;
+  file_type: string | null;
   confidenceScore: number;
 }
 
 const ProductCard = memo(({ product }: { product: Product }) => {
-  // thumbnail_path already contains full URL from database - use directly
   const thumbnailUrl = product.thumbnail_path || '/placeholder.svg';
+  const isVideo = product.file_type?.startsWith('video/');
 
   return (
     <Link to={`/product/${product.slug}`} className="group block">
       <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group-hover:border-primary/50">
         <div className="aspect-[4/3] relative bg-muted">
-          <img 
-            src={thumbnailUrl}
-            alt={product.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
+          {isVideo ? (
+            <WatermarkedVideoThumbnail 
+              thumbnail={thumbnailUrl}
+              title={product.title}
+              videoUrl={product.preview_path || undefined}
+              className="w-full h-full"
+            />
+          ) : (
+            <img 
+              src={thumbnailUrl}
+              alt={product.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+          )}
           {product.price === 0 && (
             <Badge className="absolute top-2 left-2 bg-green-600">Free</Badge>
           )}
@@ -119,7 +131,7 @@ const CollectionDetail = () => {
           tags,
           slug,
           price,
-          content_files(thumbnail_path)
+          content_files(thumbnail_path, preview_path, file_type)
         `)
         .eq('status', 'approved')
         .not('slug', 'is', null)

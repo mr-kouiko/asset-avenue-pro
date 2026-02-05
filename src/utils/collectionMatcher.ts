@@ -24,7 +24,11 @@ interface ContentSubmission {
   tags: string[] | null;
   slug: string | null;
   price: number | null;
-  content_files?: Array<{ thumbnail_path: string | null }>;
+  content_files?: Array<{ 
+    thumbnail_path: string | null;
+    preview_path: string | null;
+    file_type: string | null;
+  }>;
 }
 
 interface ScoredProduct {
@@ -33,6 +37,8 @@ interface ScoredProduct {
   slug: string;
   price: number | null;
   thumbnail_path: string | null;
+  preview_path: string | null;
+  file_type: string | null;
   confidenceScore: number;
   matchReasons: string[];
 }
@@ -231,12 +237,15 @@ export function filterProductsForCollection(
     const { score, reasons } = calculateConfidenceScore(product, collection);
     
     if (score >= minConfidence) {
+      const primaryFile = product.content_files?.[0];
       scored.push({
         id: product.id,
         title: product.title,
         slug: product.slug,
         price: product.price,
-        thumbnail_path: product.content_files?.[0]?.thumbnail_path || null,
+        thumbnail_path: primaryFile?.thumbnail_path || null,
+        preview_path: primaryFile?.preview_path || null,
+        file_type: primaryFile?.file_type || null,
         confidenceScore: score,
         matchReasons: reasons,
       });
