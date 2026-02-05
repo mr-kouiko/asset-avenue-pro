@@ -25,7 +25,7 @@ interface ContentSubmission {
   slug: string | null;
   price: number | null;
   content_files?: Array<{ 
-    thumbnail_path: string | null;
+    file_path: string | null; thumbnail_path: string | null;
     preview_path: string | null;
     file_type: string | null;
   }>;
@@ -36,7 +36,7 @@ interface ScoredProduct {
   title: string;
   slug: string;
   price: number | null;
-  thumbnail_path: string | null;
+  file_path: string | null; thumbnail_path: string | null;
   preview_path: string | null;
   file_type: string | null;
   confidenceScore: number;
@@ -269,7 +269,7 @@ export function filterProductsForCollection(
         title: product.title,
         slug: product.slug,
         price: product.price,
-        thumbnail_path: primaryFile?.thumbnail_path || null,
+        file_path: primaryFile?.file_path || null, thumbnail_path: primaryFile?.thumbnail_path || null,
         preview_path: primaryFile?.preview_path || null,
         file_type: primaryFile?.file_type || null,
         confidenceScore: score,
