@@ -130,6 +130,18 @@ export const collectionCategoryRestrictions: Record<string, string[] | null> = {
 };
 
 /**
+ * Map MIME file type to category for restriction matching
+ */
+export function fileTypeToCategory(fileType: string | null): string | null {
+  if (!fileType) return null;
+  if (fileType.startsWith('audio/')) return 'audio';
+  if (fileType.startsWith('video/')) return 'video';
+  if (fileType.startsWith('image/')) return 'photo';
+  if (fileType.includes('svg') || fileType.includes('vector')) return 'vector';
+  return null;
+}
+
+/**
  * Calculate confidence score for a product matching a collection
  * Returns 0 if the product should be excluded
  */
@@ -231,13 +243,27 @@ export function filterProductsForCollection(
 ): ScoredProduct[] {
   const scored: ScoredProduct[] = [];
   
+  // Get category restrictions for this collection (null = all allowed)
+  const allowedCategories = collectionCategoryRestrictions[collection.id];
+  
   for (const product of products) {
     if (!product.slug) continue;
+    
+    const primaryFile = product.content_files?.[0];
+    
+    // CATEGORY RESTRICTION CHECK - skip products with wrong file type
+    if (allowedCategories !== null) {
+      const productCategory = fileTypeToCategory(primaryFile?.file_type || null);
+      
+      // If we can determine category and it's not allowed, skip
+      if (productCategory && !allowedCategories.includes(productCategory)) {
+        continue;
+      }
+    }
     
     const { score, reasons } = calculateConfidenceScore(product, collection);
     
     if (score >= minConfidence) {
-      const primaryFile = product.content_files?.[0];
       scored.push({
         id: product.id,
         title: product.title,
