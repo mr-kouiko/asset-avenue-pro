@@ -9,8 +9,10 @@ import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SearchProvider } from "@/hooks/useSearch";
 import { LanguageRedirect } from "@/components/LanguageRedirect";
+import { RouteTitleFallback } from "@/components/RouteTitleFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { lazy, Suspense } from "react";
+
 
 // Critical above-the-fold components loaded eagerly
 import IndexEN from "./pages/en/IndexEN";
@@ -100,6 +102,7 @@ const App = () => (
                 <BrowserRouter>
                   <SearchProvider>
                     <LanguageRedirect />
+                    <RouteTitleFallback />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
                         {/* Homepage - loaded eagerly for fast initial render */}

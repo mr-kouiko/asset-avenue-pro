@@ -14,19 +14,37 @@ const NotFound = () => {
       location.pathname
     );
 
+    const DEFAULT_TITLE = "VisuStock - Creative Content Marketplace";
+
     // Ensure proper 404 signal for crawlers via meta tag
-    const robotsMeta = document.querySelector('meta[name="robots"]') as HTMLMetaElement;
-    if (robotsMeta) {
-      robotsMeta.content = 'noindex, follow';
-    } else {
-      const meta = document.createElement('meta');
-      meta.name = 'robots';
-      meta.content = 'noindex, follow';
-      document.head.appendChild(meta);
+    let robotsMeta = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    const hadRobotsMeta = !!robotsMeta;
+    const previousRobotsContent = robotsMeta?.content;
+
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.name = 'robots';
+      document.head.appendChild(robotsMeta);
     }
+
+    robotsMeta.content = 'noindex, follow';
 
     // Set document title
     document.title = 'Page Not Found | VisuStock';
+
+    return () => {
+      // Restore defaults when leaving the 404 page
+      document.title = DEFAULT_TITLE;
+
+      if (robotsMeta) {
+        if (hadRobotsMeta) {
+          robotsMeta.content = previousRobotsContent || 'index, follow';
+        } else {
+          // We created it only for 404—remove it so other pages can manage robots.
+          robotsMeta.remove();
+        }
+      }
+    };
   }, [location.pathname]);
 
   // Suggest closest pages based on path
