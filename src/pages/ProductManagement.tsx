@@ -176,6 +176,11 @@ const ProductManagement = () => {
     }
   }, [currentDraftIndex, allDrafts, switchToDraft]);
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'Product Management | VisuStock';
+  }, []);
+
   useEffect(() => {
     // Prevent multiple initializations
     
