@@ -78,6 +78,8 @@ const ProductCard = memo(({ product }: { product: Product }) => {
               alt={product.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
             />
           )}
           {product.price === 0 && (
