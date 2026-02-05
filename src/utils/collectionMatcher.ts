@@ -72,6 +72,12 @@ export const collectionExclusions: Record<string, string[]> = {
   technology: [
     'digital art', 'digital painting', 'digital download',
     'nature', 'wildlife', 'landscape',
+    'bikini', 'swimsuit', 'swimwear', 'pool', 'swimming pool', 'poolside',
+    'beach', 'relaxing', 'sunbathing', 'vacation', 'resort', 'spa',
+    'fashion model', 'lingerie', 'sexy', 'sensual',
+    'yoga', 'meditation', 'wellness retreat',
+    'cooking', 'food', 'recipe', 'kitchen',
+    'wedding', 'bride', 'romantic', 'woman relaxing', 'man relaxing',
   ],
   travel: [
     'city life', 'city living', 'urban lifestyle',
