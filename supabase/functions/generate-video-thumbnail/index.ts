@@ -6,34 +6,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-// Timeline positions to try (as percentages of video duration)
-const TIMELINE_POSITIONS = [0.01, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50];
+// FAST PATH: Only 3 positions (much faster than 7)
+const FAST_POSITIONS = [0.10, 0.25, 0.50];
+// Extended positions only if fast path fails completely
+const EXTENDED_POSITIONS = [0.05, 0.15, 0.35, 0.40];
 
-// Thresholds for detecting invalid frames
-const BRIGHTNESS_THRESHOLD_HIGH = 250; // Near-white
-const BRIGHTNESS_THRESHOLD_LOW = 5;    // Near-black
-const CONTRAST_THRESHOLD = 10;         // Minimum standard deviation for contrast
-const EDGE_THRESHOLD = 100;            // Minimum edge count for meaningful content
+// Thresholds for detecting invalid frames (simplified)
+const BRIGHTNESS_THRESHOLD_HIGH = 245; // Near-white
+const BRIGHTNESS_THRESHOLD_LOW = 10;   // Near-black
 
 interface FrameAnalysis {
   isValid: boolean;
   brightness: number;
-  contrast: number;
-  edgeCount: number;
   reason?: string;
 }
 
 /**
- * Analyze a frame image to determine if it's visually meaningful
- * Uses FFmpeg to extract frame statistics
+ * FAST frame analysis - single FFmpeg call, minimal processing
  */
-async function analyzeFrame(framePath: string): Promise<FrameAnalysis> {
+async function analyzeFrameFast(framePath: string): Promise<FrameAnalysis> {
   try {
-    // Use FFmpeg to get frame statistics (signalstats filter)
-    const statsCommand = new Deno.Command("ffmpeg", {
+    // Single FFmpeg call to get basic stats
+    const command = new Deno.Command("ffmpeg", {
       args: [
         "-i", framePath,
-        "-vf", "signalstats,metadata=print:file=-",
+        "-vf", "signalstats",
         "-f", "null",
         "-"
       ],
@@ -41,77 +38,36 @@ async function analyzeFrame(framePath: string): Promise<FrameAnalysis> {
       stderr: "piped",
     });
 
-    const { stdout, stderr } = await statsCommand.output();
+    const { stderr } = await command.output();
     const output = new TextDecoder().decode(stderr);
     
-    // Parse YAVG (average luminance) from signalstats output
-    const yavgMatch = output.match(/lavfi\.signalstats\.YAVG=(\d+\.?\d*)/);
-    const yminMatch = output.match(/lavfi\.signalstats\.YMIN=(\d+)/);
-    const ymaxMatch = output.match(/lavfi\.signalstats\.YMAX=(\d+)/);
-    
+    // Parse YAVG (average luminance)
+    const yavgMatch = output.match(/YAVG:(\d+\.?\d*)/);
     const brightness = yavgMatch ? parseFloat(yavgMatch[1]) : 128;
-    const ymin = yminMatch ? parseInt(yminMatch[1]) : 0;
-    const ymax = ymaxMatch ? parseInt(ymaxMatch[1]) : 255;
-    const contrast = ymax - ymin;
     
-    // Use edge detection to find meaningful content
-    const edgeCommand = new Deno.Command("ffmpeg", {
-      args: [
-        "-i", framePath,
-        "-vf", "edgedetect=low=0.1:high=0.4,metadata=print:file=-",
-        "-f", "null",
-        "-"
-      ],
-      stdout: "piped",
-      stderr: "piped",
-    });
-    
-    const edgeResult = await edgeCommand.output();
-    const edgeOutput = new TextDecoder().decode(edgeResult.stderr);
-    
-    // Count edges by checking if frame has significant edge content
-    // If the edge detection passes without error and produces output, there are edges
-    const edgeCount = edgeOutput.includes("frame=") ? 150 : 50;
-    
-    // Determine if frame is valid
-    let isValid = true;
-    let reason = "";
-    
+    // Simple valid/invalid check
     if (brightness > BRIGHTNESS_THRESHOLD_HIGH) {
-      isValid = false;
-      reason = `Too bright (${brightness.toFixed(1)} > ${BRIGHTNESS_THRESHOLD_HIGH})`;
-    } else if (brightness < BRIGHTNESS_THRESHOLD_LOW) {
-      isValid = false;
-      reason = `Too dark (${brightness.toFixed(1)} < ${BRIGHTNESS_THRESHOLD_LOW})`;
-    } else if (contrast < CONTRAST_THRESHOLD) {
-      isValid = false;
-      reason = `Low contrast (${contrast} < ${CONTRAST_THRESHOLD})`;
+      return { isValid: false, brightness, reason: 'too bright' };
+    }
+    if (brightness < BRIGHTNESS_THRESHOLD_LOW) {
+      return { isValid: false, brightness, reason: 'too dark' };
     }
     
-    console.log(`[FrameAnalysis] Brightness: ${brightness.toFixed(1)}, Contrast: ${contrast}, Valid: ${isValid}${reason ? ` - ${reason}` : ''}`);
-    
-    return {
-      isValid,
-      brightness,
-      contrast,
-      edgeCount,
-      reason
-    };
-  } catch (error) {
-    console.error('[FrameAnalysis] Error analyzing frame:', error);
-    // If analysis fails, assume frame might be valid to avoid false rejections
-    return {
-      isValid: true,
-      brightness: 128,
-      contrast: 100,
-      edgeCount: 100,
-      reason: 'Analysis failed, assuming valid'
-    };
+    return { isValid: true, brightness };
+  } catch {
+    // If analysis fails, check file size as fallback
+    try {
+      const stat = await Deno.stat(framePath);
+      // Larger files typically have more content
+      return { isValid: stat.size > 5000, brightness: 128 };
+    } catch {
+      return { isValid: true, brightness: 128 }; // Assume valid if we can't check
+    }
   }
 }
 
 /**
- * Get video duration in seconds using FFprobe
+ * Get video duration (with caching-friendly fast probe)
  */
 async function getVideoDuration(videoPath: string): Promise<number> {
   const command = new Deno.Command("ffprobe", {
@@ -126,29 +82,21 @@ async function getVideoDuration(videoPath: string): Promise<number> {
   });
   
   const { stdout } = await command.output();
-  const durationStr = new TextDecoder().decode(stdout).trim();
-  const duration = parseFloat(durationStr);
-  
-  if (isNaN(duration) || duration <= 0) {
-    console.warn('[Duration] Could not determine video duration, defaulting to 10s');
-    return 10;
-  }
-  
-  console.log(`[Duration] Video duration: ${duration.toFixed(2)}s`);
-  return duration;
+  const duration = parseFloat(new TextDecoder().decode(stdout).trim());
+  return isNaN(duration) || duration <= 0 ? 10 : duration;
 }
 
 /**
- * Extract a frame at a specific timestamp
+ * Extract frame with optimized FFmpeg settings
  */
 async function extractFrame(videoPath: string, timestamp: number, outputPath: string): Promise<boolean> {
   const command = new Deno.Command("ffmpeg", {
     args: [
-      "-ss", timestamp.toString(),
+      "-ss", timestamp.toFixed(2),
       "-i", videoPath,
       "-vframes", "1",
-      "-q:v", "2",
-      "-vf", "scale=1280:-1",
+      "-q:v", "3", // Slightly lower quality = faster
+      "-vf", "scale=960:-1", // Smaller = faster
       "-y",
       outputPath
     ],
@@ -161,69 +109,64 @@ async function extractFrame(videoPath: string, timestamp: number, outputPath: st
 }
 
 /**
- * Find the first visually meaningful frame in a video
+ * Find valid frame using fast-path strategy
  */
-async function findValidFrame(
+async function findValidFrameFast(
   videoPath: string, 
   tempDir: string
-): Promise<{ framePath: string; timestamp: number; analysis: FrameAnalysis } | null> {
+): Promise<{ framePath: string; timestamp: number } | null> {
   const duration = await getVideoDuration(videoPath);
   
-  for (const positionPercent of TIMELINE_POSITIONS) {
-    const timestamp = Math.max(0.1, duration * positionPercent);
-    const framePath = `${tempDir}/frame_${positionPercent}.jpg`;
+  // FAST PATH: Try 3 strategic positions
+  for (const pos of FAST_POSITIONS) {
+    const timestamp = Math.max(0.1, duration * pos);
+    const framePath = `${tempDir}/frame_${Math.round(pos * 100)}.jpg`;
     
-    console.log(`[SmartThumbnail] Trying position ${(positionPercent * 100).toFixed(0)}% (${timestamp.toFixed(2)}s)`);
+    if (!await extractFrame(videoPath, timestamp, framePath)) continue;
     
-    const extracted = await extractFrame(videoPath, timestamp, framePath);
-    if (!extracted) {
-      console.warn(`[SmartThumbnail] Failed to extract frame at ${timestamp}s`);
-      continue;
-    }
-    
-    // Check if file was actually created and has content
+    // Check file exists and has content
     try {
       const stat = await Deno.stat(framePath);
-      if (stat.size < 1000) {
-        console.warn(`[SmartThumbnail] Frame too small (${stat.size} bytes), skipping`);
-        continue;
-      }
-    } catch {
-      continue;
-    }
+      if (stat.size < 2000) continue;
+    } catch { continue; }
     
-    const analysis = await analyzeFrame(framePath);
-    
+    const analysis = await analyzeFrameFast(framePath);
     if (analysis.isValid) {
-      console.log(`[SmartThumbnail] ✅ Found valid frame at ${(positionPercent * 100).toFixed(0)}% (${timestamp.toFixed(2)}s)`);
-      return { framePath, timestamp, analysis };
+      console.log(`[Thumbnail] ✓ Valid frame at ${(pos * 100)}%`);
+      return { framePath, timestamp };
     }
     
-    // Clean up invalid frame
-    try {
-      await Deno.remove(framePath);
-    } catch {}
+    try { await Deno.remove(framePath); } catch {}
   }
   
-  // If no valid frame found, use the middle of the video as last resort
-  const fallbackTimestamp = duration * 0.5;
+  // EXTENDED PATH: Only if fast path completely fails
+  console.log('[Thumbnail] Fast path failed, trying extended positions...');
+  for (const pos of EXTENDED_POSITIONS) {
+    const timestamp = Math.max(0.1, duration * pos);
+    const framePath = `${tempDir}/frame_ext_${Math.round(pos * 100)}.jpg`;
+    
+    if (!await extractFrame(videoPath, timestamp, framePath)) continue;
+    
+    try {
+      const stat = await Deno.stat(framePath);
+      if (stat.size < 2000) continue;
+    } catch { continue; }
+    
+    const analysis = await analyzeFrameFast(framePath);
+    if (analysis.isValid) {
+      console.log(`[Thumbnail] ✓ Valid frame at ${(pos * 100)}% (extended)`);
+      return { framePath, timestamp };
+    }
+    
+    try { await Deno.remove(framePath); } catch {}
+  }
+  
+  // FALLBACK: Just use 25% regardless of analysis
+  const fallbackTs = duration * 0.25;
   const fallbackPath = `${tempDir}/frame_fallback.jpg`;
-  
-  console.log(`[SmartThumbnail] ⚠️ No valid frame found, using fallback at 50% (${fallbackTimestamp.toFixed(2)}s)`);
-  
-  const extracted = await extractFrame(videoPath, fallbackTimestamp, fallbackPath);
-  if (extracted) {
-    return {
-      framePath: fallbackPath,
-      timestamp: fallbackTimestamp,
-      analysis: {
-        isValid: false,
-        brightness: 128,
-        contrast: 50,
-        edgeCount: 50,
-        reason: 'Fallback frame - no valid frame found'
-      }
-    };
+  if (await extractFrame(videoPath, fallbackTs, fallbackPath)) {
+    console.log(`[Thumbnail] ⚠ Using fallback at 25%`);
+    return { framePath: fallbackPath, timestamp: fallbackTs };
   }
   
   return null;
@@ -234,10 +177,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  const tempFiles: string[] = [];
+  const tempDir = `/tmp/thumb_${Date.now()}`;
   
   try {
-    const { videoPath, outputPath, timeOffset = 1, smartDetection = true } = await req.json()
+    const { videoPath, outputPath, smartDetection = true } = await req.json()
     
     if (!videoPath || !outputPath) {
       return new Response(
@@ -251,10 +194,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    console.log(`[Thumbnail] Starting smart thumbnail generation for: ${videoPath}`)
-    console.log(`[Thumbnail] Smart detection enabled: ${smartDetection}`)
+    console.log(`[Thumbnail] Processing: ${videoPath}`)
 
-    // Download video from Supabase storage
+    // Download video
     const { data: videoData, error: downloadError } = await supabaseClient
       .storage
       .from('uploads')
@@ -263,92 +205,34 @@ serve(async (req) => {
     if (downloadError) {
       console.error('[Thumbnail] Download error:', downloadError)
       return new Response(
-        JSON.stringify({ error: `Failed to download video: ${downloadError.message}` }),
+        JSON.stringify({ error: `Download failed: ${downloadError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`[Thumbnail] Video downloaded, size: ${videoData.size} bytes`)
-
-    // Save video to temporary file
-    const videoBytes = new Uint8Array(await videoData.arrayBuffer())
-    const tempDir = `/tmp/thumb_${Date.now()}`
+    // Save to temp
     await Deno.mkdir(tempDir, { recursive: true })
-    
     const tempVideoPath = `${tempDir}/video.mov`
-    tempFiles.push(tempVideoPath)
-    
-    await Deno.writeFile(tempVideoPath, videoBytes)
-    console.log(`[Thumbnail] Video saved to: ${tempVideoPath}`)
+    await Deno.writeFile(tempVideoPath, new Uint8Array(await videoData.arrayBuffer()))
+
+    // Find valid frame (fast path)
+    const result = smartDetection 
+      ? await findValidFrameFast(tempVideoPath, tempDir)
+      : null;
 
     let finalFramePath: string;
-    let thumbnailMetadata: Record<string, unknown> = {};
-
-    if (smartDetection) {
-      // Use smart detection to find a valid frame
-      const result = await findValidFrame(tempVideoPath, tempDir);
-      
-      if (!result) {
-        console.error('[Thumbnail] Failed to find any valid frame');
-        return new Response(
-          JSON.stringify({ error: 'Failed to extract any frame from video' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
+    
+    if (result) {
       finalFramePath = result.framePath;
-      thumbnailMetadata = {
-        smart_detection: true,
-        selected_timestamp: result.timestamp,
-        frame_analysis: result.analysis,
-        positions_tried: TIMELINE_POSITIONS.length
-      };
-      tempFiles.push(finalFramePath);
     } else {
-      // Legacy mode: just use the specified timeOffset
-      const tempThumbnailPath = `${tempDir}/thumbnail.jpg`
-      tempFiles.push(tempThumbnailPath);
-      
-      const ffmpegCommand = new Deno.Command("ffmpeg", {
-        args: [
-          "-ss", timeOffset.toString(),
-          "-i", tempVideoPath,
-          "-vframes", "1",
-          "-q:v", "2",
-          "-vf", "scale=1280:-1",
-          "-y",
-          tempThumbnailPath
-        ],
-        stdout: "piped",
-        stderr: "piped",
-      })
-
-      console.log(`[Thumbnail] Running FFmpeg (legacy mode)...`)
-      const { code, stderr } = await ffmpegCommand.output()
-      
-      if (code !== 0) {
-        const errorText = new TextDecoder().decode(stderr)
-        console.error('[Thumbnail] FFmpeg error:', errorText)
-        return new Response(
-          JSON.stringify({ error: 'FFmpeg thumbnail extraction failed', details: errorText }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      finalFramePath = tempThumbnailPath;
-      thumbnailMetadata = {
-        smart_detection: false,
-        selected_timestamp: timeOffset
-      };
+      // Direct extraction at 1s as absolute fallback
+      finalFramePath = `${tempDir}/thumb_direct.jpg`;
+      await extractFrame(tempVideoPath, 1, finalFramePath);
     }
 
-    console.log(`[Thumbnail] Reading final frame from: ${finalFramePath}`)
-
-    // Read the generated thumbnail
-    const thumbnailBytes = await Deno.readFile(finalFramePath)
-    console.log(`[Thumbnail] Thumbnail size: ${thumbnailBytes.length} bytes`)
-
-    // Upload thumbnail to Supabase storage
+    // Read and upload
+    const thumbnailBytes = await Deno.readFile(finalFramePath);
+    
     const { error: uploadError } = await supabaseClient
       .storage
       .from('thumbnails')
@@ -358,48 +242,31 @@ serve(async (req) => {
       })
 
     if (uploadError) {
-      console.error('[Thumbnail] Upload error:', uploadError)
       return new Response(
-        JSON.stringify({ error: `Failed to upload thumbnail: ${uploadError.message}` }),
+        JSON.stringify({ error: `Upload failed: ${uploadError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Get public URL
     const { data: { publicUrl } } = supabaseClient
       .storage
       .from('thumbnails')
       .getPublicUrl(outputPath)
 
-    console.log(`[Thumbnail] ✅ Success! Thumbnail URL: ${publicUrl}`)
+    console.log(`[Thumbnail] ✅ Done: ${publicUrl}`)
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        thumbnailUrl: publicUrl,
-        message: 'Thumbnail generated successfully',
-        metadata: thumbnailMetadata
-      }),
+      JSON.stringify({ success: true, thumbnailUrl: publicUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('[Thumbnail] Unexpected error:', error)
+    console.error('[Thumbnail] Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } finally {
-    // Clean up temp files
-    for (const file of tempFiles) {
-      try {
-        await Deno.remove(file)
-      } catch {}
-    }
-    // Try to remove temp directory
-    try {
-      const tempDir = tempFiles[0]?.split('/').slice(0, -1).join('/');
-      if (tempDir) await Deno.remove(tempDir, { recursive: true });
-    } catch {}
+    try { await Deno.remove(tempDir, { recursive: true }); } catch {}
   }
 })
