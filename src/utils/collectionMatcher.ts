@@ -48,56 +48,190 @@ interface ScoredProduct {
  * These terms disqualify an asset even if it matches positive terms
  */
 export const collectionExclusions: Record<string, string[]> = {
+  // EDUCATION: Academic/learning only - exclude medical, religious, leisure, lifestyle
   education: [
-    'surgery', 'surgical', 'operating room', 'medical procedure',
-    'pilgrimage', 'hajj', 'umrah', 'mecca', 'kaaba',
-    'wildlife', 'safari', 'animal behavior',
-    'study music', 'studying music', 'relaxing music',
-    'coffee', 'latte', 'cappuccino', 'brew',
-    'prayer', 'worship', 'mosque', 'church',
+    // Medical
+    'surgery', 'surgical', 'operating room', 'medical procedure', 'hospital', 'patient',
+    // Religious
+    'pilgrimage', 'hajj', 'umrah', 'mecca', 'kaaba', 'prayer', 'worship', 'mosque', 'church', 'temple',
+    // Wildlife/Nature
+    'wildlife', 'safari', 'animal behavior', 'jungle', 'forest', 'mountain',
+    // Audio misleading terms
+    'study music', 'studying music', 'relaxing music', 'focus music', 'concentration music',
+    // Food/Beverage
+    'coffee', 'latte', 'cappuccino', 'brew', 'restaurant', 'cooking', 'recipe',
+    // Leisure/Lifestyle
+    'bikini', 'swimsuit', 'pool', 'beach', 'vacation', 'resort', 'spa', 'relaxing',
+    'nightclub', 'party', 'bar', 'drinking', 'cocktail',
+    // Fashion
+    'fashion', 'runway', 'model', 'lingerie', 'sexy',
+    // Sports
+    'football', 'soccer', 'basketball', 'tennis', 'golf', 'extreme sport',
   ],
+  
+  // NATURE: Wilderness/outdoors only - exclude urban, man-made, lifestyle
   nature: [
-    'marina', 'yacht', 'waterfront', 'skyline', 'skyscraper',
-    'port', 'shipping', 'container', 'cargo',
-    'pool', 'swimming pool', 'water park',
-    'fountain', 'water feature',
-    'dubai', 'urban', 'city center', 'downtown',
+    // Urban/Architecture
+    'marina', 'yacht', 'waterfront property', 'skyline', 'skyscraper', 'building', 'architecture',
+    'port', 'shipping', 'container', 'cargo', 'industrial', 'factory', 'warehouse',
+    'dubai', 'urban', 'city center', 'downtown', 'street', 'road', 'highway',
+    // Man-made water features
+    'pool', 'swimming pool', 'water park', 'fountain', 'water feature', 'aquarium',
+    // Technology
+    'computer', 'laptop', 'smartphone', 'software', 'coding', 'technology', 'digital',
+    // Business
+    'office', 'meeting', 'corporate', 'business', 'boardroom', 'presentation',
+    // Fashion/Lifestyle
+    'fashion', 'model', 'runway', 'bikini', 'lingerie', 'sexy',
+    // Food
+    'restaurant', 'cooking', 'chef', 'cuisine', 'recipe', 'kitchen',
+    // Sports (non-outdoor)
+    'gym', 'fitness center', 'basketball court', 'tennis court',
   ],
+  
+  // BUSINESS: Corporate/professional only - exclude leisure, medical, creative arts
   business: [
+    // Audio misleading terms
     'music production', 'professional audio', 'professional quality',
-    'professional camera', 'professional photography',
-    'surgery', 'medical', 'hospital', 'clinic',
-    'sports team', 'football team', 'soccer team',
+    'professional camera', 'professional photography equipment',
+    // Medical
+    'surgery', 'medical', 'hospital', 'clinic', 'doctor', 'nurse', 'patient',
+    // Sports
+    'sports team', 'football team', 'soccer team', 'basketball', 'athlete',
+    // Nature/Wildlife
+    'nature', 'wildlife', 'forest', 'mountain', 'jungle', 'safari', 'ocean', 'beach',
+    // Leisure
+    'vacation', 'holiday', 'resort', 'spa', 'relaxing', 'pool', 'swimming',
+    'bikini', 'swimsuit', 'sunbathing',
+    // Entertainment
+    'party', 'nightclub', 'concert', 'festival', 'wedding', 'bride',
+    // Fashion (non-business)
+    'lingerie', 'sexy', 'sensual', 'swimwear',
+    // Food (unless business lunch)
+    'cooking', 'recipe', 'chef', 'baking',
+    // Art/Creative
+    'painting', 'sculpture', 'gallery', 'museum', 'artist studio',
   ],
+  
+  // TECHNOLOGY: Tech/digital only - exclude lifestyle, nature, creative arts
   technology: [
-    'digital art', 'digital painting', 'digital download',
-    'nature', 'wildlife', 'landscape',
+    // Art terms that include "digital"
+    'digital art', 'digital painting', 'digital download', 'digital print',
+    // Nature
+    'nature', 'wildlife', 'landscape', 'forest', 'mountain', 'ocean', 'beach', 'sunset', 'sunrise',
+    // Leisure/Lifestyle
     'bikini', 'swimsuit', 'swimwear', 'pool', 'swimming pool', 'poolside',
-    'beach', 'relaxing', 'sunbathing', 'vacation', 'resort', 'spa',
-    'fashion model', 'lingerie', 'sexy', 'sensual',
-    'yoga', 'meditation', 'wellness retreat',
-    'cooking', 'food', 'recipe', 'kitchen',
-    'wedding', 'bride', 'romantic', 'woman relaxing', 'man relaxing',
+    'beach', 'relaxing', 'sunbathing', 'vacation', 'resort', 'spa', 'wellness',
+    'woman relaxing', 'man relaxing', 'couple relaxing',
+    // Fashion
+    'fashion model', 'lingerie', 'sexy', 'sensual', 'runway', 'fashion show',
+    // Wellness (non-tech)
+    'yoga', 'meditation', 'wellness retreat', 'massage', 'therapy',
+    // Food
+    'cooking', 'food', 'recipe', 'kitchen', 'restaurant', 'chef', 'cuisine',
+    // Events
+    'wedding', 'bride', 'romantic', 'party', 'celebration', 'birthday',
+    // Sports
+    'football', 'soccer', 'basketball', 'tennis', 'golf', 'gym workout',
+    // Animals
+    'pet', 'dog', 'cat', 'horse', 'animal', 'wildlife',
   ],
+  
+  // TRAVEL: Destinations/tourism only - exclude local daily life, pure technology
   travel: [
-    'city life', 'city living', 'urban lifestyle',
-    'local business', 'city traffic',
+    // Local/Urban daily life
+    'city life', 'city living', 'urban lifestyle', 'commute', 'commuting',
+    'local business', 'city traffic', 'office work', 'daily routine',
+    // Pure technology
+    'coding', 'programming', 'software development', 'computer screen',
+    // Medical
+    'hospital', 'surgery', 'medical', 'doctor', 'clinic',
+    // Industrial
+    'factory', 'warehouse', 'industrial', 'manufacturing',
+    // Abstract only
+    'abstract pattern', 'geometric shape', 'texture only',
+    // Fashion (studio)
+    'fashion shoot', 'studio model', 'lingerie', 'sexy',
   ],
+  
+  // HEALTH: Medical/wellness only - exclude business terms, pure leisure
   health: [
+    // Business metaphors using "health"
     'financial health', 'business health', 'health of the economy',
-    'healthy profit', 'healthy growth',
+    'healthy profit', 'healthy growth', 'market health',
+    // Pure technology
+    'coding', 'programming', 'software', 'computer science',
+    // Travel/Tourism
+    'tourist', 'tourism', 'destination', 'landmark', 'sightseeing',
+    // Pure entertainment
+    'nightclub', 'party', 'bar', 'concert', 'festival',
+    // Fashion
+    'fashion show', 'runway', 'lingerie', 'sexy', 'sensual',
+    // Food (unless healthy eating)
+    'junk food', 'fast food', 'fried', 'burger', 'pizza', 'candy',
+    // Industrial
+    'factory', 'warehouse', 'industrial', 'manufacturing',
   ],
+  
+  // LIFESTYLE: Daily life/people - exclude pure industrial, abstract, medical procedures
   lifestyle: [
-    // Lifestyle is broad by design, minimal exclusions
+    // Medical procedures
+    'surgery', 'surgical', 'operating room', 'medical procedure',
+    // Industrial
+    'factory', 'warehouse', 'industrial', 'manufacturing', 'machinery',
+    // Pure abstract
+    'abstract pattern', 'geometric texture', 'color gradient only',
+    // Pure technology (no humans)
+    'circuit board', 'server room', 'data center', 'code only',
+    // Scientific
+    'laboratory experiment', 'chemical', 'microscope view',
   ],
+  
+  // MUSIC: Audio content only - category restricted, minimal exclusions
   music: [
-    // Audio-only, handled by category gating
+    // Visual-only terms
+    'music video', 'concert photo', 'album cover design',
+    // Non-audio music references
+    'music room decor', 'music poster', 'music artwork',
   ],
+  
+  // FOOD: Culinary only - exclude non-food lifestyle, pure nature
   food: [
-    'food for thought', 'food chain', 'food industry logistics',
+    // Business metaphors
+    'food for thought', 'food chain business', 'food industry logistics',
+    // Pure nature (not farm/agriculture)
+    'wildlife', 'safari', 'jungle', 'forest hike', 'mountain climbing',
+    // Technology
+    'coding', 'programming', 'software', 'computer',
+    // Fashion
+    'fashion', 'runway', 'model', 'lingerie', 'bikini',
+    // Sports
+    'football', 'soccer', 'basketball', 'tennis', 'gym workout',
+    // Medical
+    'surgery', 'hospital', 'medical procedure',
+    // Entertainment (non-dining)
+    'concert', 'nightclub', 'party dancing',
   ],
+  
+  // ABSTRACT: Patterns/textures/art - exclude realistic photos, specific subjects
   abstract: [
-    // Abstract is broad, minimal exclusions
+    // Realistic people
+    'portrait', 'person', 'people', 'man', 'woman', 'child', 'family', 'couple',
+    'face', 'eyes', 'hands', 'body',
+    // Specific locations
+    'city', 'building', 'landmark', 'street', 'road', 'destination',
+    // Animals
+    'animal', 'pet', 'dog', 'cat', 'wildlife', 'bird', 'fish',
+    // Food
+    'food', 'dish', 'meal', 'cooking', 'restaurant', 'chef',
+    // Nature (realistic)
+    'landscape photo', 'nature photography', 'wildlife photo',
+    // Fashion/Lifestyle
+    'fashion', 'bikini', 'swimsuit', 'lingerie', 'model',
+    // Sports
+    'sports', 'football', 'soccer', 'basketball', 'athlete',
+    // Business
+    'office', 'meeting', 'corporate', 'businessperson',
   ],
 };
 
