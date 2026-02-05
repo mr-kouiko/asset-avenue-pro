@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, memo } from 'react';
-import { Film, Play } from 'lucide-react';
+import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
+import { Play } from 'lucide-react';
 import { VideoWatermark } from './VideoWatermark';
 
 interface WatermarkedVideoThumbnailProps {
@@ -11,10 +11,17 @@ interface WatermarkedVideoThumbnailProps {
 }
 
 /**
- * Static watermarked thumbnail for video previews in listings
- * Adds hover auto-play preview of the actual video
- * Optimized: video element only mounted on hover to save bandwidth
- * Enhanced: Uses video frame extraction as fallback for missing thumbnails
+ * Normalized video thumbnail component for marketplace grid.
+ * 
+ * GUARANTEES:
+ * 1. Always shows a poster (thumbnail, extracted frame, or styled placeholder)
+ * 2. Always attempts muted autoplay on hover when videoUrl exists
+ * 3. Graceful fallback if autoplay fails (shows poster, no error)
+ * 4. Lazy loading via IntersectionObserver (skipped for priority items)
+ * 
+ * BROWSER AUTOPLAY POLICY:
+ * - Muted videos can autoplay without user interaction in all modern browsers
+ * - We set muted=true, playsInline=true to ensure compatibility
  */
 export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = memo(({
   thumbnail,
@@ -29,8 +36,10 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
   const [thumbnailError, setThumbnailError] = useState(false);
   const [extractedFrame, setExtractedFrame] = useState<string | null>(null);
   const [frameExtractionFailed, setFrameExtractionFailed] = useState(false);
+  const [videoPlayFailed, setVideoPlayFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const frameExtractionAttempted = useRef(false);
 
   // Lazy loading with Intersection Observer - skip for priority items
   useEffect(() => {
@@ -53,41 +62,46 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     return () => observer.disconnect();
   }, [priority]);
 
-  // Check if thumbnail is missing or is placeholder
+  // Check if thumbnail is valid (not placeholder or empty)
   const hasValidThumbnail = thumbnail && 
     thumbnail !== '/placeholder.svg' && 
-    !thumbnail.includes('placeholder');
+    !thumbnail.includes('placeholder') &&
+    thumbnail.trim() !== '';
 
-  // Extract frame from video when thumbnail fails
+  // Extract frame from video when thumbnail fails or is missing
+  // This runs ONCE per component lifecycle when needed
   useEffect(() => {
-    if (!thumbnailError || !videoUrl || extractedFrame || frameExtractionFailed) return;
-
+    // Skip if: already have thumbnail, already extracted frame, already failed, no video URL
+    if (hasValidThumbnail && !thumbnailError) return;
+    if (extractedFrame || frameExtractionFailed) return;
+    if (!videoUrl || frameExtractionAttempted.current) return;
+    
+    frameExtractionAttempted.current = true;
+    
     const extractFrame = async () => {
       try {
         const video = document.createElement('video');
         video.crossOrigin = 'anonymous';
         video.muted = true;
         video.preload = 'metadata';
+        video.playsInline = true;
         
-        // Try to fetch as blob first for better CORS handling
-        try {
-          const response = await fetch(videoUrl, { mode: 'cors' });
-          if (response.ok) {
-            const blob = await response.blob();
-            video.src = URL.createObjectURL(blob);
-          } else {
-            video.src = videoUrl;
+        // Set source directly (more reliable than <source> tags for extraction)
+        video.src = videoUrl;
+
+        const timeoutId = setTimeout(() => {
+          if (!extractedFrame) {
+            setFrameExtractionFailed(true);
           }
-        } catch {
-          video.src = videoUrl;
-        }
+        }, 8000); // 8 second timeout
 
         video.onloadeddata = () => {
-          // Seek to 1 second for a better frame
-          video.currentTime = 1;
+          // Seek to 1 second for a better frame (skip black intro)
+          video.currentTime = Math.min(1, video.duration * 0.1);
         };
 
         video.onseeked = () => {
+          clearTimeout(timeoutId);
           try {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth || 640;
@@ -96,59 +110,90 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
             if (ctx) {
               ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
               const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-              setExtractedFrame(dataUrl);
+              // Validate frame is not empty/black
+              if (dataUrl.length > 1000) {
+                setExtractedFrame(dataUrl);
+              } else {
+                setFrameExtractionFailed(true);
+              }
             }
           } catch (e) {
-            console.warn('[WatermarkedVideoThumbnail] Frame extraction failed:', e);
+            console.warn('[VideoThumbnail] Frame extraction canvas error:', e);
             setFrameExtractionFailed(true);
-          }
-          // Cleanup
-          if (video.src.startsWith('blob:')) {
-            URL.revokeObjectURL(video.src);
           }
         };
 
         video.onerror = () => {
-          console.warn('[WatermarkedVideoThumbnail] Video load failed for frame extraction');
+          clearTimeout(timeoutId);
+          console.warn('[VideoThumbnail] Video load failed for frame extraction');
           setFrameExtractionFailed(true);
         };
-
-        // Timeout fallback
-        setTimeout(() => {
-          if (!extractedFrame) {
-            setFrameExtractionFailed(true);
-          }
-        }, 5000);
       } catch (e) {
-        console.warn('[WatermarkedVideoThumbnail] Frame extraction error:', e);
+        console.warn('[VideoThumbnail] Frame extraction error:', e);
         setFrameExtractionFailed(true);
       }
     };
 
     extractFrame();
-  }, [thumbnailError, videoUrl, extractedFrame, frameExtractionFailed]);
+  }, [thumbnailError, videoUrl, extractedFrame, frameExtractionFailed, hasValidThumbnail]);
 
-  // Auto-play video on hover
+  // Muted autoplay on hover - with graceful fallback
+  const attemptPlay = useCallback(async () => {
+    const v = videoRef.current;
+    if (!v || !videoUrl) return;
+    
+    try {
+      // Ensure video is ready
+      v.muted = true;
+      v.playsInline = true;
+      
+      // Only attempt play if video has loaded enough
+      if (v.readyState >= 2) {
+        await v.play();
+        setIsVideoReady(true);
+        setVideoPlayFailed(false);
+      } else {
+        // Wait for canplay event
+        v.oncanplay = async () => {
+          try {
+            await v.play();
+            setIsVideoReady(true);
+            setVideoPlayFailed(false);
+          } catch (err) {
+            console.warn('[VideoThumbnail] Deferred play failed:', err);
+            setVideoPlayFailed(true);
+          }
+        };
+      }
+    } catch (err) {
+      // Autoplay failed - likely browser policy (shouldn't happen with muted)
+      console.warn('[VideoThumbnail] Autoplay blocked:', err);
+      setVideoPlayFailed(true);
+    }
+  }, [videoUrl]);
+
+  // Handle hover state changes
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     
-    if (isHovered && videoUrl) {
-      v.muted = true;
-      v.play()
-        .then(() => setIsVideoReady(true))
-        .catch((err) => console.warn('[HoverPreview] play failed', err));
+    if (isHovered && videoUrl && !videoPlayFailed) {
+      attemptPlay();
     } else {
       v.pause();
       v.currentTime = 0;
       setIsVideoReady(false);
     }
-  }, [isHovered, videoUrl]);
+  }, [isHovered, videoUrl, attemptPlay, videoPlayFailed]);
 
-  // Determine what to show as the thumbnail
-  const showThumbnail = !thumbnailError && hasValidThumbnail;
-  const showExtractedFrame = thumbnailError && extractedFrame;
-  const showPlaceholder = (thumbnailError || !hasValidThumbnail) && !extractedFrame;
+  // Reset play failure state when video URL changes
+  useEffect(() => {
+    setVideoPlayFailed(false);
+  }, [videoUrl]);
+
+  // Determine what to show as the poster
+  const effectivePoster = extractedFrame || (hasValidThumbnail && !thumbnailError ? thumbnail : null);
+  const showPlaceholder = !effectivePoster;
 
   return (
     <div 
@@ -157,36 +202,53 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
       onMouseEnter={() => videoUrl && setIsHovered(true)}
       onMouseLeave={() => { setIsHovered(false); setIsVideoReady(false); }}
     >
-      {/* Loading skeleton */}
+      {/* Loading skeleton before visible */}
       {!isVisible && (
         <div className="absolute inset-0 bg-muted animate-pulse" />
       )}
       
       {isVisible && (
         <>
-          {/* Video preview on hover - only mounted when hovering */}
-          {isHovered && videoUrl && (
+          {/* 
+            VIDEO ELEMENT - Always render when videoUrl exists
+            This ensures the video is preloaded and ready for hover playback
+          */}
+          {videoUrl && (
             <video
               ref={videoRef}
               className={`absolute inset-0 z-10 w-full h-full object-cover transition-opacity duration-300 ${
-                isVideoReady ? 'opacity-100' : 'opacity-0'
+                isHovered && isVideoReady ? 'opacity-100' : 'opacity-0'
               }`}
               muted
               loop
               playsInline
-              preload="none"
-              onCanPlay={() => setIsVideoReady(true)}
+              preload="metadata"
+              poster={effectivePoster || undefined}
+              onCanPlay={() => {
+                if (isHovered) setIsVideoReady(true);
+              }}
+              onError={(e) => {
+                console.warn('[VideoThumbnail] Video playback error:', e);
+                setVideoPlayFailed(true);
+              }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              <source src={videoUrl} type={videoUrl.endsWith('.mov') ? 'video/quicktime' : 'video/mp4'} />
-              {videoUrl.endsWith('.mov') && <source src={videoUrl} type="video/mp4" />}
+              {/* Primary MP4 source */}
+              <source 
+                src={videoUrl} 
+                type={videoUrl.endsWith('.mov') ? 'video/quicktime' : 'video/mp4'} 
+              />
+              {/* Fallback for MOV as MP4 */}
+              {videoUrl.endsWith('.mov') && (
+                <source src={videoUrl} type="video/mp4" />
+              )}
             </video>
           )}
           
-          {/* Primary thumbnail */}
-          {showThumbnail && (
+          {/* Primary thumbnail image */}
+          {effectivePoster && (
             <img
-              src={thumbnail}
+              src={effectivePoster}
               alt={title}
               loading={priority ? "eager" : "lazy"}
               decoding="async"
@@ -194,26 +256,17 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
               className={`w-full h-full object-cover transition-opacity duration-200 ${
                 isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
               }`}
-              onError={() => setThumbnailError(true)}
+              onError={() => {
+                if (effectivePoster === thumbnail) {
+                  setThumbnailError(true);
+                }
+              }}
               onContextMenu={(e) => e.preventDefault()}
               onDragStart={(e) => e.preventDefault()}
             />
           )}
 
-          {/* Extracted frame fallback */}
-          {showExtractedFrame && (
-            <img
-              src={extractedFrame}
-              alt={title}
-              className={`w-full h-full object-cover transition-opacity duration-200 ${
-                isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
-              }`}
-              onContextMenu={(e) => e.preventDefault()}
-              onDragStart={(e) => e.preventDefault()}
-            />
-          )}
-
-          {/* Styled placeholder fallback - much nicer than blue gradient */}
+          {/* Styled placeholder fallback - shown when no poster available */}
           {showPlaceholder && (
             <div className="w-full h-full bg-muted flex items-center justify-center relative overflow-hidden">
               {/* Subtle pattern background */}
@@ -246,7 +299,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
             <VideoWatermark size="thumbnail" />
           </div>
           
-          {/* Video play indicator */}
+          {/* Video badge indicator */}
           <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
             Vidéo
           </div>

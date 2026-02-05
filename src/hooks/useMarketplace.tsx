@@ -219,18 +219,39 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       }
 
       // Media URL - optimized with cached URL builder
+      // CRITICAL: For videos, we MUST have a valid URL for hover autoplay
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
+        // Priority 1: Watermarked preview (preferred for marketplace)
         const fileWithPreview = files?.find(f => f.preview_path);
         if (fileWithPreview?.preview_path) {
           mediaUrl = fileWithPreview.preview_path.startsWith('http')
             ? fileWithPreview.preview_path
             : buildPublicUrlCached('previews', fileWithPreview.preview_path);
         }
+        
+        // Priority 2: Original file path (fallback)
         if (!mediaUrl && originalFile?.file_path) {
           mediaUrl = originalFile.file_path.startsWith('http')
             ? originalFile.file_path
             : buildPublicUrlCached('uploads', originalFile.file_path);
+        }
+        
+        // Priority 3: Any video file in the submission
+        if (!mediaUrl) {
+          const anyVideoFile = files?.find(f => 
+            f.file_type?.toLowerCase().includes('video') && f.file_path
+          );
+          if (anyVideoFile?.file_path) {
+            mediaUrl = anyVideoFile.file_path.startsWith('http')
+              ? anyVideoFile.file_path
+              : buildPublicUrlCached('uploads', anyVideoFile.file_path);
+          }
+        }
+        
+        // Debug: Log when video has no URL (should not happen)
+        if (!mediaUrl && process.env.NODE_ENV === 'development') {
+          console.warn(`⚠️ [MARKETPLACE] Video "${item.title}" (${item.id}) has no playable URL`, { files });
         }
       } else if (contentType === 'audio') {
         if (originalFile?.file_path) {
