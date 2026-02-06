@@ -195,6 +195,10 @@ Deno.serve(async (req) => {
     
     console.log(`📤 [R2] Action: ${action}, File: ${fileName}`);
     
+    // Route based on action
+    if (action === 'finalize-upload') {
+      // Handle multipart upload finalization to R2
+    
       console.log(`🔄 Finalizing upload: ${fileName} (${totalChunks} chunks)`);
       
       // Stream to R2 using S3-compatible Multipart Upload to avoid large memory allocations
@@ -402,8 +406,19 @@ Deno.serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
     
-    throw new Error(`Unknown action: ${action}`);
+    // Unknown action
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: `Unknown action: ${action}. Supported: finalize-upload`
+      }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
     
   } catch (error) {
     console.error('❌ R2 error:', error);
