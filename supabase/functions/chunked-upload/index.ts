@@ -19,6 +19,7 @@ const MAX_FILE_SIZE: Record<string, number> = {
   image: 50 * 1024 * 1024,          // 50MB for images
   audio: 100 * 1024 * 1024,         // 100MB for audio
   document: 50 * 1024 * 1024,       // 50MB for documents
+  archive: 2 * 1024 * 1024 * 1024,  // 2GB for archives (VFX packs)
   default: 50 * 1024 * 1024,        // 50MB default
 };
 
@@ -129,6 +130,8 @@ function getFileSizeLimit(mimeType: string): number {
   if (mimeType.startsWith('image/')) return MAX_FILE_SIZE.image;
   if (mimeType.startsWith('audio/')) return MAX_FILE_SIZE.audio;
   if (mimeType === 'application/pdf' || mimeType.startsWith('text/')) return MAX_FILE_SIZE.document;
+  // Archives (RAR, ZIP) for VFX packs
+  if (mimeType.includes('rar') || mimeType.includes('zip')) return MAX_FILE_SIZE.archive;
   return MAX_FILE_SIZE.default;
 }
 
@@ -203,6 +206,9 @@ function detectMimeType(fileName: string): string {
     pdf: "application/pdf",
     txt: "text/plain",
     json: "application/json",
+    // Archives (VFX assets)
+    rar: "application/x-rar-compressed",
+    zip: "application/zip",
   };
   
   // For video extensions: ONLY return video MIME types
@@ -242,7 +248,12 @@ function validateMimeType(fileName: string): boolean {
     // Documents
     'application/pdf',
     'text/plain',
-    'application/json'
+    'application/json',
+    // Archives (VFX assets)
+    'application/x-rar-compressed',
+    'application/vnd.rar',
+    'application/rar',
+    'application/zip'
   ];
   
   const detectedMimeType = detectMimeType(fileName);
