@@ -104,6 +104,9 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
       'm4a': 'audio/mp4',
       // Documents
       'pdf': 'application/pdf',
+      // Archives (VFX)
+      'rar': 'application/x-rar-compressed',
+      'zip': 'application/zip',
     };
     
     return mimeMap[ext || ''] || file.type || 'application/octet-stream';

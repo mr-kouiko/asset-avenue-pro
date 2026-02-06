@@ -75,9 +75,16 @@ export class StreamingUploadHandler {
       'mp3': 'audio/mpeg'
     };
 
+    // Document/Archive MIME types
+    const documentTypes: Record<string, string> = {
+      'pdf': 'application/pdf',
+      'rar': 'application/x-rar-compressed',
+      'zip': 'application/zip'
+    };
+
     // Priority 1: Use extension-based detection first for reliability
     if (extension) {
-      const detectedType = imageTypes[extension] || videoTypes[extension] || audioTypes[extension];
+      const detectedType = imageTypes[extension] || videoTypes[extension] || audioTypes[extension] || documentTypes[extension];
       if (detectedType) {
         console.log(`✅ MIME type detected from extension: ${detectedType} for .${extension}`);
         return detectedType;
