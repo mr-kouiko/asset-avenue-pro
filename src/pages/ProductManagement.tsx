@@ -35,7 +35,7 @@ interface UploadedFileData {
   thumbnailUrl?: string;
   previewUrl?: string;
   isAiGenerated?: boolean;
-  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
   submissionId?: string; // Track which draft/submission this file belongs to
 }
 
@@ -276,6 +276,12 @@ const ProductManagement = () => {
               );
               autoCategory = ebookCat?.id || '';
               break;
+            case 'vfx':
+              const vfxCat = categories.find(cat => 
+                cat.name.toLowerCase().includes('visual') || cat.name.toLowerCase().includes('vfx')
+              );
+              autoCategory = vfxCat?.id || '';
+              break;
           }
         }
         
@@ -312,6 +318,13 @@ const ProductManagement = () => {
               cat.name.toLowerCase().includes('ebook')
             );
             autoCategory = ebookCategory?.id || '';
+          }
+          // RAR files -> VFX category
+          else if (fileType.includes('rar') || fileName.endsWith('.rar')) {
+            const vfxCategory = categories.find(cat => 
+              cat.name.toLowerCase().includes('visual') || cat.name.toLowerCase().includes('vfx')
+            );
+            autoCategory = vfxCategory?.id || '';
           }
         }
         

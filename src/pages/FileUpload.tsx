@@ -21,7 +21,7 @@ interface UploadedFileData {
   thumbnailUrl?: string;
   isWatermarked?: boolean;
   isAiGenerated?: boolean;
-  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
   fileHash?: string;
 }
 

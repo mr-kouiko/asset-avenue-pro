@@ -25,7 +25,7 @@ interface UploadFile {
   aiConfidence?: number;
   estimatedTimeRemaining?: number; // in seconds
   fileHash?: string;
-  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
 }
 
 interface SimpleFileUploadProps {
@@ -39,7 +39,7 @@ interface SimpleFileUploadProps {
     thumbnailUrl?: string;
     previewUrl?: string;
     isAiGenerated?: boolean;
-    detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook';
+    detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
     fileHash?: string;
   }[]) => void;
   maxFiles?: number;
@@ -152,16 +152,19 @@ export const SimpleFileUpload = ({
     'video/mp4', // Only MP4 video files allowed
     'audio/mpeg', // Only MP3 audio files allowed
     'application/pdf',
-    'model/*'
+    'model/*',
+    // VFX archives
+    'application/x-rar-compressed', 'application/vnd.rar', 'application/rar'
   ];
 
-  const acceptAttribute = 'image/*,video/mp4,.mp4,.mp3,audio/mpeg,.pdf,application/pdf';
+  const acceptAttribute = 'image/*,video/mp4,.mp4,.mp3,audio/mpeg,.pdf,application/pdf,.rar,application/x-rar-compressed';
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image className="h-4 w-4" />;
     if (type.startsWith('video/')) return <Film className="h-4 w-4" />;
     if (type.startsWith('audio/')) return <Music className="h-4 w-4" />;
     if (type === 'application/pdf') return <FileText className="h-4 w-4" />;
+    if (type.includes('rar') || type === 'application/x-rar-compressed') return <Sparkles className="h-4 w-4" />;
     return <FileText className="h-4 w-4" />;
   };
 
@@ -204,7 +207,9 @@ export const SimpleFileUpload = ({
       // Audio - Only MP3 allowed
       'mp3': 'audio/mpeg',
       // Documents
-      'pdf': 'application/pdf'
+      'pdf': 'application/pdf',
+      // Archives (VFX)
+      'rar': 'application/x-rar-compressed'
     };
     
     // For ALL video extensions: ONLY use extension mapping, never browser type
@@ -490,7 +495,8 @@ export const SimpleFileUpload = ({
       }
 
       // AUTOMATIC CATEGORY DETECTION - Based on file type
-      let detectedCategory: 'photo' | 'video' | 'audio' | 'ebook' | undefined;
+      let detectedCategory: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | undefined;
+      const isRar = detectedMimeType.includes('rar') || uploadFileData.file.name.toLowerCase().endsWith('.rar');
       
       if (isVideo) {
         detectedCategory = 'video';
@@ -498,6 +504,8 @@ export const SimpleFileUpload = ({
         detectedCategory = 'audio';
       } else if (isPDF) {
         detectedCategory = 'ebook';
+      } else if (isRar) {
+        detectedCategory = 'vfx';
       } else if (isImage) {
         detectedCategory = 'photo';
       }
