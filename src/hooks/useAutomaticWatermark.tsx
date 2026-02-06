@@ -216,13 +216,21 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
 
       const processSingle = async (file: File) => {
         const fileId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+        
+        // Detect file type with extension fallback for RAR/archives
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+        const isRar = fileExtension === 'rar' || file.type.includes('rar');
+        const isZip = fileExtension === 'zip' || file.type.includes('zip');
+        const isArchive = isRar || isZip;
 
         const processedFile: ProcessedFile = {
           id: fileId,
           originalFile: file,
           type: file.type.startsWith('image/') ? 'image' : 
                 file.type.startsWith('video/') ? 'video' : 
-                file.type === 'application/pdf' ? 'document' : 'audio',
+                file.type === 'application/pdf' ? 'document' : 
+                isArchive ? 'document' : // RAR/ZIP files are treated as documents
+                file.type.startsWith('audio/') ? 'audio' : 'document',
           status: 'processing'
         };
 
@@ -234,7 +242,6 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           let thumbnailUrl: string;
           let previewUrl: string | undefined;
 
-          const fileExtension = file.name.split('.').pop()?.toLowerCase();
           let filePath: string;
           let bucketName = 'uploads';
           
@@ -246,6 +253,8 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
             bucketName = 'uploads';
           } else if (file.type.startsWith('image/')) {
             filePath = `${user.id}/images/${fileId}_original.${fileExtension}`;
+          } else if (isArchive) {
+            filePath = `${user.id}/archives/${fileId}_original.${fileExtension}`;
           } else {
             filePath = `${user.id}/files/${fileId}_original.${fileExtension}`;
           }
@@ -272,8 +281,13 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           
           // Generate and upload thumbnail with watermark
           try {
+            // For archive files (RAR, ZIP), skip thumbnail generation - they need manual preview upload
+            if (isArchive) {
+              console.log(`📦 Archive file detected: ${file.name} - thumbnail will be set via Product Management`);
+              thumbnailUrl = watermarkedUrl!; // Use file URL as placeholder
+            }
             // For video files, try server-side thumbnail generation first (more reliable for .mov)
-            if (file.type.startsWith('video/')) {
+            else if (file.type.startsWith('video/')) {
               console.log(`🎬 Generating server-side thumbnail for video: ${file.name}`);
               
               try {
@@ -307,7 +321,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
                 });
               }
             } else {
-              // For non-video files, use browser-based thumbnail generation
+              // For non-video/non-archive files, use browser-based thumbnail generation
               const thumbnailBlob = await generateThumbnail(file, {
                 maxSize: 400,
                 quality: 0.8,
