@@ -654,7 +654,8 @@ export class StreamingUploadHandler {
   }
 
   /**
-   * Upload to Cloudflare R2 via chunked edge function (for files >= 100MB)
+   * Upload to Cloudflare R2 via presigned multipart URLs (for files >= 100MB)
+   * This uploads directly from browser to R2, bypassing Supabase Storage entirely.
    */
   private static async uploadToR2Chunked(
     file: File,
@@ -662,97 +663,186 @@ export class StreamingUploadHandler {
     mimeType: string,
     onProgress?: (progress: number) => void
   ): Promise<StreamingUploadResult> {
-    console.log(`☁️ [R2 Chunked] Starting chunked upload: ${finalPath} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    console.log(`☁️ [R2 Presigned Multipart] Starting: ${finalPath} (${fileSizeMB}MB)`);
+    
+    // R2/S3 requires minimum 5MB per part (except last part)
+    const MIN_PART_SIZE = 5 * 1024 * 1024; // 5MB minimum
+    const OPTIMAL_PART_SIZE = 10 * 1024 * 1024; // 10MB for better throughput
+    const partSize = Math.max(MIN_PART_SIZE, OPTIMAL_PART_SIZE);
+    const totalParts = Math.ceil(file.size / partSize);
+    
+    let uploadId: string | null = null;
+    let objectKey: string | null = null;
     
     try {
-      // CRITICAL: Use getSession() instead of refreshSession() to prevent SIGNED_IN events
-      // that would trigger auth state changes and reset the upload UI
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
-        throw new Error('Authentication session not found');
-      }
-      const user = session.user;
-      console.log('✓ Session validated for long upload');
-
-      onProgress?.(5);
+      onProgress?.(2);
       
-      // Create chunks (10MB each for R2)
-      const R2_CHUNK_SIZE = 10 * 1024 * 1024;
-      const chunks = this.createChunks(file, R2_CHUNK_SIZE);
-      const totalChunks = chunks.length;
-      
-      console.log(`📦 Created ${totalChunks} chunks of ${(R2_CHUNK_SIZE / 1024 / 1024)}MB each`);
-      onProgress?.(10);
-      
-      // Upload chunks directly to Supabase Storage (bypass edge function)
-      let uploadedChunks = 0;
-      for (let i = 0; i < totalChunks; i++) {
-        // Validate session every 10 chunks (Supabase auto-refreshes internally)
-        // CRITICAL: Never call refreshSession() as it triggers SIGNED_IN events
-        if (i > 0 && i % 10 === 0) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.user) {
-            throw new Error('Session expired during upload');
-          }
-          console.log('✓ Session validated during upload');
-        }
-
-        const chunk = chunks[i];
-        const chunkBuffer = await chunk.arrayBuffer();
-        const chunkBytes = new Uint8Array(chunkBuffer);
-        
-        console.log(`📤 [R2 Chunk ${i + 1}/${totalChunks}] Uploading ${(chunk.size / 1024 / 1024).toFixed(2)}MB using signed URL`);
-        const chunkPath = `temp-chunks/${user.id}/${finalPath}/chunk_${i}`;
-        // Upload via signed URL to avoid auth token on large payload
-        const ok = await this.uploadChunkViaSigned(chunk, i, totalChunks, chunkPath, 'application/octet-stream');
-        if (!ok) {
-          // Try one forced refresh + retry once
-          await this.ensureFreshSession(5);
-          const retryOk = await this.uploadChunkViaSigned(chunk, i, totalChunks, chunkPath, 'application/octet-stream');
-          if (!retryOk) {
-            throw new Error(`Chunk ${i + 1} upload failed after retry`);
-          }
-        }
-        
-        uploadedChunks++;
-        const progress = 10 + Math.floor((uploadedChunks / totalChunks) * 85);
-        onProgress?.(progress);
-        console.log(`✅ [R2 Chunk ${i + 1}/${totalChunks}] Uploaded successfully to temp storage`);
-      }
-      
-      // Finalize upload via edge function
-      console.log(`🧩 [R2] Finalizing upload...`);
-      onProgress?.(95);
-      await this.ensureFreshSession(60);
-      
-      const { data: finalData, error: finalError } = await supabase.functions.invoke('r2-upload', {
+      // 1) Initiate multipart upload and get presigned URLs
+      console.log(`📦 Initiating multipart upload with ${totalParts} parts`);
+      const { data: initData, error: initError } = await supabase.functions.invoke('r2-presigned-upload', {
         body: {
-          action: 'finalize-upload',
+          action: 'initiate',
           fileName: finalPath,
           fileType: mimeType,
           fileSize: file.size,
-          totalChunks
+          totalParts
         }
       });
       
-      if (finalError || !finalData?.success) {
-        throw new Error(`Finalization failed: ${finalData?.error || finalError?.message}`);
+      if (initError || !initData?.success) {
+        throw new Error(`Failed to initiate multipart upload: ${initData?.error || initError?.message}`);
+      }
+      
+      uploadId = initData.uploadId;
+      objectKey = initData.objectKey;
+      const presignedUrls: { partNumber: number; url: string }[] = initData.presignedUrls;
+      
+      console.log(`🔑 Received ${presignedUrls.length} presigned URLs, uploadId: ${uploadId}`);
+      onProgress?.(5);
+      
+      // 2) Upload parts directly to R2 with retry logic
+      const completedParts: { PartNumber: number; ETag: string }[] = [];
+      const MAX_RETRIES = 5;
+      const MAX_PARALLEL = 3; // Conservative parallelism for large uploads
+      
+      const uploadPart = async (partNumber: number, retryCount = 0): Promise<{ PartNumber: number; ETag: string }> => {
+        const start = (partNumber - 1) * partSize;
+        const end = Math.min(start + partSize, file.size);
+        const chunk = file.slice(start, end);
+        const chunkSizeMB = ((end - start) / (1024 * 1024)).toFixed(2);
+        
+        // Get presigned URL (use cached or request fresh on retry)
+        let presignedUrl = presignedUrls.find(p => p.partNumber === partNumber)?.url;
+        
+        if (retryCount > 0) {
+          // Request fresh presigned URL on retry
+          console.log(`🔄 [Part ${partNumber}] Retry ${retryCount}/${MAX_RETRIES} - getting fresh URL`);
+          const { data: freshData, error: freshError } = await supabase.functions.invoke('r2-presigned-upload', {
+            body: {
+              action: 'get-part-url',
+              uploadId,
+              objectKey,
+              partNumber
+            }
+          });
+          
+          if (freshError || !freshData?.success) {
+            throw new Error(`Failed to get fresh URL for part ${partNumber}`);
+          }
+          presignedUrl = freshData.url;
+        }
+        
+        if (!presignedUrl) {
+          throw new Error(`No presigned URL for part ${partNumber}`);
+        }
+        
+        console.log(`📤 [Part ${partNumber}/${totalParts}] Uploading ${chunkSizeMB}MB to R2`);
+        
+        try {
+          const response = await fetch(presignedUrl, {
+            method: 'PUT',
+            body: chunk,
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              'Content-Length': chunk.size.toString(),
+            }
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ [Part ${partNumber}] Upload failed: ${response.status}`, errorText);
+            throw new Error(`Part ${partNumber} upload failed: ${response.status}`);
+          }
+          
+          // Get ETag from response (required for completing multipart)
+          const etag = response.headers.get('ETag') || response.headers.get('etag');
+          if (!etag) {
+            throw new Error(`No ETag returned for part ${partNumber}`);
+          }
+          
+          console.log(`✅ [Part ${partNumber}/${totalParts}] Uploaded successfully, ETag: ${etag}`);
+          return { PartNumber: partNumber, ETag: etag };
+          
+        } catch (error) {
+          if (retryCount < MAX_RETRIES) {
+            // Exponential backoff with jitter
+            const baseWait = Math.pow(2, retryCount) * 1000;
+            const jitter = Math.random() * 1000;
+            const waitTime = Math.min(baseWait + jitter, 30000);
+            console.log(`⏳ [Part ${partNumber}] Waiting ${Math.round(waitTime)}ms before retry`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            return uploadPart(partNumber, retryCount + 1);
+          }
+          throw error;
+        }
+      };
+      
+      // Upload parts with controlled parallelism
+      let completedCount = 0;
+      for (let i = 0; i < totalParts; i += MAX_PARALLEL) {
+        const batch = [];
+        for (let j = i; j < Math.min(i + MAX_PARALLEL, totalParts); j++) {
+          batch.push(uploadPart(j + 1)); // partNumber is 1-indexed
+        }
+        
+        const batchResults = await Promise.all(batch);
+        completedParts.push(...batchResults);
+        completedCount += batchResults.length;
+        
+        const progress = 5 + Math.floor((completedCount / totalParts) * 85);
+        onProgress?.(progress);
+        console.log(`📊 Progress: ${completedCount}/${totalParts} parts (${progress}%)`);
+      }
+      
+      onProgress?.(92);
+      
+      // 3) Complete multipart upload
+      console.log(`🧩 Completing multipart upload with ${completedParts.length} parts`);
+      const { data: completeData, error: completeError } = await supabase.functions.invoke('r2-presigned-upload', {
+        body: {
+          action: 'complete',
+          uploadId,
+          objectKey,
+          parts: completedParts,
+          fileName: finalPath,
+          fileType: mimeType,
+          fileSize: file.size
+        }
+      });
+      
+      if (completeError || !completeData?.success) {
+        throw new Error(`Failed to complete multipart upload: ${completeData?.error || completeError?.message}`);
       }
       
       onProgress?.(100);
-      console.log(`✅ [R2 Complete] ${file.name} uploaded to R2 successfully`);
+      console.log(`✅ [R2 Complete] ${file.name} uploaded successfully: ${completeData.publicUrl}`);
       
       return {
         success: true,
-        fileUrl: finalData.publicUrl,
+        fileUrl: completeData.publicUrl,
         mimeType,
-        message: 'Fichier stocké avec succès dans R2 Cloudflare'
+        message: 'File uploaded successfully to Cloudflare R2'
       };
+      
     } catch (error) {
-      console.error(`💥 [R2 Chunked Failed] ${file.name}:`, error);
+      console.error(`💥 [R2 Presigned Multipart Failed] ${file.name}:`, error);
+      
+      // Cleanup: abort the multipart upload if it was initiated
+      if (uploadId && objectKey) {
+        try {
+          await supabase.functions.invoke('r2-presigned-upload', {
+            body: { action: 'abort', uploadId, objectKey }
+          });
+          console.log(`🧹 Aborted failed multipart upload`);
+        } catch (abortErr) {
+          console.warn('Failed to abort multipart upload:', abortErr);
+        }
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'R2 chunked upload failed'
+        error: error instanceof Error ? error.message : 'R2 multipart upload failed'
       };
     }
   }
