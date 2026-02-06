@@ -6,6 +6,7 @@ interface ContentStats {
   videos: number;
   audios: number;
   ebooks: number;
+  vfx: number;
   total: number;
 }
 
@@ -15,6 +16,7 @@ export const useContentStats = () => {
     videos: 0,
     audios: 0,
     ebooks: 0,
+    vfx: 0,
     total: 0
   });
   const [loading, setLoading] = useState(true);
@@ -48,13 +50,15 @@ export const useContentStats = () => {
       let videos = 0;
       let audios = 0;
       let ebooks = 0;
+      let vfx = 0;
 
       // Category ID to type mapping (from database categories table)
-      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'ebook'> = {
+      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'ebook' | 'vfx'> = {
         'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',
         'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',
         '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',
         '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',
+        'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c': 'vfx',
       };
 
       // Use a Map to track unique submissions by ID
@@ -73,6 +77,7 @@ export const useContentStats = () => {
           else if (mappedType === 'video') videos++;
           else if (mappedType === 'audio') audios++;
           else if (mappedType === 'ebook') ebooks++;
+          else if (mappedType === 'vfx') vfx++;
           return;
         }
 
@@ -96,13 +101,14 @@ export const useContentStats = () => {
         }
       });
 
-      const total = photos + videos + audios + ebooks;
+      const total = photos + videos + audios + ebooks + vfx;
 
       setStats({
         photos,
         videos,
         audios,
         ebooks,
+        vfx,
         total
       });
     } catch (error) {
