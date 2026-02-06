@@ -322,6 +322,7 @@ const Marketplace = () => {
     'illustration': '653f8437-6317-4a81-8bbf-9b8c520c0dbe',
     'vector': 'ceca4e62-559c-4dc6-98fe-64017d537192',
     'ebook': '9ec96e29-199f-4ce2-b951-4ca18c62c87c',
+    'vfx': 'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c',
   };
 
   // Filter content with structured hard filters + keyword ranking

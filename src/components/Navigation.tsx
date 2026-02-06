@@ -1,4 +1,4 @@
-import { Camera, Video, Music, FileImage, TrendingUp, BookOpen, Layers } from "lucide-react";
+import { Camera, Video, Music, FileImage, TrendingUp, BookOpen, Layers, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useContentStats } from "@/hooks/useContentStats";
@@ -14,6 +14,7 @@ export const Navigation = () => {
     { name: t('nav.photos'), icon: Camera, count: loading ? "..." : stats.photos.toString(), href: "/marketplace?category=photo" },
     { name: t('nav.videos'), icon: Video, count: loading ? "..." : stats.videos.toString(), href: "/marketplace?category=video" },
     { name: t('nav.audio'), icon: Music, count: loading ? "..." : stats.audios.toString(), href: "/marketplace?category=audio" },
+    { name: "VFX", icon: Sparkles, count: loading ? "..." : stats.vfx?.toString() || "0", href: "/marketplace?category=vfx" },
     { name: "Ebooks", icon: BookOpen, count: loading ? "..." : stats.ebooks.toString(), href: "/marketplace?category=ebook" },
     { name: t('nav.vectors'), icon: FileImage, count: "0", href: "/marketplace?category=vector" },
     { name: "Collections", icon: Layers, count: "10", href: "/collections" },

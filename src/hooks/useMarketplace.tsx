@@ -39,6 +39,7 @@ const categorySlugToId: Record<string, string> = {
   'audio': '0b9e322e-cecb-494f-ba8d-c5397e913b99',
   'vector': 'ceca4e62-559c-4dc6-98fe-64017d537192',
   'ebook': '9ec96e29-199f-4ce2-b951-4ca18c62c87c',
+  'vfx': 'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c',
 };
 
 // Cache for public URLs to avoid re-computation
@@ -190,15 +191,16 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       }
 
       // Content type detection - prioritize category_id over file type
-      let contentType: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' = 'photo';
+      let contentType: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx' = 'photo';
       
       // Category ID to type mapping (from database categories table)
-      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'pdf' | 'ebook'> = {
+      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx'> = {
         'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',      // Photo
         'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',      // Vidéo
         '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',      // Audio
         'ceca4e62-559c-4dc6-98fe-64017d537192': 'photo',      // Vector (now treated as photo)
         '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',      // Ebooks
+        'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c': 'vfx',        // Visual Effects
       };
       
       // Use category_id first if available
