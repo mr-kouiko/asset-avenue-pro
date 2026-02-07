@@ -417,8 +417,10 @@ Deno.serve(async (req) => {
     console.log(`📤 [R2 Presigned] Action: ${action}, User: ${user.id}`);
     
     // ACTION: initiate - Start a new multipart upload
+    // JIT mode (recommended): only returns uploadId and objectKey, client fetches URLs per-part
+    // Legacy mode: pre-generates all URLs (for backward compatibility)
     if (action === 'initiate') {
-      const { fileName, fileType, fileSize, totalParts } = body;
+      const { fileName, fileType, fileSize, totalParts, jitMode = false } = body;
       
       if (!fileName || !totalParts) {
         return new Response(
@@ -432,26 +434,43 @@ Deno.serve(async (req) => {
       const ext = fileName.split('.').pop() || '';
       const objectKey = `${user.id}/${timestamp}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       
-      console.log(`📦 Initiating multipart for: ${objectKey} (${totalParts} parts)`);
+      console.log(`📦 Initiating multipart for: ${objectKey} (${totalParts} parts, JIT mode: ${jitMode})`);
       
       // Initiate multipart upload
       const uploadId = await initiateMultipartUpload(objectKey);
       
-      // Generate presigned URLs for all parts (valid for 1 hour)
+      // JIT mode: Don't pre-generate URLs - client will request them one by one
+      // This prevents TTL expiration on long uploads
+      if (jitMode) {
+        console.log(`🔑 JIT mode: URLs will be generated per-part on demand`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            uploadId,
+            objectKey,
+            jitMode: true,
+            expiresIn: 21600 // 6 hours for the entire upload session
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Legacy mode: Generate presigned URLs for all parts (6 hour TTL for safety)
       const config = getR2Config();
       const presignedUrls: { partNumber: number; url: string }[] = [];
+      const TTL_SECONDS = 21600; // 6 hours to handle slow connections
       
       for (let i = 1; i <= totalParts; i++) {
         const url = await generatePresignedUrl(
           'PUT',
           `/${config.bucketName}/${objectKey}`,
           { partNumber: i.toString(), uploadId },
-          3600 // 1 hour expiry
+          TTL_SECONDS
         );
         presignedUrls.push({ partNumber: i, url });
       }
       
-      console.log(`🔑 Generated ${presignedUrls.length} presigned URLs`);
+      console.log(`🔑 Legacy mode: Generated ${presignedUrls.length} presigned URLs (TTL: ${TTL_SECONDS}s)`);
       
       return new Response(
         JSON.stringify({
@@ -459,13 +478,13 @@ Deno.serve(async (req) => {
           uploadId,
           objectKey,
           presignedUrls,
-          expiresIn: 3600
+          expiresIn: TTL_SECONDS
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // ACTION: get-part-url - Get a fresh presigned URL for a specific part (for retries)
+    // ACTION: get-part-url - Get a fresh presigned URL for a specific part (JIT mode / retries)
     if (action === 'get-part-url') {
       const { uploadId, objectKey, partNumber } = body;
       
@@ -477,17 +496,18 @@ Deno.serve(async (req) => {
       }
       
       const config = getR2Config();
+      const TTL_SECONDS = 21600; // 6 hours
       const url = await generatePresignedUrl(
         'PUT',
         `/${config.bucketName}/${objectKey}`,
         { partNumber: partNumber.toString(), uploadId },
-        3600
+        TTL_SECONDS
       );
       
-      console.log(`🔑 Generated fresh URL for part ${partNumber}`);
+      console.log(`🔑 JIT: Generated fresh URL for part ${partNumber} (TTL: ${TTL_SECONDS}s)`);
       
       return new Response(
-        JSON.stringify({ success: true, url, expiresIn: 3600 }),
+        JSON.stringify({ success: true, url, expiresIn: TTL_SECONDS }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

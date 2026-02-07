@@ -656,6 +656,13 @@ export class StreamingUploadHandler {
   /**
    * Upload to Cloudflare R2 via presigned multipart URLs (for files >= 100MB)
    * This uploads directly from browser to R2, bypassing Supabase Storage entirely.
+   * 
+   * Key improvements (production-grade):
+   * - Just-In-Time (JIT) URL generation: each part gets a fresh URL right before upload
+   * - No Content-Length header (forbidden in browsers)
+   * - Byte-level progress tracking for smooth UX
+   * - Robust error classification (CORS vs HTTP vs ETag)
+   * - Automatic retry with fresh URLs on signature/TTL errors
    */
   private static async uploadToR2Chunked(
     file: File,
@@ -668,25 +675,36 @@ export class StreamingUploadHandler {
     
     // R2/S3 requires minimum 5MB per part (except last part)
     const MIN_PART_SIZE = 5 * 1024 * 1024; // 5MB minimum
-    const OPTIMAL_PART_SIZE = 10 * 1024 * 1024; // 10MB for better throughput
-    const partSize = Math.max(MIN_PART_SIZE, OPTIMAL_PART_SIZE);
+    // Adaptive part size: larger files get larger parts for efficiency
+    const fileSizeBytes = file.size;
+    let optimalPartSize = 10 * 1024 * 1024; // 10MB default
+    if (fileSizeBytes > 1024 * 1024 * 1024) {
+      optimalPartSize = 32 * 1024 * 1024; // 32MB for files > 1GB
+    } else if (fileSizeBytes > 500 * 1024 * 1024) {
+      optimalPartSize = 16 * 1024 * 1024; // 16MB for files > 500MB
+    }
+    
+    const partSize = Math.max(MIN_PART_SIZE, optimalPartSize);
     const totalParts = Math.ceil(file.size / partSize);
     
     let uploadId: string | null = null;
     let objectKey: string | null = null;
+    let bytesUploaded = 0;
+    const startTime = performance.now();
     
     try {
       onProgress?.(2);
       
-      // 1) Initiate multipart upload and get presigned URLs
-      console.log(`📦 Initiating multipart upload with ${totalParts} parts`);
+      // 1) Initiate multipart upload (no pre-generated URLs in JIT mode)
+      console.log(`📦 Initiating multipart upload with ${totalParts} parts (JIT mode)`);
       const { data: initData, error: initError } = await supabase.functions.invoke('r2-presigned-upload', {
         body: {
           action: 'initiate',
           fileName: finalPath,
           fileType: mimeType,
           fileSize: file.size,
-          totalParts
+          totalParts,
+          jitMode: true // Signal JIT mode - don't pre-generate URLs
         }
       });
       
@@ -696,89 +714,130 @@ export class StreamingUploadHandler {
       
       uploadId = initData.uploadId;
       objectKey = initData.objectKey;
-      const presignedUrls: { partNumber: number; url: string }[] = initData.presignedUrls;
       
-      console.log(`🔑 Received ${presignedUrls.length} presigned URLs, uploadId: ${uploadId}`);
+      console.log(`🔑 Multipart initiated, uploadId: ${uploadId}, objectKey: ${objectKey}`);
       onProgress?.(5);
       
-      // 2) Upload parts directly to R2 with retry logic
+      // 2) Upload parts with JIT URL fetching and robust error handling
       const completedParts: { PartNumber: number; ETag: string }[] = [];
       const MAX_RETRIES = 5;
       const MAX_PARALLEL = 3; // Conservative parallelism for large uploads
       
+      /**
+       * Get a fresh presigned URL for a specific part
+       */
+      const getPartUrl = async (partNumber: number): Promise<string> => {
+        const { data, error } = await supabase.functions.invoke('r2-presigned-upload', {
+          body: {
+            action: 'get-part-url',
+            uploadId,
+            objectKey,
+            partNumber
+          }
+        });
+        
+        if (error || !data?.success) {
+          throw new Error(`Failed to get URL for part ${partNumber}: ${data?.error || error?.message}`);
+        }
+        
+        return data.url;
+      };
+      
+      /**
+       * Classify error type for appropriate handling
+       */
+      const classifyError = (error: unknown): 'cors' | 'network' | 'http' | 'etag' | 'unknown' => {
+        if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+          return 'cors'; // Could be CORS or pure network error
+        }
+        if (error instanceof Error) {
+          if (error.message.includes('403') || error.message.includes('SignatureDoesNotMatch')) {
+            return 'http';
+          }
+          if (error.message.includes('ETag')) {
+            return 'etag';
+          }
+        }
+        return 'unknown';
+      };
+      
+      /**
+       * Upload a single part with retry logic
+       */
       const uploadPart = async (partNumber: number, retryCount = 0): Promise<{ PartNumber: number; ETag: string }> => {
         const start = (partNumber - 1) * partSize;
         const end = Math.min(start + partSize, file.size);
         const chunk = file.slice(start, end);
         const chunkSizeMB = ((end - start) / (1024 * 1024)).toFixed(2);
         
-        // Get presigned URL (use cached or request fresh on retry)
-        let presignedUrl = presignedUrls.find(p => p.partNumber === partNumber)?.url;
-        
-        if (retryCount > 0) {
-          // Request fresh presigned URL on retry
-          console.log(`🔄 [Part ${partNumber}] Retry ${retryCount}/${MAX_RETRIES} - getting fresh URL`);
-          const { data: freshData, error: freshError } = await supabase.functions.invoke('r2-presigned-upload', {
-            body: {
-              action: 'get-part-url',
-              uploadId,
-              objectKey,
-              partNumber
-            }
-          });
-          
-          if (freshError || !freshData?.success) {
-            throw new Error(`Failed to get fresh URL for part ${partNumber}`);
-          }
-          presignedUrl = freshData.url;
-        }
-        
-        if (!presignedUrl) {
-          throw new Error(`No presigned URL for part ${partNumber}`);
-        }
+        // JIT: Always get fresh URL before each upload attempt
+        console.log(`📤 [Part ${partNumber}/${totalParts}] Getting fresh URL, attempt ${retryCount + 1}`);
+        const presignedUrl = await getPartUrl(partNumber);
         
         console.log(`📤 [Part ${partNumber}/${totalParts}] Uploading ${chunkSizeMB}MB to R2`);
         
         try {
+          // CRITICAL: Do NOT set Content-Length - it's a forbidden header in browsers
+          // The browser automatically sets it based on body size
           const response = await fetch(presignedUrl, {
             method: 'PUT',
             body: chunk,
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              'Content-Length': chunk.size.toString(),
-            }
+            // Minimal headers - let browser handle Content-Length
+            // Content-Type is optional for S3/R2 presigned PUT
           });
           
           if (!response.ok) {
             const errorText = await response.text();
-            console.error(`❌ [Part ${partNumber}] Upload failed: ${response.status}`, errorText);
-            throw new Error(`Part ${partNumber} upload failed: ${response.status}`);
+            console.error(`❌ [Part ${partNumber}] HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+            throw new Error(`Part ${partNumber} failed: HTTP ${response.status} - ${response.statusText}`);
           }
           
           // Get ETag from response (required for completing multipart)
+          // R2 CORS must have ExposeHeaders: ["ETag"] for this to work
           const etag = response.headers.get('ETag') || response.headers.get('etag');
           if (!etag) {
-            throw new Error(`No ETag returned for part ${partNumber}`);
+            console.error(`❌ [Part ${partNumber}] No ETag returned - check R2 CORS ExposeHeaders config`);
+            throw new Error(`No ETag returned for part ${partNumber}. Ensure R2 CORS has ExposeHeaders: ["ETag"]`);
           }
           
-          console.log(`✅ [Part ${partNumber}/${totalParts}] Uploaded successfully, ETag: ${etag}`);
+          // Track bytes for smooth progress
+          bytesUploaded += chunk.size;
+          
+          console.log(`✅ [Part ${partNumber}/${totalParts}] Success, ETag: ${etag}`);
           return { PartNumber: partNumber, ETag: etag };
           
         } catch (error) {
+          const errorType = classifyError(error);
+          console.warn(`⚠️ [Part ${partNumber}] Error type: ${errorType}`, error);
+          
           if (retryCount < MAX_RETRIES) {
             // Exponential backoff with jitter
             const baseWait = Math.pow(2, retryCount) * 1000;
             const jitter = Math.random() * 1000;
             const waitTime = Math.min(baseWait + jitter, 30000);
-            console.log(`⏳ [Part ${partNumber}] Waiting ${Math.round(waitTime)}ms before retry`);
+            
+            // Provide helpful error message based on type
+            if (errorType === 'cors') {
+              console.warn(`🔧 [Part ${partNumber}] CORS/Network error - check R2 bucket CORS policy`);
+              console.warn(`   Required: AllowedMethods: [PUT, GET, HEAD], ExposeHeaders: [ETag]`);
+            } else if (errorType === 'http') {
+              console.warn(`🔧 [Part ${partNumber}] HTTP 403 - URL may have expired, will get fresh URL`);
+            } else if (errorType === 'etag') {
+              console.warn(`🔧 [Part ${partNumber}] ETag missing - add ExposeHeaders: ["ETag"] to R2 CORS`);
+            }
+            
+            console.log(`⏳ [Part ${partNumber}] Retrying in ${Math.round(waitTime)}ms...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
             return uploadPart(partNumber, retryCount + 1);
           }
+          
+          // Max retries exceeded
+          console.error(`💥 [Part ${partNumber}] Failed after ${MAX_RETRIES} retries`);
           throw error;
         }
       };
       
-      // Upload parts with controlled parallelism
+      // Upload parts with controlled parallelism + byte-level progress
       let completedCount = 0;
       for (let i = 0; i < totalParts; i += MAX_PARALLEL) {
         const batch = [];
@@ -790,9 +849,17 @@ export class StreamingUploadHandler {
         completedParts.push(...batchResults);
         completedCount += batchResults.length;
         
-        const progress = 5 + Math.floor((completedCount / totalParts) * 85);
-        onProgress?.(progress);
-        console.log(`📊 Progress: ${completedCount}/${totalParts} parts (${progress}%)`);
+        // Progress based on bytes uploaded for smoother UX
+        const progressPercent = Math.min(90, 5 + Math.floor((bytesUploaded / file.size) * 85));
+        onProgress?.(progressPercent);
+        
+        // Calculate speed and ETA
+        const elapsedMs = performance.now() - startTime;
+        const speedMBps = (bytesUploaded / (1024 * 1024)) / (elapsedMs / 1000);
+        const remainingBytes = file.size - bytesUploaded;
+        const etaSeconds = remainingBytes / (speedMBps * 1024 * 1024);
+        
+        console.log(`📊 Progress: ${completedCount}/${totalParts} parts | ${(bytesUploaded / (1024 * 1024)).toFixed(1)}MB / ${fileSizeMB}MB | ${speedMBps.toFixed(2)} MB/s | ETA: ${Math.round(etaSeconds)}s`);
       }
       
       onProgress?.(92);
@@ -815,8 +882,11 @@ export class StreamingUploadHandler {
         throw new Error(`Failed to complete multipart upload: ${completeData?.error || completeError?.message}`);
       }
       
+      const totalTime = (performance.now() - startTime) / 1000;
+      const avgSpeed = (file.size / (1024 * 1024)) / totalTime;
+      
       onProgress?.(100);
-      console.log(`✅ [R2 Complete] ${file.name} uploaded successfully: ${completeData.publicUrl}`);
+      console.log(`✅ [R2 Complete] ${file.name} uploaded in ${totalTime.toFixed(1)}s (avg ${avgSpeed.toFixed(2)} MB/s): ${completeData.publicUrl}`);
       
       return {
         success: true,
@@ -827,6 +897,16 @@ export class StreamingUploadHandler {
       
     } catch (error) {
       console.error(`💥 [R2 Presigned Multipart Failed] ${file.name}:`, error);
+      
+      // Provide actionable error message
+      const errorMessage = error instanceof Error ? error.message : 'R2 multipart upload failed';
+      let userMessage = errorMessage;
+      
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('CORS')) {
+        userMessage = 'Upload blocked by CORS policy. Please contact support to configure R2 bucket.';
+      } else if (errorMessage.includes('ETag')) {
+        userMessage = 'Server configuration issue (missing ETag). Please contact support.';
+      }
       
       // Cleanup: abort the multipart upload if it was initiated
       if (uploadId && objectKey) {
@@ -842,7 +922,7 @@ export class StreamingUploadHandler {
       
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'R2 multipart upload failed'
+        error: userMessage
       };
     }
   }
