@@ -109,8 +109,8 @@ const ContactEN = () => {
                   <div>
                     <p className="font-medium">Address</p>
                     <p className="text-muted-foreground">
-                      123 Rue de la Tech<br />
-                      75001 Paris, France
+                      27 Place de la Madeleine<br />
+                      75008 Paris, France
                     </p>
                   </div>
                 </div>

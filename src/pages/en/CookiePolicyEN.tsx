@@ -128,7 +128,7 @@ const CookiePolicyEN = () => {
             </p>
             <div className="text-muted-foreground">
               <p>Email: legal@visustock.com</p>
-              <p>Address: 123 Rue de la Tech, 75001 Paris, France</p>
+              <p>Address: 27 Place de la Madeleine, 75008 Paris, France</p>
             </div>
           </Card>
         </div>
