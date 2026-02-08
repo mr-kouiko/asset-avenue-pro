@@ -148,7 +148,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
       
       {/* Fixed Aspect Ratio Container - Adobe Stock Style */}
       <div className="relative bg-stock-gray overflow-hidden" style={{ aspectRatio: 'var(--thumbnail-aspect)' }}>
-        {type === 'video' ? (
+        {type === 'video' || (type === 'vfx' && videoUrl) ? (
           <WatermarkedVideoThumbnail 
             thumbnail={thumbnail} 
             title={title}

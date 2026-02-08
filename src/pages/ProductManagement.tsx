@@ -50,6 +50,7 @@ interface ProductData {
   status: 'draft' | 'published' | 'pending';
   coverUrl?: string;
   previewImageUrl?: string; // For VFX/archive products
+  previewMediaType?: 'image' | 'video'; // For VFX - tracks if preview is image or video
   isAiGenerated?: boolean;
   isFreeContent?: boolean;
 }
@@ -780,7 +781,9 @@ const ProductManagement = () => {
             // For ebooks, use cover as thumbnail; for archives, use preview image
             thumbnailUrl: isPDF ? productData.coverUrl : (isArchive ? productData.previewImageUrl : file.thumbnailUrl),
             previewUrl: isArchive ? productData.previewImageUrl : file.previewUrl,
-            isAiGenerated: productData.isAiGenerated || false
+            isAiGenerated: productData.isAiGenerated || false,
+            // For VFX archives, pass the preview media type (image or video)
+            previewMediaType: isArchive ? productData.previewMediaType : undefined
           },
           productData: {
             title: productData.title,
@@ -1174,12 +1177,16 @@ const ProductManagement = () => {
                         </div>
                       </div>
 
-                      {/* VFX/Archive Preview Image Upload */}
+                      {/* VFX/Archive Preview Media Upload (Image or Video) */}
                       {(selectedFile.type.includes('rar') || selectedFile.type.includes('zip') ||
                         selectedFile.name.toLowerCase().endsWith('.rar') || selectedFile.name.toLowerCase().endsWith('.zip')) && (
                         <VFXPreviewUpload
                           previewImageUrl={selectedProductData.previewImageUrl}
-                          onPreviewChange={(url) => updateProductData(selectedFileId!, { previewImageUrl: url })}
+                          previewMediaType={selectedProductData.previewMediaType}
+                          onPreviewChange={(url, mediaType) => updateProductData(selectedFileId!, { 
+                            previewImageUrl: url,
+                            previewMediaType: mediaType
+                          })}
                           disabled={loading}
                         />
                       )}
