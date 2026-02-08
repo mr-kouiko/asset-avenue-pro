@@ -159,13 +159,13 @@ export const useProductDetail = (productId: string) => {
                 // Now fetch creator info including avatar
                 const { data: creatorData } = await supabase
                   .from('profiles')
-                  .select('store_name, avatar_url')
+                  .select('store_name, display_name, avatar_url')
                   .eq('user_id', slugData.creator_id)
                   .single();
                 
                 productInfo = {
                   ...slugData,
-                  creator_store_name: creatorData?.store_name || 'Anonymous Store',
+                  creator_store_name: creatorData?.store_name || creatorData?.display_name || 'Anonymous Store',
                   creator_avatar: creatorData?.avatar_url || null,
                   creator_hash: slugData.creator_id ? btoa(slugData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16) : null,
                 };
@@ -199,16 +199,20 @@ export const useProductDetail = (productId: string) => {
                   productInfo.slug = submissionData.slug;
                 }
                 
-                // Fetch creator avatar if we have creator_id
+                // Fetch creator avatar and name if we have creator_id
                 if (submissionData?.creator_id) {
                   const { data: creatorProfile } = await supabase
                     .from('profiles')
-                    .select('avatar_url')
+                    .select('store_name, display_name, avatar_url')
                     .eq('user_id', submissionData.creator_id)
                     .single();
                   
                   productInfo.creator_avatar = creatorProfile?.avatar_url || null;
                   productInfo.creator_hash = btoa(submissionData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+                  // Apply fallback if RPC returned 'Anonymous Store'
+                  if (!productInfo.creator_store_name || productInfo.creator_store_name === 'Anonymous Store') {
+                    productInfo.creator_store_name = creatorProfile?.store_name || creatorProfile?.display_name || 'Anonymous Store';
+                  }
                 }
               } else {
                 console.warn('⚠️ [PRODUCT-DETAIL] RPC returned empty array for id:', normalizedId);
