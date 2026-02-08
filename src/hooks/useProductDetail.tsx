@@ -156,17 +156,15 @@ export const useProductDetail = (productId: string) => {
                 actualProductUuid = slugData.id;
                 console.log('✅ [PRODUCT-DETAIL] Product loaded by slug, UUID:', actualProductUuid);
                 
-                // Now fetch creator info including avatar
+                // Now fetch creator info using secure public RPC (works for anonymous users)
                 const { data: creatorData } = await supabase
-                  .from('profiles')
-                  .select('store_name, display_name, avatar_url')
-                  .eq('user_id', slugData.creator_id)
-                  .single();
+                  .rpc('get_creator_public_info', { creator_ids: [slugData.creator_id] });
                 
+                const creator = (creatorData as any[])?.[0];
                 productInfo = {
                   ...slugData,
-                  creator_store_name: creatorData?.store_name || creatorData?.display_name || 'Anonymous Store',
-                  creator_avatar: creatorData?.avatar_url || null,
+                  creator_store_name: creator?.store_name || creator?.display_name || 'Anonymous Store',
+                  creator_avatar: creator?.avatar_url || null,
                   creator_hash: slugData.creator_id ? btoa(slugData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16) : null,
                 };
               }
@@ -199,14 +197,12 @@ export const useProductDetail = (productId: string) => {
                   productInfo.slug = submissionData.slug;
                 }
                 
-                // Fetch creator avatar and name if we have creator_id
+                // Fetch creator avatar and name using secure public RPC (works for anonymous users)
                 if (submissionData?.creator_id) {
-                  const { data: creatorProfile } = await supabase
-                    .from('profiles')
-                    .select('store_name, display_name, avatar_url')
-                    .eq('user_id', submissionData.creator_id)
-                    .single();
+                  const { data: creatorProfiles } = await supabase
+                    .rpc('get_creator_public_info', { creator_ids: [submissionData.creator_id] });
                   
+                  const creatorProfile = (creatorProfiles as any[])?.[0];
                   productInfo.creator_avatar = creatorProfile?.avatar_url || null;
                   productInfo.creator_hash = btoa(submissionData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
                   // Apply fallback if RPC returned 'Anonymous Store'

@@ -66,12 +66,12 @@ export function useFreeContent(limit: number = 6) {
         .select('submission_id, file_path, file_format, thumbnail_path, preview_path, is_preview')
         .in('submission_id', submissionIds);
 
-      // Fetch creator info
+      // Fetch creator info using secure public RPC (works for anonymous users)
       const creatorIds = [...new Set(submissions.map(s => s.creator_id))];
       const { data: creators } = await supabase
-        .rpc('get_creator_profiles_public', { creator_ids: creatorIds });
+        .rpc('get_creator_public_info', { creator_ids: creatorIds });
 
-      const creatorMap = new Map(creators?.map(c => [c.user_id, c]) || []);
+      const creatorMap = new Map((creators as any[])?.map(c => [c.user_id, c]) || []);
       const fileMap = new Map<string, typeof files>();
       files?.forEach(f => {
         if (!fileMap.has(f.submission_id!)) fileMap.set(f.submission_id!, []);
@@ -120,7 +120,7 @@ export function useFreeContent(limit: number = 6) {
         return {
           id: sub.id,
           title: sub.title,
-          author: creator?.display_name || creator?.store_name || 'Unknown Creator',
+          author: creator?.store_name || creator?.display_name || 'Unknown Creator',
           price: 0,
           type,
           thumbnail,
