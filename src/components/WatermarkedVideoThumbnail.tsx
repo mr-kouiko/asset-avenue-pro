@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
 import { Play } from 'lucide-react';
 import { VideoWatermark } from './VideoWatermark';
+import { getProxiedVideoUrl, needsCorsProxy } from '@/utils/videoProxy';
 
 interface WatermarkedVideoThumbnailProps {
   thumbnail: string;
@@ -81,13 +82,14 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
     const extractFrame = async () => {
       try {
         const video = document.createElement('video');
-        video.crossOrigin = 'anonymous';
         video.muted = true;
         video.preload = 'metadata';
         video.playsInline = true;
         
-        // Set source directly (more reliable than <source> tags for extraction)
-        video.src = videoUrl;
+        // Use proxied URL to avoid CORS canvas taint issues
+        const srcUrl = needsCorsProxy(videoUrl!) ? getProxiedVideoUrl(videoUrl!) : videoUrl!;
+        video.crossOrigin = 'anonymous';
+        video.src = srcUrl;
 
         const timeoutId = setTimeout(() => {
           if (!extractedFrame) {

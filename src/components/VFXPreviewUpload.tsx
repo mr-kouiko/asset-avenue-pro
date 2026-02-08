@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, X, Image, AlertTriangle, Video, Play } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getProxiedVideoUrl, needsCorsProxy } from "@/utils/videoProxy";
 
 interface VFXPreviewUploadProps {
   previewImageUrl?: string;
@@ -52,9 +53,12 @@ export const VFXPreviewUpload = ({
 
   const extractVideoThumbnail = (videoUrl: string) => {
     const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
     video.muted = true;
     video.preload = 'metadata';
+    
+    // Use proxied URL to avoid CORS issues with canvas drawing
+    const srcUrl = needsCorsProxy(videoUrl) ? getProxiedVideoUrl(videoUrl) : videoUrl;
+    video.crossOrigin = 'anonymous';
     
     video.onloadeddata = () => {
       video.currentTime = 1; // Seek to 1 second for thumbnail
@@ -79,7 +83,7 @@ export const VFXPreviewUpload = ({
       console.error('Error loading video for thumbnail extraction');
     };
     
-    video.src = videoUrl;
+    video.src = srcUrl;
     video.load();
   };
 
