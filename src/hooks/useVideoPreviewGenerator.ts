@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-
+import { getProxiedVideoUrl, needsCorsProxy } from '@/utils/videoProxy';
 export interface PreviewOptions {
   url: string;
   durationSec?: number; // how many seconds to capture
@@ -45,10 +45,12 @@ export function useVideoPreviewGenerator() {
     let blobUrl: string | null = null;
 
     try {
-      // Try to fetch video as blob first - this avoids CORS canvas taint issues
+      // Use proxy for CORS-restricted URLs (Supabase storage, R2)
+      const fetchUrl = needsCorsProxy(url) ? getProxiedVideoUrl(url) : url;
+      
       try {
-        console.log('[VideoPreview] Attempting to fetch video as blob to avoid CORS...');
-        const response = await fetch(url, { mode: 'cors' });
+        console.log('[VideoPreview] Fetching video through proxy to avoid CORS...');
+        const response = await fetch(fetchUrl, { mode: 'cors' });
         if (response.ok) {
           const videoBlob = await response.blob();
           blobUrl = URL.createObjectURL(videoBlob);
@@ -56,7 +58,7 @@ export function useVideoPreviewGenerator() {
           setState(s => ({ ...s, progress: 5 }));
         }
       } catch (fetchErr) {
-        console.warn('[VideoPreview] Blob fetch failed, falling back to direct URL:', fetchErr);
+        console.warn('[VideoPreview] Proxy fetch failed, falling back to direct URL:', fetchErr);
       }
 
       // Create video element
@@ -65,7 +67,7 @@ export function useVideoPreviewGenerator() {
       video.playsInline = true;
       video.preload = 'auto';
       
-      // Use blob URL if available (no CORS taint), otherwise use direct URL with crossOrigin
+      // Use blob URL if available (CORS-safe), otherwise try direct URL
       if (blobUrl) {
         video.src = blobUrl;
         console.log('[VideoPreview] Using blob URL (CORS-safe)');

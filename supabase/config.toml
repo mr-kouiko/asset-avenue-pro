@@ -163,3 +163,6 @@ verify_jwt = false
 
 [functions.r2-presigned-upload]
 verify_jwt = true
+
+[functions.proxy-video]
+verify_jwt = false
