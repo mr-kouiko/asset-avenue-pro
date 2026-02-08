@@ -439,14 +439,14 @@ const ProductDetail = () => {
             {/* Left Column - Video/Image Display */}
         <div className="lg:col-span-2 space-y-6">
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
-        {product.type === 'video' ? (
+        {(product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'))) ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
               <MediaPlayer 
                 src={product.previewUrl}
                 type="video"
                 title={product.title}
-                poster={product.thumbnail}
+                poster={product.thumbnail?.includes('.mp4') ? undefined : product.thumbnail}
                 className="w-full h-full"
                 autoPlay={false}
                 controls={true}
