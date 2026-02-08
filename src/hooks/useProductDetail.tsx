@@ -305,6 +305,7 @@ export const useProductDetail = (productId: string) => {
           const firstFile = filesList[0];
           const fileType = firstFile.file_type?.toLowerCase() || '';
           const fileName = firstFile.file_path?.toLowerCase() || '';
+          const fileFormat = firstFile.file_format?.toLowerCase() || '';
           
           // Enhanced video detection - check both MIME type and file extension
           if (fileType.startsWith('video/') || 
@@ -335,6 +336,28 @@ export const useProductDetail = (productId: string) => {
           }
           else if (fileType === 'application/pdf' || fileName.includes('.pdf')) {
             contentType = 'ebook';
+          }
+          // VFX detection - archive files with video preview
+          else if (fileType === 'document' || 
+                   fileFormat.includes('rar') ||
+                   fileFormat.includes('zip') ||
+                   fileFormat.includes('7z') ||
+                   fileName.includes('.rar') || 
+                   fileName.includes('.zip') || 
+                   fileName.includes('.7z') ||
+                   fileName.includes('.tar')) {
+            // Check if this archive has a video preview - indicates VFX content
+            const hasVideoPreview = filesList.some((f: any) => 
+              f.preview_path?.toLowerCase().includes('.mp4') ||
+              f.thumbnail_path?.toLowerCase().includes('.mp4')
+            );
+            if (hasVideoPreview) {
+              contentType = 'vfx';
+              console.log('✅ VFX content detected (archive with video preview):', { fileType, fileName, fileFormat });
+            } else {
+              contentType = 'ebook'; // Archive without video preview treated as downloadable
+              console.log('📦 Archive content detected (no video preview):', { fileType, fileName });
+            }
           }
           // Only fallback to illustration for actual illustration files
           else if (fileType.includes('svg') || 
