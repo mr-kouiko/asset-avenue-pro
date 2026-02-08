@@ -14,6 +14,7 @@ interface ProductFile {
   isWatermarked?: boolean;
   isAiGenerated?: boolean;
   fileHash?: string;
+  previewMediaType?: 'image' | 'video'; // For VFX: indicates if preview is an image or video
 }
 
 interface ProductMetadata {
@@ -200,9 +201,20 @@ export const useProductManager = () => {
       if (submission.file.type === 'application/pdf') {
         fileType = 'document';
       }
+      // For VFX archives, set type as 'document' (archive)
+      const isArchive = submission.file.type.includes('rar') || 
+                        submission.file.type.includes('zip') ||
+                        submission.file.name?.toLowerCase().endsWith('.rar') ||
+                        submission.file.name?.toLowerCase().endsWith('.zip');
+      if (isArchive) {
+        fileType = 'document';
+      }
 
       const isVideo = fileType === 'video';
       const isPDF = submission.file.type === 'application/pdf';
+      
+      // Determine if VFX preview is a video (MP4)
+      const isVfxVideoPreview = isArchive && submission.file.previewMediaType === 'video';
       
       const slugifiedFileName = generateSlugifiedFileName(
         submission.productData.title,
@@ -210,6 +222,9 @@ export const useProductManager = () => {
       );
       
       console.log('📁 Slugified file name:', slugifiedFileName);
+      if (isVfxVideoPreview) {
+        console.log('🎬 VFX product with video preview detected');
+      }
 
       // Check if content_file already exists for this submission
       const { data: existingFile } = await supabase
@@ -234,7 +249,9 @@ export const useProductManager = () => {
             metadata: {
               isWatermarked: submission.file.isWatermarked || false,
               isAiGenerated: submission.file.isAiGenerated || false,
-              originalFileName: submission.file.name
+              originalFileName: submission.file.name,
+              // Store preview media type for VFX products with video previews
+              previewMediaType: isVfxVideoPreview ? 'video' : undefined
             }
           })
           .eq('id', existingFile.id);
@@ -258,7 +275,9 @@ export const useProductManager = () => {
             metadata: {
               isWatermarked: submission.file.isWatermarked || false,
               isAiGenerated: submission.file.isAiGenerated || false,
-              originalFileName: submission.file.name
+              originalFileName: submission.file.name,
+              // Store preview media type for VFX products with video previews
+              previewMediaType: isVfxVideoPreview ? 'video' : undefined
             }
           });
 

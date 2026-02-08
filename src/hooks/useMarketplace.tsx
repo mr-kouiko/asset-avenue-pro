@@ -261,6 +261,29 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         }
       }
 
+      // VFX video preview URL - check if preview is an MP4 video
+      if (contentType === 'vfx') {
+        // Method 1: Check if preview_path ends with .mp4
+        const videoPreviewFile = files?.find(f => 
+          f.preview_path?.toLowerCase().endsWith('.mp4')
+        );
+        
+        // Method 2: Check metadata for previewMediaType === 'video'
+        const hasVideoPreviewMetadata = files?.find(f => 
+          f.metadata && typeof f.metadata === 'object' && 
+          'previewMediaType' in f.metadata && 
+          f.metadata.previewMediaType === 'video'
+        );
+        
+        const vfxVideoFile = videoPreviewFile || hasVideoPreviewMetadata;
+        
+        if (vfxVideoFile?.preview_path) {
+          mediaUrl = vfxVideoFile.preview_path.startsWith('http')
+            ? vfxVideoFile.preview_path
+            : buildPublicUrlCached('previews', vfxVideoFile.preview_path);
+        }
+      }
+
       // Cover URL for ebooks
       let coverUrl: string | undefined;
       if (contentType === 'ebook') {
@@ -306,7 +329,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         isFree: item.price === 0,
         type: contentType,
         thumbnail: thumbnailUrl,
-        videoUrl: contentType === 'video' ? mediaUrl : undefined,
+        videoUrl: (contentType === 'video' || contentType === 'vfx') ? mediaUrl : undefined,
         audioUrl: contentType === 'audio' ? mediaUrl : undefined,
         coverUrl: coverUrl || (contentType === 'ebook' ? thumbnailUrl : undefined),
         likes: Math.floor(Math.random() * 2000),
