@@ -24,6 +24,7 @@ import { MediaPlayer } from "@/components/media/MediaPlayer";
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { EbookForm } from "@/components/EbookForm";
+import { VFXPreviewUpload } from "@/components/VFXPreviewUpload";
 
 interface UploadedFileData {
   id: string;
@@ -48,6 +49,7 @@ interface ProductData {
   currentTag: string;
   status: 'draft' | 'published' | 'pending';
   coverUrl?: string;
+  previewImageUrl?: string; // For VFX/archive products
   isAiGenerated?: boolean;
   isFreeContent?: boolean;
 }
@@ -606,14 +608,23 @@ const ProductManagement = () => {
       return;
     }
 
+    // For VFX/archive products, check if preview image is present
+    const isArchive = file.type.includes('rar') || file.type.includes('zip') || 
+                      file.name.toLowerCase().endsWith('.rar') || file.name.toLowerCase().endsWith('.zip');
+    if (isArchive && !productData.previewImageUrl) {
+      toast.error("A preview image is required to publish VFX products");
+      return;
+    }
+
     // Use the category selected by the user - no auto-override
     const finalCategoryId = productData.category;
 
     const success = await publishProduct({
       file: {
         ...file,
-        // For ebooks, use cover as thumbnail
-        thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl,
+        // For ebooks, use cover as thumbnail; for archives, use preview image
+        thumbnailUrl: isPDF ? productData.coverUrl : (isArchive ? productData.previewImageUrl : file.thumbnailUrl),
+        previewUrl: isArchive ? productData.previewImageUrl : file.previewUrl,
         isAiGenerated: productData.isAiGenerated || false
       },
       productData: {
@@ -747,7 +758,9 @@ const ProductManagement = () => {
     for (const productData of validProducts) {
       const file = uploadedFiles.find(f => f.id === productData.fileId);
       if (file) {
-        const isPDF = file.type === 'application/pdf';
+      const isPDF = file.type === 'application/pdf';
+        const isArchive = file.type.includes('rar') || file.type.includes('zip') || 
+                          file.name.toLowerCase().endsWith('.rar') || file.name.toLowerCase().endsWith('.zip');
         
         // Skip ebooks without cover
         if (isPDF && !productData.coverUrl) {
@@ -755,11 +768,18 @@ const ProductManagement = () => {
           continue;
         }
         
+        // Skip archives without preview
+        if (isArchive && !productData.previewImageUrl) {
+          console.log(`Skipping VFX ${file.name} - no preview image`);
+          continue;
+        }
+        
         const success = await publishProduct({
           file: {
             ...file,
-            // For ebooks, use cover as thumbnail
-            thumbnailUrl: isPDF ? productData.coverUrl : file.thumbnailUrl,
+            // For ebooks, use cover as thumbnail; for archives, use preview image
+            thumbnailUrl: isPDF ? productData.coverUrl : (isArchive ? productData.previewImageUrl : file.thumbnailUrl),
+            previewUrl: isArchive ? productData.previewImageUrl : file.previewUrl,
             isAiGenerated: productData.isAiGenerated || false
           },
           productData: {
@@ -1154,6 +1174,16 @@ const ProductManagement = () => {
                         </div>
                       </div>
 
+                      {/* VFX/Archive Preview Image Upload */}
+                      {(selectedFile.type.includes('rar') || selectedFile.type.includes('zip') ||
+                        selectedFile.name.toLowerCase().endsWith('.rar') || selectedFile.name.toLowerCase().endsWith('.zip')) && (
+                        <VFXPreviewUpload
+                          previewImageUrl={selectedProductData.previewImageUrl}
+                          onPreviewChange={(url) => updateProductData(selectedFileId!, { previewImageUrl: url })}
+                          disabled={loading}
+                        />
+                      )}
+
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="title">Title *</Label>
@@ -1337,7 +1367,15 @@ const ProductManagement = () => {
                         
                         <Button 
                           onClick={() => handlePublish(selectedFileId!)}
-                          disabled={loading || !selectedProductData.title.trim() || !selectedProductData.description.trim()}
+                          disabled={
+                            loading || 
+                            !selectedProductData.title.trim() || 
+                            !selectedProductData.description.trim() ||
+                            // Disable for VFX without preview image
+                            ((selectedFile.type.includes('rar') || selectedFile.type.includes('zip') ||
+                              selectedFile.name.toLowerCase().endsWith('.rar') || selectedFile.name.toLowerCase().endsWith('.zip')) && 
+                              !selectedProductData.previewImageUrl)
+                          }
                         >
                           {isEditMode ? (
                             <>
