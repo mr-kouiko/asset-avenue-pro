@@ -10,6 +10,9 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
   size = 'normal'
 }) => {
   // Define sizes for different contexts
+  // Tight black drop shadow (80% opacity, small blur) creates a border effect for white backgrounds
+  const tightShadow = 'drop-shadow(0 1px 1px rgba(0,0,0,0.8)) drop-shadow(0 -1px 1px rgba(0,0,0,0.8)) drop-shadow(1px 0 1px rgba(0,0,0,0.8)) drop-shadow(-1px 0 1px rgba(0,0,0,0.8))';
+  
   const getSizeStyle = () => {
     switch (size) {
       case 'thumbnail':
@@ -20,7 +23,7 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
           maxWidth: '80%',
           maxHeight: '80%',
           objectFit: 'contain' as const,
-          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
+          filter: `${tightShadow} drop-shadow(0 4px 12px rgba(0,0,0,0.6))`,
           opacity: 1
         };
       case 'large':
@@ -31,7 +34,7 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
           maxWidth: '60%',
           maxHeight: '60%',
           objectFit: 'contain' as const,
-          filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.5))',
+          filter: `${tightShadow} drop-shadow(0 3px 10px rgba(0,0,0,0.5))`,
           opacity: 1
         };
       case 'normal':
@@ -43,7 +46,7 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
           maxWidth: '40%',
           maxHeight: '40%',
           objectFit: 'contain' as const,
-          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))',
+          filter: `${tightShadow} drop-shadow(0 2px 8px rgba(0,0,0,0.4))`,
           opacity: 0.96
         };
     }
