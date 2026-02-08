@@ -109,10 +109,10 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       const creatorIds = [...new Set((marketplaceData || []).map((item: any) => item.creator_id))];
       const { data: creators } = await supabase
         .from('profiles')
-        .select('user_id, store_name')
+        .select('user_id, store_name, display_name')
         .in('user_id', creatorIds);
       
-      const creatorMap = new Map(creators?.map(c => [c.user_id, c.store_name]) || []);
+      const creatorMap = new Map(creators?.map(c => [c.user_id, c.store_name || c.display_name]) || []);
 
       // Fetch all files in one query
       const submissionIds = (marketplaceData || []).map((item: any) => item.id);
@@ -388,7 +388,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       const [creatorsResult, filesResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, store_name')
+          .select('user_id, store_name, display_name')
           .in('user_id', creatorIds),
         supabase
           .from('content_files')
@@ -399,7 +399,7 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       const parallelTime = Date.now() - parallelStart;
       console.log(`⚡ [MARKETPLACE] PARALLEL fetch (creators + files): ${parallelTime}ms`);
       
-      const creatorMap = new Map(creatorsResult.data?.map(c => [c.user_id, c.store_name]) || []);
+      const creatorMap = new Map(creatorsResult.data?.map(c => [c.user_id, c.store_name || c.display_name]) || []);
       
       if (filesResult.error) {
         console.error('❌ [MARKETPLACE] Error loading files:', filesResult.error);
