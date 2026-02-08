@@ -6,7 +6,7 @@ export interface TrendingItem {
   title: string;
   author: string;
   price: number;
-  type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook';
+  type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx';
   thumbnail: string;
   videoUrl?: string;
   likes: number;

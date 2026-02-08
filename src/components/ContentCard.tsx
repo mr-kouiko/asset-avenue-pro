@@ -20,7 +20,7 @@ interface ContentCardProps {
   title: string;
   author: string;
   price: number;
-  type: "photo" | "video" | "audio" | "pdf" | "ebook";
+  type: "photo" | "video" | "audio" | "pdf" | "ebook" | "vfx";
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
@@ -175,7 +175,8 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
           >
             {type === 'photo' ? 'PHOTO' :
              type === 'video' ? 'VIDEO' :
-             type === 'pdf' ? 'PDF' : 'EBOOK'}
+             type === 'pdf' ? 'PDF' :
+             type === 'vfx' ? 'VFX' : 'EBOOK'}
           </Badge>
           {isAiGenerated && (
             <Badge 

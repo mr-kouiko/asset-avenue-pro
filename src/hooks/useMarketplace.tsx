@@ -9,7 +9,7 @@ export interface MarketplaceContent {
   price: number;
   /** True only when the creator explicitly set the product as free (price = 0 in DB). */
   isFree?: boolean;
-  type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook';
+  type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx';
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
