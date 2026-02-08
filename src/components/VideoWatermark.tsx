@@ -11,7 +11,7 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
 }) => {
   // Define sizes for different contexts
   // Tight black drop shadow (80% opacity, small blur) creates a border effect for white backgrounds
-  const tightShadow = 'drop-shadow(0 1px 1px rgba(0,0,0,0.8)) drop-shadow(0 -1px 1px rgba(0,0,0,0.8)) drop-shadow(1px 0 1px rgba(0,0,0,0.8)) drop-shadow(-1px 0 1px rgba(0,0,0,0.8))';
+  const tightShadow = 'drop-shadow(0 1px 1px rgba(0,0,0,0.3)) drop-shadow(0 -1px 1px rgba(0,0,0,0.3)) drop-shadow(1px 0 1px rgba(0,0,0,0.3)) drop-shadow(-1px 0 1px rgba(0,0,0,0.3))';
   
   const getSizeStyle = () => {
     switch (size) {
