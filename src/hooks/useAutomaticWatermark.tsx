@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateThumbnail, addWatermarkToImage, createWebPreviewWithWatermark } from '@/utils/watermark';
 import { StreamingUploadHandler } from '@/components/media/StreamingUploadHandler';
+import { getProxiedVideoUrl } from '@/utils/videoProxy';
 interface ProcessedFile {
   id: string;
   originalFile: File;
@@ -364,6 +365,8 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           
           // Generate and upload preview for videos (watermarked short clip)
           if (file.type.startsWith('video/')) {
+            let clientPreviewFailed = false;
+            
             try {
               console.log(`🎬 Generating video preview with watermark for: ${file.name}`);
               
@@ -373,7 +376,10 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
               video.playsInline = true;
               video.preload = 'auto';
               video.crossOrigin = 'anonymous';
-              video.src = watermarkedUrl!;
+              
+              // Use proxied URL to bypass CORS and prevent tainted canvas
+              video.src = getProxiedVideoUrl(watermarkedUrl!);
+              console.log(`🔗 Using proxied URL for video preview generation`);
               
               // Wait for video metadata to load
               await new Promise<void>((resolve, reject) => {
@@ -455,6 +461,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
               
               // Draw frames with watermark
               let animId = 0;
+              let drawErrors = 0;
               const draw = () => {
                 try {
                   ctx.drawImage(video, 0, 0, width, height);
@@ -466,7 +473,12 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
                     ctx.drawImage(watermarkLogo, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
                     ctx.restore();
                   }
-                } catch {}
+                } catch (drawError) {
+                  drawErrors++;
+                  if (drawErrors === 1) {
+                    console.warn('Canvas draw error (possible CORS taint):', drawError);
+                  }
+                }
                 animId = requestAnimationFrame(draw);
               };
               
@@ -484,6 +496,11 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
               
               if (chunks.length === 0) throw new Error('No video preview data recorded');
               
+              // Check for high draw error rate - indicates CORS issues
+              if (drawErrors > 10) {
+                throw new Error('Canvas tainted by CORS - falling back to server-side');
+              }
+              
               const outputMimeType = selectedMimeType.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
               const previewBlob = new Blob(chunks, { type: outputMimeType });
               
@@ -495,10 +512,37 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
                 onProgress?.(fileId, 85 + progress * 0.15);
               });
               
-              console.log(`✅ Video preview generated and uploaded: ${previewUrl}`);
+              console.log(`✅ Video preview generated (client-side) and uploaded: ${previewUrl}`);
             } catch (previewError) {
-              console.warn('Video preview generation failed:', previewError);
-              // Video preview is optional - continue without it
+              console.warn('Client-side video preview generation failed:', previewError);
+              clientPreviewFailed = true;
+            }
+            
+            // Server-side fallback if client-side failed
+            if (clientPreviewFailed && !previewUrl) {
+              try {
+                console.log(`🔄 Falling back to server-side video preview generation for: ${file.name}`);
+                
+                const { data, error } = await supabase.functions.invoke('generate-video-preview', {
+                  body: {
+                    videoPath: filePath,
+                    duration: 6,
+                    resolution: 720
+                  }
+                });
+                
+                if (error) throw error;
+                
+                if (data?.previewUrl) {
+                  previewUrl = data.previewUrl;
+                  console.log(`✅ Video preview generated (server-side): ${previewUrl}`);
+                } else {
+                  console.warn('Server-side preview generation returned no URL');
+                }
+              } catch (serverError) {
+                console.warn('Server-side video preview also failed:', serverError);
+                // Video preview is optional - continue without it
+              }
             }
           }
           
