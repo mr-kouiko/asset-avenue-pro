@@ -221,7 +221,33 @@ serve(async (req) => {
       .from('uploads')
       .getPublicUrl(previewPath);
 
-    // Update content record if contentId provided
+    // Update content_files record if we can find it by file_path
+    // This handles cases where contentId is not provided but we can match by path
+    try {
+      // Build the original file URL to match
+      const { data: { publicUrl: originalFileUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(videoPath);
+      
+      // Try to update by matching the file_path
+      const { data: updatedFiles, error: updateError } = await supabase
+        .from('content_files')
+        .update({ preview_path: publicUrl })
+        .or(`file_path.eq.${originalFileUrl},file_path.ilike.%${videoPath}`)
+        .select('id');
+
+      if (updateError) {
+        console.warn(`[generate-video-preview] Failed to update content_files:`, updateError);
+      } else if (updatedFiles && updatedFiles.length > 0) {
+        console.log(`[generate-video-preview] Updated ${updatedFiles.length} content_files record(s) with preview path`);
+      } else {
+        console.log(`[generate-video-preview] No matching content_files found for path: ${videoPath}`);
+      }
+    } catch (dbError) {
+      console.warn(`[generate-video-preview] DB update error:`, dbError);
+    }
+
+    // Also update content record if contentId provided (original behavior)
     if (contentId) {
       const { error: updateError } = await supabase
         .from('content')

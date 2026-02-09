@@ -509,9 +509,25 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         // Trigger server-side processing (async, don't wait)
         updateProgress(id, { status: 'processing', progress: 95 });
         try {
-          // Extract storage path from URL
+          // Extract storage path from URL - support multiple bucket patterns
           const urlParts = new URL(url);
-          const storagePath = urlParts.pathname.split('/storage/v1/object/public/uploads/')[1];
+          const pathname = urlParts.pathname;
+          
+          // Try different bucket patterns
+          let storagePath: string | null = null;
+          const patterns = [
+            '/storage/v1/object/public/uploads/',
+            '/storage/v1/object/public/content-uploads/',
+          ];
+          
+          for (const pattern of patterns) {
+            if (pathname.includes(pattern)) {
+              storagePath = pathname.split(pattern)[1];
+              break;
+            }
+          }
+          
+          console.log('[useEnhancedUpload] Extracted storage path:', storagePath, 'from URL:', url);
           
           if (storagePath) {
             // Generate output path for thumbnail
@@ -538,6 +554,7 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
             });
             
             // Also generate video preview
+            console.log('[useEnhancedUpload] Triggering video preview generation for:', storagePath);
             supabase.functions.invoke('generate-video-preview', {
               body: { 
                 videoPath: storagePath,
@@ -546,14 +563,18 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
               },
             }).then(({ data, error }) => {
               if (error) {
-                console.warn('[useEnhancedUpload] Video preview generation failed:', error);
+                console.error('[useEnhancedUpload] Video preview generation failed:', error);
               } else if (data?.previewUrl) {
                 console.log('[useEnhancedUpload] Video preview generated:', data.previewUrl);
                 previewUrl = data.previewUrl;
+              } else {
+                console.warn('[useEnhancedUpload] Video preview response:', data);
               }
             }).catch(err => {
-              console.warn('[useEnhancedUpload] Video preview request failed:', err);
+              console.error('[useEnhancedUpload] Video preview request failed:', err);
             });
+          } else {
+            console.warn('[useEnhancedUpload] Could not extract storage path from URL:', url);
           }
         } catch (previewError) {
           console.warn('[useEnhancedUpload] Failed to trigger video processing:', previewError);
