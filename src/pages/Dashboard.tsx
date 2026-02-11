@@ -696,6 +696,19 @@ const Dashboard = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {submission.status === 'approved' && (
+                                <DropdownMenuItem onClick={() => {
+                                  const slug = submission.slug;
+                                  if (slug) {
+                                    navigate(`/product/${slug}`);
+                                  } else {
+                                    navigate(`/product/${submission.id}`);
+                                  }
+                                }}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View on Marketplace
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => handleEditSubmission(submission.id)}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit

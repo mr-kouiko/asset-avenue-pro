@@ -23,6 +23,7 @@ interface ContentSubmission {
   created_at: string;
   updated_at: string;
   rejection_reason?: string;
+  slug?: string | null;
   admin_notes?: string;
   content_files?: ContentFile[]; // Match the actual Supabase query
 }
