@@ -235,15 +235,11 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
               }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              {/* Primary MP4 source */}
+              {/* Primary MP4 source - append #t=0.1 to force first frame display as poster */}
               <source 
-                src={videoUrl} 
-                type={videoUrl.endsWith('.mov') ? 'video/quicktime' : 'video/mp4'} 
+                src={`${videoUrl}${videoUrl.includes('#') ? '' : '#t=0.1'}`} 
+                type="video/mp4" 
               />
-              {/* Fallback for MOV as MP4 */}
-              {videoUrl.endsWith('.mov') && (
-                <source src={videoUrl} type="video/mp4" />
-              )}
             </video>
           )}
           
