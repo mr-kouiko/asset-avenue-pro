@@ -192,13 +192,31 @@ const Portfolio = () => {
                     const thumbnailFile = submission.content_files?.find(file => file.thumbnail_path);
                     const originalFile = submission.content_files?.find(file => file.is_original);
                     
-                    // Determine content type from file type
-                    const getContentType = (): "photo" | "video" | "audio" | "pdf" | "ebook" => {
-                      const fileType = originalFile?.file_type || previewFile?.file_type || '';
-                      if (fileType.startsWith('video/')) return 'video';
-                      if (fileType.startsWith('audio/')) return 'audio';
+                    // Category ID to type mapping
+                    const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx'> = {
+                      'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',
+                      'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',
+                      '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',
+                      '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',
+                      'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c': 'vfx',
+                    };
+
+                    // Determine content type: prefer category_id, fallback to file_type
+                    const getContentType = (): "photo" | "video" | "audio" | "pdf" | "ebook" | "vfx" => {
+                      // Use category_id first (most reliable)
+                      if (submission.category_id && categoryTypeMap[submission.category_id]) {
+                        return categoryTypeMap[submission.category_id];
+                      }
+                      // Fallback to file_type detection
+                      const fileType = (originalFile?.file_type || previewFile?.file_type || '').toLowerCase();
+                      if (fileType === 'video' || fileType.startsWith('video/')) return 'video';
+                      if (fileType === 'audio' || fileType.startsWith('audio/')) return 'audio';
                       if (fileType === 'application/pdf') return 'pdf';
                       if (fileType.includes('epub') || fileType.includes('ebook')) return 'ebook';
+                      // Check file extension as last resort
+                      const fileName = (originalFile?.file_name || '').toLowerCase();
+                      if (fileName.endsWith('.mp4') || fileName.endsWith('.mov') || fileName.endsWith('.webm')) return 'video';
+                      if (fileName.endsWith('.mp3') || fileName.endsWith('.wav') || fileName.endsWith('.ogg')) return 'audio';
                       return 'photo';
                     };
                     
