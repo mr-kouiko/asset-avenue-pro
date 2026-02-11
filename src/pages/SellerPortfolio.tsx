@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import { slugifyStoreName } from "@/utils/slugGenerator";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
@@ -38,7 +39,7 @@ const categoryConfig = [
 ];
 
 const SellerPortfolio = () => {
-  const { creatorHash } = useParams<{ creatorHash: string }>();
+  const { storeSlug } = useParams<{ storeSlug: string }>();
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [sellerProducts, setSellerProducts] = useState<SellerProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +134,7 @@ const SellerPortfolio = () => {
 
   useEffect(() => {
     const fetchSellerData = async () => {
-      if (!creatorHash) {
+      if (!storeSlug) {
         setError("Seller not found");
         setLoading(false);
         return;
@@ -148,9 +149,10 @@ const SellerPortfolio = () => {
           throw creatorsError;
         }
 
+        const decodedSlug = decodeURIComponent(storeSlug).toLowerCase();
         const matchedCreator = (creators as any[])?.find(c => {
-          const hash = btoa(c.user_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
-          return hash === creatorHash;
+          const name = c.store_name || c.display_name || '';
+          return slugifyStoreName(name) === decodedSlug || name.toLowerCase() === decodedSlug;
         });
 
         if (!matchedCreator) {
@@ -182,7 +184,7 @@ const SellerPortfolio = () => {
     };
 
     fetchSellerData();
-  }, [creatorHash, fetchSellerProducts]);
+  }, [storeSlug, fetchSellerProducts]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: sellerProducts.length };

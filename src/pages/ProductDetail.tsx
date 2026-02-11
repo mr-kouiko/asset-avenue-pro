@@ -575,9 +575,9 @@ const ProductDetail = () => {
               
               {/* Author Info - Clickable Avatar */}
               <div className="flex items-center gap-3 mb-4">
-                {product.authorHash ? (
+                {product.authorStoreSlug ? (
                   <Link 
-                    to={`/seller/${product.authorHash}`}
+                    to={`/seller/${encodeURIComponent(product.authorStoreSlug)}`}
                     className="flex items-center gap-3 group hover:opacity-90 transition-opacity"
                   >
                     <Avatar className="h-10 w-10 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
