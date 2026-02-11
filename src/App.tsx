@@ -127,7 +127,7 @@ const App = () => (
                         <Route path="/seller-dashboard" element={<SellerDashboard />} />
                         <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
                         <Route path="/portfolio" element={<Portfolio />} />
-                        <Route path="/seller/:creatorHash" element={<SellerPortfolio />} />
+                        <Route path="/seller/:storeSlug" element={<SellerPortfolio />} />
                         
                         {/* E-commerce routes */}
                         <Route path="/cart" element={<Cart />} />

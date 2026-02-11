@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { slugifyStoreName } from '@/utils/slugGenerator';
 import { toast } from 'sonner';
 
 interface ProductDetailData {
@@ -9,7 +10,7 @@ interface ProductDetailData {
   author: string;
   authorId: string;
   authorAvatar?: string;
-  authorHash?: string;
+  authorStoreSlug?: string;
   type: string;
   thumbnail: string;
   previewUrl?: string;
@@ -165,7 +166,7 @@ export const useProductDetail = (productId: string) => {
                   ...slugData,
                   creator_store_name: creator?.store_name || creator?.display_name || 'Anonymous Store',
                   creator_avatar: creator?.avatar_url || null,
-                  creator_hash: slugData.creator_id ? btoa(slugData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16) : null,
+                  creator_store_slug: slugifyStoreName(creator?.store_name || creator?.display_name || ''),
                 };
               }
             } else {
@@ -204,7 +205,7 @@ export const useProductDetail = (productId: string) => {
                   
                   const creatorProfile = (creatorProfiles as any[])?.[0];
                   productInfo.creator_avatar = creatorProfile?.avatar_url || null;
-                  productInfo.creator_hash = btoa(submissionData.creator_id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+                  productInfo.creator_store_slug = slugifyStoreName(creatorProfile?.store_name || creatorProfile?.display_name || '');
                   // Apply fallback if RPC returned 'Anonymous Store'
                   if (!productInfo.creator_store_name || productInfo.creator_store_name === 'Anonymous Store') {
                     productInfo.creator_store_name = creatorProfile?.store_name || creatorProfile?.display_name || 'Anonymous Store';
@@ -431,7 +432,7 @@ export const useProductDetail = (productId: string) => {
           author: productInfo.creator_store_name || 'Anonymous Store', // Use ONLY store name, no fallback to display name
           authorId: 'anonymous', // Don't expose real creator ID
           authorAvatar: productInfo.creator_avatar || undefined,
-          authorHash: productInfo.creator_hash || undefined,
+          authorStoreSlug: productInfo.creator_store_slug || undefined,
           type: contentType,
           thumbnail,
           previewUrl,

@@ -148,6 +148,18 @@ export function ensureUniqueSlug(baseSlug: string, existingSlugs: string[]): str
  * generateSlugifiedFileName("Aerial Shot of Speedboat", "image_304d2e.jpg")
  * // Returns: "aerial-shot-speedboat.jpg"
  */
+/**
+ * Slugify a store name for use in seller URLs
+ * e.g. "Lumostock Media" -> "lumostock-media"
+ */
+export function slugifyStoreName(storeName: string): string {
+  return removeAccents(storeName)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    || 'store';
+}
+
 export function generateSlugifiedFileName(title: string, originalFileName: string): string {
   // Extract the file extension from original filename
   const lastDotIndex = originalFileName.lastIndexOf('.');
