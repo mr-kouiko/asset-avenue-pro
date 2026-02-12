@@ -270,6 +270,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
             <img
               src={effectivePoster}
               alt={title}
+              crossOrigin="anonymous"
               loading={priority ? "eager" : "lazy"}
               decoding="async"
               fetchPriority={priority ? "high" : "auto"}
