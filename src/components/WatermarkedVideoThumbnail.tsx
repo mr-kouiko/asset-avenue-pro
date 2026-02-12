@@ -24,6 +24,28 @@ interface WatermarkedVideoThumbnailProps {
  * - Muted videos can autoplay without user interaction in all modern browsers
  * - We set muted=true, playsInline=true to ensure compatibility
  */
+const validateThumbnailBrightness = (img: HTMLImageElement): boolean => {
+  try {
+    const canvas = document.createElement('canvas');
+    const size = 32;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return true;
+    ctx.drawImage(img, 0, 0, size, size);
+    const data = ctx.getImageData(0, 0, size, size).data;
+    let totalBrightness = 0;
+    const pixelCount = size * size;
+    for (let i = 0; i < data.length; i += 4) {
+      totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+    }
+    const avgBrightness = totalBrightness / pixelCount;
+    return avgBrightness > 15 && avgBrightness < 240;
+  } catch {
+    return true;
+  }
+};
+
 export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps> = memo(({
   thumbnail,
   title,
@@ -254,6 +276,11 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
               className={`w-full h-full object-cover transition-opacity duration-200 ${
                 isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
               }`}
+              onLoad={(e) => {
+                if (!validateThumbnailBrightness(e.currentTarget)) {
+                  setThumbnailError(true);
+                }
+              }}
               onError={() => {
                 if (effectivePoster === thumbnail) {
                   setThumbnailError(true);

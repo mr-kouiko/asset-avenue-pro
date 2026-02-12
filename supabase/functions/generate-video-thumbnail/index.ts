@@ -12,8 +12,8 @@ const FAST_POSITIONS = [0.10, 0.25, 0.50];
 const EXTENDED_POSITIONS = [0.05, 0.15, 0.35, 0.40];
 
 // Thresholds for detecting invalid frames (simplified)
-const BRIGHTNESS_THRESHOLD_HIGH = 245; // Near-white
-const BRIGHTNESS_THRESHOLD_LOW = 10;   // Near-black
+const BRIGHTNESS_THRESHOLD_HIGH = 235; // Near-white
+const BRIGHTNESS_THRESHOLD_LOW = 15;   // Near-black
 
 interface FrameAnalysis {
   isValid: boolean;
