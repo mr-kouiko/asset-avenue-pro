@@ -92,15 +92,6 @@ const imageTools: AITool[] = [
     available: true,
     badge: 'Free'
   },
-  {
-    id: 'create-variations',
-    title: 'Create Variations',
-    description: 'Generate multiple creative variations from a single image.',
-    icon: <Palette className="w-6 h-6" />,
-    href: '/studio-ai/create-variations',
-    available: false,
-    badge: 'Coming Soon'
-  }
 ];
 
 const audioTools: AITool[] = [
