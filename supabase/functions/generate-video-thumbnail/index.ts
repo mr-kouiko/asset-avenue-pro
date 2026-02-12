@@ -7,13 +7,14 @@ const corsHeaders = {
 }
 
 // FAST PATH: Only 3 positions (much faster than 7)
-const FAST_POSITIONS = [0.10, 0.25, 0.50];
+const FAST_POSITIONS = [0.15, 0.30, 0.50];
 // Extended positions only if fast path fails completely
-const EXTENDED_POSITIONS = [0.05, 0.15, 0.35, 0.40];
+const EXTENDED_POSITIONS = [0.05, 0.20, 0.40, 0.60, 0.75];
 
-// Thresholds for detecting invalid frames (simplified)
-const BRIGHTNESS_THRESHOLD_HIGH = 235; // Near-white
-const BRIGHTNESS_THRESHOLD_LOW = 15;   // Near-black
+// Thresholds for detecting invalid frames
+const BRIGHTNESS_THRESHOLD_HIGH = 220; // Near-white (tightened from 235)
+const BRIGHTNESS_THRESHOLD_LOW = 20;   // Near-black (tightened from 15)
+const MIN_VARIANCE = 8;                // Minimum luminance std-dev to ensure frame has content
 
 interface FrameAnalysis {
   isValid: boolean;
@@ -26,6 +27,14 @@ interface FrameAnalysis {
  */
 async function analyzeFrameFast(framePath: string): Promise<FrameAnalysis> {
   try {
+    // First check file size - blank/uniform frames produce very small JPEGs
+    try {
+      const stat = await Deno.stat(framePath);
+      if (stat.size < 3000) {
+        return { isValid: false, brightness: 0, reason: 'file too small (likely blank)' };
+      }
+    } catch { /* continue with analysis */ }
+
     // Single FFmpeg call to get basic stats
     const command = new Deno.Command("ffmpeg", {
       args: [
@@ -41,11 +50,15 @@ async function analyzeFrameFast(framePath: string): Promise<FrameAnalysis> {
     const { stderr } = await command.output();
     const output = new TextDecoder().decode(stderr);
     
-    // Parse YAVG (average luminance)
+    // Parse YAVG (average luminance) and YLOW/YHIGH for variance estimation
     const yavgMatch = output.match(/YAVG:(\d+\.?\d*)/);
+    const ylowMatch = output.match(/YLOW:(\d+\.?\d*)/);
+    const yhighMatch = output.match(/YHIGH:(\d+\.?\d*)/);
     const brightness = yavgMatch ? parseFloat(yavgMatch[1]) : 128;
+    const ylow = ylowMatch ? parseFloat(ylowMatch[1]) : 0;
+    const yhigh = yhighMatch ? parseFloat(yhighMatch[1]) : 255;
     
-    // Simple valid/invalid check
+    // Check brightness range
     if (brightness > BRIGHTNESS_THRESHOLD_HIGH) {
       return { isValid: false, brightness, reason: 'too bright' };
     }
@@ -53,15 +66,21 @@ async function analyzeFrameFast(framePath: string): Promise<FrameAnalysis> {
       return { isValid: false, brightness, reason: 'too dark' };
     }
     
+    // Check variance - uniform color frames have very low range between YLOW and YHIGH
+    const luminanceRange = yhigh - ylow;
+    if (luminanceRange < MIN_VARIANCE) {
+      return { isValid: false, brightness, reason: `uniform color (range=${luminanceRange})` };
+    }
+    
     return { isValid: true, brightness };
   } catch {
     // If analysis fails, check file size as fallback
     try {
       const stat = await Deno.stat(framePath);
-      // Larger files typically have more content
-      return { isValid: stat.size > 5000, brightness: 128 };
+      // Require at least 8KB for a valid video thumbnail
+      return { isValid: stat.size > 8000, brightness: 128 };
     } catch {
-      return { isValid: true, brightness: 128 }; // Assume valid if we can't check
+      return { isValid: true, brightness: 128 };
     }
   }
 }
@@ -95,8 +114,8 @@ async function extractFrame(videoPath: string, timestamp: number, outputPath: st
       "-ss", timestamp.toFixed(2),
       "-i", videoPath,
       "-vframes", "1",
-      "-q:v", "3", // Slightly lower quality = faster
-      "-vf", "scale=960:-1", // Smaller = faster
+      "-q:v", "2", // Higher quality to ensure valid content
+      "-vf", "scale=1280:-1", // Larger = better detection of blank frames
       "-y",
       outputPath
     ],
