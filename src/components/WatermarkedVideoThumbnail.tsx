@@ -35,15 +35,42 @@ const validateThumbnailBrightness = (img: HTMLImageElement): boolean => {
     ctx.drawImage(img, 0, 0, size, size);
     const data = ctx.getImageData(0, 0, size, size).data;
     let totalBrightness = 0;
+    let totalR = 0, totalG = 0, totalB = 0;
     const pixelCount = size * size;
     for (let i = 0; i < data.length; i += 4) {
+      totalR += data[i];
+      totalG += data[i + 1];
+      totalB += data[i + 2];
       totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
     }
     const avgBrightness = totalBrightness / pixelCount;
-    return avgBrightness > 15 && avgBrightness < 240;
+    const avgR = totalR / pixelCount;
+    const avgG = totalG / pixelCount;
+    const avgB = totalB / pixelCount;
+    
+    // Reject near-white or near-black
+    if (avgBrightness <= 15 || avgBrightness >= 240) return false;
+    
+    // Detect purple/violet watermark frames (high R, low G, high B)
+    const isPurpleDominant = avgB > 100 && avgR > 80 && avgG < avgB * 0.7;
+    if (isPurpleDominant) {
+      console.warn('[VideoThumbnail] Rejected purple watermark thumbnail');
+      return false;
+    }
+    
+    // Check color variance - uniform color frames are likely watermark intros
+    let variance = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      variance += Math.abs(data[i] - avgR) + Math.abs(data[i+1] - avgG) + Math.abs(data[i+2] - avgB);
+    }
+    const avgVariance = variance / (pixelCount * 3);
+    if (avgVariance < 12) {
+      console.warn('[VideoThumbnail] Rejected low-variance thumbnail (likely solid color)');
+      return false;
+    }
+    
+    return true;
   } catch {
-    // CORS tainted canvas or other error - assume thumbnail is invalid
-    // so the video #t=0.1 fallback can display instead
     return false;
   }
 };
@@ -122,8 +149,8 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
         }, 8000); // 8 second timeout
 
         video.onloadeddata = () => {
-          // Seek to 1 second for a better frame (skip black intro)
-          video.currentTime = Math.min(1, video.duration * 0.1);
+        // Seek to 2 seconds to skip watermark intro
+          video.currentTime = Math.min(2, video.duration * 0.3);
         };
 
         video.onseeked = () => {
@@ -266,9 +293,9 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
               }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              {/* Primary MP4 source - append #t=0.1 to force first frame display as poster */}
+              {/* Primary MP4 source - skip watermark intro (#t=2) for meaningful first frame */}
               <source 
-                src={`${videoUrl}${videoUrl.includes('#') ? '' : '#t=0.1'}`} 
+                src={`${videoUrl}${videoUrl.includes('#') ? '' : '#t=2'}`} 
                 type="video/mp4" 
               />
             </video>
