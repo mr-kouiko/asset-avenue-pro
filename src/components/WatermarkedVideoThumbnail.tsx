@@ -42,7 +42,9 @@ const validateThumbnailBrightness = (img: HTMLImageElement): boolean => {
     const avgBrightness = totalBrightness / pixelCount;
     return avgBrightness > 15 && avgBrightness < 240;
   } catch {
-    return true;
+    // CORS tainted canvas or other error - assume thumbnail is invalid
+    // so the video #t=0.1 fallback can display instead
+    return false;
   }
 };
 
