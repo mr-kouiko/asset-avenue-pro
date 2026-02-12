@@ -443,10 +443,10 @@ const ProductDetail = () => {
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
               <MediaPlayer 
-                src={product.previewUrl}
+                src={`${product.previewUrl}${product.previewUrl.includes('#') ? '' : '#t=2'}`}
                 type="video"
                 title={product.title}
-                poster={product.thumbnail?.includes('.mp4') ? undefined : product.thumbnail}
+                poster={product.thumbnail?.includes('.mp4') || product.thumbnail?.includes('placeholder') ? undefined : product.thumbnail}
                 className="w-full h-full"
                 autoPlay={false}
                 controls={true}
