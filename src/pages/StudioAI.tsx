@@ -20,7 +20,8 @@ import {
   Scissors,
   Mic,
   Palette,
-  ArrowUpRight
+  ArrowUpRight,
+  RefreshCw
 } from 'lucide-react';
 
 interface AITool {
@@ -81,6 +82,15 @@ const imageTools: AITool[] = [
     href: '/studio-ai/remove-background',
     available: true,
     badge: 'Available'
+  },
+  {
+    id: 'image-converter',
+    title: 'Image Converter',
+    description: 'Convert images between PNG, JPEG, WebP and PDF — free, instant, and 100% in-browser.',
+    icon: <RefreshCw className="w-6 h-6" />,
+    href: '/studio-ai/image-converter',
+    available: true,
+    badge: 'Free'
   },
   {
     id: 'create-variations',
