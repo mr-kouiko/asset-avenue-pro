@@ -1,81 +1,72 @@
 
-
-# Fix Video Preview Generation in Product Management
-
-## Problem Identified
-The video preview generation in the upload flow is failing due to **CORS restrictions**. Specifically:
-
-1. **FileUpload page** uses `SimpleFileUpload` component
-2. `SimpleFileUpload` uses `useAutomaticWatermark` hook to process files
-3. In `useAutomaticWatermark`, video preview generation happens **client-side** using canvas recording
-4. The code sets `video.crossOrigin = 'anonymous'` (line 375), but Supabase storage doesn't return proper CORS headers
-5. This causes the canvas to become "tainted" when drawing video frames, blocking the preview generation
-
-The error typically looks like:
-```text
-DOMException: The operation is insecure.
-```
-Or silent failure with "Video preview generation failed" warning in console.
+# Fix: Video Thumbnails Showing Blank/White Images
 
 ## Root Cause
-The `useAutomaticWatermark` hook tries to:
-1. Create a video element pointing to the uploaded video URL
-2. Draw video frames to a canvas with watermark overlay
-3. Record the canvas as a MediaRecorder stream
 
-This fails because the video URL is cross-origin and the storage bucket doesn't provide `Access-Control-Allow-Origin` headers.
+The server-side thumbnail generator (`generate-video-thumbnail` edge function) sometimes produces blank white frames that pass the brightness check (threshold is 245, but pure white = 255 would fail; near-white at ~240 would pass). These invalid thumbnails are stored in Supabase storage and return HTTP 200, so the browser's `<img onError>` never fires. The `WatermarkedVideoThumbnail` component treats these as valid thumbnails and displays them -- resulting in the blank purple cards you see.
 
-## Solution
-Update `useAutomaticWatermark` to use the **video proxy** utility that was already created to bypass CORS:
+## Solution: Two-Part Fix
 
-1. Import `getProxiedVideoUrl` from `@/utils/videoProxy`
-2. Use the proxied URL when setting `video.src` for preview generation
-3. Add fallback to server-side `generate-video-preview` edge function if client-side fails
+### Part 1 -- Frontend: Validate thumbnail on load (canvas brightness check)
 
----
+In `WatermarkedVideoThumbnail.tsx`, add an `onLoad` handler to the `<img>` element that draws the loaded image to a hidden canvas and checks average brightness. If the image is mostly white (avg brightness > 240) or mostly black (avg brightness < 15), mark the thumbnail as invalid and trigger the existing fallback path (frame extraction from the video via `#t=0.1`).
 
-## Files to Modify
+This catches:
+- White/blank thumbnails from failed FFmpeg extraction
+- All-black thumbnails from videos with dark intros
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useAutomaticWatermark.tsx` | Import proxy utility, use proxied URL for video preview generation |
+### Part 2 -- Server-side: Tighten the thumbnail validation threshold
 
----
+In `generate-video-thumbnail/index.ts`, lower `BRIGHTNESS_THRESHOLD_HIGH` from 245 to 235 to catch more near-white frames. This prevents future uploads from generating blank thumbnails.
 
-## Technical Implementation
+## Technical Details
 
-**Current code (failing):**
+### WatermarkedVideoThumbnail.tsx Changes
+
+Add a new `validateThumbnailBrightness` function:
+
 ```typescript
-video.crossOrigin = 'anonymous';
-video.src = watermarkedUrl!;  // Direct URL - CORS blocks canvas access
+const validateThumbnailBrightness = (img: HTMLImageElement): boolean => {
+  try {
+    const canvas = document.createElement('canvas');
+    const size = 32; // Small sample for speed
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return true;
+    ctx.drawImage(img, 0, 0, size, size);
+    const data = ctx.getImageData(0, 0, size, size).data;
+    let totalBrightness = 0;
+    const pixelCount = size * size;
+    for (let i = 0; i < data.length; i += 4) {
+      totalBrightness += (data[i] + data[i+1] + data[i+2]) / 3;
+    }
+    const avgBrightness = totalBrightness / pixelCount;
+    return avgBrightness > 15 && avgBrightness < 240;
+  } catch {
+    return true; // CORS error = assume valid
+  }
+};
 ```
 
-**Fixed code:**
+Add `onLoad` to the existing `<img>` tag:
 ```typescript
-import { getProxiedVideoUrl } from '@/utils/videoProxy';
-
-// Use proxied URL to bypass CORS
-video.crossOrigin = 'anonymous';
-video.src = getProxiedVideoUrl(watermarkedUrl!);
+onLoad={(e) => {
+  const img = e.currentTarget;
+  if (!validateThumbnailBrightness(img)) {
+    setThumbnailError(true); // triggers fallback
+  }
+}}
 ```
 
-Additionally, add a server-side fallback:
+### generate-video-thumbnail/index.ts Changes
+
 ```typescript
-// If client-side fails, try server-side generation
-const { data, error } = await supabase.functions.invoke('generate-video-preview', {
-  body: { videoPath: filePath, duration: 6, resolution: 720 }
-});
-if (data?.previewUrl) {
-  previewUrl = data.previewUrl;
-}
+const BRIGHTNESS_THRESHOLD_HIGH = 235; // Was 245
+const BRIGHTNESS_THRESHOLD_LOW = 15;   // Was 10
 ```
 
----
+## Files Modified
 
-## Expected Outcome
-After this fix:
-- Videos uploaded through the FileUpload page will have their previews generated successfully
-- The preview generation uses the CORS proxy to fetch video frames
-- If client-side generation still fails (browser compatibility), the server-side edge function provides a reliable fallback
-- Product Management page will display the watermarked video preview
-
+1. `src/components/WatermarkedVideoThumbnail.tsx` -- Add `onLoad` brightness validation
+2. `supabase/functions/generate-video-thumbnail/index.ts` -- Tighten brightness thresholds
