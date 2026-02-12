@@ -218,6 +218,8 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
   // Determine what to show as the poster
   const effectivePoster = extractedFrame || (hasValidThumbnail && !thumbnailError ? thumbnail : null);
   const showPlaceholder = !effectivePoster;
+  // Only show watermark when we have actual video content visible (not on placeholder)
+  const showWatermark = !showPlaceholder || (isHovered && isVideoReady);
 
   return (
     <div 
@@ -235,13 +237,18 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
         <>
           {/* 
             VIDEO ELEMENT - Always render when videoUrl exists
-            This ensures the video is preloaded and ready for hover playback
+            Acts as base layer: shows first frame via #t=0.1 even when thumbnail is missing/blank.
+            On hover, plays the video at full opacity.
           */}
           {videoUrl && (
             <video
               ref={videoRef}
-              className={`absolute inset-0 z-10 w-full h-full object-cover transition-opacity duration-300 ${
-                isHovered && isVideoReady ? 'opacity-100' : 'opacity-0'
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                isHovered && isVideoReady 
+                  ? 'opacity-100 z-10' 
+                  : showPlaceholder 
+                    ? 'opacity-100 z-[1]'  // Visible as fallback when no thumbnail
+                    : 'opacity-0 z-10'
               }`}
               muted
               loop
@@ -265,7 +272,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
             </video>
           )}
           
-          {/* Primary thumbnail image */}
+          {/* Primary thumbnail image - rendered on top of video base layer */}
           {effectivePoster && (
             <img
               src={effectivePoster}
@@ -274,7 +281,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
               loading={priority ? "eager" : "lazy"}
               decoding="async"
               fetchPriority={priority ? "high" : "auto"}
-              className={`w-full h-full object-cover transition-opacity duration-200 ${
+              className={`relative z-[2] w-full h-full object-cover transition-opacity duration-200 ${
                 isHovered && isVideoReady && videoUrl ? 'opacity-0' : 'opacity-100'
               }`}
               onLoad={(e) => {
@@ -292,8 +299,8 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
             />
           )}
 
-          {/* Styled placeholder fallback - shown when no poster available */}
-          {showPlaceholder && (
+          {/* Styled placeholder fallback - shown when no poster AND no video URL */}
+          {showPlaceholder && !videoUrl && (
             <div className="w-full h-full bg-muted flex items-center justify-center relative overflow-hidden">
               {/* Subtle pattern background */}
               <div className="absolute inset-0 opacity-5">
@@ -314,19 +321,21 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
                   <Play className="h-6 w-6 text-muted-foreground ml-1" />
                 </div>
                 <span className="text-xs text-muted-foreground mt-3 font-medium">
-                  {frameExtractionFailed ? 'Vidéo' : 'Chargement...'}
+                  Vidéo
                 </span>
               </div>
             </div>
           )}
           
-          {/* Large watermark overlay for thumbnail */}
-          <div className="pointer-events-none">
-            <VideoWatermark size="thumbnail" />
-          </div>
+          {/* Large watermark overlay - only when video content is visible */}
+          {showWatermark && (
+            <div className="pointer-events-none">
+              <VideoWatermark size="thumbnail" />
+            </div>
+          )}
           
           {/* Video badge indicator */}
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
+          <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium z-30">
             Vidéo
           </div>
         </>
