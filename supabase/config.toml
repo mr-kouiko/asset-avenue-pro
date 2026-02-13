@@ -39,7 +39,7 @@ port = 54321
 verify_jwt = true
 
 [functions.send-vendor-emails]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-confirmation-email]
 verify_jwt = false
