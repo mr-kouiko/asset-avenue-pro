@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Mail, MapPin, Clock } from "lucide-react";
 
 const ContactEN = () => {
   return (
@@ -45,10 +45,6 @@ const ContactEN = () => {
                 <Input id="email" type="email" placeholder="your@email.com" required />
               </div>
               
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" type="tel" placeholder="+1 234 567 89" />
-              </div>
               
               <div>
                 <Label htmlFor="subject">Subject *</Label>
@@ -93,14 +89,6 @@ const ContactEN = () => {
                   <div>
                     <p className="font-medium">Email</p>
                     <p className="text-muted-foreground">contact@visustock.com</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <Phone className="h-5 w-5 text-primary mt-1" />
-                  <div>
-                    <p className="font-medium">Phone</p>
-                    <p className="text-muted-foreground">+33 1 23 45 67 89</p>
                   </div>
                 </div>
                 
