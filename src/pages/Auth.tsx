@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Lock, User, Store, ArrowLeft } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthProps {
   userType?: "client" | "seller";
@@ -137,6 +138,24 @@ const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
         console.error('Registration failed:', result.error);
       } else {
         console.log('Registration successful');
+        
+        // Send welcome email for buyer registrations (seller emails handled by register-free-seller)
+        if (userType === "client") {
+          try {
+            const displayName = `${formData.firstName} ${formData.lastName}`.trim();
+            await supabase.functions.invoke("send-vendor-emails", {
+              body: {
+                userId: "new-user",
+                email: formData.registerEmail,
+                displayName,
+                emailType: "welcome",
+              },
+            });
+            console.log("Buyer welcome email sent");
+          } catch (emailErr) {
+            console.warn("Failed to send welcome email (non-blocking):", emailErr);
+          }
+        }
       }
     } catch (error) {
       console.error('Registration exception:', error);
