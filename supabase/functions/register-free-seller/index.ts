@@ -110,6 +110,44 @@ serve(async (req) => {
       spotNumber: sellerCount + 1 
     });
 
+    // Get user profile for email details
+    const { data: profile } = await supabaseService
+      .from("profiles")
+      .select("display_name, store_name, email")
+      .eq("user_id", user.id)
+      .single();
+
+    const displayName = profile?.display_name || user.email?.split("@")[0] || "Seller";
+    const userEmail = profile?.email || user.email || "";
+    const storeName = profile?.store_name || "";
+
+    // Send confirmation email
+    try {
+      const emailResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-vendor-emails`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            email: userEmail,
+            displayName,
+            storeName,
+            emailType: "confirmation",
+          }),
+        }
+      );
+      const emailResult = await emailResponse.json();
+      logStep("Vendor email sent", { success: emailResult.success });
+    } catch (emailError) {
+      logStep("Failed to send vendor email (non-blocking)", { 
+        error: emailError instanceof Error ? emailError.message : String(emailError) 
+      });
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       message: "Congratulations! You are now a Founding Creator!",
