@@ -60,7 +60,7 @@ const handler = async (req: Request): Promise<Response> => {
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Bienvenue sur VisuStock - Compte Vendeur</title>
+          <title>Welcome to VisuStock - Seller Account</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { text-align: center; padding: 30px 0; border-bottom: 3px solid #FF6B35; }
@@ -76,32 +76,32 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="header">
             <div class="logo">📸 VisuStock</div>
-            <p>Plateforme de contenus visuels premium</p>
+            <p>Premium Visual Content Platform</p>
           </div>
           <div class="content">
             <div class="welcome-box">
-              <h1>🎉 Bienvenue ${displayName}!</h1>
-              <p>Votre compte vendeur VisuStock est maintenant activé</p>
+              <h1>🎉 Welcome ${displayName}!</h1>
+              <p>Your VisuStock seller account is now active</p>
             </div>
-            <p>Félicitations ! Votre inscription en tant que créateur sur VisuStock a été confirmée avec succès.</p>
-            ${storeName ? `<p><strong>Nom de votre boutique :</strong> ${storeName}</p>` : ''}
+            <p>Congratulations! Your registration as a creator on VisuStock has been successfully confirmed.</p>
+            ${storeName ? `<p><strong>Store name:</strong> ${storeName}</p>` : ''}
             <div class="checklist">
-              <h3>✅ Prochaines étapes :</h3>
+              <h3>✅ Next steps:</h3>
               <ul>
-                <li>📤 Commencez à télécharger vos premiers contenus</li>
-                <li>🏷️ Ajoutez des tags et descriptions détaillées</li>
-                <li>💰 Définissez vos prix et licences</li>
-                <li>📊 Suivez vos ventes dans votre tableau de bord</li>
+                <li>📤 Start uploading your first content</li>
+                <li>🏷️ Add detailed tags and descriptions</li>
+                <li>💰 Set your prices and licenses</li>
+                <li>📊 Track your sales in your dashboard</li>
               </ul>
             </div>
             <div style="text-align: center;">
-              <a href="https://visustock.com/seller-dashboard" class="button">🚀 Accéder au Dashboard Vendeur</a>
+              <a href="https://visustock.com/seller-dashboard" class="button">🚀 Go to Seller Dashboard</a>
             </div>
-            <p><strong>Besoin d'aide ?</strong><br>Notre équipe est là pour vous accompagner.</p>
+            <p><strong>Need help?</strong><br>Our team is here to support you.</p>
           </div>
           <div class="footer">
             <p><strong>VisuStock Team</strong><br>📧 support@visustock.com<br>🌐 <a href="https://visustock.com">visustock.com</a></p>
-            <p style="margin-top: 20px; font-size: 12px; color: #999;">Cet email a été envoyé automatiquement.</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #999;">This email was sent automatically.</p>
           </div>
         </body>
         </html>
@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
       const confirmationResult = await transporter.sendMail({
         from: "VisuStock <contact@visustock.com>",
         to: email,
-        subject: "🎉 Bienvenue sur VisuStock - Votre compte vendeur est activé !",
+        subject: "🎉 Welcome to VisuStock - Your seller account is active!",
         html: confirmationHtml,
         replyTo: "support@visustock.com",
         headers: { 'X-Priority': '1', 'Importance': 'High' },
@@ -121,19 +121,19 @@ const handler = async (req: Request): Promise<Response> => {
       const adminHtml = `
         <!DOCTYPE html>
         <html>
-        <head><meta charset="utf-8"><title>Nouveau vendeur inscrit</title></head>
+        <head><meta charset="utf-8"><title>New Seller Registered</title></head>
         <body style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #FF6B35, #F7931E); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-            <h1>🔔 Nouveau Vendeur Inscrit</h1>
+            <h1>🔔 New Seller Registered</h1>
           </div>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FF6B35;">
-            <h3>📋 Détails :</h3>
+            <h3>📋 Details:</h3>
             <ul>
-              <li><strong>Nom :</strong> ${displayName}</li>
-              <li><strong>Email :</strong> ${email}</li>
-              <li><strong>ID :</strong> ${userId}</li>
-              ${storeName ? `<li><strong>Boutique :</strong> ${storeName}</li>` : ''}
-              <li><strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}</li>
+              <li><strong>Name:</strong> ${displayName}</li>
+              <li><strong>Email:</strong> ${email}</li>
+              <li><strong>ID:</strong> ${userId}</li>
+              ${storeName ? `<li><strong>Store:</strong> ${storeName}</li>` : ''}
+              <li><strong>Date:</strong> ${new Date().toISOString()}</li>
             </ul>
           </div>
         </body>
@@ -143,7 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
       const adminResult = await transporter.sendMail({
         from: "VisuStock Admin <contact@visustock.com>",
         to: "contact@visustock.com",
-        subject: `🔔 Nouveau vendeur inscrit: ${displayName}`,
+        subject: `🔔 New seller registered: ${displayName}`,
         html: adminHtml,
       });
 
@@ -164,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Bienvenue sur VisuStock</title>
+          <title>Welcome to VisuStock</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { text-align: center; padding: 30px 0; border-bottom: 3px solid #FF6B35; }
@@ -180,32 +180,32 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="header">
             <div class="logo">📸 VisuStock</div>
-            <p>Plateforme de contenus visuels premium</p>
+            <p>Premium Visual Content Platform</p>
           </div>
           <div class="content">
             <div class="welcome-box">
-              <h1>🎉 Bienvenue ${displayName}!</h1>
-              <p>Votre compte VisuStock est maintenant activé</p>
+              <h1>🎉 Welcome ${displayName}!</h1>
+              <p>Your VisuStock account is now active</p>
             </div>
-            <p>Merci de rejoindre la communauté VisuStock !</p>
+            <p>Thank you for joining the VisuStock community!</p>
             <div class="features">
-              <h3>🌟 Découvrez nos fonctionnalités :</h3>
+              <h3>🌟 Discover our features:</h3>
               <ul>
-                <li>🔍 Explorez notre marketplace de contenus uniques</li>
-                <li>📥 Téléchargez vos achats immédiatement</li>
-                <li>📊 Suivez vos achats dans votre dashboard</li>
-                <li>🎨 Accédez à du contenu exclusif de qualité professionnelle</li>
+                <li>🔍 Explore our marketplace of unique content</li>
+                <li>📥 Download your purchases instantly</li>
+                <li>📊 Track your purchases in your dashboard</li>
+                <li>🎨 Access exclusive professional-quality content</li>
               </ul>
             </div>
             <div style="text-align: center;">
-              <a href="https://visustock.com/marketplace" class="button">🛒 Découvrir le Marketplace</a>
+              <a href="https://visustock.com/marketplace" class="button">🛒 Explore the Marketplace</a>
             </div>
-            <p><strong>Envie de devenir vendeur ?</strong><br>
-            <a href="https://visustock.com/auth/seller" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">🎨 Devenir Vendeur</a></p>
+            <p><strong>Want to become a seller?</strong><br>
+            <a href="https://visustock.com/auth/seller" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">🎨 Become a Seller</a></p>
           </div>
           <div class="footer">
             <p><strong>VisuStock Team</strong><br>📧 support@visustock.com<br>🌐 <a href="https://visustock.com">visustock.com</a></p>
-            <p style="margin-top: 20px; font-size: 12px; color: #999;">Cet email a été envoyé automatiquement.</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #999;">This email was sent automatically.</p>
           </div>
         </body>
         </html>
@@ -214,7 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
       const welcomeResult = await transporter.sendMail({
         from: "VisuStock <contact@visustock.com>",
         to: email,
-        subject: "🎉 Bienvenue sur VisuStock - Découvrez notre marketplace !",
+        subject: "🎉 Welcome to VisuStock - Discover our marketplace!",
         html: welcomeHtml,
         replyTo: "support@visustock.com",
         headers: { 'X-Priority': '1', 'Importance': 'High' },
