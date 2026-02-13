@@ -1809,6 +1809,22 @@ export type Database = {
         Returns: boolean
       }
       check_admin_access_patterns: { Args: never; Returns: undefined }
+      check_and_insert_file: {
+        Args: {
+          p_file_format?: string
+          p_file_hash: string
+          p_file_name: string
+          p_file_path?: string
+          p_file_size?: number
+          p_file_type?: string
+          p_submission_id: string
+        }
+        Returns: {
+          existing_owner: string
+          message: string
+          success: boolean
+        }[]
+      }
       check_file_duplicate: {
         Args: { file_type_param?: string; hash_value: string }
         Returns: {
