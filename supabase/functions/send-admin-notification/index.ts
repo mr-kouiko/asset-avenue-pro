@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from 'npm:nodemailer@6.9.12';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const transporter = nodemailer.createTransport({
+  host: Deno.env.get('SMTP_HOST'),
+  port: Number(Deno.env.get('SMTP_PORT') || '587'),
+  secure: false,
+  auth: {
+    user: Deno.env.get('SMTP_USER'),
+    pass: Deno.env.get('SMTP_PASS'),
+  },
+});
 
 interface AdminNotificationRequest {
   type: 'content_report' | 'support_ticket' | 'new_seller' | 'system';
@@ -17,7 +28,6 @@ interface AdminNotificationRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,7 +35,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const request: AdminNotificationRequest = await req.json();
@@ -50,10 +59,8 @@ serve(async (req) => {
     let notificationMessage = '';
     let notificationLink = '/admin';
 
-    // Build notification based on type
     switch (request.type) {
       case 'content_report':
-        // Get content title
         let contentTitle = 'Unknown content';
         if (request.submission_id) {
           const { data: submission } = await supabase
@@ -114,33 +121,21 @@ serve(async (req) => {
       throw notifError;
     }
 
-    // Send email notification for critical items
-    if (resendApiKey && (request.type === 'content_report')) {
+    // Send email notification for critical items via SMTP
+    if (request.type === 'content_report') {
       try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify({
-            from: 'VisuStock <noreply@visustock.com>',
-            to: ['admin@visustock.com'],
-            subject: notificationTitle,
-            html: `
-              <h2>${notificationTitle}</h2>
-              <p>${notificationMessage}</p>
-              ${request.details ? `<h3>Additional Details:</h3><p>${request.details}</p>` : ''}
-              <hr />
-              <p><a href="https://asset-avenue-pro.lovable.app${notificationLink}">View in Admin Dashboard</a></p>
-            `,
-          }),
+        await transporter.sendMail({
+          from: 'VisuStock <contact@visustock.com>',
+          to: 'contact@visustock.com',
+          subject: notificationTitle,
+          html: `
+            <h2>${notificationTitle}</h2>
+            <p>${notificationMessage}</p>
+            ${request.details ? `<h3>Additional Details:</h3><p>${request.details}</p>` : ''}
+            <hr />
+            <p><a href="https://visustock.com${notificationLink}">View in Admin Dashboard</a></p>
+          `,
         });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error('Resend API error:', errorText);
-        }
       } catch (emailError) {
         console.error('Email sending failed:', emailError);
       }

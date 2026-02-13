@@ -1,10 +1,18 @@
 import React from 'npm:react@18.3.1'
-import { Resend } from 'npm:resend@4.0.0'
+import nodemailer from 'npm:nodemailer@6.9.12'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SellerNotificationEmail } from './_templates/seller-notification.tsx'
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
+const transporter = nodemailer.createTransport({
+  host: Deno.env.get('SMTP_HOST'),
+  port: Number(Deno.env.get('SMTP_PORT') || '587'),
+  secure: false,
+  auth: {
+    user: Deno.env.get('SMTP_USER'),
+    pass: Deno.env.get('SMTP_PASS'),
+  },
+})
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,11 +32,10 @@ interface SellerNotificationRequest {
   items: SaleItem[];
   total_amount: number;
   currency: string;
-  test_email?: string; // Override email for testing
+  test_email?: string;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -41,18 +48,15 @@ Deno.serve(async (req) => {
     const payload: SellerNotificationRequest = await req.json()
     console.log('Seller notification request:', JSON.stringify(payload))
 
-    // Validate required fields
     if (!payload.seller_id || !payload.items || payload.items.length === 0) {
       throw new Error('Missing required fields: seller_id, items')
     }
 
-    // Create Supabase admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Fetch seller profile
     const { data: sellerProfile, error: sellerError } = await supabaseAdmin
       .from('profiles')
       .select('email, display_name, store_name')
@@ -66,7 +70,6 @@ Deno.serve(async (req) => {
 
     console.log('Seller found:', sellerProfile.display_name || sellerProfile.store_name)
 
-    // Fetch buyer profile (for display name only)
     const { data: buyerProfile } = await supabaseAdmin
       .from('profiles')
       .select('display_name')
@@ -75,7 +78,6 @@ Deno.serve(async (req) => {
 
     const buyerName = buyerProfile?.display_name || 'A customer'
 
-    // Fetch content details for each item
     const submissionIds = payload.items.map(item => item.submission_id)
     const { data: submissions, error: submissionsError } = await supabaseAdmin
       .from('content_submissions')
@@ -86,7 +88,6 @@ Deno.serve(async (req) => {
       console.error('Failed to fetch submissions:', submissionsError)
     }
 
-    // Fetch license names
     const licenseIds = payload.items.filter(item => item.license_id).map(item => item.license_id)
     let licenses: { id: string; name: string }[] = []
     if (licenseIds.length > 0) {
@@ -97,14 +98,12 @@ Deno.serve(async (req) => {
       licenses = licenseData || []
     }
 
-    // Fetch thumbnails for items
     const { data: contentFiles } = await supabaseAdmin
       .from('content_files')
       .select('submission_id, thumbnail_path')
       .in('submission_id', submissionIds)
       .not('thumbnail_path', 'is', null)
 
-    // Build items array for email
     const emailItems = payload.items.map(item => {
       const submission = submissions?.find(s => s.id === item.submission_id)
       const license = licenses.find(l => l.id === item.license_id)
@@ -118,12 +117,10 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Calculate commission (20%)
     const commissionRate = 0.20
     const commissionAmount = payload.total_amount * commissionRate
     const sellerEarnings = payload.total_amount - commissionAmount
 
-    // Render email template
     const html = await renderAsync(
       React.createElement(SellerNotificationEmail, {
         seller_name: sellerProfile.display_name || sellerProfile.store_name || 'Creator',
@@ -142,44 +139,28 @@ Deno.serve(async (req) => {
       })
     )
 
-    // Send email (use test_email override if provided)
     const recipientEmail = payload.test_email || sellerProfile.email
     console.log('Sending to:', recipientEmail, payload.test_email ? '(test override)' : '')
     
-    const { data, error } = await resend.emails.send({
-      from: 'VisuStock <noreply@visustock.com>',
-      to: [recipientEmail],
+    const info = await transporter.sendMail({
+      from: 'VisuStock <contact@visustock.com>',
+      to: recipientEmail,
       subject: `🎉 You made a sale! +€${sellerEarnings.toFixed(2)} earned`,
       html,
-      reply_to: 'support@visustock.com',
-      tags: [
-        { name: 'category', value: 'transaction' },
-        { name: 'email_type', value: 'seller_notification' }
-      ]
+      replyTo: 'support@visustock.com',
     })
 
-    if (error) {
-      console.error('Failed to send email:', error)
-      throw error
-    }
-
-    console.log('Seller notification email sent:', data)
+    console.log('Seller notification email sent:', info.messageId)
 
     return new Response(
-      JSON.stringify({ success: true, emailId: data?.id }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
+      JSON.stringify({ success: true, messageId: info.messageId }),
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   } catch (error) {
     console.error('Error in send-seller-notification:', error)
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 })
