@@ -397,33 +397,26 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // SECURITY: For video files, ONLY use preview_path (720p watermarked)
-        // Original HD files are stored in a private bucket and NEVER exposed to frontend
+        // For video files, use original file for playback (preview files may be corrupt/incomplete)
         if (contentType === 'video' && filesList.length > 0) {
-          // First try: use preview_path from any video file (server-generated 720p preview)
-          const videoFileWithPreview = filesList.find((f: any) =>
-            f.preview_path && (
+          const videoFile = filesList.find((f: any) =>
+            f.is_original && (
               f.file_type?.toLowerCase().startsWith('video') ||
-              f.file_format?.toLowerCase().startsWith('video/')
+              f.file_format?.toLowerCase().startsWith('video/') ||
+              /\.(mp4|mov|avi|webm|mkv|wmv|flv)$/.test((f.file_path || '').toLowerCase())
             )
           );
-          if (videoFileWithPreview?.preview_path) {
-            previewUrl = videoFileWithPreview.preview_path;
-            console.log('🔒 Using secure 720p preview for video:', previewUrl);
-          } else {
-            // Fallback: use thumbnail_path if no preview generated yet
-            const videoFileWithThumb = filesList.find((f: any) =>
-              f.thumbnail_path && (
-                f.file_type?.toLowerCase().startsWith('video') ||
-                f.file_format?.toLowerCase().startsWith('video/')
-              )
-            );
-            if (videoFileWithThumb?.thumbnail_path) {
-              previewUrl = videoFileWithThumb.thumbnail_path;
-              console.log('🖼️ Using thumbnail as video preview (no 720p preview yet):', previewUrl);
+          if (videoFile?.file_path) {
+            console.log('🎬 Using original video for playback:', videoFile.file_path);
+            if (videoFile.file_path.startsWith('http')) {
+              previewUrl = videoFile.file_path;
             } else {
-              console.warn('⚠️ No preview or thumbnail available for video - preview generation needed');
+              const { data: publicData } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(videoFile.file_path);
+              previewUrl = publicData.publicUrl;
             }
+            console.log('📺 Video URL created:', previewUrl);
           }
         }
 

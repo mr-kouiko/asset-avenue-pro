@@ -12,7 +12,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BUCKET_TEMP = "temp-chunks";
 const BUCKET_FINAL = "uploads";
-const BUCKET_ORIGINALS = "original-files"; // Private bucket for HD master files
 
 // ============= SECURITY: File size limits per content type =============
 const MAX_FILE_SIZE: Record<string, number> = {
@@ -167,21 +166,10 @@ async function checkDailyQuota(userId: string, fileSize: number): Promise<{ allo
 async function ensureBucketExists(bucket: string) {
   const { data, error } = await supabase.storage.getBucket(bucket);
   if (error || !data) {
-    // original-files bucket must be private, uploads must be public
-    const makePublic = bucket !== BUCKET_ORIGINALS && bucket !== BUCKET_TEMP;
+    const makePublic = bucket === BUCKET_FINAL; // final files should be public
     const { error: createErr } = await supabase.storage.createBucket(bucket, { public: makePublic });
     if (createErr) throw new Error(`Failed to create bucket '${bucket}': ${createErr.message}`);
   }
-}
-
-// Determine the correct destination bucket based on file type
-// Video originals go to private bucket, everything else to public
-function getDestinationBucket(fileName: string): string {
-  const mimeType = detectMimeType(fileName);
-  if (mimeType.startsWith('video/')) {
-    return BUCKET_ORIGINALS;
-  }
-  return BUCKET_FINAL;
 }
 
 // Pure extension-based MIME type detection - no forced conversions for videos
@@ -431,9 +419,8 @@ async function mergeChunksInMemory(
   console.log(`🔗 [Merge] Concatenated ${totalLength} bytes`);
 
   const finalPath = fileName;
-  const destBucket = getDestinationBucket(fileName);
   const { error: uploadError } = await supabase.storage
-    .from(destBucket)
+    .from(BUCKET_FINAL)
     .upload(finalPath, mergedFile, {
       contentType: detectMimeType(fileName),
       upsert: true,
@@ -441,17 +428,9 @@ async function mergeChunksInMemory(
 
   if (uploadError) throw uploadError;
 
-  console.log(`📤 [Merge] Uploaded final file to ${destBucket}: ${finalPath}`);
+  console.log(`📤 [Merge] Uploaded final file: ${finalPath}`);
   await cleanupChunks(uploadId, sorted);
   console.log(`🧹 [Merge] Cleanup completed in ${Date.now() - startTime}ms total`);
-
-  // For video files in private bucket, trigger preview generation
-  if (destBucket === BUCKET_ORIGINALS) {
-    console.log(`🎬 [Merge] Video stored in private bucket - triggering preview generation`);
-    triggerPreviewGeneration(finalPath, destBucket).catch(err => 
-      console.error(`⚠️ [Merge] Preview generation trigger failed:`, err)
-    );
-  }
 
   return finalPath;
 }
@@ -518,9 +497,8 @@ async function mergeChunksStreaming(
   console.log(`🔗 [Merge] Concatenated ${totalLength} bytes`);
 
   const finalPath = fileName;
-  const destBucket = getDestinationBucket(fileName);
   const { error: uploadError } = await supabase.storage
-    .from(destBucket)
+    .from(BUCKET_FINAL)
     .upload(finalPath, mergedFile, {
       contentType: detectMimeType(fileName),
       upsert: true,
@@ -531,17 +509,9 @@ async function mergeChunksStreaming(
     throw uploadError;
   }
 
-  console.log(`📤 [Merge] Uploaded final file to ${destBucket}: ${finalPath}`);
+  console.log(`📤 [Merge] Uploaded final file: ${finalPath}`);
   await cleanupChunks(uploadId, sorted);
   console.log(`🧹 [Merge] Cleanup completed in ${Date.now() - startTime}ms total`);
-
-  // For video files in private bucket, trigger preview generation
-  if (destBucket === BUCKET_ORIGINALS) {
-    console.log(`🎬 [Merge] Video stored in private bucket - triggering preview generation`);
-    triggerPreviewGeneration(finalPath, destBucket).catch(err => 
-      console.error(`⚠️ [Merge] Preview generation trigger failed:`, err)
-    );
-  }
 
   return finalPath;
 }
@@ -558,36 +528,6 @@ async function cleanupChunks(uploadId: string, sorted: any[]) {
     );
   }
   await Promise.all(cleanupBatches);
-}
-
-// Trigger async preview generation for video files stored in private bucket
-async function triggerPreviewGeneration(videoPath: string, bucket: string) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  
-  console.log(`🎬 [Preview] Triggering generation for: ${videoPath}`);
-  
-  const response = await fetch(`${supabaseUrl}/functions/v1/generate-video-preview`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${supabaseServiceKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      videoPath,
-      bucket,
-      duration: 10,
-      resolution: 720,
-    }),
-  });
-  
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error(`⚠️ [Preview] Generation request failed: ${response.status} ${errText}`);
-  } else {
-    const result = await response.json();
-    console.log(`✅ [Preview] Generation result:`, result);
-  }
 }
 
 // Serveur
@@ -622,7 +562,6 @@ serve(async (req) => {
 
     await ensureBucketExists(BUCKET_TEMP);
     await ensureBucketExists(BUCKET_FINAL);
-    await ensureBucketExists(BUCKET_ORIGINALS);
 
     // Init upload (legacy URL parameter method)
     if (action === "init-upload" && req.method === "POST") {

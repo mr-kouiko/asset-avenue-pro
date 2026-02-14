@@ -132,7 +132,6 @@ async function handleTokenBasedDownload(supabaseClient: any, token: string, req:
 
     // Determine the correct bucket and extract relative path
     // file_path may be a full URL or a relative path
-    // Default to 'original-files' (private bucket) for originals
     let bucket = contentFile.metadata?.bucket || "original-files";
     let relativePath = contentFile.file_path;
     
@@ -152,8 +151,6 @@ async function handleTokenBasedDownload(supabaseClient: any, token: string, req:
         console.error('Failed to parse file_path URL:', e);
       }
     }
-    
-    console.log(`Generating signed URL from bucket: ${bucket}, path: ${relativePath}`);
 
     // Generate signed URL (valid for 5 minutes for security)
     const { data: signedUrlData, error: signedUrlError } = await supabaseClient
