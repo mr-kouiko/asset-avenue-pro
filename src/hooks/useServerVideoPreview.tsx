@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface PreviewOptions {
   videoPath: string;
+  bucket?: string;       // Source bucket (default: 'original-files')
   contentId?: string;
   duration?: number;
   resolution?: number;
@@ -36,7 +37,7 @@ export function useServerVideoPreview() {
   });
 
   const generate = useCallback(async (options: PreviewOptions): Promise<PreviewResult> => {
-    const { videoPath, contentId, duration = 6, resolution = 720 } = options;
+    const { videoPath, bucket = 'original-files', contentId, duration = 10, resolution = 720 } = options;
 
     setState({ isGenerating: true, progress: 10, stage: 'requesting' });
 
@@ -45,7 +46,7 @@ export function useServerVideoPreview() {
       setState(prev => ({ ...prev, progress: 30, stage: 'processing' }));
       
       const { data, error } = await supabase.functions.invoke('generate-video-preview', {
-        body: { videoPath, contentId, duration, resolution },
+        body: { videoPath, bucket, contentId, duration, resolution },
       });
 
       if (error) {
