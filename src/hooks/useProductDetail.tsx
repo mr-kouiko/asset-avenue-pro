@@ -416,21 +416,10 @@ export const useProductDetail = (productId: string) => {
               previewUrl = publicData.publicUrl;
             }
           } else {
-            // No preview_path available - fetch actual file_path from DB directly
-            // (the RPC strips file_path for security, but uploads bucket is public)
-            const videoFile = filesList.find((f: any) => f.is_original);
-            if (videoFile?.id) {
-              console.log('🎬 No preview_path, fetching file_path from DB for file:', videoFile.id);
-              const { data: fileData } = await supabase
-                .from('content_files')
-                .select('file_path')
-                .eq('id', videoFile.id)
-                .single();
-              if (fileData?.file_path) {
-                previewUrl = fileData.file_path;
-                console.log('📺 Video URL from DB:', previewUrl);
-              }
-            }
+            // SECURITY: No preview_path available - do NOT fall back to original file
+            // Original HD masters must never be exposed to the browser
+            console.warn('⚠️ No preview_path available for video - preview unavailable');
+            previewUrl = undefined;
           }
           if (previewUrl) {
             console.log('📺 Final video URL:', previewUrl);
