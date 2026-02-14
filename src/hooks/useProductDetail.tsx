@@ -416,10 +416,16 @@ export const useProductDetail = (productId: string) => {
               previewUrl = publicData.publicUrl;
             }
           } else {
-            // SECURITY: No preview_path available - do NOT fall back to original file
-            // Original HD masters must never be exposed to the browser
-            console.warn('⚠️ No preview_path available for video - preview unavailable');
-            previewUrl = undefined;
+            // No preview_path - only allow fallback if file_path is already a public URL
+            // (public uploads bucket). NEVER query DB for private file paths.
+            const videoFile = filesList.find((f: any) => f.is_original);
+            if (videoFile?.file_path && videoFile.file_path.startsWith('http')) {
+              console.log('🎬 No preview_path, using already-public file_path:', videoFile.file_path);
+              previewUrl = videoFile.file_path;
+            } else {
+              console.warn('⚠️ No preview_path and no public file_path - preview unavailable');
+              previewUrl = undefined;
+            }
           }
           if (previewUrl) {
             console.log('📺 Final video URL:', previewUrl);
