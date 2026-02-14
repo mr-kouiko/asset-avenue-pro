@@ -308,17 +308,21 @@ export const useProductDetail = (productId: string) => {
           const fileName = firstFile.file_path?.toLowerCase() || '';
           const fileFormat = firstFile.file_format?.toLowerCase() || '';
           
-          // Enhanced video detection - check both MIME type and file extension
-          if (fileType.startsWith('video/') || 
+          // Enhanced video detection - check MIME type, exact type, file extension, and format
+          if (fileType === 'video' ||
+              fileType.startsWith('video/') || 
+              fileFormat.startsWith('video/') ||
               fileName.includes('.mp4') || 
               fileName.includes('.mov') || 
               fileName.includes('.avi') || 
               fileName.includes('.webm') || 
               fileName.includes('.mkv') ||
               fileName.includes('.wmv') ||
-              fileName.includes('.flv')) {
+              fileName.includes('.flv') ||
+              firstFile.file_name?.toLowerCase().includes('.mp4') ||
+              firstFile.file_name?.toLowerCase().includes('.mov')) {
             contentType = 'video';
-            console.log('✅ Video content detected:', { fileType, fileName, contentType });
+            console.log('✅ Video content detected:', { fileType, fileName, fileFormat, contentType });
           }
           else if (fileType.startsWith('image/') || 
                    fileName.includes('.jpg') || 
@@ -397,26 +401,39 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For video files, use original file for playback (preview files may be corrupt/incomplete)
+        // For video files, resolve playback URL
         if (contentType === 'video' && filesList.length > 0) {
-          const videoFile = filesList.find((f: any) =>
-            f.is_original && (
-              f.file_type?.toLowerCase().startsWith('video') ||
-              f.file_format?.toLowerCase().startsWith('video/') ||
-              /\.(mp4|mov|avi|webm|mkv|wmv|flv)$/.test((f.file_path || '').toLowerCase())
-            )
-          );
-          if (videoFile?.file_path) {
-            console.log('🎬 Using original video for playback:', videoFile.file_path);
-            if (videoFile.file_path.startsWith('http')) {
-              previewUrl = videoFile.file_path;
+          // First try preview_path (watermarked preview - preferred for security)
+          const videoFileWithPreview = filesList.find((f: any) => f.preview_path);
+          if (videoFileWithPreview?.preview_path) {
+            console.log('🎬 Using preview_path for video playback:', videoFileWithPreview.preview_path);
+            if (videoFileWithPreview.preview_path.startsWith('http')) {
+              previewUrl = videoFileWithPreview.preview_path;
             } else {
               const { data: publicData } = supabase.storage
-                .from('uploads')
-                .getPublicUrl(videoFile.file_path);
+                .from('previews')
+                .getPublicUrl(videoFileWithPreview.preview_path);
               previewUrl = publicData.publicUrl;
             }
-            console.log('📺 Video URL created:', previewUrl);
+          } else {
+            // No preview_path available - fetch actual file_path from DB directly
+            // (the RPC strips file_path for security, but uploads bucket is public)
+            const videoFile = filesList.find((f: any) => f.is_original);
+            if (videoFile?.id) {
+              console.log('🎬 No preview_path, fetching file_path from DB for file:', videoFile.id);
+              const { data: fileData } = await supabase
+                .from('content_files')
+                .select('file_path')
+                .eq('id', videoFile.id)
+                .single();
+              if (fileData?.file_path) {
+                previewUrl = fileData.file_path;
+                console.log('📺 Video URL from DB:', previewUrl);
+              }
+            }
+          }
+          if (previewUrl) {
+            console.log('📺 Final video URL:', previewUrl);
           }
         }
 
