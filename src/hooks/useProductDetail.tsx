@@ -397,8 +397,8 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For video files, use preview_path first, fallback to original file  
-        if (contentType === 'video' && filesList.length > 0 && !previewUrl) {
+        // For video files, use original file for playback (preview files may be corrupt/incomplete)
+        if (contentType === 'video' && filesList.length > 0) {
           const videoFile = filesList.find((f: any) =>
             f.is_original && (
               f.file_type?.toLowerCase().startsWith('video') ||
@@ -407,7 +407,7 @@ export const useProductDetail = (productId: string) => {
             )
           );
           if (videoFile?.file_path) {
-            console.log('🎬 No preview_path found, falling back to original video:', videoFile.file_path);
+            console.log('🎬 Using original video for playback:', videoFile.file_path);
             if (videoFile.file_path.startsWith('http')) {
               previewUrl = videoFile.file_path;
             } else {

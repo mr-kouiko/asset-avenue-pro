@@ -272,6 +272,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setDuration(d);
   }, []);
 
+  const handleDurationChange = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    const d = Number.isFinite(media.duration) ? media.duration : 0;
+    if (d > 0) setDuration(d);
+  }, []);
+
   const handleProgress = useCallback(() => {
     const media = mediaRef.current;
     if (!media || !Number.isFinite(media.duration) || media.duration <= 0) return;
@@ -309,6 +316,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     media.addEventListener('canplay', handleCanPlay);
     media.addEventListener('error', handleError);
     media.addEventListener('loadedmetadata', handleLoadedMetadata);
+    media.addEventListener('durationchange', handleDurationChange);
     media.addEventListener('progress', handleProgress);
     media.addEventListener('timeupdate', handleTimeUpdate);
     media.addEventListener('play', handlePlayEvt);
@@ -320,6 +328,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       media.removeEventListener('canplay', handleCanPlay);
       media.removeEventListener('error', handleError);
       media.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      media.removeEventListener('durationchange', handleDurationChange);
       media.removeEventListener('progress', handleProgress);
       media.removeEventListener('timeupdate', handleTimeUpdate);
       media.removeEventListener('play', handlePlayEvt);
@@ -331,6 +340,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     handleCanPlay,
     handleError,
     handleLoadedMetadata,
+    handleDurationChange,
     handleProgress,
     handleTimeUpdate,
     handlePlayEvt,
@@ -339,29 +349,28 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     handleVolumeEvt,
   ]);
 
-  // Handle source loading and reloading
+  // Reset player state when source changes
+  // The key={mediaKey} prop forces React to remount the element,
+  // so we just reset our tracking state here.
+  const prevSrcRef = useRef<string | undefined>();
   useEffect(() => {
-    const media = mediaRef.current;
-    if (!media) return;
-    if (!src) {
-      setIsLoading(false);
-      setHasError(false);
-      setCanPlay(false);
-      return;
+    if (prevSrcRef.current !== src) {
+      prevSrcRef.current = src;
+      if (src) {
+        setIsLoading(true);
+        setHasError(false);
+        setCanPlay(false);
+        setBuffered(0);
+        setDuration(0);
+        setCurrentTime(0);
+        setIsPlaying(false);
+      } else {
+        setIsLoading(false);
+        setHasError(false);
+        setCanPlay(false);
+      }
     }
-    
-    setIsLoading(true);
-    setHasError(false);
-    setCanPlay(false);
-    setBuffered(0);
-    setDuration(0);
-    setCurrentTime(0);
-
-    media.removeAttribute('src');
-    try {
-      media.load();
-    } catch (_) {}
-  }, [mediaKey, src]);
+  }, [src]);
 
   // Controls
   const togglePlay = useCallback(async () => {
@@ -541,6 +550,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         <video
           key={mediaKey}
           ref={mediaRef as React.RefObject<HTMLVideoElement>}
+          src={src}
           poster={poster}
           preload={deviceInfo.isMobile ? 'metadata' : 'auto'}
           autoPlay={autoPlay && !deviceInfo.isMobile}
@@ -548,13 +558,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           playsInline
           crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
           className="w-full h-full object-cover"
-          style={{ display: isLoading ? 'none' : 'block' }}
+          style={{ opacity: isLoading ? 0 : 1 }}
           controls={false}
-        >
-          <source src={src} type={mimeType} />
-          {/* Fallback for .mov files - try as MP4 if QuickTime fails */}
-          {mimeType === 'video/quicktime' && <source src={src} type="video/mp4" />}
-        </video>
+        />
       ) : (
         <audio
           key={mediaKey}
