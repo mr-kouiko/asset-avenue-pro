@@ -53,10 +53,8 @@ export const useReviews = (submissionId?: string) => {
       
       if (userIds.length > 0) {
         const { data: profileData } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, avatar_url')
-          .in('user_id', userIds);
-        
+          .rpc('get_safe_profile_info', { p_user_ids: userIds });
+
         profiles = (profileData || []).reduce((acc, p) => {
           acc[p.user_id] = { display_name: p.display_name || 'Anonymous', avatar_url: p.avatar_url || '' };
           return acc;

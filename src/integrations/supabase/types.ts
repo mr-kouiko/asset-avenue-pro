@@ -1983,6 +1983,15 @@ export type Database = {
           public_file_url: string
         }[]
       }
+      get_safe_profile_info: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          store_name: string
+          user_id: string
+        }[]
+      }
       get_security_audit_summary: {
         Args: never
         Returns: {
