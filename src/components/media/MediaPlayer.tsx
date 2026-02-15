@@ -141,7 +141,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         const result = await serverPreview.generate({
           videoPath: storagePath,
           contentId,
-          duration: 6,
           resolution: 720,
         });
         
@@ -180,7 +179,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       // Use 720p for faster processing
       const blob = await clientPreview.generate({ 
         url: src, 
-        durationSec: 6, 
+        // No durationSec — records full video length
         targetWidth: 1280, // 720p width
         fps: 24, 
         videoBitsPerSecond: 2500000 // 2.5 Mbps for 720p
