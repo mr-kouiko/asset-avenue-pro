@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Volume2, Download, Loader2, Play, Pause } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const VOICES = [
   { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Warm British male" },
@@ -42,6 +43,12 @@ export default function TextToSpeech() {
     setAudioUrl(null);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast.error("Please sign in to use Text to Speech");
+        return;
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
@@ -49,7 +56,7 @@ export default function TextToSpeech() {
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${sessionData.session.access_token}`,
           },
           body: JSON.stringify({ text: text.trim(), voiceId: selectedVoice }),
         }
