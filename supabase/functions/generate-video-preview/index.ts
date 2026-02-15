@@ -49,7 +49,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { videoPath, contentId, duration = 6, resolution = 720 }: PreviewRequest = await req.json();
+    const { videoPath, contentId, duration, resolution = 720 }: PreviewRequest = await req.json();
 
     if (!videoPath) {
       return new Response(
@@ -121,27 +121,8 @@ serve(async (req) => {
       // Continue without watermark if logo fails
     }
 
-    // For now, we'll use a simpler approach: 
-    // Since Deno Deploy doesn't have FFmpeg, we'll create a lightweight preview
-    // by extracting frames and creating a simple video using canvas-based approach
-    // 
-    // In production, you would:
-    // 1. Use a cloud video processing service (AWS MediaConvert, Cloudflare Stream, etc.)
-    // 2. Or run this on a server with FFmpeg installed
-    // 3. Or use FFmpeg WASM (slower but works)
-    
-    // For this implementation, we'll store the original video as the "preview"
-    // but with proper metadata to indicate it needs client-side processing
-    // The real FFmpeg processing would require additional infrastructure
-
-    // Create a preview by using the first portion of the video
-    // This is a simplified approach - in production use FFmpeg
-    const videoArrayBuffer = await videoData.arrayBuffer();
-    const videoBytes = new Uint8Array(videoArrayBuffer);
-    
-    // For a proper implementation, we would process the video here
-    // For now, we'll upload the original and mark it for client-side processing
-    // OR use an external video processing API
+    // For now, we need an external FFmpeg API for proper video processing.
+    // Deno Deploy doesn't have FFmpeg, so we cannot process video server-side without one.
     
     // Check if we have an FFmpeg processing API configured
     const ffmpegApiUrl = Deno.env.get('FFMPEG_API_URL');
@@ -153,9 +134,12 @@ serve(async (req) => {
       // Use external FFmpeg API for processing
       console.log(`[generate-video-preview] Using external FFmpeg API...`);
       
+      const videoArrayBuffer = await videoData.arrayBuffer();
+      const videoBytes = new Uint8Array(videoArrayBuffer);
+      
       const formData = new FormData();
       formData.append('video', new Blob([videoBytes], { type: 'video/mp4' }), 'input.mp4');
-      formData.append('duration', duration.toString());
+      if (duration) formData.append('duration', duration.toString());
       formData.append('resolution', resolution.toString());
       if (logoData) {
         formData.append('watermark', logoData, 'watermark.png');
@@ -175,24 +159,16 @@ serve(async (req) => {
       
       previewBlob = await ffmpegResponse.blob();
     } else {
-      // Fallback: Store a marker that indicates preview needs generation
-      // The client will use the video preview generator as fallback
-      console.log(`[generate-video-preview] No FFmpeg API configured, using fallback approach`);
-      
-      // For small videos (< 50MB), we can store a portion as preview
-      // This gives immediate availability while marking for proper processing
-      const maxPreviewSize = 10 * 1024 * 1024; // 10MB max for preview
-      
-      if (videoBytes.length <= maxPreviewSize) {
-        // Small enough to store directly
-        previewBlob = new Blob([videoBytes], { type: 'video/mp4' });
-      } else {
-        // For larger videos, we'll create a smaller "preview" by taking a portion
-        // This is NOT ideal but provides something while proper processing is set up
-        const previewBytes = videoBytes.slice(0, maxPreviewSize);
-        previewBlob = new Blob([previewBytes], { type: 'video/mp4' });
-        console.log(`[generate-video-preview] Video truncated for preview (${maxPreviewSize} bytes)`);
-      }
+      // No FFmpeg API configured — cannot generate a valid preview server-side.
+      // Return an error so the client falls back to browser-based preview generation.
+      console.warn(`[generate-video-preview] No FFMPEG_API_URL configured. Cannot generate server-side preview.`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Server-side preview generation requires an FFmpeg processing API. Configure FFMPEG_API_URL and FFMPEG_API_KEY secrets, or use client-side preview generation instead.' 
+        } as PreviewResponse),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 501 }
+      );
     }
 
     // Upload the preview

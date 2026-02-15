@@ -32,7 +32,7 @@ export function useVideoPreviewGenerator() {
 
   const generate = useCallback(async ({
     url,
-    durationSec = 6,
+    durationSec, // undefined = use full video duration
     targetWidth, // undefined = use original resolution
     fps = 24,
     videoBitsPerSecond = 4_000_000, // ~4 Mbps for full resolution
@@ -347,10 +347,9 @@ export function useVideoPreviewGenerator() {
       
       raf = requestAnimationFrame(draw);
 
-      // IMPORTANT: Always use the requested duration, not the video duration
-      // This ensures we get a full 6-second preview regardless of video length
-      const stopAfter = durationSec;
-      console.log('[VideoPreview] Recording for exactly', stopAfter, 'seconds (video duration:', video.duration, ')');
+      // Use full video duration if no explicit duration was requested
+      const stopAfter = durationSec && durationSec > 0 ? Math.min(durationSec, video.duration) : video.duration;
+      console.log('[VideoPreview] Recording for', stopAfter, 'seconds (video duration:', video.duration, ')');
       
       // Monitor actual recording time
       const recordStartTime = Date.now();
