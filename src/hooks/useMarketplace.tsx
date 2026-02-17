@@ -126,8 +126,29 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         filesBySubmission.set(file.submission_id, [...existing, file]);
       });
 
+      // Batch-fetch engagement stats (likes + downloads)
+      const [likesResult, downloadsResult] = await Promise.all([
+        supabase
+          .from('content_likes')
+          .select('submission_id')
+          .in('submission_id', submissionIds),
+        supabase
+          .from('downloads')
+          .select('submission_id')
+          .in('submission_id', submissionIds)
+      ]);
+
+      const likesMap = new Map<string, number>();
+      (likesResult.data || []).forEach(row => {
+        likesMap.set(row.submission_id, (likesMap.get(row.submission_id) || 0) + 1);
+      });
+      const downloadsMap = new Map<string, number>();
+      (downloadsResult.data || []).forEach(row => {
+        downloadsMap.set(row.submission_id, (downloadsMap.get(row.submission_id) || 0) + 1);
+      });
+
       // Process items (same logic as fetchMarketplaceContent)
-      const newContent = processMarketplaceData(marketplaceData || [], filesBySubmission, creatorMap);
+      const newContent = processMarketplaceData(marketplaceData || [], filesBySubmission, creatorMap, likesMap, downloadsMap);
       
       // Only update if there are actual changes to avoid unnecessary re-renders
       setContent(prev => {
@@ -155,7 +176,9 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
   const processMarketplaceData = useCallback((
     marketplaceData: any[], 
     filesBySubmission: Map<string, any[]>,
-    creatorMap: Map<string, string>
+    creatorMap: Map<string, string>,
+    likesMap: Map<string, number> = new Map(),
+    downloadsMap: Map<string, number> = new Map()
   ): MarketplaceContent[] => {
     const isImagePath = (p?: string) => !!p && /\.(jpg|jpeg|png|webp|gif)$/i.test(p);
 
@@ -332,8 +355,8 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         videoUrl: (contentType === 'video' || contentType === 'vfx') ? mediaUrl : undefined,
         audioUrl: contentType === 'audio' ? mediaUrl : undefined,
         coverUrl: coverUrl || (contentType === 'ebook' ? thumbnailUrl : undefined),
-        likes: Math.floor(Math.random() * 2000),
-        downloads: Math.floor(Math.random() * 1000),
+        likes: likesMap.get(item.id) || 0,
+        downloads: downloadsMap.get(item.id) || 0,
         category_id: item.category_id,
         tags: item.tags || [],
         created_at: item.created_at,
@@ -430,7 +453,28 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         filesBySubmission.set(file.submission_id, [...existing, file]);
       });
 
-      const validContent = processMarketplaceData(marketplaceData || [], filesBySubmission, creatorMap);
+      // Batch-fetch engagement stats (likes + downloads)
+      const [likesResult, downloadsResult] = await Promise.all([
+        supabase
+          .from('content_likes')
+          .select('submission_id')
+          .in('submission_id', submissionIds),
+        supabase
+          .from('downloads')
+          .select('submission_id')
+          .in('submission_id', submissionIds)
+      ]);
+
+      const likesMap = new Map<string, number>();
+      (likesResult.data || []).forEach(row => {
+        likesMap.set(row.submission_id, (likesMap.get(row.submission_id) || 0) + 1);
+      });
+      const downloadsMap = new Map<string, number>();
+      (downloadsResult.data || []).forEach(row => {
+        downloadsMap.set(row.submission_id, (downloadsMap.get(row.submission_id) || 0) + 1);
+      });
+
+      const validContent = processMarketplaceData(marketplaceData || [], filesBySubmission, creatorMap, likesMap, downloadsMap);
       console.log(`✅ [MARKETPLACE] Showing ${validContent.length} valid items`);
 
       if (reset) {
