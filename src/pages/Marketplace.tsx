@@ -51,7 +51,7 @@ const Marketplace = () => {
     noindex: hasFilterParams // noindex filter variations
   });
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("popular");
+  const [sortBy, setSortBy] = useState("recent");
   const [categories, setCategories] = useState([
     { value: "all", label: "All Categories", count: "0" }
   ]);
