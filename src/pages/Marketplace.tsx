@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { SlidersHorizontal, ChevronDown, Video, Camera } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams, useParams, useLocation } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
@@ -689,9 +690,13 @@ const Marketplace = () => {
           {/* Results Info and View Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {filteredContent.length} results found
-              </span>
+              {loading ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  {filteredContent.length} results found
+                </span>
+              )}
               <Badge variant="secondary">All</Badge>
             </div>
 
@@ -733,11 +738,14 @@ const Marketplace = () => {
 
         {/* Content Grid - Adobe Stock Style */}
         {loading ? (
-          <div className="flex justify-center items-center py-16">
-            <div className="text-center">
-              <div className="w-8 h-8 border-2 border-stock-blue/30 border-t-stock-blue rounded-full animate-spin mx-auto mb-4" />
-              <div className="text-stock-dark/60 font-medium">Loading content...</div>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
           </div>
         ) : sortedContent.length === 0 ? (
           <div className="text-center py-16">

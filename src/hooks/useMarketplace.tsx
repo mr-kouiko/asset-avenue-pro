@@ -427,19 +427,26 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       const creatorIds = [...new Set((marketplaceData || []).map((item: any) => item.creator_id))];
       const submissionIds = (marketplaceData || []).map((item: any) => item.id);
       
-      // PARALLEL FETCH: Creators and Files at the same time
-      // Using secure public RPC for creators (works for anonymous users)
+      // PARALLEL FETCH: Creators, Files, Likes, and Downloads all at once
       const parallelStart = Date.now();
-      const [creatorsResult, filesResult] = await Promise.all([
+      const [creatorsResult, filesResult, likesResult, downloadsResult] = await Promise.all([
         supabase.rpc('get_creator_public_info', { creator_ids: creatorIds }),
         supabase
           .from('content_files')
           .select('id, submission_id, file_name, file_path, file_type, file_format, is_original, is_preview, preview_path, thumbnail_path, metadata')
+          .in('submission_id', submissionIds),
+        supabase
+          .from('content_likes')
+          .select('submission_id')
+          .in('submission_id', submissionIds),
+        supabase
+          .from('downloads')
+          .select('submission_id')
           .in('submission_id', submissionIds)
       ]);
       
       const parallelTime = Date.now() - parallelStart;
-      console.log(`⚡ [MARKETPLACE] PARALLEL fetch (creators + files): ${parallelTime}ms`);
+      console.log(`⚡ [MARKETPLACE] PARALLEL fetch (creators + files + stats): ${parallelTime}ms`);
       
       const creatorMap = new Map((creatorsResult.data as any[])?.map(c => [c.user_id, c.store_name || c.display_name]) || []);
       
@@ -452,18 +459,6 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         const existing = filesBySubmission.get(file.submission_id) || [];
         filesBySubmission.set(file.submission_id, [...existing, file]);
       });
-
-      // Batch-fetch engagement stats (likes + downloads)
-      const [likesResult, downloadsResult] = await Promise.all([
-        supabase
-          .from('content_likes')
-          .select('submission_id')
-          .in('submission_id', submissionIds),
-        supabase
-          .from('downloads')
-          .select('submission_id')
-          .in('submission_id', submissionIds)
-      ]);
 
       const likesMap = new Map<string, number>();
       (likesResult.data || []).forEach(row => {
@@ -499,20 +494,23 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
     }
   };
 
-  // Refetch when category filter changes
+  // Single effect for initial fetch + category changes
   useEffect(() => {
-    if (prevCategoryRef.current !== categoryFilter) {
+    const isInitial = prevCategoryRef.current === undefined && categoryFilter === undefined;
+    const categoryChanged = prevCategoryRef.current !== categoryFilter;
+    
+    if (categoryChanged) {
       console.log(`🔀 [MARKETPLACE] Category changed: ${prevCategoryRef.current} -> ${categoryFilter}`);
       prevCategoryRef.current = categoryFilter;
       isInitialLoadRef.current = true;
       setOffset(0);
-      fetchMarketplaceContent(true);
     }
+    
+    fetchMarketplaceContent(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter]);
 
   useEffect(() => {
-    // Initial fetch on mount
-    fetchMarketplaceContent(true);
     
     // Listen for explicit refresh events (triggered by user actions like search, filter, sort)
     const handleRefresh = () => {
