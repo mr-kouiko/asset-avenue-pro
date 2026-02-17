@@ -1,58 +1,60 @@
 
-# Add Image Converter to Studio AI
 
-## Overview
+# Fix Marketplace Sorting and Fake Engagement Stats
 
-A free, client-side image format converter tool accessible at `/studio-ai/image-converter`. Inspired by Shutterstock's converter, it lets users upload an image and convert it to PNG, JPEG, WebP, or PDF -- all processed in the browser with zero server cost or credit consumption.
+## Problem Identified
 
-## What it does
+Two issues are causing the marketplace sorting to appear broken:
 
-- Drag-and-drop or click to upload an image (JPG, PNG, WebP, BMP, GIF, TIFF)
-- Choose a target format: PNG, JPEG, WebP, or PDF
-- Adjust quality for lossy formats (JPEG, WebP)
-- Preview original and converted image side by side
-- Download the converted file instantly
-- Shows file size before/after conversion
+1. **Fake random engagement stats**: The `useMarketplace` hook generates random `likes` and `downloads` values on every load:
+   ```
+   likes: Math.floor(Math.random() * 2000)
+   downloads: Math.floor(Math.random() * 1000)
+   ```
+   This means every page load shows different numbers, making the UI feel unreliable and confusing.
 
-## Cost
+2. **"Most popular" sort uses random data**: The default sort (`popular`) ranks by `downloads + likes`, which are random -- so the order is essentially random and changes on every refresh.
 
-This tool runs entirely in the browser using the Canvas API. There is no server call, no edge function, and no credit or quota consumption.
+3. **Default sort should be "Most recent"**: For a marketplace with a growing catalog, defaulting to "Most recent" ensures new content gets visibility and the order is consistent.
 
-## Technical Plan
+## Solution
 
-### 1. New page: `src/pages/ImageConverter.tsx`
+### 1. Replace fake stats with real database counts
 
-- Follows the same dark theme and layout as `RemoveBackground.tsx`
-- Upload zone with drag-and-drop support
-- Format selector buttons (PNG, JPEG, WebP, PDF)
-- Quality slider (for JPEG/WebP, 10-100%)
-- Side-by-side preview (original vs converted)
-- File size comparison display
-- Download button
-- Uses `canvas.toBlob()` for raster conversions and `jsPDF`-free approach (canvas to PDF via data URL) for PDF output
+- Query actual `content_likes` counts using the existing `get_content_likes_count` RPC function (already in the database)
+- Query actual `downloads` count from the `downloads` table
+- Cache these values to avoid excessive queries
 
-### 2. Register route in `src/App.tsx`
+### 2. Change default sort to "Most recent"
 
-- Add lazy import: `const ImageConverter = lazy(() => import("./pages/ImageConverter"))`
-- Add route: `<Route path="/studio-ai/image-converter" element={<ImageConverter />} />`
+- Update the initial `sortBy` state from `"popular"` to `"recent"` in `Marketplace.tsx`
 
-### 3. Add tool card in `src/pages/StudioAI.tsx`
+### 3. Batch-fetch real engagement data
 
-- Add a new entry to the `imageTools` array with `id: 'image-converter'`, title "Image Converter", and the `RefreshCw` icon
-- Badge: "Available", `available: true`
-- Links to `/studio-ai/image-converter`
+- After fetching marketplace content, run a single efficient query to get like counts and download counts for all displayed items
+- This avoids N+1 query problems
 
-### Supported conversions
+---
 
-| From | To |
-|------|-----|
-| JPG, PNG, WebP, BMP, GIF, TIFF | PNG |
-| JPG, PNG, WebP, BMP, GIF, TIFF | JPEG |
-| JPG, PNG, WebP, BMP, GIF, TIFF | WebP |
-| JPG, PNG, WebP, BMP, GIF, TIFF | PDF (single page) |
+## Technical Details
 
-### Files to create/modify
+### File: `src/hooks/useMarketplace.tsx`
 
-- **Create**: `src/pages/ImageConverter.tsx` (new page)
-- **Edit**: `src/App.tsx` (add route)
-- **Edit**: `src/pages/StudioAI.tsx` (add tool card to imageTools array)
+**Remove random stats generation:**
+- Replace `likes: Math.floor(Math.random() * 2000)` with real like counts from a batch query
+- Replace `downloads: Math.floor(Math.random() * 1000)` with real download counts from a batch query
+
+**Add batch engagement query:**
+After fetching content submissions and files, run two parallel queries:
+- `SELECT submission_id, COUNT(*) FROM content_likes WHERE submission_id = ANY($ids) GROUP BY submission_id`
+- `SELECT submission_id, COUNT(*) FROM downloads WHERE submission_id = ANY($ids) GROUP BY submission_id`
+
+Map these counts back to each content item.
+
+### File: `src/pages/Marketplace.tsx`
+
+**Change default sort:**
+- Line 54: Change `useState("popular")` to `useState("recent")`
+
+This ensures new visitors see the freshest content first, and sorting is always deterministic and accurate.
+
