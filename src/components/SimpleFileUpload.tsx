@@ -699,9 +699,25 @@ export const SimpleFileUpload = ({
 
   const handleUploadAll = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending');
-    // Upload all files in parallel for maximum performance
-    const uploadPromises = pendingFiles.map(file => uploadFile(file));
-    await Promise.all(uploadPromises);
+    if (pendingFiles.length === 0) return;
+    
+    // Upload with concurrency limit to prevent overwhelming browser/server
+    const CONCURRENCY = 3;
+    const results: void[] = [];
+    let index = 0;
+    
+    const worker = async () => {
+      while (index < pendingFiles.length) {
+        const currentIndex = index++;
+        await uploadFile(pendingFiles[currentIndex]);
+      }
+    };
+    
+    const workers = Array.from(
+      { length: Math.min(CONCURRENCY, pendingFiles.length) }, 
+      () => worker()
+    );
+    await Promise.all(workers);
   };
 
   const handleRemoveFile = (fileId: string) => {
@@ -804,9 +820,16 @@ export const SimpleFileUpload = ({
                 <div className="flex-shrink-0">
                   {file.file.type.startsWith('image/') ? (
                     <img
-                      src={URL.createObjectURL(file.file)} 
+                      src={file.url || URL.createObjectURL(file.file)} 
                       alt={file.file.name}
                       className="w-12 h-12 object-cover rounded"
+                      onLoad={(e) => {
+                        // Cleanup object URL after image loads to prevent memory leak
+                        const src = (e.target as HTMLImageElement).src;
+                        if (src.startsWith('blob:') && file.url) {
+                          URL.revokeObjectURL(src);
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
