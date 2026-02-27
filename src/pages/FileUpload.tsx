@@ -47,6 +47,17 @@ const FileUpload = () => {
   
   // CRITICAL: Track if uploads are in progress to prevent state updates that cause re-renders
   const isUploadingRef = useRef(false);
+  
+  // CRITICAL: Mutex to prevent concurrent draft creation (race condition fix)
+  const draftCreationPromiseRef = useRef<Promise<string | null> | null>(null);
+  
+  // Ref to track draft ID without stale closure issues
+  const currentDraftIdRef = useRef<string | null>(null);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentDraftIdRef.current = currentDraftId;
+  }, [currentDraftId]);
 
   // Initialize: load existing drafts and recover orphaned uploads
   useEffect(() => {
@@ -90,16 +101,36 @@ const FileUpload = () => {
   }, []); // Empty deps - runs once, guard prevents re-runs
 
   // Create a draft when user starts uploading (if not already created)
+  // Uses a mutex + ref to prevent concurrent creation and stale closures
   const ensureDraftExists = useCallback(async (): Promise<string | null> => {
-    if (currentDraftId) return currentDraftId;
+    // Use ref to avoid stale closure — state updates may not be visible in callbacks
+    if (currentDraftIdRef.current) return currentDraftIdRef.current;
     
-    const newDraftId = await createDraft('New Upload');
-    if (newDraftId) {
-      setCurrentDraftId(newDraftId);
-      console.log('📝 Created new draft for upload session:', newDraftId);
+    // If another call is already creating a draft, wait for it
+    if (draftCreationPromiseRef.current) {
+      return draftCreationPromiseRef.current;
     }
-    return newDraftId;
-  }, [currentDraftId, createDraft]);
+    
+    // Create the promise and store it so concurrent calls reuse it
+    const promise = (async () => {
+      const newDraftId = await createDraft('New Upload');
+      if (newDraftId) {
+        currentDraftIdRef.current = newDraftId; // Update ref immediately
+        setCurrentDraftId(newDraftId);
+        console.log('📝 Created new draft for upload session:', newDraftId);
+      }
+      return newDraftId;
+    })();
+    
+    draftCreationPromiseRef.current = promise;
+    
+    try {
+      const result = await promise;
+      return result;
+    } finally {
+      draftCreationPromiseRef.current = null;
+    }
+  }, [createDraft]);
 
   // STABILIZED callback - uses refs to track upload state without causing re-renders
   const handleFilesUploaded = useCallback(async (files: UploadedFileData[]) => {
