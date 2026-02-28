@@ -106,21 +106,49 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     ? serverPreview.progress 
     : clientPreview.state.progress;
 
+  // Helper: fetch a URL as blob and trigger download as a proper file
+  const downloadUrlAsFile = useCallback(async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      return true;
+    } catch (err) {
+      console.warn('[MediaPlayer] Blob download failed, using direct link fallback:', err);
+      // Fallback: direct link (may open in tab for cross-origin)
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    }
+  }, []);
+
   const handleDownloadPreview = useCallback(async () => {
     if (type !== 'video' || !src) return;
     
     const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
 
-    // Option 1: If pre-generated preview exists, download directly (instant)
+    // Option 1: If pre-generated preview exists, download as blob for proper MP4
     if (existingPreviewPath) {
       console.log('[MediaPlayer] Using pre-generated preview:', existingPreviewPath);
-      const a = document.createElement('a');
-      a.href = existingPreviewPath;
-      a.download = `${filenameBase}_preview.mp4`;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      toast({ 
+        title: 'Downloading preview…', 
+        description: 'Preparing MP4 file', 
+        duration: 10000 
+      });
+      await downloadUrlAsFile(existingPreviewPath, `${filenameBase}_preview.mp4`);
       toast({ 
         title: 'Preview ready', 
         description: 'Watermarked preview downloaded.', 
@@ -129,7 +157,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return;
     }
 
-    // Option 2: Try server-side generation (preferred - faster, reliable MP4)
+    // Option 2: Try to download the source video directly as preview (watermarked)
+    // This uses the preview URL (which is already watermarked) and downloads it as a real file
+    if (src) {
+      const cleanSrc = src.split('#')[0]; // Remove any #t=2 fragments
+      console.log('[MediaPlayer] Downloading source as preview:', cleanSrc);
+      toast({ 
+        title: 'Downloading preview…', 
+        description: 'Preparing watermarked MP4 file', 
+        duration: 30000 
+      });
+      
+      try {
+        await downloadUrlAsFile(cleanSrc, `${filenameBase}_preview.mp4`);
+        toast({ 
+          title: 'Preview ready', 
+          description: 'Watermarked preview downloaded.', 
+          duration: 3000 
+        });
+        return;
+      } catch (err) {
+        console.warn('[MediaPlayer] Direct download failed, trying server generation:', err);
+      }
+    }
+
+    // Option 3: Try server-side generation (fallback)
     if (storagePath) {
       toast({ 
         title: 'Generating preview…', 
@@ -145,14 +197,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         });
         
         console.log('[MediaPlayer] Server preview generated:', result);
-        
-        const a = document.createElement('a');
-        a.href = result.previewUrl;
-        a.download = `${filenameBase}_preview.mp4`;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        await downloadUrlAsFile(result.previewUrl, `${filenameBase}_preview.mp4`);
         
         toast({ 
           title: 'Preview ready', 
@@ -164,11 +209,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         return;
       } catch (serverErr) {
         console.warn('[MediaPlayer] Server preview failed, falling back to client-side:', serverErr);
-        // Fall through to client-side generation
       }
     }
 
-    // Option 3: Fallback to client-side generation (slower, may produce WebM)
+    // Option 4: Fallback to client-side generation (slower, may produce WebM)
     toast({ 
       title: 'Generating preview…', 
       description: 'Processing in browser (720p)', 
@@ -176,13 +220,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     });
     
     try {
-      // Use 720p for faster processing
       const blob = await clientPreview.generate({ 
         url: src, 
-        // No durationSec — records full video length
-        targetWidth: 1280, // 720p width
+        targetWidth: 1280,
         fps: 24, 
-        videoBitsPerSecond: 2500000 // 2.5 Mbps for 720p
+        videoBitsPerSecond: 2500000
       });
       
       const a = document.createElement('a');
