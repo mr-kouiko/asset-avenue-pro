@@ -38,6 +38,67 @@ import { ReportModal } from "@/components/ReportModal";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
 
+/** Prominent download preview button - fetches as blob for proper file download */
+const DownloadPreviewButton = ({ previewUrl, title, type }: { previewUrl: string; title: string; type: 'video' | 'audio' }) => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    const filenameBase = (title || 'preview').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
+    const ext = type === 'video' ? 'mp4' : 'mp3';
+    const filename = `${filenameBase}_preview.${ext}`;
+    const cleanUrl = previewUrl.split('#')[0];
+
+    try {
+      const response = await fetch(cleanUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fallback: open in new tab
+      const a = document.createElement('a');
+      a.href = cleanUrl;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="lg"
+      className="w-full gap-2 border-dashed border-2 border-primary/30 hover:border-primary hover:bg-primary/5 text-primary"
+      onClick={handleDownload}
+      disabled={downloading}
+    >
+      {downloading ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Downloading preview…
+        </>
+      ) : (
+        <>
+          <Download className="h-4 w-4" />
+          Download Watermarked Preview (Free)
+        </>
+      )}
+    </Button>
+  );
+};
+
 const ProductDetail = () => {
   // Support both new /products/:slug and legacy /product/:id routes
   const { slug, id } = useParams<{ slug?: string; id?: string }>();
@@ -531,6 +592,15 @@ const ProductDetail = () => {
         )}
         
       </div>
+
+            {/* Download Preview Button - Prominent for video/audio */}
+            {(product.type === 'video' || product.type === 'vfx' || isAudioByExtension) && product.previewUrl && (
+              <DownloadPreviewButton 
+                previewUrl={product.previewUrl} 
+                title={product.title} 
+                type={product.type === 'video' || product.type === 'vfx' ? 'video' : 'audio'}
+              />
+            )}
 
             {/* Technical Details - Adobe Stock Style */}
             <div className="bg-stock-gray/50 rounded-lg p-4 border border-stock-border/50">
