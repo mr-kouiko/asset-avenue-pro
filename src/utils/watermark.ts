@@ -172,16 +172,122 @@ export const addWatermarkToVideo = async (
 ): Promise<Blob> => {
   const {
     opacity = 0.6,
-    position = 'bottom-right',
-    size = 12,
-    logoPath = '/visustock-logo-watermark.png'
+    logoPath = DEFAULT_LOGO_URL
   } = options;
 
-  // For now, video watermarking would require server-side processing with ffmpeg
-  // This is a placeholder that returns the original video
-  // In production, implement server-side video watermarking
-  console.info('Video watermarking: Server-side implementation recommended for production');
-  return videoFile;
+  // Client-side video watermarking using Canvas + MediaRecorder
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+
+    const videoUrl = URL.createObjectURL(videoFile);
+
+    video.onloadedmetadata = () => {
+      // Cap preview to 720p
+      const scale = Math.min(1, 720 / video.videoHeight);
+      const width = Math.round(video.videoWidth * scale);
+      const height = Math.round(video.videoHeight * scale);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+
+      // Load watermark logo before starting capture
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+
+      logoImg.onload = () => {
+        // Setup MediaRecorder
+        const stream = canvas.captureStream(30); // 30fps
+        
+        // Try VP9 first for better quality, fallback to VP8, then default
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm;codecs=vp8';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm';
+        }
+
+        const recorder = new MediaRecorder(stream, {
+          mimeType,
+          videoBitsPerSecond: 2_500_000 // 2.5 Mbps for good quality at 720p
+        });
+
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          URL.revokeObjectURL(videoUrl);
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          console.log(`[watermark] Generated watermarked preview: ${(blob.size / 1024 / 1024).toFixed(1)}MB`);
+          resolve(blob);
+        };
+
+        recorder.onerror = (e) => {
+          URL.revokeObjectURL(videoUrl);
+          reject(new Error('MediaRecorder error during watermarking'));
+        };
+
+        // Draw loop
+        const watermarkSize = Math.round(width * 0.2); // 20% of width
+        const logoAspect = logoImg.naturalWidth / logoImg.naturalHeight;
+        const logoW = watermarkSize;
+        const logoH = watermarkSize / logoAspect;
+
+        const drawFrame = () => {
+          ctx.drawImage(video, 0, 0, width, height);
+          
+          // Draw centered watermark
+          ctx.globalAlpha = opacity;
+          ctx.drawImage(
+            logoImg,
+            (width - logoW) / 2,
+            (height - logoH) / 2,
+            logoW,
+            logoH
+          );
+          ctx.globalAlpha = 1;
+
+          if (!video.paused && !video.ended) {
+            requestAnimationFrame(drawFrame);
+          }
+        };
+
+        // Start recording and playback
+        recorder.start(100); // collect data every 100ms
+        video.play().then(() => {
+          drawFrame();
+        }).catch(reject);
+
+        video.onended = () => {
+          // Let last frame render, then stop
+          setTimeout(() => recorder.stop(), 200);
+        };
+      };
+
+      logoImg.onerror = () => {
+        // Fallback: record without watermark logo, use text
+        URL.revokeObjectURL(videoUrl);
+        reject(new Error('Failed to load watermark logo'));
+      };
+
+      logoImg.src = logoPath;
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(videoUrl);
+      reject(new Error('Failed to load video for watermarking'));
+    };
+
+    video.src = videoUrl;
+    video.load();
+  });
 };
 
 export const shouldWatermark = (fileType: string): boolean => {
