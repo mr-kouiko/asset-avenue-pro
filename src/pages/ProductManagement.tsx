@@ -1481,7 +1481,14 @@ const ProductManagement = () => {
                 {previewFile.type.startsWith('video/') && (
                   <div className="max-w-full max-h-[60vh] bg-black rounded-lg overflow-hidden">
                     <MediaPlayer 
-                      src={previewFile.url}
+                      src={(() => {
+                        // For CDN URLs, proxy through edge function to ensure playback
+                        const url = previewFile.url;
+                        if (url && url.includes('cdn.visustock.com')) {
+                          return `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/proxy-video?url=${encodeURIComponent(url)}`;
+                        }
+                        return url;
+                      })()}
                       type="video"
                       title={previewFile.name}
                       controls={true}

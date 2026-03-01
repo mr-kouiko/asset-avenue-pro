@@ -21,8 +21,13 @@ export function needsCorsProxy(url: string): boolean {
       return true;
     }
     
-    // Check for R2 URLs
+    // Check for R2 URLs (direct or via custom CDN domain)
     if (hostname.includes('r2.cloudflarestorage.com') || hostname.startsWith('pub-')) {
+      return true;
+    }
+    
+    // Check for VisuStock CDN (R2 custom domain)
+    if (hostname === 'cdn.visustock.com') {
       return true;
     }
     

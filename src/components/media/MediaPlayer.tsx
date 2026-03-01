@@ -268,7 +268,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!src) return false;
     try {
       const host = new URL(src).hostname;
-      // Enable CORS for Supabase assets or same-origin media only
+      // Enable CORS for Supabase assets (including proxy-video) or same-origin media only
+      // Note: cdn.visustock.com is NOT included because R2 CDN may not serve CORS headers,
+      // and setting crossOrigin without server support blocks the entire resource load.
       return host.includes('supabase.co') || host === window.location.hostname;
     } catch {
       return false;
