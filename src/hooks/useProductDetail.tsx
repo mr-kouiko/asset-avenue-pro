@@ -23,6 +23,7 @@ interface ProductDetailData {
   original_language?: string;
   slug?: string;
   isAiGenerated?: boolean;
+  hasWatermarkedPreview?: boolean;
   files: Array<{
     id: string;
     file_name: string;
@@ -437,17 +438,25 @@ export const useProductDetail = (productId: string) => {
           file.metadata?.isAiGenerated === true
         );
 
+        // Determine if a real watermarked preview file exists (not just original fallback)
+        const hasWatermarkedPreview = contentType === 'video' 
+          ? filesList.some((f: any) => f.preview_path)
+          : contentType === 'audio' 
+            ? true // Audio previews are always watermarked via Web Audio API
+            : false;
+
         const productData: ProductDetailData = {
           id: productInfo.id,
           title: productInfo.title,
           description: productInfo.description,
-          author: productInfo.creator_store_name || 'Anonymous Store', // Use ONLY store name, no fallback to display name
-          authorId: 'anonymous', // Don't expose real creator ID
+          author: productInfo.creator_store_name || 'Anonymous Store',
+          authorId: 'anonymous',
           authorAvatar: productInfo.creator_avatar || undefined,
           authorStoreSlug: productInfo.creator_store_slug || undefined,
           type: contentType,
           thumbnail,
           previewUrl,
+          hasWatermarkedPreview,
           tags: productInfo.tags || [],
           uploadDate: productInfo.created_at,
           likes: 0, // Would need to implement likes system

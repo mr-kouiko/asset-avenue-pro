@@ -594,7 +594,7 @@ const ProductDetail = () => {
       </div>
 
             {/* Download Preview Button - Prominent for video/audio */}
-            {(product.type === 'video' || product.type === 'vfx' || isAudioByExtension) && product.previewUrl && (
+            {(product.type === 'video' || product.type === 'vfx' || isAudioByExtension) && product.previewUrl && product.hasWatermarkedPreview && (
               <DownloadPreviewButton 
                 previewUrl={product.previewUrl} 
                 title={product.title} 
