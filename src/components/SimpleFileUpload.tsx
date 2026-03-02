@@ -93,15 +93,24 @@ export const SimpleFileUpload = ({
           return;
         }
         
-        // Query recent uploads to see if these files completed
+        // Query recent uploads to see if these files completed (check BOTH tables)
         const recentTime = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // Last 10 mins
-        const { data: recentFiles } = await supabase
-          .from('uploaded_files')
-          .select('file_name')
-          .eq('user_id', user.id)
-          .gte('created_at', recentTime);
+        const [{ data: recentUploaded }, { data: recentContent }] = await Promise.all([
+          supabase
+            .from('uploaded_files')
+            .select('file_name')
+            .eq('user_id', user.id)
+            .gte('created_at', recentTime),
+          supabase
+            .from('content_files')
+            .select('file_name')
+            .gte('created_at', recentTime),
+        ]);
         
-        const completedNames = new Set((recentFiles || []).map(f => f.file_name));
+        const completedNames = new Set([
+          ...(recentUploaded || []).map(f => f.file_name),
+          ...(recentContent || []).map(f => f.file_name),
+        ]);
         const trulyInterrupted = activeUploads.filter(
           (u: { name: string }) => !completedNames.has(u.name)
         );
