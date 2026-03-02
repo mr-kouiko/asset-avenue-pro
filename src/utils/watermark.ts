@@ -175,16 +175,33 @@ export const addWatermarkToVideo = async (
     logoPath = DEFAULT_LOGO_URL
   } = options;
 
-  // Client-side video watermarking using Canvas + MediaRecorder
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
+    video.preload = 'auto';
 
     const videoUrl = URL.createObjectURL(videoFile);
+    let cleanedUp = false;
 
-    video.onloadedmetadata = () => {
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      URL.revokeObjectURL(videoUrl);
+    };
+
+    // Wait for the video to be fully ready to play
+    video.oncanplaythrough = () => {
+      const duration = video.duration;
+      if (!duration || !isFinite(duration) || duration <= 0) {
+        cleanup();
+        reject(new Error('Video has invalid duration'));
+        return;
+      }
+
+      console.log(`[watermark] Video loaded: ${duration.toFixed(1)}s, ${video.videoWidth}x${video.videoHeight}`);
+
       // Cap preview to 720p
       const scale = Math.min(1, 720 / video.videoHeight);
       const width = Math.round(video.videoWidth * scale);
@@ -200,10 +217,9 @@ export const addWatermarkToVideo = async (
       logoImg.crossOrigin = 'anonymous';
 
       logoImg.onload = () => {
-        // Setup MediaRecorder
-        const stream = canvas.captureStream(30); // 30fps
-        
-        // Try VP9 first for better quality, fallback to VP8, then default
+        // Setup MediaRecorder with canvas stream
+        const stream = canvas.captureStream(30);
+
         let mimeType = 'video/webm;codecs=vp9';
         if (!MediaRecorder.isTypeSupported(mimeType)) {
           mimeType = 'video/webm;codecs=vp8';
@@ -214,7 +230,7 @@ export const addWatermarkToVideo = async (
 
         const recorder = new MediaRecorder(stream, {
           mimeType,
-          videoBitsPerSecond: 2_500_000 // 2.5 Mbps for good quality at 720p
+          videoBitsPerSecond: 2_500_000,
         });
 
         const chunks: Blob[] = [];
@@ -223,26 +239,38 @@ export const addWatermarkToVideo = async (
         };
 
         recorder.onstop = () => {
-          URL.revokeObjectURL(videoUrl);
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          console.log(`[watermark] Generated watermarked preview: ${(blob.size / 1024 / 1024).toFixed(1)}MB`);
-          resolve(blob);
+          cleanup();
+          const rawBlob = new Blob(chunks, { type: 'video/webm' });
+          console.log(`[watermark] Generated watermarked preview: ${(rawBlob.size / 1024 / 1024).toFixed(1)}MB, duration: ${duration.toFixed(1)}s`);
+
+          // Fix WebM duration metadata (MediaRecorder often writes 0 or Infinity)
+          fixWebmDuration(rawBlob, duration * 1000).then(fixedBlob => {
+            resolve(fixedBlob);
+          }).catch(() => {
+            // If fix fails, return raw blob anyway
+            resolve(rawBlob);
+          });
         };
 
-        recorder.onerror = (e) => {
-          URL.revokeObjectURL(videoUrl);
+        recorder.onerror = () => {
+          cleanup();
           reject(new Error('MediaRecorder error during watermarking'));
         };
 
-        // Draw loop
-        const watermarkSize = Math.round(width * 0.2); // 20% of width
+        // Watermark dimensions
+        const watermarkSize = Math.round(width * 0.2);
         const logoAspect = logoImg.naturalWidth / logoImg.naturalHeight;
         const logoW = watermarkSize;
         const logoH = watermarkSize / logoAspect;
 
+        let animFrameId: number;
+        let recordingStartTime = 0;
+
         const drawFrame = () => {
+          if (video.paused || video.ended) return;
+
           ctx.drawImage(video, 0, 0, width, height);
-          
+
           // Draw centered watermark
           ctx.globalAlpha = opacity;
           ctx.drawImage(
@@ -254,26 +282,50 @@ export const addWatermarkToVideo = async (
           );
           ctx.globalAlpha = 1;
 
-          if (!video.paused && !video.ended) {
-            requestAnimationFrame(drawFrame);
-          }
+          animFrameId = requestAnimationFrame(drawFrame);
         };
 
-        // Start recording and playback
-        recorder.start(100); // collect data every 100ms
-        video.play().then(() => {
-          drawFrame();
-        }).catch(reject);
+        // Safety timeout: duration + 10s buffer
+        const safetyTimeout = setTimeout(() => {
+          console.warn('[watermark] Safety timeout reached, stopping recording');
+          cancelAnimationFrame(animFrameId);
+          if (recorder.state === 'recording') {
+            recorder.stop();
+          }
+        }, (duration + 10) * 1000);
 
         video.onended = () => {
-          // Let last frame render, then stop
-          setTimeout(() => recorder.stop(), 200);
+          clearTimeout(safetyTimeout);
+          cancelAnimationFrame(animFrameId);
+          // Draw one last frame to ensure we capture the end
+          ctx.drawImage(video, 0, 0, width, height);
+          ctx.globalAlpha = opacity;
+          ctx.drawImage(logoImg, (width - logoW) / 2, (height - logoH) / 2, logoW, logoH);
+          ctx.globalAlpha = 1;
+          // Give MediaRecorder time to flush
+          setTimeout(() => {
+            if (recorder.state === 'recording') {
+              recorder.stop();
+            }
+          }, 300);
         };
+
+        // Collect data frequently for better duration tracking
+        recorder.start(200);
+        recordingStartTime = performance.now();
+
+        video.play().then(() => {
+          console.log('[watermark] Video playback started, recording frames...');
+          drawFrame();
+        }).catch(err => {
+          cleanup();
+          clearTimeout(safetyTimeout);
+          reject(new Error(`Video playback failed: ${err.message}`));
+        });
       };
 
       logoImg.onerror = () => {
-        // Fallback: record without watermark logo, use text
-        URL.revokeObjectURL(videoUrl);
+        cleanup();
         reject(new Error('Failed to load watermark logo'));
       };
 
@@ -281,7 +333,7 @@ export const addWatermarkToVideo = async (
     };
 
     video.onerror = () => {
-      URL.revokeObjectURL(videoUrl);
+      cleanup();
       reject(new Error('Failed to load video for watermarking'));
     };
 
@@ -289,6 +341,38 @@ export const addWatermarkToVideo = async (
     video.load();
   });
 };
+
+/**
+ * Fix WebM duration metadata.
+ * MediaRecorder-generated WebM files often have missing or incorrect duration.
+ * This patches the Segment > Info > Duration EBML element.
+ */
+async function fixWebmDuration(blob: Blob, durationMs: number): Promise<Blob> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // Find the Segment > Info > Duration element in the EBML structure
+  // Duration element ID is 0x4489
+  const durationIdBytes = [0x44, 0x89];
+  
+  for (let i = 0; i < bytes.length - 12; i++) {
+    if (bytes[i] === durationIdBytes[0] && bytes[i + 1] === durationIdBytes[1]) {
+      // Found Duration element ID. Next byte is the size (should be 0x88 = 8 bytes for float64)
+      const sizeIdx = i + 2;
+      if (bytes[sizeIdx] === 0x88) {
+        // Write duration as float64 big-endian at offset sizeIdx + 1
+        const view = new DataView(buffer, sizeIdx + 1, 8);
+        view.setFloat64(0, durationMs, false); // big-endian
+        console.log(`[watermark] Fixed WebM duration to ${(durationMs / 1000).toFixed(1)}s`);
+        return new Blob([buffer], { type: 'video/webm' });
+      }
+    }
+  }
+
+  // If we couldn't find/patch, return original
+  console.warn('[watermark] Could not find Duration element in WebM to patch');
+  return blob;
+}
 
 export const shouldWatermark = (fileType: string): boolean => {
   return fileType.startsWith('image/') || fileType.startsWith('video/');
