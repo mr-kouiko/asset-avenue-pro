@@ -75,7 +75,7 @@ const FileUpload = () => {
         }
 
         // Load existing drafts
-        const existingDrafts = await loadDrafts();
+        let existingDrafts = await loadDrafts();
         
         // Recover any orphaned uploads (creates a draft for them automatically)
         const recoveredFiles = await recoverOrphanedUploads();
@@ -83,12 +83,30 @@ const FileUpload = () => {
         if (recoveredFiles.length > 0) {
           toast.info(`🔄 Recovered ${recoveredFiles.length} file(s) from previous session`);
           // Reload drafts to include the newly created recovery draft
-          await loadDrafts();
+          existingDrafts = await loadDrafts();
         }
 
         // If there are existing drafts with files, show them
         if (existingDrafts.some(d => d.files.length > 0)) {
           setShowExistingDrafts(true);
+          
+          // Hydrate uploadedFiles from the most recent draft so the UI shows them
+          const mostRecentDraft = existingDrafts.find(d => d.files.length > 0);
+          if (mostRecentDraft) {
+            setCurrentDraftId(mostRecentDraft.id);
+            currentDraftIdRef.current = mostRecentDraft.id;
+            setUploadedFiles(mostRecentDraft.files.map(f => ({
+              id: f.id,
+              url: f.url,
+              name: f.name,
+              type: f.type,
+              size: f.size,
+              previewUrl: f.previewUrl,
+              thumbnailUrl: f.thumbnailUrl,
+              isWatermarked: f.isWatermarked,
+              fileHash: f.fileHash,
+            })));
+          }
         }
       } catch (error) {
         console.error('Initialization error:', error);
