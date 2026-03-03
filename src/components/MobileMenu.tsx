@@ -195,7 +195,7 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
           <SectionLabel>{labels.explore}</SectionLabel>
           <div className="space-y-0.5">
             <MenuItem to={`/${language}`} icon={Home} label={labels.home} onClick={close} />
-            <MenuItem to={`/${language}/marketplace`} icon={Package} label={labels.marketplace} onClick={close} />
+            
             <MenuItem to="/studio-ai" icon={Wand2} label={labels.studioAi} onClick={close} badge="AI" />
             <MenuItem to="/collections" icon={Layers} label={labels.collections} onClick={close} />
             <MenuItem to={`/${language}/marketplace?sort=trending`} icon={TrendingUp} label={labels.trending} onClick={close} />
