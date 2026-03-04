@@ -25,6 +25,7 @@ import {
   FileArchive,
   HardDrive
 } from "lucide-react";
+import { Bot } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
 import { AdminUsersManagement } from "@/components/admin/AdminUsersManagement";
