@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift, ChevronLeft, ChevronRight, Layers, Bot } from "lucide-react";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
@@ -49,10 +49,11 @@ interface ProductData {
   currentTag: string;
   status: 'draft' | 'published' | 'pending';
   coverUrl?: string;
-  previewImageUrl?: string; // For VFX/archive products
-  previewMediaType?: 'image' | 'video'; // For VFX - tracks if preview is image or video
+  previewImageUrl?: string;
+  previewMediaType?: 'image' | 'video';
   isAiGenerated?: boolean;
   isFreeContent?: boolean;
+  aiDeclaration?: 'fully_ai_generated' | 'ai_assisted' | 'no_ai_used';
 }
 
 const ProductManagement = () => {
@@ -599,6 +600,11 @@ const ProductManagement = () => {
 
     if (!productData.title.trim() || !productData.description.trim()) {
       toast.error("Title and description are required to publish");
+      return;
+    }
+
+    if (!productData.aiDeclaration) {
+      toast.error("AI declaration is required before publishing");
       return;
     }
 
@@ -1274,58 +1280,48 @@ const ProductManagement = () => {
                           )}
                         </div>
 
-                        {/* AI Content Toggle - Creator can override automatic detection */}
+                        {/* AI Declaration - Mandatory */}
                         <div className="md:col-span-2">
-                          <div className={`flex items-center justify-between p-4 rounded-lg border ${
-                            selectedProductData.isAiGenerated 
-                              ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800' 
-                              : 'bg-muted/50 border-muted'
-                          }`}>
-                            <div className="flex items-center space-x-3">
-                              <div className={`h-5 w-5 rounded flex items-center justify-center ${
-                                selectedProductData.isAiGenerated 
-                                  ? 'bg-purple-500 text-white' 
-                                  : 'bg-muted-foreground/20'
-                              }`}>
-                                {selectedProductData.isAiGenerated && (
-                                  <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
+                          <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Bot className="h-5 w-5 text-primary" />
                               <div>
-                                <div className="text-sm font-medium flex items-center gap-2">
-                                  {selectedProductData.isAiGenerated ? (
-                                    <Badge className="bg-purple-500 text-white text-xs">AI</Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">Non-AI</Badge>
-                                  )}
-                                  AI-Generated Content
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  🤖 Mark this content as AI-generated
+                                <Label className="text-sm font-medium">AI Content Declaration *</Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Required: Declare if this content was created with AI assistance
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {/* Re-analyze button for images and videos */}
-                              {(selectedFile?.type.startsWith('image/') || selectedFile?.type.startsWith('video/')) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleReanalyzeAI(selectedFileId!)}
-                                  disabled={isReanalyzing || isDetectingImage || isDetectingVideo}
-                                  className="shrink-0"
-                                >
-                                  <RefreshCw className={`h-4 w-4 mr-1 ${isReanalyzing ? 'animate-spin' : ''}`} />
-                                  {isReanalyzing ? 'Analyzing...' : 'Re-analyze'}
-                                </Button>
-                              )}
-                              <Switch
-                                checked={selectedProductData.isAiGenerated || false}
-                                onCheckedChange={(checked) => updateProductData(selectedFileId!, { isAiGenerated: checked })}
-                              />
-                            </div>
+                            <Select
+                              value={selectedProductData.aiDeclaration || ''}
+                              onValueChange={(value) => updateProductData(selectedFileId!, { 
+                                aiDeclaration: value as ProductData['aiDeclaration'],
+                                isAiGenerated: value === 'fully_ai_generated'
+                              })}
+                            >
+                              <SelectTrigger className={!selectedProductData.aiDeclaration ? 'border-destructive' : ''}>
+                                <SelectValue placeholder="Select AI usage level..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="no_ai_used">
+                                  <span className="flex items-center gap-2">🎨 No AI Used — 100% human-made</span>
+                                </SelectItem>
+                                <SelectItem value="ai_assisted">
+                                  <span className="flex items-center gap-2">🤝 AI Assisted — AI tools used partially</span>
+                                </SelectItem>
+                                <SelectItem value="fully_ai_generated">
+                                  <span className="flex items-center gap-2">🤖 Fully AI Generated</span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {!selectedProductData.aiDeclaration && (
+                              <p className="text-xs text-destructive">⚠️ AI declaration is required before publishing</p>
+                            )}
+                            {selectedProductData.aiDeclaration && (
+                              <p className="text-xs text-muted-foreground">
+                                Your content will be automatically scanned after submission. Mismatches between your declaration and detected AI usage may flag your content for review.
+                              </p>
+                            )}
                           </div>
                         </div>
 

@@ -25,6 +25,7 @@ import {
   FileArchive,
   HardDrive
 } from "lucide-react";
+import { Bot } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
 import { AdminUsersManagement } from "@/components/admin/AdminUsersManagement";
@@ -36,6 +37,7 @@ import { AdminSupportTickets } from "@/components/admin/AdminSupportTickets";
 import { AdminContentReports } from "@/components/admin/AdminContentReports";
 import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
 import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
+import { AdminModerationQueue } from "@/components/admin/AdminModerationQueue";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -224,27 +226,27 @@ const AdminDashboard = () => {
           <TabsList className="grid w-full grid-cols-12 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Vue d'ensemble</span>
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="moderation" className="flex items-center gap-1">
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">AI Mod</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Utilisateurs</span>
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
             <TabsTrigger value="vendors" className="flex items-center gap-1">
               <Store className="h-4 w-4" />
-              <span className="hidden sm:inline">Vendeurs</span>
+              <span className="hidden sm:inline">Vendors</span>
             </TabsTrigger>
             <TabsTrigger value="content" className="flex items-center gap-1">
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Modération</span>
+              <span className="hidden sm:inline">Content</span>
             </TabsTrigger>
             <TabsTrigger value="transactions" className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Transactions</span>
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-1">
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline">Commandes</span>
             </TabsTrigger>
             <TabsTrigger value="support" className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
@@ -252,15 +254,15 @@ const AdminDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-1">
               <Flag className="h-4 w-4" />
-              <span className="hidden sm:inline">Signalements</span>
+              <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-1">
               <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Sécurité</span>
+              <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
             <TabsTrigger value="seo" className="flex items-center gap-1">
               <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">SEO Co-Pilot</span>
+              <span className="hidden sm:inline">SEO</span>
             </TabsTrigger>
             <TabsTrigger value="export" className="flex items-center gap-1">
               <FileArchive className="h-4 w-4" />
@@ -271,6 +273,11 @@ const AdminDashboard = () => {
               <span className="hidden sm:inline">Integrity</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* AI Moderation Tab */}
+          <TabsContent value="moderation">
+            <AdminModerationQueue />
+          </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
