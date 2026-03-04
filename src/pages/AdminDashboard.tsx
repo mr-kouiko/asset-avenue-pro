@@ -222,6 +222,15 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-13 mb-6">
+            <TabsTrigger value="overview" className="flex items-center gap-1">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="moderation" className="flex items-center gap-1">
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">AI Moderation</span>
+            </TabsTrigger>
           <TabsList className="grid w-full grid-cols-12 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
