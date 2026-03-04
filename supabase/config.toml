@@ -166,3 +166,6 @@ verify_jwt = true
 
 [functions.proxy-video]
 verify_jwt = false
+
+[functions.scan-content]
+verify_jwt = false
