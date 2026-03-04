@@ -603,6 +603,11 @@ const ProductManagement = () => {
       return;
     }
 
+    if (!productData.aiDeclaration) {
+      toast.error("AI declaration is required before publishing");
+      return;
+    }
+
     // For ebooks, check if cover is present
     const isPDF = file.type === 'application/pdf';
     if (isPDF && !productData.coverUrl) {
