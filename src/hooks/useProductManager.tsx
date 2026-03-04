@@ -23,6 +23,7 @@ interface ProductMetadata {
   category_id?: string;
   tags: string[];
   isFreeContent?: boolean;
+  aiDeclaration?: 'fully_ai_generated' | 'ai_assisted' | 'no_ai_used';
 }
 
 interface ProductSubmission {
