@@ -271,6 +271,7 @@ export type Database = {
       content_submissions: {
         Row: {
           admin_notes: string | null
+          ai_declaration: string | null
           approved_at: string | null
           approved_by: string | null
           category_id: string | null
@@ -290,6 +291,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          ai_declaration?: string | null
           approved_at?: string | null
           approved_by?: string | null
           category_id?: string | null
@@ -309,6 +311,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          ai_declaration?: string | null
           approved_at?: string | null
           approved_by?: string | null
           category_id?: string | null
@@ -407,6 +410,62 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      detection_results: {
+        Row: {
+          ai_score: number | null
+          content_submission_id: string
+          created_at: string
+          deepfake_score: number | null
+          detection_score: number
+          detection_status: string
+          final_confidence: number
+          id: string
+          indicators: string[] | null
+          model_used: string
+          quality_score: number | null
+          raw_response: Json | null
+          reasoning: string | null
+        }
+        Insert: {
+          ai_score?: number | null
+          content_submission_id: string
+          created_at?: string
+          deepfake_score?: number | null
+          detection_score: number
+          detection_status?: string
+          final_confidence: number
+          id?: string
+          indicators?: string[] | null
+          model_used?: string
+          quality_score?: number | null
+          raw_response?: Json | null
+          reasoning?: string | null
+        }
+        Update: {
+          ai_score?: number | null
+          content_submission_id?: string
+          created_at?: string
+          deepfake_score?: number | null
+          detection_score?: number
+          detection_status?: string
+          final_confidence?: number
+          id?: string
+          indicators?: string[] | null
+          model_used?: string
+          quality_score?: number | null
+          raw_response?: Json | null
+          reasoning?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detection_results_content_submission_id_fkey"
+            columns: ["content_submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -953,6 +1012,8 @@ export type Database = {
           avatar_url: string | null
           country: string | null
           created_at: string
+          creator_integrity_score: number
+          creator_mismatch_count: number
           display_name: string | null
           email: string
           id: string
@@ -968,6 +1029,8 @@ export type Database = {
           avatar_url?: string | null
           country?: string | null
           created_at?: string
+          creator_integrity_score?: number
+          creator_mismatch_count?: number
           display_name?: string | null
           email: string
           id?: string
@@ -983,6 +1046,8 @@ export type Database = {
           avatar_url?: string | null
           country?: string | null
           created_at?: string
+          creator_integrity_score?: number
+          creator_mismatch_count?: number
           display_name?: string | null
           email?: string
           id?: string
@@ -2079,6 +2144,14 @@ export type Database = {
       mark_download_token_used: {
         Args: { token_param: string }
         Returns: boolean
+      }
+      process_scan_result: {
+        Args: {
+          p_ai_declaration: string
+          p_detection_score: number
+          p_submission_id: string
+        }
+        Returns: string
       }
       unaccent: { Args: { "": string }; Returns: string }
       user_can_access_profile: {
