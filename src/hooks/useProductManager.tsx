@@ -304,7 +304,31 @@ export const useProductManager = () => {
           .eq('draft_id', submission.draftId);
       }
 
-      toast.success(`✅ Product published: ${submission.productData.title}`);
+      // Trigger server-side AI content scan (non-blocking)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-content`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            submissionId,
+            aiDeclaration: submission.productData.aiDeclaration || 'no_ai_used'
+          }),
+        }).then(async (res) => {
+          if (res.ok) {
+            const scanResult = await res.json();
+            console.log('🔍 [SCAN] Result:', scanResult.status, scanResult.detection_score);
+          } else {
+            console.warn('🔍 [SCAN] Failed:', res.status);
+          }
+        }).catch(err => console.warn('🔍 [SCAN] Error:', err));
+      }
+
+      toast.success(`✅ Product submitted for review: ${submission.productData.title}`);
       return true;
 
     } catch (error) {
