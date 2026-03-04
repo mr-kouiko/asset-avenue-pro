@@ -49,10 +49,11 @@ interface ProductData {
   currentTag: string;
   status: 'draft' | 'published' | 'pending';
   coverUrl?: string;
-  previewImageUrl?: string; // For VFX/archive products
-  previewMediaType?: 'image' | 'video'; // For VFX - tracks if preview is image or video
+  previewImageUrl?: string;
+  previewMediaType?: 'image' | 'video';
   isAiGenerated?: boolean;
   isFreeContent?: boolean;
+  aiDeclaration?: 'fully_ai_generated' | 'ai_assisted' | 'no_ai_used';
 }
 
 const ProductManagement = () => {
