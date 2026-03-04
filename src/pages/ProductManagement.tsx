@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift, ChevronLeft, ChevronRight, Layers, Bot } from "lucide-react";
 import { useAIImageDetection } from "@/hooks/useAIImageDetection";
 import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
