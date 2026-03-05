@@ -40,6 +40,7 @@ const MIN_CHUNK_SIZE = 1 * 1024 * 1024; // 1MB
 const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
 const DEFAULT_MAX_CONCURRENT = 3;
 const DEFAULT_MAX_RETRIES = 3;
+const MAX_VIDEO_DURATION_SECONDS = 60;
 
 export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
   const {
@@ -111,6 +112,53 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
     };
     
     return mimeMap[ext || ''] || file.type || 'application/octet-stream';
+  }, []);
+
+  // Validate video duration (max 60 seconds)
+  const validateVideoDuration = useCallback((file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      const cleanup = () => {
+        URL.revokeObjectURL(video.src);
+        video.remove();
+      };
+
+      video.onloadedmetadata = () => {
+        const duration = video.duration;
+        cleanup();
+        if (!isFinite(duration) || duration <= 0) {
+          // Can't determine duration, allow upload but warn
+          console.warn(`⚠️ Could not determine duration for ${file.name}`);
+          resolve(true);
+          return;
+        }
+        if (duration > MAX_VIDEO_DURATION_SECONDS) {
+          toast.error(`Video "${file.name}" is ${Math.round(duration)}s long. Maximum allowed is ${MAX_VIDEO_DURATION_SECONDS}s.`);
+          resolve(false);
+          return;
+        }
+        console.log(`✅ Video duration OK: ${file.name} = ${duration.toFixed(1)}s`);
+        resolve(true);
+      };
+
+      video.onerror = () => {
+        cleanup();
+        // If we can't read metadata, reject to be safe
+        toast.error(`Could not read video metadata for "${file.name}". Please ensure it's a valid video file.`);
+        resolve(false);
+      };
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        cleanup();
+        console.warn(`⚠️ Duration check timed out for ${file.name}, allowing upload`);
+        resolve(true);
+      }, 10000);
+
+      video.src = URL.createObjectURL(file);
+    });
   }, []);
 
   // Generate unique file ID
@@ -692,6 +740,12 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         continue;
       }
 
+      // Video duration validation (max 60 seconds)
+      if (mimeType.startsWith('video/')) {
+        const durationOk = await validateVideoDuration(file);
+        if (!durationOk) continue;
+      }
+
       // Duplicate check (hash + size + type fallback)
       try {
         const hash = await calculateFileHash(file);
@@ -737,7 +791,7 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
     // Return empty immediately - results will be provided via onComplete callback
     return results;
   }, [
-    maxFileSize, generateFileId, detectMimeType,
+    maxFileSize, generateFileId, detectMimeType, validateVideoDuration,
     calculateFileHash, checkDuplicate, isUploading, processQueue
   ]);
 

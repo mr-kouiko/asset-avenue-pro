@@ -230,7 +230,7 @@ export function EnhancedFileUpload({
               {isDragOver ? "Drop files here" : "Drag & drop files here"}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              or click to browse • Max {formatSize(maxFileSize)} per file
+              or click to browse • Max {formatSize(maxFileSize)} per file • Videos max 60s
             </p>
           </div>
 
