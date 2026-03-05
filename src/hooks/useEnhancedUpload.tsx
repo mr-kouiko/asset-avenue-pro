@@ -559,18 +559,52 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         updateProgress(id, { status: 'processing', progress: 92 });
         try {
           console.log('[useEnhancedUpload] Generating client-side watermarked video preview...');
-          const watermarkedBlob = await addWatermarkToVideo(file, { opacity: 0.6 });
           
-          // Upload watermarked preview to storage
+          // Request a signed URL for the uploaded file (private bucket)
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             const userId = session.user.id;
+            
+            // Extract storage path from the upload URL
+            const urlParts = new URL(url);
+            const pathname = urlParts.pathname;
+            let storagePath: string | null = null;
+            const patterns = [
+              '/storage/v1/object/public/uploads/',
+              '/storage/v1/object/public/content-uploads/',
+            ];
+            for (const pattern of patterns) {
+              if (pathname.includes(pattern)) {
+                storagePath = pathname.split(pattern)[1];
+                break;
+              }
+            }
+            
+            // Get a signed URL for the private original
+            let videoSourceUrl = url;
+            if (storagePath) {
+              try {
+                const { data: signedData, error: signedError } = await supabase.functions.invoke('generate-signed-url', {
+                  body: { storagePath, bucket: 'content-uploads', expiresIn: 900 },
+                });
+                if (!signedError && signedData?.signedUrl) {
+                  videoSourceUrl = signedData.signedUrl;
+                  console.log('[useEnhancedUpload] Got signed URL for preview generation');
+                }
+              } catch (signedUrlErr) {
+                console.warn('[useEnhancedUpload] Signed URL request failed, using original URL:', signedUrlErr);
+              }
+            }
+            
+            const watermarkedBlob = await addWatermarkToVideo(file, { opacity: 0.6 });
+            
+            // Upload watermarked preview to the PUBLIC previews bucket
             const previewFileName = `${userId}/previews/${id}_watermarked_preview.webm`;
             
             updateProgress(id, { status: 'processing', progress: 96 });
             
             const { data: previewData, error: previewUploadError } = await supabase.storage
-              .from('content-uploads')
+              .from('previews')
               .upload(previewFileName, watermarkedBlob, {
                 contentType: 'video/webm',
                 cacheControl: '3600',
@@ -581,30 +615,14 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
               console.warn('[useEnhancedUpload] Failed to upload watermarked preview:', previewUploadError);
             } else if (previewData) {
               const { data: previewUrlData } = supabase.storage
-                .from('content-uploads')
+                .from('previews')
                 .getPublicUrl(previewData.path);
               
               previewUrl = previewUrlData.publicUrl;
-              console.log('[useEnhancedUpload] Watermarked preview uploaded:', previewUrl);
+              console.log('[useEnhancedUpload] Watermarked preview uploaded to previews bucket:', previewUrl);
               
               // Update content_files record with preview_path
-              // Match by the original file URL
-              const urlParts = new URL(url);
-              const pathname = urlParts.pathname;
-              let storagePath: string | null = null;
-              const patterns = [
-                '/storage/v1/object/public/uploads/',
-                '/storage/v1/object/public/content-uploads/',
-              ];
-              for (const pattern of patterns) {
-                if (pathname.includes(pattern)) {
-                  storagePath = pathname.split(pattern)[1];
-                  break;
-                }
-              }
-              
               if (storagePath) {
-                // Try updating content_files by matching file_path
                 supabase
                   .from('content_files')
                   .update({ preview_path: previewUrl })
