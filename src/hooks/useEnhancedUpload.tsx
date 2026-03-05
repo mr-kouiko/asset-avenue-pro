@@ -740,6 +740,12 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
         continue;
       }
 
+      // Video duration validation (max 60 seconds)
+      if (mimeType.startsWith('video/')) {
+        const durationOk = await validateVideoDuration(file);
+        if (!durationOk) continue;
+      }
+
       // Duplicate check (hash + size + type fallback)
       try {
         const hash = await calculateFileHash(file);
