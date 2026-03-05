@@ -1,60 +1,35 @@
 
+# Private Uploads Bucket with Signed URL Pipeline — IMPLEMENTED
 
-# Fix Marketplace Sorting and Fake Engagement Stats
+## What was done
 
-## Problem Identified
+### 1. Created `generate-signed-url` edge function
+- Authenticated endpoint that validates file ownership (path must start with user's ID)
+- Returns a 15-minute signed URL using service_role credentials
+- Used by the upload hook to access private originals during preview generation
 
-Two issues are causing the marketplace sorting to appear broken:
+### 2. Updated `proxy-video` edge function
+- Detects `content-uploads` bucket URLs and generates signed URLs server-side
+- Uses service_role to access private files without exposing credentials to clients
+- Maintains CORS proxy functionality for preview generation
 
-1. **Fake random engagement stats**: The `useMarketplace` hook generates random `likes` and `downloads` values on every load:
-   ```
-   likes: Math.floor(Math.random() * 2000)
-   downloads: Math.floor(Math.random() * 1000)
-   ```
-   This means every page load shows different numbers, making the UI feel unreliable and confusing.
+### 3. Updated `useEnhancedUpload` hook
+- After uploading to `content-uploads`, requests a signed URL via `generate-signed-url`
+- Uploads watermarked previews to the **`previews`** bucket (public) instead of `content-uploads`
+- Stores the public preview URL in `content_files.preview_path`
 
-2. **"Most popular" sort uses random data**: The default sort (`popular`) ranks by `downloads + likes`, which are random -- so the order is essentially random and changes on every refresh.
+### 4. Updated `secure-download` edge function
+- Default bucket changed from `original-files` to `content-uploads`
+- Uses service_role signed URLs for purchased file access
 
-3. **Default sort should be "Most recent"**: For a marketplace with a growing catalog, defaulting to "Most recent" ensures new content gets visibility and the order is consistent.
+## Manual steps required
 
-## Solution
+### Create the `previews` bucket (PUBLIC)
+Go to Supabase Dashboard → Storage → Create bucket named `previews`, set it as **public**.
 
-### 1. Replace fake stats with real database counts
+### Make `content-uploads` bucket PRIVATE
+Go to Supabase Dashboard → Storage → `content-uploads` → Settings → Disable public access.
 
-- Query actual `content_likes` counts using the existing `get_content_likes_count` RPC function (already in the database)
-- Query actual `downloads` count from the `downloads` table
-- Cache these values to avoid excessive queries
-
-### 2. Change default sort to "Most recent"
-
-- Update the initial `sortBy` state from `"popular"` to `"recent"` in `Marketplace.tsx`
-
-### 3. Batch-fetch real engagement data
-
-- After fetching marketplace content, run a single efficient query to get like counts and download counts for all displayed items
-- This avoids N+1 query problems
-
----
-
-## Technical Details
-
-### File: `src/hooks/useMarketplace.tsx`
-
-**Remove random stats generation:**
-- Replace `likes: Math.floor(Math.random() * 2000)` with real like counts from a batch query
-- Replace `downloads: Math.floor(Math.random() * 1000)` with real download counts from a batch query
-
-**Add batch engagement query:**
-After fetching content submissions and files, run two parallel queries:
-- `SELECT submission_id, COUNT(*) FROM content_likes WHERE submission_id = ANY($ids) GROUP BY submission_id`
-- `SELECT submission_id, COUNT(*) FROM downloads WHERE submission_id = ANY($ids) GROUP BY submission_id`
-
-Map these counts back to each content item.
-
-### File: `src/pages/Marketplace.tsx`
-
-**Change default sort:**
-- Line 54: Change `useState("popular")` to `useState("recent")`
-
-This ensures new visitors see the freshest content first, and sorting is always deterministic and accurate.
-
+### Migrate existing preview URLs
+Existing `content_files.preview_path` entries pointing to `content-uploads` will break.
+Run a migration to copy existing preview files to the `previews` bucket.
