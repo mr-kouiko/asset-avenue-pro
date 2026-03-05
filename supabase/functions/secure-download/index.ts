@@ -132,7 +132,8 @@ async function handleTokenBasedDownload(supabaseClient: any, token: string, req:
 
     // Determine the correct bucket and extract relative path
     // file_path may be a full URL or a relative path
-    let bucket = contentFile.metadata?.bucket || "original-files";
+    // Default to content-uploads (private bucket for originals)
+    let bucket = contentFile.metadata?.bucket || "content-uploads";
     let relativePath = contentFile.file_path;
     
     // If file_path is a full URL, extract the bucket and relative path
@@ -143,8 +144,8 @@ async function handleTokenBasedDownload(supabaseClient: any, token: string, req:
         // Format: /storage/v1/object/public/{bucket}/{...relativePath}
         const storageIndex = pathParts.indexOf('storage');
         if (storageIndex !== -1 && pathParts.length > storageIndex + 4) {
-          bucket = pathParts[storageIndex + 4]; // e.g., "uploads" or "original-files"
-          relativePath = pathParts.slice(storageIndex + 5).join('/'); // Everything after bucket
+          bucket = pathParts[storageIndex + 4]; // e.g., "content-uploads" or "uploads"
+          relativePath = pathParts.slice(storageIndex + 5).join('/');
         }
         console.log('Extracted bucket:', bucket, 'relativePath:', relativePath);
       } catch (e) {
