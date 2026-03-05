@@ -791,7 +791,7 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
     // Return empty immediately - results will be provided via onComplete callback
     return results;
   }, [
-    maxFileSize, generateFileId, detectMimeType,
+    maxFileSize, generateFileId, detectMimeType, validateVideoDuration,
     calculateFileHash, checkDuplicate, isUploading, processQueue
   ]);
 
