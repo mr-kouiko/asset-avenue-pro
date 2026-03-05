@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw,
-  Shield, Bot, User, Search, ScanLine
+  Shield, Bot, User, ScanLine, FileDown, FileQuestion
 } from "lucide-react";
 
 type StatusFilter = 'all' | 'pending_review' | 'pending_scan' | 'scan_failed' | 'approved_ai' | 'approved_ai_assisted';
@@ -30,13 +31,84 @@ const DECLARATION_LABELS: Record<string, { label: string; icon: React.ReactNode 
   no_ai_used: { label: 'No AI', icon: <User className="h-3 w-3" /> },
 };
 
+function getMediaType(fileType: string): 'image' | 'video' | 'audio' | 'other' {
+  if (fileType.startsWith('image/')) return 'image';
+  if (fileType.startsWith('video/')) return 'video';
+  if (fileType.startsWith('audio/')) return 'audio';
+  return 'other';
+}
+
+function MediaPreview({ file, large = false }: { file: { file_type: string; file_path: string; preview_path?: string | null; thumbnail_path?: string | null; file_name: string }; large?: boolean }) {
+  const mediaType = getMediaType(file.file_type);
+  const src = file.preview_path || file.file_path;
+  const imgSrc = file.thumbnail_path || file.preview_path || file.file_path;
+
+  if (mediaType === 'image') {
+    return (
+      <img
+        src={imgSrc}
+        alt={file.file_name}
+        className={`rounded-lg object-contain bg-muted ${large ? 'max-h-[70vh] w-full' : 'max-h-48 w-full'}`}
+        loading="lazy"
+      />
+    );
+  }
+
+  if (mediaType === 'video') {
+    return (
+      <video
+        src={src}
+        controls
+        className={`rounded-lg bg-black ${large ? 'max-h-[70vh] w-full' : 'max-h-48 w-full'}`}
+        preload="metadata"
+      />
+    );
+  }
+
+  if (mediaType === 'audio') {
+    return (
+      <div className="p-4 rounded-lg bg-muted flex flex-col items-center gap-2">
+        <FileQuestion className="h-8 w-8 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground truncate max-w-full">{file.file_name}</span>
+        <audio src={src} controls className="w-full" preload="metadata" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 rounded-lg bg-muted flex flex-col items-center gap-2">
+      <FileDown className="h-10 w-10 text-muted-foreground" />
+      <span className="text-sm font-medium truncate max-w-full">{file.file_name}</span>
+      <span className="text-xs text-muted-foreground">{file.file_type}</span>
+    </div>
+  );
+}
+
+function ScoreBar({ label, value, max = 1 }: { label: string; value: number | null | undefined; max?: number }) {
+  if (value == null) return null;
+  const pct = Math.min((value / max) * 100, 100);
+  const color = pct < 55 ? 'bg-green-500' : pct < 70 ? 'bg-amber-500' : 'bg-red-500';
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-mono font-medium">{(value * 100).toFixed(1)}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export const AdminModerationQueue = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending_review');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+  const [previewModal, setPreviewModal] = useState<{ open: boolean; file: any | null }>({ open: false, file: null });
   const queryClient = useQueryClient();
 
-  // Fetch submissions needing review
+  // Fetch submissions
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['moderation-queue', statusFilter],
     queryFn: async () => {
@@ -56,6 +128,22 @@ export const AdminModerationQueue = () => {
       if (error) throw error;
       return data || [];
     },
+  });
+
+  // Fetch content files for expanded submission
+  const { data: contentFiles } = useQuery({
+    queryKey: ['moderation-files', expandedId],
+    queryFn: async () => {
+      if (!expandedId) return null;
+      const { data, error } = await supabase
+        .from('content_files')
+        .select('id, file_type, file_path, preview_path, thumbnail_path, file_name, file_size, file_format')
+        .eq('submission_id', expandedId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!expandedId,
   });
 
   // Fetch detection results for expanded submission
@@ -144,14 +232,11 @@ export const AdminModerationQueue = () => {
     onError: (err) => toast.error(`Scan error: ${err.message}`),
   });
 
-  const getScoreColor = (score: number) => {
-    if (score < 0.55) return 'text-green-600';
-    if (score < 0.70) return 'text-amber-600';
-    return 'text-red-600';
-  };
+  const primaryFile = contentFiles?.[0] || null;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Shield className="h-5 w-5" />
@@ -183,6 +268,7 @@ export const AdminModerationQueue = () => {
         <div className="space-y-3">
           {submissions.map((sub) => (
             <Card key={sub.id} className="overflow-hidden">
+              {/* Collapsed row */}
               <div
                 className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
@@ -207,125 +293,151 @@ export const AdminModerationQueue = () => {
                 </div>
               </div>
 
+              {/* Expanded detail — two-column layout */}
               {expandedId === sub.id && (
-                <CardContent className="border-t bg-muted/20 space-y-4">
-                  {/* Creator Info */}
-                  {creatorProfile && (
-                    <div className="flex items-center gap-4 p-3 rounded-lg bg-background border">
-                      <div>
-                        <p className="font-medium">{creatorProfile.display_name || creatorProfile.store_name || 'Unknown'}</p>
-                        <div className="flex gap-3 text-sm">
-                          <span className="flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            Integrity: <strong className={creatorProfile.creator_integrity_score < 50 ? 'text-red-600' : creatorProfile.creator_integrity_score < 75 ? 'text-amber-600' : 'text-green-600'}>
-                              {creatorProfile.creator_integrity_score}/100
-                            </strong>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            Mismatches: <strong className={creatorProfile.creator_mismatch_count >= 3 ? 'text-red-600' : ''}>
-                              {creatorProfile.creator_mismatch_count}
-                            </strong>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Detection Results */}
-                  {detectionResults && detectionResults.length > 0 ? (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold flex items-center gap-1">
-                        <ScanLine className="h-4 w-4" /> Detection Results
-                      </h4>
-                      {detectionResults.map((dr: any) => (
-                        <div key={dr.id} className="p-3 rounded-lg border bg-background text-sm space-y-2">
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            <div>
-                              <span className="text-muted-foreground">Score:</span>{' '}
-                              <strong className={getScoreColor(dr.detection_score)}>
-                                {(dr.detection_score * 100).toFixed(1)}%
-                              </strong>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">AI:</span>{' '}
-                              <strong>{dr.ai_score ? `${(dr.ai_score * 100).toFixed(0)}%` : 'N/A'}</strong>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Deepfake:</span>{' '}
-                              <strong>{dr.deepfake_score ? `${(dr.deepfake_score * 100).toFixed(0)}%` : 'N/A'}</strong>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Model:</span>{' '}
-                              <span>{dr.model_used}</span>
-                            </div>
-                          </div>
-                          {dr.reasoning && (
-                            <p className="text-muted-foreground italic">{dr.reasoning}</p>
-                          )}
-                          {dr.indicators && dr.indicators.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {dr.indicators.map((ind: string, i: number) => (
-                                <Badge key={i} variant="secondary" className="text-xs">{ind}</Badge>
+                <CardContent className="border-t bg-muted/20 p-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* LEFT COLUMN: Media Preview */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold">Content Preview</h4>
+                      {primaryFile ? (
+                        <div className="space-y-2">
+                          <MediaPreview file={primaryFile} />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setPreviewModal({ open: true, file: primaryFile })}
+                          >
+                            <Eye className="h-3 w-3 mr-1" /> View Full Size
+                          </Button>
+                          {contentFiles && contentFiles.length > 1 && (
+                            <div className="flex gap-2 overflow-x-auto pt-1">
+                              {contentFiles.slice(1).map((f) => (
+                                <button
+                                  key={f.id}
+                                  className="shrink-0 w-16 h-16 rounded border overflow-hidden hover:ring-2 ring-primary transition-all"
+                                  onClick={() => setPreviewModal({ open: true, file: f })}
+                                >
+                                  {getMediaType(f.file_type) === 'image' ? (
+                                    <img src={f.thumbnail_path || f.file_path} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
+                                      {f.file_format}
+                                    </div>
+                                  )}
+                                </button>
                               ))}
                             </div>
                           )}
-                          <div className="text-xs text-muted-foreground">
-                            {dr.detection_status} • {new Date(dr.created_at).toLocaleString()}
-                          </div>
                         </div>
-                      ))}
+                      ) : (
+                        <div className="p-8 rounded-lg bg-muted flex flex-col items-center gap-2 text-muted-foreground">
+                          <FileQuestion className="h-10 w-10" />
+                          <p className="text-sm">No files attached</p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No detection results yet</p>
-                  )}
 
-                  {/* Admin Actions */}
-                  <div className="space-y-3 pt-2">
-                    <Textarea
-                      placeholder="Admin notes..."
-                      value={adminNotes[sub.id] || ''}
-                      onChange={(e) => setAdminNotes(prev => ({ ...prev, [sub.id]: e.target.value }))}
-                      className="min-h-[60px]"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'approved', notes: adminNotes[sub.id] })}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" /> Approve (Human)
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'approved_ai', notes: adminNotes[sub.id] })}
-                      >
-                        <Bot className="h-3 w-3 mr-1" /> Label as AI
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'approved_ai_assisted', notes: adminNotes[sub.id] })}
-                      >
-                        <Bot className="h-3 w-3 mr-1" /> Label AI-Assisted
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'rejected', notes: adminNotes[sub.id] })}
-                      >
-                        <XCircle className="h-3 w-3 mr-1" /> Reject
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => rescanMutation.mutate(sub.id)}
-                        disabled={rescanMutation.isPending}
-                      >
-                        <RefreshCw className={`h-3 w-3 mr-1 ${rescanMutation.isPending ? 'animate-spin' : ''}`} />
-                        Re-scan
-                      </Button>
+                    {/* RIGHT COLUMN: Details + Actions */}
+                    <div className="space-y-4">
+                      {/* Creator Info */}
+                      {creatorProfile && (
+                        <div className="p-3 rounded-lg bg-background border space-y-1">
+                          <p className="font-medium text-sm">{creatorProfile.display_name || creatorProfile.store_name || 'Unknown Creator'}</p>
+                          <div className="flex gap-4 text-xs">
+                            <span className="flex items-center gap-1">
+                              <Shield className="h-3 w-3" />
+                              Integrity:
+                              <strong className={
+                                creatorProfile.creator_integrity_score < 50 ? 'text-destructive' :
+                                creatorProfile.creator_integrity_score < 75 ? 'text-amber-600' : 'text-green-600'
+                              }>
+                                {creatorProfile.creator_integrity_score}/100
+                              </strong>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              Mismatches:
+                              <strong className={creatorProfile.creator_mismatch_count >= 3 ? 'text-destructive' : ''}>
+                                {creatorProfile.creator_mismatch_count}
+                              </strong>
+                            </span>
+                          </div>
+                          {sub.ai_declaration && (
+                            <div className="text-xs mt-1">
+                              Seller declared: <Badge variant="outline" className="text-xs ml-1 inline-flex items-center gap-1">
+                                {DECLARATION_LABELS[sub.ai_declaration]?.icon}
+                                {DECLARATION_LABELS[sub.ai_declaration]?.label || sub.ai_declaration}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Detection Results */}
+                      {detectionResults && detectionResults.length > 0 ? (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold flex items-center gap-1">
+                            <ScanLine className="h-4 w-4" /> Detection Results
+                          </h4>
+                          {detectionResults.map((dr: any) => (
+                            <div key={dr.id} className="p-3 rounded-lg border bg-background text-sm space-y-3">
+                              <ScoreBar label="Detection Score" value={dr.detection_score} />
+                              <ScoreBar label="AI Score" value={dr.ai_score} />
+                              <ScoreBar label="Deepfake Score" value={dr.deepfake_score} />
+                              <ScoreBar label="Quality Score" value={dr.quality_score} />
+                              <ScoreBar label="Final Confidence" value={dr.final_confidence} />
+                              <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
+                                <span>Model: <strong className="text-foreground">{dr.model_used}</strong></span>
+                                <span>{dr.detection_status}</span>
+                              </div>
+                              {dr.reasoning && (
+                                <p className="text-xs text-muted-foreground italic border-l-2 border-muted pl-2">{dr.reasoning}</p>
+                              )}
+                              {dr.indicators && dr.indicators.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {dr.indicators.map((ind: string, i: number) => (
+                                    <Badge key={i} variant="secondary" className="text-xs">{ind}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="text-[10px] text-muted-foreground">
+                                {new Date(dr.created_at).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No detection results yet</p>
+                      )}
+
+                      {/* Admin Actions */}
+                      <div className="space-y-3 pt-2 border-t">
+                        <Textarea
+                          placeholder="Admin notes..."
+                          value={adminNotes[sub.id] || ''}
+                          onChange={(e) => setAdminNotes(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                          className="min-h-[60px]"
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="default" onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'approved', notes: adminNotes[sub.id] })}>
+                            <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'approved_ai', notes: adminNotes[sub.id] })}>
+                            <Bot className="h-3 w-3 mr-1" /> Label AI
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'approved_ai_assisted', notes: adminNotes[sub.id] })}>
+                            <Bot className="h-3 w-3 mr-1" /> AI-Assisted
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => updateStatusMutation.mutate({ id: sub.id, status: 'rejected', notes: adminNotes[sub.id] })}>
+                            <XCircle className="h-3 w-3 mr-1" /> Reject
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => rescanMutation.mutate(sub.id)} disabled={rescanMutation.isPending}>
+                            <RefreshCw className={`h-3 w-3 mr-1 ${rescanMutation.isPending ? 'animate-spin' : ''}`} /> Re-scan
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -334,6 +446,16 @@ export const AdminModerationQueue = () => {
           ))}
         </div>
       )}
+
+      {/* Full-size preview modal */}
+      <Dialog open={previewModal.open} onOpenChange={(open) => setPreviewModal({ open, file: open ? previewModal.file : null })}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>{previewModal.file?.file_name || 'Preview'}</DialogTitle>
+          </DialogHeader>
+          {previewModal.file && <MediaPreview file={previewModal.file} large />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
