@@ -40,6 +40,7 @@ const MIN_CHUNK_SIZE = 1 * 1024 * 1024; // 1MB
 const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
 const DEFAULT_MAX_CONCURRENT = 3;
 const DEFAULT_MAX_RETRIES = 3;
+const MAX_VIDEO_DURATION_SECONDS = 60;
 
 export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
   const {
