@@ -142,67 +142,7 @@ const IndexEN = () => {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="bg-muted py-12">
-          <div className="container">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-              <div className="col-span-2 md:col-span-1 flex items-start">
-                <Link to="/en" className="mr-5 flex-shrink-0">
-                  <img 
-                    src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
-                    alt="VisuStock" 
-                    className="h-8 w-auto hover:opacity-80 transition-opacity"
-                  />
-                </Link>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">Products</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link to="/en/marketplace" className="text-muted-foreground hover:text-foreground">Browse Content</Link></li>
-                  <li><Link to="/en/packages-pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link></li>
-                  <li><Link to="/en/infinity" className="text-muted-foreground hover:text-foreground">Infinity</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">Collections</h4>
-                <ul className="space-y-2 text-sm">
-                  {seoCollections
-                    .sort((a, b) => b.priority - a.priority)
-                    .slice(0, 5)
-                    .map((collection) => (
-                      <li key={collection.id}>
-                        <Link 
-                          to={`/collections/${collection.slug}`} 
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          {collection.name}
-                        </Link>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">Company</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link to="/en/about" className="text-muted-foreground hover:text-foreground">About</Link></li>
-                  <li><Link to="/en/support" className="text-muted-foreground hover:text-foreground">Support</Link></li>
-                  <li><Link to="/en/contact" className="text-muted-foreground hover:text-foreground">Contact</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">Legal</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link to="/en/terms" className="text-muted-foreground hover:text-foreground">Terms</Link></li>
-                  <li><Link to="/en/privacy-policy" className="text-muted-foreground hover:text-foreground">Privacy</Link></li>
-                  <li><Link to="/en/licenses" className="text-muted-foreground hover:text-foreground">Licenses</Link></li>
-                </ul>
-              </div>
-            </div>
-            <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-              <p>&copy; 2026 VisuStock. All rights reserved.</p>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </main>
     </div>
   );
