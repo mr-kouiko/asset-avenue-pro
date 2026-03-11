@@ -127,7 +127,7 @@ const CookiePolicyEN = () => {
               you can contact us at:
             </p>
             <div className="text-muted-foreground">
-              <p>Email: legal@visustock.com</p>
+              <p>Email: contact@visustock.com</p>
               <p>Address: 27 Place de la Madeleine, 75008 Paris, France</p>
             </div>
           </Card>

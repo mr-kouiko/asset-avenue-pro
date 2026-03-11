@@ -137,7 +137,7 @@ const PrivacyPolicyEN = () => {
               Upon deletion, we will remove your personal data within 30 days, except where retention is required by law.
             </p>
             <p className="text-muted-foreground mt-2">
-              To exercise any of these rights, contact us at <strong>legal@visustock.com</strong>
+              To exercise any of these rights, contact us at <strong>contact@visustock.com</strong>
             </p>
           </Card>
 
