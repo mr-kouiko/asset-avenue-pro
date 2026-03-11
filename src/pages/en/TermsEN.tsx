@@ -1,180 +1,168 @@
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 
 const TermsEN = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <Navigation />
       
-      <div className="container py-8 max-w-4xl">
-        {/* Header */}
+      <div className="container py-8 max-w-4xl flex-1">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
+          <h1 className="text-4xl font-bold mb-4">Terms & Conditions</h1>
           <p className="text-muted-foreground">
-            Last updated: January 15, 2026
+            Last updated: March 11, 2026
           </p>
         </div>
 
         <div className="space-y-8">
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">1. Purpose</h2>
+            <h2 className="text-2xl font-bold mb-4">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground mb-4">
-              These Terms of Service (hereinafter "ToS") govern the use of the VisuStock platform, 
-              a marketplace for digital creative content (photos, videos, illustrations, audio) accessible at visustock.com.
+              By accessing or using VisuStock ("the Platform"), you agree to be bound by these Terms & Conditions. 
+              If you do not agree, you must not use the Platform.
             </p>
             <p className="text-muted-foreground">
-              Use of the platform implies full acceptance of these ToS by the user.
+              VisuStock is a marketplace for digital creative content (photos, videos, illustrations, audio, ebooks) 
+              accessible at visustock.com.
             </p>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">2. Definitions</h2>
-            <div className="space-y-3 text-muted-foreground">
-              <p><strong>Platform:</strong> The VisuStock website and its associated services</p>
-              <p><strong>User:</strong> Any natural or legal person using the platform</p>
-              <p><strong>Creator/Seller:</strong> User who sells their creations on the platform</p>
-              <p><strong>Buyer:</strong> User who purchases content on the platform</p>
-              <p><strong>Content:</strong> Any creative element (photo, video, illustration, audio) offered on the platform</p>
-            </div>
-          </Card>
-
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">3. Registration and User Account</h2>
+            <h2 className="text-2xl font-bold mb-4">2. Account Responsibilities</h2>
             <div className="space-y-4 text-muted-foreground">
-              <p>
-                Registration on the platform is free and open to any adult or minor with parental authorization.
-              </p>
-              <p>
-                Users commit to providing accurate information and keeping it up to date. They are responsible for the confidentiality 
-                of their login credentials.
-              </p>
-              <p>
-                VisuStock reserves the right to suspend or delete any account in case of violation of these ToS.
-              </p>
-            </div>
-          </Card>
-
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">4. Services Offered</h2>
-            <div className="space-y-4 text-muted-foreground">
-              <h3 className="text-lg font-semibold text-foreground">4.1 For Buyers</h3>
+              <p>When you create an account, you agree to:</p>
               <ul className="list-disc list-inside space-y-2">
-                <li>Search and browse the catalog</li>
-                <li>Purchase and download content</li>
-                <li>License management</li>
-                <li>Customer support</li>
+                <li>Provide accurate and up-to-date information</li>
+                <li>Keep your login credentials confidential and secure</li>
+                <li>Be responsible for all activity under your account</li>
+                <li>Notify us immediately of any unauthorized access</li>
+                <li>Not share your account or transfer it to another person</li>
               </ul>
-              
-              <h3 className="text-lg font-semibold text-foreground">4.2 For Creators</h3>
+              <p>
+                You must be at least 18 years old (or have parental consent) to create an account. 
+                VisuStock reserves the right to suspend or delete any account that violates these terms.
+              </p>
+            </div>
+          </Card>
+
+          <Card className="p-8">
+            <h2 className="text-2xl font-bold mb-4">3. Acceptable Use</h2>
+            <div className="space-y-4 text-muted-foreground">
+              <h3 className="text-lg font-semibold text-foreground">You agree NOT to:</h3>
               <ul className="list-disc list-inside space-y-2">
-                <li>Upload and sell creations</li>
-                <li>Portfolio management</li>
-                <li>Performance tracking</li>
-                <li>Revenue management</li>
+                <li>Upload content that infringes on third-party intellectual property rights</li>
+                <li>Use the platform for any illegal or fraudulent purpose</li>
+                <li>Attempt to gain unauthorized access to other accounts or platform systems</li>
+                <li>Upload malicious code, viruses, or harmful content</li>
+                <li>Scrape, crawl, or bulk-download content without authorization</li>
+                <li>Circumvent watermarks, DRM, or other content protection mechanisms</li>
+                <li>Resell or redistribute purchased content beyond the scope of your license</li>
+                <li>Harass, abuse, or threaten other users</li>
+                <li>Use automated tools to create fake accounts or manipulate platform metrics</li>
+              </ul>
+              <h3 className="text-lg font-semibold text-foreground mt-4">For Creators/Sellers:</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>You must own or have proper licenses for all content you upload</li>
+                <li>Content must meet platform quality standards</li>
+                <li>AI-generated content must be properly declared</li>
+                <li>You must not upload illegal, harmful, or rights-infringing content</li>
               </ul>
             </div>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">5. User Obligations</h2>
-            <div className="space-y-4 text-muted-foreground">
-              <h3 className="text-lg font-semibold text-foreground">5.1 General Obligations</h3>
-              <ul className="list-disc list-inside space-y-2">
-                <li>Respect applicable laws</li>
-                <li>Not infringe on third-party rights</li>
-                <li>Not use the platform for illegal purposes</li>
-                <li>Maintain confidentiality of their credentials</li>
-              </ul>
-              
-              <h3 className="text-lg font-semibold text-foreground">5.2 Creator Obligations</h3>
-              <ul className="list-disc list-inside space-y-2">
-                <li>Own the rights to uploaded content</li>
-                <li>Provide professional quality content</li>
-                <li>Respect community standards</li>
-                <li>Not upload illegal content or content violating copyrights</li>
-              </ul>
-            </div>
-          </Card>
-
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">6. Intellectual Property</h2>
+            <h2 className="text-2xl font-bold mb-4">4. Intellectual Property</h2>
             <p className="text-muted-foreground mb-4">
-              Creators retain their copyright on uploaded content. VisuStock obtains a 
-              non-exclusive license to host, display and distribute this content.
+              Creators retain their copyright on uploaded content. By uploading content to VisuStock, you grant 
+              us a non-exclusive license to host, display, watermark, and distribute that content on the platform.
             </p>
             <p className="text-muted-foreground">
-              The platform, its design elements, source code and brand are protected by 
-              VisuStock's intellectual property rights.
+              The platform itself — its design, source code, branding, and features — is the intellectual 
+              property of VisuStock and is protected by applicable laws.
             </p>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">7. Pricing and Payment</h2>
+            <h2 className="text-2xl font-bold mb-4">5. Purchases & Payments</h2>
             <div className="space-y-4 text-muted-foreground">
+              <p>Prices are displayed in the applicable currency. Payments are processed securely via PayPal.</p>
+              <p>VisuStock takes a commission on each sale, disclosed to creators during registration.</p>
               <p>
-                Prices are displayed in euros including tax. Payments are secure and processed by our trusted partners.
+                Refunds are available only in the case of technical failure preventing download, 
+                and must be requested within 30 days of purchase.
               </p>
               <p>
-                VisuStock takes a commission on each sale, the rate of which is communicated to creators upon registration.
-              </p>
-              <p>
-                Refunds are only possible in case of technical failure preventing download within 30 days of purchase.
+                Credit purchases are non-refundable once credits have been used.
               </p>
             </div>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">8. Liability</h2>
+            <h2 className="text-2xl font-bold mb-4">6. Limitation of Liability</h2>
+            <div className="space-y-4 text-muted-foreground">
+              <p>
+                VisuStock is provided "as is" without warranties of any kind. We make our best efforts to ensure 
+                availability and security but cannot guarantee uninterrupted or error-free operation.
+              </p>
+              <p><strong>VisuStock shall not be liable for:</strong></p>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Indirect, incidental, or consequential damages</li>
+                <li>Loss of profits, data, or business opportunities</li>
+                <li>Content uploaded by users (creators are solely responsible)</li>
+                <li>Third-party service interruptions (payment processors, hosting)</li>
+                <li>Unauthorized access due to user negligence (e.g., shared passwords)</li>
+              </ul>
+              <p>
+                Our total liability is limited to the amount of transactions you have made on the platform 
+                in the preceding 12 months.
+              </p>
+            </div>
+          </Card>
+
+          <Card className="p-8">
+            <h2 className="text-2xl font-bold mb-4">7. Termination</h2>
             <p className="text-muted-foreground mb-4">
-              VisuStock makes its best efforts to ensure platform availability and security, 
-              but cannot guarantee uninterrupted operation.
+              You can delete your account at any time from your dashboard settings.
             </p>
             <p className="text-muted-foreground">
-              VisuStock's liability is limited to direct damages and cannot exceed the amount of concerned transactions 
-              over the last 12 months.
+              VisuStock may suspend or terminate your account if you violate these terms, after providing 
+              notice where practicable. Upon termination, your right to use the platform ceases immediately.
             </p>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">9. Termination</h2>
-            <p className="text-muted-foreground mb-4">
-              Users can delete their account at any time from their personal space.
-            </p>
+            <h2 className="text-2xl font-bold mb-4">8. Changes to These Terms</h2>
             <p className="text-muted-foreground">
-              VisuStock may suspend or delete an account in case of ToS violation, after formal notice remains without effect.
+              VisuStock reserves the right to update these Terms & Conditions at any time. 
+              We will notify users of material changes by email or via a notice on the platform. 
+              Continued use of the platform after changes constitutes acceptance of the updated terms. 
+              If you disagree with changes, you must stop using the platform and delete your account.
             </p>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">10. ToS Modifications</h2>
+            <h2 className="text-2xl font-bold mb-4">9. Governing Law</h2>
             <p className="text-muted-foreground">
-              VisuStock reserves the right to modify these ToS at any time. Users will be notified 
-              by email of important modifications. Continued use constitutes acceptance of the new terms.
+              These terms are governed by French law. In case of dispute, the courts of Paris shall have 
+              exclusive jurisdiction, except where mandatory consumer protection laws apply.
             </p>
           </Card>
 
           <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">11. Applicable Law and Jurisdiction</h2>
-            <p className="text-muted-foreground">
-              These ToS are governed by French law. In case of dispute, the courts of Paris have sole jurisdiction, 
-              except for contrary legal provisions.
-            </p>
-          </Card>
-
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">12. Contact</h2>
-            <p className="text-muted-foreground">
-              For any questions regarding these ToS, you can contact us at:
-            </p>
-            <div className="mt-4 text-muted-foreground">
-              <p>Email: legal@visustock.com</p>
+            <h2 className="text-2xl font-bold mb-4">10. Contact</h2>
+            <div className="text-muted-foreground">
+              <p>For any questions regarding these terms:</p>
+              <p className="mt-2">Email: <strong>legal@visustock.com</strong></p>
               <p>Address: 27 Place de la Madeleine, 75008 Paris, France</p>
             </div>
           </Card>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };

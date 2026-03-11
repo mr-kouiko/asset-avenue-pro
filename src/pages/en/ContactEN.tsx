@@ -1,25 +1,25 @@
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, MapPin, Clock } from "lucide-react";
+import { Mail, MapPin, Clock, Code } from "lucide-react";
 
 const ContactEN = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <Navigation />
       
-      <div className="container py-8">
-        {/* Header */}
+      <div className="container py-8 flex-1">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Our team is here to help you. Feel free to contact us
+            Our team is here to help you. Feel free to contact us.
           </p>
         </div>
 
@@ -44,7 +44,6 @@ const ContactEN = () => {
                 <Label htmlFor="email">Email *</Label>
                 <Input id="email" type="email" placeholder="your@email.com" required />
               </div>
-              
               
               <div>
                 <Label htmlFor="subject">Subject *</Label>
@@ -87,7 +86,7 @@ const ContactEN = () => {
                 <div className="flex items-start space-x-3">
                   <Mail className="h-5 w-5 text-primary mt-1" />
                   <div>
-                    <p className="font-medium">Email</p>
+                    <p className="font-medium">Support Email</p>
                     <p className="text-muted-foreground">contact@visustock.com</p>
                   </div>
                 </div>
@@ -108,8 +107,8 @@ const ContactEN = () => {
                   <div>
                     <p className="font-medium">Hours</p>
                     <p className="text-muted-foreground">
-                      Mon - Fri: 9:00 AM - 6:00 PM<br />
-                      Sat: 10:00 AM - 4:00 PM
+                      Mon – Fri: 9:00 AM – 6:00 PM (CET)<br />
+                      Sat: 10:00 AM – 4:00 PM (CET)
                     </p>
                   </div>
                 </div>
@@ -117,27 +116,31 @@ const ContactEN = () => {
             </Card>
 
             <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">FAQ</h3>
-              <p className="text-muted-foreground mb-4">
-                Check our help center to quickly find answers to frequently asked questions.
-              </p>
-              <Button variant="outline" className="w-full">
-                View FAQ
-              </Button>
+              <div className="flex items-start space-x-3">
+                <Code className="h-5 w-5 text-primary mt-1" />
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Developer Contact</h3>
+                  <p className="text-muted-foreground mb-2">
+                    For technical inquiries, API questions, or integration support:
+                  </p>
+                  <p className="text-muted-foreground"><strong>Email:</strong> dev@visustock.com</p>
+                </div>
+              </div>
             </Card>
 
             <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Seller Support</h3>
-              <p className="text-muted-foreground mb-4">
-                Are you a seller and need help? Contact our dedicated team.
+              <h3 className="text-xl font-semibold mb-4">Legal Inquiries</h3>
+              <p className="text-muted-foreground mb-2">
+                For GDPR requests, data deletion, or legal matters:
               </p>
-              <Button variant="outline" className="w-full">
-                Seller Support
-              </Button>
+              <p className="text-muted-foreground"><strong>Email:</strong> legal@visustock.com</p>
+              <p className="text-muted-foreground"><strong>DPO:</strong> dpo@visustock.com</p>
             </Card>
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };
