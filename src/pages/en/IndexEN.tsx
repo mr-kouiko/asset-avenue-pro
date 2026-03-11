@@ -12,6 +12,7 @@ import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart, ArrowRight }
 import { Link } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
 import { seoCollections } from "@/data/seoCollections";
+import { Footer } from "@/components/Footer";
 
 const IndexEN = () => {
   const { stats } = useContentStats();
