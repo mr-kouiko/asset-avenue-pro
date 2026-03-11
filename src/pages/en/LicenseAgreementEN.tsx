@@ -176,8 +176,7 @@ const LicenseAgreementEN = () => {
               For any questions regarding this license agreement:
             </p>
             <div className="text-muted-foreground">
-              <p>Email: legal@visustock.com</p>
-              <p>License service: licenses@visustock.com</p>
+               <p>Email: contact@visustock.com</p>
               <p>Address: 27 Place de la Madeleine, 75008 Paris, France</p>
             </div>
           </Card>

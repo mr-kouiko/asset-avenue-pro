@@ -137,7 +137,7 @@ const PrivacyPolicyEN = () => {
               Upon deletion, we will remove your personal data within 30 days, except where retention is required by law.
             </p>
             <p className="text-muted-foreground mt-2">
-              To exercise any of these rights, contact us at <strong>legal@visustock.com</strong>
+              To exercise any of these rights, contact us at <strong>contact@visustock.com</strong>
             </p>
           </Card>
 
@@ -172,8 +172,7 @@ const PrivacyPolicyEN = () => {
             <h2 className="text-2xl font-bold mb-4">Contact</h2>
             <div className="text-muted-foreground">
               <p>For any questions regarding this privacy policy or your personal data:</p>
-              <p className="mt-2">Email: <strong>legal@visustock.com</strong></p>
-              <p>Data Protection Officer: <strong>dpo@visustock.com</strong></p>
+              <p className="mt-2">Email: <strong>contact@visustock.com</strong></p>
               <p>Address: 27 Place de la Madeleine, 75008 Paris, France</p>
             </div>
           </Card>
