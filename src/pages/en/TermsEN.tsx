@@ -155,7 +155,7 @@ const TermsEN = () => {
             <h2 className="text-2xl font-bold mb-4">10. Contact</h2>
             <div className="text-muted-foreground">
               <p>For any questions regarding these terms:</p>
-              <p className="mt-2">Email: <strong>legal@visustock.com</strong></p>
+              <p className="mt-2">Email: <strong>contact@visustock.com</strong></p>
               <p>Address: 27 Place de la Madeleine, 75008 Paris, France</p>
             </div>
           </Card>

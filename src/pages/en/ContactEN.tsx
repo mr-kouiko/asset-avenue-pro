@@ -133,8 +133,7 @@ const ContactEN = () => {
               <p className="text-muted-foreground mb-2">
                 For GDPR requests, data deletion, or legal matters:
               </p>
-              <p className="text-muted-foreground"><strong>Email:</strong> legal@visustock.com</p>
-              <p className="text-muted-foreground"><strong>DPO:</strong> dpo@visustock.com</p>
+              <p className="text-muted-foreground"><strong>Email:</strong> contact@visustock.com</p>
             </Card>
           </div>
         </div>
