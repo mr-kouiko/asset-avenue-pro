@@ -123,7 +123,7 @@ const ContactEN = () => {
                   <p className="text-muted-foreground mb-2">
                     For technical inquiries, API questions, or integration support:
                   </p>
-                  <p className="text-muted-foreground"><strong>Email:</strong> dev@visustock.com</p>
+                  <p className="text-muted-foreground"><strong>Email:</strong> contact@visustock.com</p>
                 </div>
               </div>
             </Card>
