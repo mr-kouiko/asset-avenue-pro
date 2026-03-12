@@ -723,23 +723,42 @@ export function useAIUpscaler() {
         for (let tx = 0; tx < tilesX; tx++) {
           const sx = tx * TILE_SIZE;
           const sy = ty * TILE_SIZE;
-          const sw = Math.min(TILE_SIZE + TILE_PADDING, fit.w - sx);
-          const sh = Math.min(TILE_SIZE + TILE_PADDING, fit.h - sy);
 
-          const tileData = srcCtx.getImageData(sx, sy, sw, sh);
+          // The usable (non-padded) tile size for this position
+          const usableW = Math.min(TILE_SIZE, fit.w - sx);
+          const usableH = Math.min(TILE_SIZE, fit.h - sy);
+
+          // Add padding on right/bottom edges (clamped to image bounds)
+          const paddedW = Math.min(usableW + TILE_PADDING, fit.w - sx);
+          const paddedH = Math.min(usableH + TILE_PADDING, fit.h - sy);
+
+          const tileData = srcCtx.getImageData(sx, sy, paddedW, paddedH);
           const outputData = await inferEsrganTile(tileData, ort);
 
-          const ow = sw * outScale;
-          const oh = sh * outScale;
+          // Full padded output dimensions
+          const ow = paddedW * outScale;
+          const oh = paddedH * outScale;
 
-          const tileImageData = outCtx.createImageData(ow, oh);
+          // We only want the center region (without padding) for reconstruction
+          const cropW = usableW * outScale;
+          const cropH = usableH * outScale;
+
+          // Render full padded tile to a temp canvas, then draw only the crop
+          const tmpCanvas = document.createElement('canvas');
+          tmpCanvas.width = ow;
+          tmpCanvas.height = oh;
+          const tmpCtx = tmpCanvas.getContext('2d')!;
+          const tileImageData = tmpCtx.createImageData(ow, oh);
           for (let i = 0; i < ow * oh; i++) {
             tileImageData.data[i * 4] = Math.min(255, Math.max(0, Math.round(outputData[i] * 255)));
             tileImageData.data[i * 4 + 1] = Math.min(255, Math.max(0, Math.round(outputData[ow * oh + i] * 255)));
             tileImageData.data[i * 4 + 2] = Math.min(255, Math.max(0, Math.round(outputData[2 * ow * oh + i] * 255)));
             tileImageData.data[i * 4 + 3] = 255;
           }
-          outCtx.putImageData(tileImageData, sx * outScale, sy * outScale);
+          tmpCtx.putImageData(tileImageData, 0, 0);
+
+          // Draw only the non-padded region to the output
+          outCtx.drawImage(tmpCanvas, 0, 0, cropW, cropH, sx * outScale, sy * outScale, cropW, cropH);
 
           processed++;
           patch({
