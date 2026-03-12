@@ -69,6 +69,7 @@ const AdjustMusicDuration = lazy(() => import("./pages/AdjustMusicDuration"));
 const ImageUpscale = lazy(() => import("./pages/ImageUpscale"));
 const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
 const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
+const ReframeVideo = lazy(() => import("./pages/ReframeVideo"));
 
 // Content pages (lazy loaded)
 const ContactEN = lazy(() => import("./pages/en/ContactEN"));
@@ -159,6 +160,7 @@ const App = () => (
                         <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
                         <Route path="/ai-upscaler" element={<AIUpscaler />} />
                         <Route path="/face-enhancer" element={<FaceEnhancer />} />
+                        <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
                         
                         {/* Content pages */}
                         <Route path="/support" element={<Support />} />
