@@ -5,6 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
+import { useAIUpscaler, type UpscaleMode } from '@/hooks/useAIUpscaler';
+import { ComparisonSlider } from '@/components/upscale/ComparisonSlider';
+import { ZoomInspector } from '@/components/upscale/ZoomInspector';
+import { ModelStatusIndicator } from '@/components/upscale/ModelStatusIndicator';
 import {
   Upload,
   Download,
@@ -13,51 +17,54 @@ import {
   Image as ImageIcon,
   Sparkles,
   RefreshCw,
-  ZoomIn
+  ZoomIn,
+  Zap,
+  Brain,
+  ShieldCheck,
+  Eye,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const SCALE_OPTIONS = [
   { value: 2, label: '2×' },
-  { value: 3, label: '3×' },
   { value: 4, label: '4×' },
 ];
 
 export default function ImageUpscale() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ai = useAIUpscaler();
 
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState('');
   const [scale, setScale] = useState(2);
   const [originalDimensions, setOriginalDimensions] = useState<{ w: number; h: number } | null>(null);
   const [sharpness, setSharpness] = useState(50);
+  const [mode, setMode] = useState<UpscaleMode>('fast');
+  const [showZoom, setShowZoom] = useState(false);
 
   useSEO({
-    title: 'Image Upscale - Enlarge Images Without Losing Quality | Studio AI',
-    description: 'Upscale images to 2×, 3× or 4× their original resolution using browser-based processing. Free, fast, and no upload required.',
-    type: 'website'
+    title: 'AI Image Upscale - Enlarge Images With Neural Network Enhancement | Studio AI',
+    description:
+      'Upscale images using Real-ESRGAN AI or fast browser processing. 2× and 4× enlargement with WebGPU acceleration. 100% client-side, no uploads.',
+    type: 'website',
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith('image/')) {
-      toast({ title: 'Invalid file type', description: 'Please upload an image file (JPG, PNG, WebP).', variant: 'destructive' });
+      toast({ title: 'Invalid file type', description: 'Please upload an image (JPG, PNG, WebP).', variant: 'destructive' });
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
-      toast({ title: 'File too large', description: 'Please upload an image smaller than 25 MB.', variant: 'destructive' });
+      toast({ title: 'File too large', description: 'Max 25 MB.', variant: 'destructive' });
       return;
     }
 
     setFileName(file.name);
     setResultImage(null);
-
     const reader = new FileReader();
     reader.onload = (ev) => {
       const src = ev.target?.result as string;
@@ -69,79 +76,23 @@ export default function ImageUpscale() {
     reader.readAsDataURL(file);
   };
 
-  const upscale = useCallback(async () => {
+  const handleUpscale = useCallback(async () => {
     if (!originalImage) return;
-    setIsProcessing(true);
     setResultImage(null);
-
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = originalImage;
-      });
-
-      const newW = img.naturalWidth * scale;
-      const newH = img.naturalHeight * scale;
-
-      // Guard against absurdly large canvases
-      if (newW * newH > 100_000_000) {
-        toast({ title: 'Output too large', description: 'The resulting image would be too large. Try a lower scale factor.', variant: 'destructive' });
-        setIsProcessing(false);
-        return;
-      }
-
-      const canvas = canvasRef.current ?? document.createElement('canvas');
-      canvas.width = newW;
-      canvas.height = newH;
-      const ctx = canvas.getContext('2d')!;
-
-      // High-quality upscale
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, newW, newH);
-
-      // Optional sharpening via unsharp mask (convolution)
-      if (sharpness > 20) {
-        const strength = sharpness / 100;
-        const imageData = ctx.getImageData(0, 0, newW, newH);
-        const data = imageData.data;
-
-        // Create a blurred copy using a smaller canvas
-        const blurCanvas = document.createElement('canvas');
-        blurCanvas.width = newW;
-        blurCanvas.height = newH;
-        const blurCtx = blurCanvas.getContext('2d')!;
-        blurCtx.filter = 'blur(1px)';
-        blurCtx.drawImage(canvas, 0, 0);
-        const blurData = blurCtx.getImageData(0, 0, newW, newH).data;
-
-        // Unsharp mask: original + strength * (original - blurred)
-        for (let i = 0; i < data.length; i += 4) {
-          data[i]     = Math.min(255, Math.max(0, data[i]     + strength * (data[i]     - blurData[i])));
-          data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + strength * (data[i + 1] - blurData[i + 1])));
-          data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + strength * (data[i + 2] - blurData[i + 2])));
-        }
-        ctx.putImageData(imageData, 0, 0);
-      }
-
-      const dataUrl = canvas.toDataURL('image/png');
-      setResultImage(dataUrl);
-      toast({ title: 'Image Upscaled!', description: `Upscaled to ${newW}×${newH} pixels.` });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to upscale image. Please try again.', variant: 'destructive' });
-    } finally {
-      setIsProcessing(false);
+    const result = await ai.upscale(originalImage, scale, mode, sharpness);
+    if (result) {
+      setResultImage(result);
+      toast({ title: mode === 'ai' ? 'AI Upscale Complete!' : 'Upscale Complete!' });
+    } else {
+      toast({ title: 'Error', description: 'Upscaling failed. Try fast mode.', variant: 'destructive' });
     }
-  }, [originalImage, scale, sharpness, toast]);
+  }, [originalImage, scale, mode, sharpness, ai, toast]);
 
   const handleDownload = () => {
     if (!resultImage) return;
     const link = document.createElement('a');
     link.href = resultImage;
-    link.download = fileName.replace(/\.[^/.]+$/, '') + `-${scale}x-upscaled.png`;
+    link.download = fileName.replace(/\.[^/.]+$/, '') + `-${scale}x-${mode}-upscaled.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -152,6 +103,7 @@ export default function ImageUpscale() {
     setResultImage(null);
     setFileName('');
     setOriginalDimensions(null);
+    setShowZoom(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -161,38 +113,76 @@ export default function ImageUpscale() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
       <Header />
-      <canvas ref={canvasRef} className="hidden" />
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <Link to="/studio-ai" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Studio AI
+          <ArrowLeft className="w-4 h-4" /> Back to Studio AI
         </Link>
 
         {/* Hero */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 mb-6">
             <ZoomIn className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium text-blue-400">100% Free — Runs in Your Browser</span>
+            <span className="text-sm font-medium text-blue-400">AI-Powered · 100% Browser-Based</span>
           </div>
 
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            Image{' '}
+            AI Image{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
               Upscale
             </span>
           </h1>
 
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Enlarge images up to 4× their original resolution with sharpening — entirely in your browser, no upload needed.
+            Enlarge images with neural-network enhancement or instant canvas processing — entirely in your browser.
           </p>
+
+          {/* Privacy badge */}
+          <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-xs text-green-400 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Your images are processed locally. No uploads required.
+          </div>
         </div>
+
+        {/* Model / Device Status */}
+        <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-6">
+          <CardContent className="p-5">
+            <ModelStatusIndicator state={ai} />
+          </CardContent>
+        </Card>
 
         {/* Settings */}
         {originalImage && (
           <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-6">
             <CardContent className="p-6">
-              <div className="grid sm:grid-cols-2 gap-6">
+              <div className="grid sm:grid-cols-3 gap-6">
+                {/* Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-3">Processing Mode</label>
+                  <div className="flex gap-3">
+                    <Button
+                      size="sm"
+                      variant={mode === 'fast' ? 'default' : 'outline'}
+                      className={mode === 'fast' ? 'bg-yellow-600 hover:bg-yellow-500' : 'border-slate-600 text-slate-300'}
+                      onClick={() => { setMode('fast'); setResultImage(null); }}
+                    >
+                      <Zap className="w-4 h-4 mr-1" /> Fast
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={mode === 'ai' ? 'default' : 'outline'}
+                      className={mode === 'ai' ? 'bg-purple-600 hover:bg-purple-500' : 'border-slate-600 text-slate-300'}
+                      onClick={() => { setMode('ai'); setResultImage(null); }}
+                      disabled={ai.backend === 'canvas-only'}
+                    >
+                      <Brain className="w-4 h-4 mr-1" /> AI (HD)
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {mode === 'fast' ? 'Instant canvas interpolation' : 'ESRGAN neural network enhancement'}
+                  </p>
+                </div>
+
                 {/* Scale Factor */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-3">Scale Factor</label>
@@ -216,10 +206,10 @@ export default function ImageUpscale() {
                   )}
                 </div>
 
-                {/* Sharpness */}
+                {/* Sharpness (fast mode only) */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Sharpness: {sharpness}%
+                    Sharpness: {sharpness}%{mode === 'ai' && ' (fast mode only)'}
                   </label>
                   <Slider
                     value={[sharpness]}
@@ -228,80 +218,142 @@ export default function ImageUpscale() {
                     max={100}
                     step={5}
                     className="w-full"
+                    disabled={mode === 'ai'}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Higher values add more edge sharpening</p>
+                  <p className="text-xs text-slate-500 mt-1">Edge sharpening for fast mode</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Image Panels */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Original */}
+        {/* Upload / Comparison area */}
+        {!originalImage ? (
           <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-blue-400" />
-                Original Image
+                <ImageIcon className="w-5 h-5 text-blue-400" /> Upload Image
               </h3>
+              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-blue-500/50 hover:bg-slate-800/30 transition-all">
+                <Upload className="w-10 h-10 text-slate-500 mb-3" />
+                <p className="mb-2 text-sm text-slate-400"><span className="font-semibold">Click to upload</span> or drag & drop</p>
+                <p className="text-xs text-slate-500">PNG, JPG or WebP (max 25 MB)</p>
+                <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+              </label>
+            </CardContent>
+          </Card>
+        ) : resultImage ? (
+          /* ── Comparison view ─────────────────────────────────── */
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-green-400" /> Result Comparison
+              </h3>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-600 text-slate-300"
+                  onClick={() => setShowZoom(!showZoom)}
+                >
+                  <Eye className="w-4 h-4 mr-1" /> {showZoom ? 'Hide' : 'Show'} Zoom
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleReset}>
+                  <RefreshCw className="w-4 h-4 mr-1" /> New Image
+                </Button>
+              </div>
+            </div>
 
-              {!originalImage ? (
-                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-blue-500/50 hover:bg-slate-800/30 transition-all">
-                  <Upload className="w-10 h-10 text-slate-500 mb-3" />
-                  <p className="mb-2 text-sm text-slate-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                  <p className="text-xs text-slate-500">PNG, JPG or WebP (max 25 MB)</p>
-                  <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-                </label>
-              ) : (
+            <ComparisonSlider
+              originalSrc={originalImage}
+              resultSrc={resultImage}
+              className="h-[400px] md:h-[500px]"
+            />
+
+            {showZoom && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-400 mb-2 font-medium">Original — hover to zoom</p>
+                  <ZoomInspector src={originalImage} alt="Original zoom" className="h-64" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400 mb-2 font-medium">Upscaled — hover to zoom</p>
+                  <ZoomInspector src={resultImage} alt="Result zoom" className="h-64" />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ── Preview before processing ───────────────────────── */
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-blue-400" /> Original
+                </h3>
                 <div className="relative">
                   <img src={originalImage} alt="Original" className="w-full h-64 object-contain rounded-xl bg-slate-800" />
                   <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleReset}>
                     <RefreshCw className="w-4 h-4 mr-1" /> Change
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Result */}
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-green-400" />
-                Upscaled Result
-              </h3>
-
-              {isProcessing ? (
-                <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/50">
-                  <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-3" />
-                  <p className="text-sm text-slate-400">Upscaling image…</p>
-                </div>
-              ) : resultImage ? (
-                <img src={resultImage} alt="Upscaled" className="w-full h-64 object-contain rounded-xl bg-slate-800" />
-              ) : (
-                <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                  <ZoomIn className="w-10 h-10 text-slate-600 mb-3" />
-                  <p className="text-sm text-slate-500">Result will appear here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-green-400" /> Result
+                </h3>
+                {ai.isProcessing ? (
+                  <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/50">
+                    <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-3" />
+                    <p className="text-sm text-slate-400">{ai.statusMessage || 'Processing…'}</p>
+                    {ai.processingProgress > 0 && (
+                      <p className="text-xs text-slate-500 mt-1">{ai.processingProgress}%</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                    <ZoomIn className="w-10 h-10 text-slate-600 mb-3" />
+                    <p className="text-sm text-slate-500">Press Upscale to begin</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
-          <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white px-8" onClick={upscale} disabled={!originalImage || isProcessing}>
-            {isProcessing ? (
-              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing…</>
+          <Button
+            size="lg"
+            className={
+              mode === 'ai'
+                ? 'bg-purple-600 hover:bg-purple-500 text-white px-8'
+                : 'bg-blue-600 hover:bg-blue-500 text-white px-8'
+            }
+            onClick={handleUpscale}
+            disabled={!originalImage || ai.isProcessing}
+          >
+            {ai.isProcessing ? (
+              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> {ai.statusMessage || 'Processing…'}</>
+            ) : mode === 'ai' ? (
+              <><Brain className="w-5 h-5 mr-2" /> AI Upscale</>
             ) : (
-              <><ZoomIn className="w-5 h-5 mr-2" /> Upscale Image</>
+              <><Zap className="w-5 h-5 mr-2" /> Fast Upscale</>
             )}
           </Button>
 
           {resultImage && (
             <Button size="lg" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-8" onClick={handleDownload}>
               <Download className="w-5 h-5 mr-2" /> Download PNG
+            </Button>
+          )}
+
+          {mode === 'ai' && ai.modelStatus !== 'ready' && ai.modelStatus !== 'downloading' && ai.modelStatus !== 'loading' && ai.backend !== 'canvas-only' && (
+            <Button size="lg" variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 px-8" onClick={ai.preloadModel}>
+              <Download className="w-5 h-5 mr-2" /> Pre-load AI Model
             </Button>
           )}
         </div>
@@ -311,9 +363,9 @@ export default function ImageUpscale() {
           <h2 className="text-xl font-semibold text-white mb-6">Tips for Best Results</h2>
           <div className="grid sm:grid-cols-3 gap-6">
             {[
-              { title: 'Start Small', description: 'Images under 2000 px produce the best upscale quality and process faster.' },
-              { title: 'Use PNG for Lossless', description: 'PNG input avoids JPEG compression artifacts that get amplified during upscaling.' },
-              { title: 'Adjust Sharpness', description: 'Increase sharpness for photos; lower it for illustrations or artwork.' },
+              { title: 'AI Mode for Photos', description: 'ESRGAN neural network produces sharper detail on photographs and realistic images.' },
+              { title: 'Fast Mode for Art', description: 'Canvas interpolation is instant and works great for illustrations and vector-style graphics.' },
+              { title: 'Keep Input Small', description: 'Images under 2000 px process faster and use less memory, especially in AI mode.' },
             ].map((tip) => (
               <div key={tip.title} className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
                 <h3 className="text-white font-medium mb-2">{tip.title}</h3>
