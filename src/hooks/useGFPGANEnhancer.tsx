@@ -34,8 +34,8 @@ export interface GFPGANState {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const GFPGAN_MODEL_URL =
-  'https://huggingface.co/akhaliq/GFPGAN/resolve/main/GFPGANv1.4.onnx';
-const GFPGAN_CACHE_KEY = 'gfpgan-model-v2';
+  'https://huggingface.co/facefusion/models-3.0.0/resolve/main/gfpgan_1.2.onnx';
+const GFPGAN_CACHE_KEY = 'gfpgan-model-v3';
 const DB_NAME = 'ai-upscaler-cache';
 const DB_STORE = 'models';
 const GFPGAN_INPUT_SIZE = 512;
@@ -316,8 +316,9 @@ export function useGFPGANEnhancer() {
       patch({ modelStatus: 'ready', statusMessage: 'GFPGAN model ready' });
       return true;
     } catch (err) {
-      console.error('GFPGAN init error:', err);
-      patch({ modelStatus: 'error', statusMessage: 'GFPGAN model failed to load' });
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('GFPGAN init error:', msg, err);
+      patch({ modelStatus: 'error', statusMessage: `GFPGAN failed: ${msg}` });
       return false;
     }
   }, [patch, getOrt, getProviders]);
@@ -441,8 +442,9 @@ export function useGFPGANEnhancer() {
         patch({ step: 'complete', statusMessage: `Enhanced ${faces.length} face(s) successfully`, processingProgress: 100 });
         return canvas.toDataURL('image/png');
       } catch (err) {
-        console.error('Face enhance error:', err);
-        patch({ step: 'error', statusMessage: 'Error during face enhancement' });
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Face enhance error:', msg, err);
+        patch({ step: 'error', statusMessage: `Face enhancement error: ${msg}` });
         return null;
       } finally {
         patch({ isProcessing: false });
