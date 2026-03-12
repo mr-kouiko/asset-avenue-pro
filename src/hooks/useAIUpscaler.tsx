@@ -40,9 +40,9 @@ export interface AIUpscalerState {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const ESRGAN_MODEL_URL =
-  'https://huggingface.co/nicjac/realesrgan-onnx/resolve/main/RealESRGAN_x4plus.onnx';
+  'https://huggingface.co/Xenova/realesrgan-x4plus/resolve/main/realesrgan-x4plus.onnx';
 const GFPGAN_MODEL_URL =
-  'https://huggingface.co/facefusion/onnxruntime/resolve/main/gfpgan_1.4.onnx';
+  'https://huggingface.co/Xenova/gfpgan/resolve/main/gfpgan.onnx';
 
 const ESRGAN_CACHE_KEY = 'esrgan-model-v1';
 const GFPGAN_CACHE_KEY = 'gfpgan-model-v1';
