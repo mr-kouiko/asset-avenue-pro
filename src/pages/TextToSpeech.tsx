@@ -1,44 +1,61 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Volume2, Download, Loader2, Play, Pause } from "lucide-react";
+import { ChevronLeft, Volume2, Download, Loader2, Play, Pause, Gauge, Music2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const VOICES = [
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Warm British male" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Soft American female" },
-  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", description: "Upbeat American female" },
-  { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie", description: "Natural Australian male" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "Articulate American male" },
-  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "Friendly Australian female" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Warm British female" },
-  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", description: "Deep British male" },
+  { id: "en-US-JennyNeural", name: "Jenny", description: "Warm female (US)", lang: "English" },
+  { id: "en-US-AriaNeural", name: "Aria", description: "Friendly female (US)", lang: "English" },
+  { id: "en-US-GuyNeural", name: "Guy", description: "Casual male (US)", lang: "English" },
+  { id: "en-US-DavisNeural", name: "Davis", description: "Deep male (US)", lang: "English" },
+  { id: "en-GB-SoniaNeural", name: "Sonia", description: "Warm female (UK)", lang: "English" },
+  { id: "en-GB-RyanNeural", name: "Ryan", description: "Articulate male (UK)", lang: "English" },
+  { id: "en-AU-NatashaNeural", name: "Natasha", description: "Friendly female (AU)", lang: "English" },
+  { id: "en-AU-WilliamNeural", name: "William", description: "Natural male (AU)", lang: "English" },
+  { id: "fr-FR-DeniseNeural", name: "Denise", description: "Douce féminine (FR)", lang: "French" },
+  { id: "fr-FR-HenriNeural", name: "Henri", description: "Masculin naturel (FR)", lang: "French" },
+  { id: "es-ES-ElviraNeural", name: "Elvira", description: "Cálida femenina (ES)", lang: "Spanish" },
+  { id: "es-ES-AlvaroNeural", name: "Alvaro", description: "Masculino natural (ES)", lang: "Spanish" },
+  { id: "de-DE-KatjaNeural", name: "Katja", description: "Warme Stimme (DE)", lang: "German" },
+  { id: "de-DE-ConradNeural", name: "Conrad", description: "Natürlich männlich (DE)", lang: "German" },
+  { id: "ar-SA-ZariyahNeural", name: "Zariyah", description: "أنثوية دافئة (AR)", lang: "Arabic" },
+  { id: "ar-SA-HamedNeural", name: "Hamed", description: "ذكوري طبيعي (AR)", lang: "Arabic" },
 ];
 
 export default function TextToSpeech() {
   const [text, setText] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0].id);
+  const [rate, setRate] = useState(0);    // -50 to +100
+  const [pitch, setPitch] = useState(0);  // -50 to +50
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
+  const formatRate = (v: number) => (v >= 0 ? `+${v}%` : `${v}%`);
+  const formatPitch = (v: number) => (v >= 0 ? `+${v}Hz` : `${v}Hz`);
+
   const handleGenerate = async () => {
     if (!text.trim()) { toast.error("Please enter some text to convert"); return; }
-    if (text.length > 5000) { toast.error("Text must be 5000 characters or less"); return; }
+    if (text.length > 10000) { toast.error("Text must be 10,000 characters or less"); return; }
 
     setIsGenerating(true);
+    if (audioUrl) { URL.revokeObjectURL(audioUrl); }
     setAudioUrl(null);
+    if (audioElement) { audioElement.pause(); }
+    setIsPlaying(false);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) { toast.error("Please sign in to use Text to Speech"); return; }
+      if (!sessionData.session) { toast.error("Please sign in to use Text to Speech"); setIsGenerating(false); return; }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/edge-tts`,
         {
           method: "POST",
           headers: {
@@ -46,7 +63,12 @@ export default function TextToSpeech() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${sessionData.session.access_token}`,
           },
-          body: JSON.stringify({ text: text.trim(), voiceId: selectedVoice }),
+          body: JSON.stringify({
+            text: text.trim(),
+            voice: selectedVoice,
+            rate: formatRate(rate),
+            pitch: formatPitch(pitch),
+          }),
         }
       );
 
@@ -63,7 +85,7 @@ export default function TextToSpeech() {
       audio.onended = () => setIsPlaying(false);
       setAudioElement(audio);
 
-      toast.success("Audio generated successfully!");
+      toast.success("Audio generated successfully — 100% free!");
     } catch (error: any) {
       console.error("TTS error:", error);
       toast.error(error.message || "Failed to generate audio");
@@ -89,6 +111,8 @@ export default function TextToSpeech() {
     toast.success("Audio downloaded!");
   };
 
+  const selectedVoiceInfo = VOICES.find(v => v.id === selectedVoice);
+
   return (
     <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
       {/* Top bar */}
@@ -103,6 +127,7 @@ export default function TextToSpeech() {
           <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
             Text to Speech
           </h1>
+          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(var(--editor-accent) / 0.2)', color: 'hsl(var(--editor-accent))' }}>FREE</span>
         </div>
         <div className="flex items-center gap-2">
           {audioUrl && (
@@ -140,25 +165,74 @@ export default function TextToSpeech() {
                   {VOICES.map((voice) => (
                     <SelectItem key={voice.id} value={voice.id}>
                       <span className="font-medium">{voice.name}</span>
-                      <span className="ml-2 opacity-60">- {voice.description}</span>
+                      <span className="ml-2 opacity-60">— {voice.description}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {selectedVoiceInfo && (
+                <p className="text-[10px] opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {selectedVoiceInfo.lang} · Microsoft Neural
+                </p>
+              )}
+            </div>
+
+            {/* Speed slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <Gauge className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-accent))' }} />
+                  Speed
+                </label>
+                <span className="text-[10px] font-mono" style={{ color: 'hsl(var(--editor-text))' }}>{formatRate(rate)}</span>
+              </div>
+              <Slider
+                value={[rate]}
+                onValueChange={([v]) => setRate(v)}
+                min={-50}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-[9px] opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
+                <span>Slower</span><span>Normal</span><span>Faster</span>
+              </div>
+            </div>
+
+            {/* Pitch slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <Music2 className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-accent))' }} />
+                  Pitch
+                </label>
+                <span className="text-[10px] font-mono" style={{ color: 'hsl(var(--editor-text))' }}>{formatPitch(pitch)}</span>
+              </div>
+              <Slider
+                value={[pitch]}
+                onValueChange={([v]) => setPitch(v)}
+                min={-50}
+                max={50}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-[9px] opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
+                <span>Lower</span><span>Normal</span><span>Higher</span>
+              </div>
             </div>
 
             {/* Text input */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>Text</label>
-                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>{text.length}/5000</span>
+                <label className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>Script</label>
+                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>{text.length}/10000</span>
               </div>
               <Textarea
                 placeholder="Enter the text you want to convert to speech..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={8}
-                maxLength={5000}
+                maxLength={10000}
                 className="resize-none text-sm"
                 style={{
                   background: 'hsl(var(--editor-bg))',
@@ -204,19 +278,26 @@ export default function TextToSpeech() {
                     </Button>
                     <Button
                       variant="ghost" size="sm" onClick={handleDownload}
-                      style={{ color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
+                      className="text-black"
+                      style={{ border: '1px solid hsl(var(--editor-border))' }}
                     >
-                      <Download className="mr-2 h-4 w-4" /> Download
+                      <Download className="mr-2 h-4 w-4" /> Download MP3
                     </Button>
                   </div>
                 </div>
                 <audio src={audioUrl} controls className="w-full" />
+                <p className="text-[10px] text-center opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
+                  Powered by Microsoft Edge Neural TTS — Free, no API key required
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-[300px] rounded-xl" style={{ border: '1px dashed hsl(var(--editor-border))', background: 'hsl(var(--editor-panel))' }}>
                 <Volume2 className="w-16 h-16 mb-4" style={{ color: 'hsl(var(--editor-text))' }} />
                 <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
                   {isGenerating ? "Generating audio..." : "Enter text and click generate"}
+                </p>
+                <p className="text-[10px] mt-2 opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
+                  16 neural voices · Free · No limits
                 </p>
               </div>
             )}
