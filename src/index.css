@@ -57,6 +57,16 @@ All colors MUST be HSL.
     
     --radius: 0.75rem;
 
+    /* Editor surfaces - Dark Blue Theme */
+    --editor-bg: 225 45% 8%;
+    --editor-sidebar: 225 40% 12%;
+    --editor-panel: 225 35% 16%;
+    --editor-border: 225 30% 22%;
+    --editor-text: 220 20% 70%;
+    --editor-text-bright: 220 30% 95%;
+    --editor-accent: 217 90% 60%;
+    --editor-accent-soft: 217 80% 55%;
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
