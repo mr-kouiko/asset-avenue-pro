@@ -425,9 +425,9 @@ export function useAIUpscaler() {
 
   // ── Get execution providers ────────────────────────────────────────────
   const getProviders = useCallback((): string[] => {
-    // Default onnxruntime-web build only ships the 'wasm' EP reliably.
-    // webgpu/webgl EPs require special builds and often cause silent failures,
-    // so we stick with 'wasm' which uses SIMD + threads when available.
+    const b = backendRef.current;
+    if (b === 'webgpu') return ['webgpu', 'wasm'];
+    if (b === 'webgl') return ['webgl', 'wasm'];
     return ['wasm'];
   }, []);
 
