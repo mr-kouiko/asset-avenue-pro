@@ -191,23 +191,12 @@ export default function AdjustMusicDuration() {
       <div className="flex min-h-[calc(100vh-64px)]">
         {/* Left Sidebar */}
         <aside
-          className="w-[380px] shrink-0 border-r flex flex-col overflow-y-auto"
+          className="w-[280px] shrink-0 border-r flex flex-col overflow-y-auto"
           style={{
             background: 'hsl(var(--editor-sidebar))',
             borderColor: 'hsl(var(--editor-border))',
           }}
         >
-          {/* Back button */}
-          <div className="p-4 border-b" style={{ borderColor: 'hsl(var(--editor-border))' }}>
-            <button
-              onClick={() => navigate('/studio-ai')}
-              className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
-              style={{ color: 'hsl(var(--editor-text))' }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Studio AI
-            </button>
-          </div>
 
           <div className="p-6 flex flex-col gap-5 flex-1">
             {/* Title */}
