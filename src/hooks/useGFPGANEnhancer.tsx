@@ -442,8 +442,9 @@ export function useGFPGANEnhancer() {
         patch({ step: 'complete', statusMessage: `Enhanced ${faces.length} face(s) successfully`, processingProgress: 100 });
         return canvas.toDataURL('image/png');
       } catch (err) {
-        console.error('Face enhance error:', err);
-        patch({ step: 'error', statusMessage: 'Error during face enhancement' });
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Face enhance error:', msg, err);
+        patch({ step: 'error', statusMessage: `Face enhancement error: ${msg}` });
         return null;
       } finally {
         patch({ isProcessing: false });
