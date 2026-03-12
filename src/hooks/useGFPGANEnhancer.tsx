@@ -316,8 +316,9 @@ export function useGFPGANEnhancer() {
       patch({ modelStatus: 'ready', statusMessage: 'GFPGAN model ready' });
       return true;
     } catch (err) {
-      console.error('GFPGAN init error:', err);
-      patch({ modelStatus: 'error', statusMessage: 'GFPGAN model failed to load' });
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('GFPGAN init error:', msg, err);
+      patch({ modelStatus: 'error', statusMessage: `GFPGAN failed: ${msg}` });
       return false;
     }
   }, [patch, getOrt, getProviders]);
