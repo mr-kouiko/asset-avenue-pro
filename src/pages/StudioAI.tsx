@@ -21,7 +21,8 @@ import {
   Mic,
   Palette,
   ArrowUpRight,
-  RefreshCw
+  RefreshCw,
+  ZoomIn
 } from 'lucide-react';
 
 interface AITool {
@@ -73,6 +74,15 @@ const imageTools: AITool[] = [
     href: '/ai-image-generator',
     available: true,
     badge: 'Available'
+  },
+  {
+    id: 'image-upscale',
+    title: 'Image Upscale',
+    description: 'Enlarge images up to 4× their original resolution with sharpening — free and 100% in-browser.',
+    icon: <ZoomIn className="w-6 h-6" />,
+    href: '/studio-ai/image-upscale',
+    available: true,
+    badge: 'Free'
   },
   {
     id: 'remove-background',
