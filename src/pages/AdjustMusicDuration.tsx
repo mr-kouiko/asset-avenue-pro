@@ -444,7 +444,7 @@ export default function AdjustMusicDuration() {
                       size="sm"
                       variant="outline"
                       onClick={handleDownload}
-                      className="border-[hsl(var(--editor-border))] text-[hsl(var(--editor-text-bright))] hover:bg-[hsl(var(--editor-panel))] h-7 text-xs"
+                      className="border-[hsl(var(--editor-border))] text-black hover:bg-[hsl(var(--editor-panel))] h-7 text-xs"
                     >
                       <Download className="w-3.5 h-3.5 mr-1" /> Download WAV
                     </Button>
