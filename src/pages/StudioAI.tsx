@@ -22,7 +22,8 @@ import {
   Palette,
   ArrowUpRight,
   RefreshCw,
-  ZoomIn
+  ZoomIn,
+  Crop
 } from 'lucide-react';
 
 interface AITool {
