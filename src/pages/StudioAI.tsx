@@ -21,7 +21,8 @@ import {
   Mic,
   Palette,
   ArrowUpRight,
-  RefreshCw
+  RefreshCw,
+  ZoomIn
 } from 'lucide-react';
 
 interface AITool {
