@@ -363,7 +363,7 @@ export function useGFPGANEnhancer() {
   );
 
   const enhance = useCallback(
-    async (imgSrc: string): Promise<string | null> => {
+    async (imgSrc: string, strength: number = 0.5): Promise<string | null> => {
       patch({ isProcessing: true, processingProgress: 0, step: 'idle', facesDetected: 0 });
       try {
         const ort = await getOrt();
