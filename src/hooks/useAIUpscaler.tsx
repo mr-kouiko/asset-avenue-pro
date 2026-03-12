@@ -710,6 +710,7 @@ export function useAIUpscaler() {
       const totalTiles = tilesX * tilesY;
       let processed = 0;
 
+      console.log("Running ESRGAN inference...");
       for (let ty = 0; ty < tilesY; ty++) {
         for (let tx = 0; tx < tilesX; tx++) {
           const sx = tx * TILE_SIZE;
@@ -739,6 +740,7 @@ export function useAIUpscaler() {
           });
         }
       }
+      console.log("ESRGAN inference finished");
 
       if (scale === 2) {
         const finalCanvas = document.createElement('canvas');
