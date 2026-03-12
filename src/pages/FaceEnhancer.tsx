@@ -106,6 +106,7 @@ export default function FaceEnhancer() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const [showZoom, setShowZoom] = useState(false);
+  const [blendStrength, setBlendStrength] = useState(50);
 
   useSEO({
     title: 'AI Face & Skin Enhancer – GFPGAN Restoration | Studio AI',
