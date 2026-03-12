@@ -1,15 +1,10 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowLeft, Upload, Download, Loader2, ZoomIn, Film } from "lucide-react";
+import { ChevronLeft, Upload, Download, Loader2, ZoomIn, Film } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
 type UpscaleOption = "2x" | "4x";
@@ -28,18 +23,8 @@ const VideoUpscale = () => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    if (!file.type.startsWith("video/")) {
-      toast.error("Please select a valid video file");
-      return;
-    }
-
-    // Max 50MB for video
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("Video must be less than 50MB");
-      return;
-    }
-
+    if (!file.type.startsWith("video/")) { toast.error("Please select a valid video file"); return; }
+    if (file.size > 50 * 1024 * 1024) { toast.error("Video must be less than 50MB"); return; }
     const url = URL.createObjectURL(file);
     setOriginalVideo(url);
     setOriginalFile(file);
@@ -49,7 +34,6 @@ const VideoUpscale = () => {
 
   const upscaleVideo = async () => {
     if (!originalVideo || !videoRef.current) return;
-
     setIsProcessing(true);
     setProgress(0);
 
@@ -57,26 +41,20 @@ const VideoUpscale = () => {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       if (!canvas) throw new Error("Canvas not available");
-
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas context not available");
 
-      // Wait for video metadata
       await new Promise<void>((resolve) => {
-        if (video.readyState >= 1) {
-          resolve();
-        } else {
-          video.onloadedmetadata = () => resolve();
-        }
+        if (video.readyState >= 1) resolve();
+        else video.onloadedmetadata = () => resolve();
       });
 
       const factor = upscaleFactor === "2x" ? 2 : 4;
       const targetWidth = video.videoWidth * factor;
       const targetHeight = video.videoHeight * factor;
 
-      // Check if dimensions are reasonable
       if (targetWidth > 3840 || targetHeight > 2160) {
-        toast.error("Resulting video would exceed 4K resolution. Please use a smaller video or lower upscale factor.");
+        toast.error("Resulting video would exceed 4K. Use a smaller video or lower factor.");
         setIsProcessing(false);
         return;
       }
@@ -84,52 +62,35 @@ const VideoUpscale = () => {
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
-      // Get video duration and fps estimate
       const duration = video.duration;
-      const fps = 30; // Assume 30fps
+      const fps = 30;
       const totalFrames = Math.floor(duration * fps);
-
-      // Collect frames
       const frames: ImageData[] = [];
-      
-      for (let i = 0; i < totalFrames && i < 300; i++) { // Cap at 300 frames (10 seconds at 30fps)
-        const time = (i / fps);
-        video.currentTime = time;
-        
-        await new Promise<void>((resolve) => {
-          video.onseeked = () => resolve();
-        });
 
-        // Draw and upscale using high-quality interpolation
+      for (let i = 0; i < totalFrames && i < 300; i++) {
+        video.currentTime = i / fps;
+        await new Promise<void>((resolve) => { video.onseeked = () => resolve(); });
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-        
         frames.push(ctx.getImageData(0, 0, targetWidth, targetHeight));
         setProgress(Math.round((i / Math.min(totalFrames, 300)) * 50));
       }
 
-      // Create upscaled video using MediaRecorder
       const stream = canvas.captureStream(fps);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: "video/webm;codecs=vp9",
-        videoBitsPerSecond: 8000000, // 8 Mbps for quality
+        videoBitsPerSecond: 8000000,
       });
 
       const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
       const recordingPromise = new Promise<Blob>((resolve) => {
-        mediaRecorder.onstop = () => {
-          resolve(new Blob(chunks, { type: "video/webm" }));
-        };
+        mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: "video/webm" }));
       });
 
       mediaRecorder.start();
-
-      // Playback frames to record
       for (let i = 0; i < frames.length; i++) {
         ctx.putImageData(frames[i], 0, 0);
         await new Promise((resolve) => setTimeout(resolve, 1000 / fps));
@@ -138,9 +99,7 @@ const VideoUpscale = () => {
 
       mediaRecorder.stop();
       const blob = await recordingPromise;
-
-      const resultUrl = URL.createObjectURL(blob);
-      setProcessedVideo(resultUrl);
+      setProcessedVideo(URL.createObjectURL(blob));
       toast.success(`Video upscaled to ${upscaleFactor} successfully!`);
     } catch (error) {
       console.error("Upscale error:", error);
@@ -153,7 +112,6 @@ const VideoUpscale = () => {
 
   const downloadResult = () => {
     if (!processedVideo) return;
-    
     const link = document.createElement("a");
     link.href = processedVideo;
     link.download = `upscaled-${upscaleFactor}-${originalFile?.name || "video"}.webm`;
@@ -164,75 +122,61 @@ const VideoUpscale = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/studio-ai">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Video Upscale</h1>
-              <p className="text-muted-foreground text-sm">
-                Enhance video quality and upscale to HD or 4K
-              </p>
-            </div>
-          </div>
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      {/* Top bar */}
+      <header
+        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
+        style={{ borderBottom: '1px solid hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+            Video Upscale
+          </h1>
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          {processedVideo && (
+            <Button size="sm" variant="ghost" onClick={downloadResult} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Upload Section */}
-          <Card className="p-8">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-                <Film className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">Upload Your Video</h2>
-                <p className="text-muted-foreground">
-                  MP4, WebM, MOV up to 50MB • Max 10 seconds recommended
-                </p>
-              </div>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                size="lg"
-                className="gap-2"
-              >
-                <Upload className="h-5 w-5" />
-                Select Video
-              </Button>
-            </div>
-          </Card>
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left sidebar */}
+        <aside
+          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
+          style={{ background: 'hsl(var(--editor-sidebar))', borderRight: '1px solid hsl(var(--editor-border))' }}
+        >
+          <div className="p-4 space-y-4 flex-1">
+            {/* Upload area */}
+            <label
+              className="flex flex-col items-center justify-center w-full h-[140px] rounded-xl border border-dashed cursor-pointer transition-colors"
+              style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-bg))' }}
+            >
+              <Film className="w-8 h-8 mb-2" style={{ color: 'hsl(var(--editor-text))' }} />
+              <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
+                {originalVideo ? 'Change Video' : 'Upload Video'}
+              </span>
+              <span className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                MP4, WebM, MOV up to 50MB
+              </span>
+              <input ref={fileInputRef} type="file" className="hidden" accept="video/*" onChange={handleFileSelect} />
+            </label>
 
-          {/* Options */}
-          {originalVideo && (
-            <Card className="p-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <ZoomIn className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Upscale Factor</span>
-                </div>
-                <Select
-                  value={upscaleFactor}
-                  onValueChange={(value: UpscaleOption) => setUpscaleFactor(value)}
-                  disabled={isProcessing}
-                >
-                  <SelectTrigger className="w-[180px]">
+            {/* Upscale factor */}
+            {originalVideo && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <ZoomIn className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-accent))' }} />
+                  Upscale Factor
+                </label>
+                <Select value={upscaleFactor} onValueChange={(v: UpscaleOption) => setUpscaleFactor(v)} disabled={isProcessing}>
+                  <SelectTrigger style={{ background: 'hsl(var(--editor-bg))', borderColor: 'hsl(var(--editor-border))', color: 'hsl(var(--editor-text-bright))' }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -241,111 +185,88 @@ const VideoUpscale = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </Card>
-          )}
+            )}
 
-          {/* Video Preview */}
-          {originalVideo && (
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Original */}
-              <Card className="p-4">
-                <h3 className="font-medium mb-3 text-center">Original</h3>
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    src={originalVideo}
-                    className="w-full h-full object-contain"
-                    controls
-                    crossOrigin="anonymous"
-                  />
-                </div>
-              </Card>
+            {/* Upscale button */}
+            <Button
+              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              onClick={upscaleVideo}
+              disabled={!originalVideo || isProcessing}
+              style={{
+                background: 'hsl(var(--editor-accent))',
+                color: '#fff',
+                opacity: (!originalVideo || isProcessing) ? 0.5 : 1,
+              }}
+            >
+              {isProcessing ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Processing... {progress}%</>
+              ) : (
+                <><ZoomIn className="w-4 h-4" /> Upscale Video</>
+              )}
+            </Button>
 
-              {/* Result */}
-              <Card className="p-4">
-                <h3 className="font-medium mb-3 text-center">
-                  Upscaled ({upscaleFactor})
-                </h3>
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                  {isProcessing ? (
-                    <div className="text-center space-y-3">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                      <p className="text-sm text-muted-foreground">
-                        Processing... {progress}%
-                      </p>
-                      <div className="w-48 h-2 bg-muted-foreground/20 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : processedVideo ? (
-                    <video
-                      src={processedVideo}
-                      className="w-full h-full object-contain"
-                      controls
-                    />
-                  ) : (
-                    <p className="text-muted-foreground text-sm">
-                      Upscaled video will appear here
-                    </p>
-                  )}
-                </div>
-              </Card>
+            {/* Progress bar */}
+            {isProcessing && (
+              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'hsl(var(--editor-border))' }}>
+                <div className="h-full transition-all duration-300 rounded-full" style={{ width: `${progress}%`, background: 'hsl(var(--editor-accent))' }} />
+              </div>
+            )}
+
+            {/* Tips */}
+            <div className="rounded-lg p-3 space-y-1.5" style={{ background: 'hsl(var(--editor-bg))' }}>
+              <h3 className="text-xs font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>Tips</h3>
+              <ul className="text-xs space-y-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                <li>• Short videos (under 10s) process faster</li>
+                <li>• Higher quality source = better results</li>
+                <li>• 2x is faster and recommended for most uses</li>
+                <li>• Processing happens in your browser</li>
+              </ul>
             </div>
-          )}
+          </div>
+        </aside>
 
-          {/* Hidden canvas for processing */}
+        {/* Main workspace */}
+        <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-auto" style={{ background: 'hsl(var(--editor-bg))' }}>
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Actions */}
-          {originalVideo && (
-            <div className="flex justify-center gap-4">
-              <Button
-                onClick={upscaleVideo}
-                disabled={isProcessing}
-                size="lg"
-                className="gap-2"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <ZoomIn className="h-5 w-5" />
-                    Upscale Video
-                  </>
-                )}
-              </Button>
+          {originalVideo ? (
+            <div className="w-full max-w-[900px] grid md:grid-cols-2 gap-6">
+              {/* Original */}
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid hsl(var(--editor-border))' }}>
+                <div className="px-3 py-2" style={{ background: 'hsl(var(--editor-panel))', borderBottom: '1px solid hsl(var(--editor-border))' }}>
+                  <span className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>Original</span>
+                </div>
+                <div className="aspect-video" style={{ background: 'hsl(var(--editor-bg))' }}>
+                  <video ref={videoRef} src={originalVideo} className="w-full h-full object-contain" controls crossOrigin="anonymous" />
+                </div>
+              </div>
 
-              {processedVideo && (
-                <Button
-                  onClick={downloadResult}
-                  variant="outline"
-                  size="lg"
-                  className="gap-2"
-                >
-                  <Download className="h-5 w-5" />
-                  Download
-                </Button>
-              )}
+              {/* Result */}
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid hsl(var(--editor-border))' }}>
+                <div className="px-3 py-2" style={{ background: 'hsl(var(--editor-panel))', borderBottom: '1px solid hsl(var(--editor-border))' }}>
+                  <span className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>Upscaled ({upscaleFactor})</span>
+                </div>
+                <div className="aspect-video flex items-center justify-center" style={{ background: 'hsl(var(--editor-bg))' }}>
+                  {isProcessing ? (
+                    <div className="text-center space-y-2">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto" style={{ color: 'hsl(var(--editor-accent))' }} />
+                      <p className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>Processing... {progress}%</p>
+                    </div>
+                  ) : processedVideo ? (
+                    <video src={processedVideo} className="w-full h-full object-contain" controls />
+                  ) : (
+                    <p className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>Result will appear here</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[400px] rounded-xl w-full max-w-[600px]" style={{ border: '1px dashed hsl(var(--editor-border))', background: 'hsl(var(--editor-panel))' }}>
+              <Film className="w-16 h-16 mb-4" style={{ color: 'hsl(var(--editor-text))' }} />
+              <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>Upload a video to get started</p>
             </div>
           )}
-
-          {/* Info */}
-          <Card className="p-6 bg-muted/50">
-            <h3 className="font-medium mb-2">Tips for best results</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Use short videos (under 10 seconds) for faster processing</li>
-              <li>• Higher quality source videos produce better upscaled results</li>
-              <li>• 2x upscaling is faster and recommended for most uses</li>
-              <li>• Processing happens in your browser - no upload needed</li>
-            </ul>
-          </Card>
-        </div>
+        </main>
       </div>
     </div>
   );

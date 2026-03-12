@@ -1,13 +1,12 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Upload, Video, Download, Loader2, Sparkles, X } from "lucide-react";
+import { Upload, Video, Download, Loader2, Sparkles, X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const ImageToVideo = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -22,28 +21,18 @@ const ImageToVideo = () => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file",
-        description: "Please select an image file (JPG, PNG, WebP)",
-        variant: "destructive",
-      });
+      toast({ title: "Invalid file", description: "Please select an image file (JPG, PNG, WebP)", variant: "destructive" });
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please select an image under 10MB",
-        variant: "destructive",
-      });
+      toast({ title: "File too large", description: "Please select an image under 10MB", variant: "destructive" });
       return;
     }
 
     setImageFile(file);
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setSelectedImage(e.target?.result as string);
-    };
+    reader.onload = (e) => setSelectedImage(e.target?.result as string);
     reader.readAsDataURL(file);
     setGeneratedVideoUrl(null);
   };
@@ -52,18 +41,12 @@ const ImageToVideo = () => {
     setSelectedImage(null);
     setImageFile(null);
     setGeneratedVideoUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleGenerate = async () => {
     if (!selectedImage) {
-      toast({
-        title: "No image selected",
-        description: "Please upload an image first",
-        variant: "destructive",
-      });
+      toast({ title: "No image selected", description: "Please upload an image first", variant: "destructive" });
       return;
     }
 
@@ -79,30 +62,18 @@ const ImageToVideo = () => {
         },
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to generate video");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (error) throw new Error(error.message || "Failed to generate video");
+      if (data?.error) throw new Error(data.error);
 
       if (data?.videoUrl) {
         setGeneratedVideoUrl(data.videoUrl);
-        toast({
-          title: "Video generated!",
-          description: "Your animated video is ready to view",
-        });
+        toast({ title: "Video generated!", description: "Your animated video is ready to view" });
       } else {
         throw new Error("No video URL returned");
       }
     } catch (error) {
       console.error("Generation error:", error);
-      toast({
-        title: "Generation failed",
-        description: error instanceof Error ? error.message : "Failed to generate video",
-        variant: "destructive",
-      });
+      toast({ title: "Generation failed", description: error instanceof Error ? error.message : "Failed to generate video", variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -110,7 +81,6 @@ const ImageToVideo = () => {
 
   const handleDownload = async () => {
     if (!generatedVideoUrl) return;
-
     try {
       const response = await fetch(generatedVideoUrl);
       const blob = await response.blob();
@@ -122,179 +92,164 @@ const ImageToVideo = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      toast({
-        title: "Download started",
-        description: "Your video is being downloaded",
-      });
-    } catch (error) {
-      toast({
-        title: "Download failed",
-        description: "Could not download the video",
-        variant: "destructive",
-      });
+      toast({ title: "Download started", description: "Your video is being downloaded" });
+    } catch {
+      toast({ title: "Download failed", description: "Could not download the video", variant: "destructive" });
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/studio-ai")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Image to Video</h1>
-            <p className="text-muted-foreground">
-              Transform your static images into animated videos with AI
-            </p>
-          </div>
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      {/* Top bar */}
+      <header
+        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
+        style={{ borderBottom: '1px solid hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+            Image to Video
+          </h1>
         </div>
+        <div className="flex items-center gap-2">
+          {generatedVideoUrl && (
+            <Button size="sm" variant="ghost" onClick={handleDownload} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </header>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left: Upload & Controls */}
-          <div className="space-y-6">
-            {/* Image Upload */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Upload className="h-5 w-5 text-primary" />
-                Upload Image
-              </h2>
-
-              {!selectedImage ? (
-                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 mb-3 text-muted-foreground" />
-                    <p className="mb-2 text-sm text-muted-foreground">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      JPG, PNG or WebP (max 10MB)
-                    </p>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                  />
-                </label>
-              ) : (
-                <div className="relative">
-                  <img
-                    src={selectedImage}
-                    alt="Selected"
-                    className="w-full h-64 object-contain rounded-lg bg-muted"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2"
-                    onClick={clearImage}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left sidebar */}
+        <aside
+          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
+          style={{ background: 'hsl(var(--editor-sidebar))', borderRight: '1px solid hsl(var(--editor-border))' }}
+        >
+          <div className="p-4 space-y-4 flex-1">
+            {/* Upload area */}
+            {!selectedImage ? (
+              <label
+                className="flex flex-col items-center justify-center w-full h-[180px] rounded-xl border border-dashed cursor-pointer transition-colors"
+                style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-bg))' }}
+              >
+                <Upload className="w-8 h-8 mb-2" style={{ color: 'hsl(var(--editor-text))' }} />
+                <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
+                  Upload Image
+                </span>
+                <span className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                  JPG, PNG or WebP (max 10MB)
+                </span>
+                <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
+              </label>
+            ) : (
+              <div className="relative rounded-xl overflow-hidden" style={{ border: '1px solid hsl(var(--editor-border))' }}>
+                <img src={selectedImage} alt="Selected" className="w-full h-[180px] object-contain" style={{ background: 'hsl(var(--editor-bg))' }} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 h-7 w-7"
+                  onClick={clearImage}
+                  style={{ background: 'hsl(0 60% 50% / 0.8)', color: '#fff' }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
 
             {/* Prompt */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Animation Prompt (Optional)
-              </h2>
+            <div className="space-y-2">
+              <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-accent))' }} />
+                Animation Prompt
+              </label>
               <Textarea
-                placeholder="Describe how you want the image to animate... e.g., 'Gentle wind blowing through the trees' or 'Camera slowly zooming in'"
+                placeholder="Describe how you want the image to animate..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[100px] resize-none"
+                className="min-h-[80px] resize-none text-sm"
                 maxLength={500}
+                style={{
+                  background: 'hsl(var(--editor-bg))',
+                  borderColor: 'hsl(var(--editor-border))',
+                  color: 'hsl(var(--editor-text-bright))',
+                }}
               />
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
                 {prompt.length}/500 characters
               </p>
             </div>
 
-            {/* Generate Button */}
+            {/* Generate button */}
             <Button
+              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleGenerate}
               disabled={!selectedImage || isGenerating}
-              className="w-full h-12 text-lg"
-              size="lg"
+              style={{
+                background: 'hsl(var(--editor-accent))',
+                color: '#fff',
+                opacity: (!selectedImage || isGenerating) ? 0.5 : 1,
+              }}
             >
               {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Generating Video...
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
               ) : (
-                <>
-                  <Video className="mr-2 h-5 w-5" />
-                  Generate Video
-                </>
+                <><Video className="w-4 h-4" /> Generate Video</>
               )}
             </Button>
 
             {isGenerating && (
-              <p className="text-sm text-muted-foreground text-center">
-                This may take 1-2 minutes. Please wait...
+              <p className="text-xs text-center" style={{ color: 'hsl(var(--editor-text))' }}>
+                This may take 1-2 minutes...
               </p>
             )}
-          </div>
-
-          {/* Right: Result */}
-          <div className="space-y-6">
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Video className="h-5 w-5 text-primary" />
-                Generated Video
-              </h2>
-
-              {generatedVideoUrl ? (
-                <div className="space-y-4">
-                  <video
-                    src={generatedVideoUrl}
-                    controls
-                    autoPlay
-                    loop
-                    className="w-full rounded-lg bg-muted"
-                  />
-                  <Button onClick={handleDownload} className="w-full">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Video
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-64 bg-muted/50 rounded-lg">
-                  <Video className="w-12 h-12 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground text-center">
-                    {isGenerating
-                      ? "Your video is being generated..."
-                      : "Upload an image and click generate to create a video"}
-                  </p>
-                </div>
-              )}
-            </div>
 
             {/* Tips */}
-            <div className="bg-muted/50 rounded-xl p-6">
-              <h3 className="font-semibold mb-3">Tips for best results:</h3>
-              <ul className="text-sm text-muted-foreground space-y-2">
-                <li>• Use high-quality images with clear subjects</li>
-                <li>• Images with depth work great for parallax effects</li>
-                <li>• Add motion prompts like "waves crashing" or "leaves falling"</li>
-                <li>• Generated videos are ~5 seconds in length</li>
+            <div className="rounded-lg p-3 space-y-1.5" style={{ background: 'hsl(var(--editor-bg))' }}>
+              <h3 className="text-xs font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>Tips</h3>
+              <ul className="text-xs space-y-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                <li>• High-quality images with clear subjects</li>
+                <li>• Images with depth for parallax effects</li>
+                <li>• Motion prompts like "waves crashing"</li>
+                <li>• Videos are ~5 seconds in length</li>
               </ul>
             </div>
           </div>
-        </div>
+        </aside>
+
+        {/* Main workspace */}
+        <main className="flex-1 flex items-center justify-center p-6 overflow-auto" style={{ background: 'hsl(var(--editor-bg))' }}>
+          <div className="w-full max-w-[900px]">
+            {generatedVideoUrl ? (
+              <div className="space-y-4">
+                <video
+                  src={generatedVideoUrl}
+                  controls
+                  autoPlay
+                  loop
+                  className="w-full rounded-xl"
+                  style={{ border: '1px solid hsl(var(--editor-border))' }}
+                />
+                <div className="flex justify-center">
+                  <Button onClick={handleDownload} className="gap-2" style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
+                    <Download className="h-4 w-4" />
+                    Download Video
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[400px] rounded-xl" style={{ border: '1px dashed hsl(var(--editor-border))', background: 'hsl(var(--editor-panel))' }}>
+                <Video className="w-16 h-16 mb-4" style={{ color: 'hsl(var(--editor-text))' }} />
+                <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {isGenerating ? "Your video is being generated..." : "Upload an image and click generate"}
+                </p>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );
