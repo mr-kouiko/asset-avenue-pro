@@ -34,8 +34,8 @@ export interface GFPGANState {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const GFPGAN_MODEL_URL =
-  'https://huggingface.co/akhaliq/GFPGAN/resolve/main/GFPGANv1.4.onnx';
-const GFPGAN_CACHE_KEY = 'gfpgan-model-v2';
+  'https://huggingface.co/facefusion/models-3.0.0/resolve/main/gfpgan_1.2.onnx';
+const GFPGAN_CACHE_KEY = 'gfpgan-model-v3';
 const DB_NAME = 'ai-upscaler-cache';
 const DB_STORE = 'models';
 const GFPGAN_INPUT_SIZE = 512;

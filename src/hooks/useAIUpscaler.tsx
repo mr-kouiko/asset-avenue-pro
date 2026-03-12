@@ -42,7 +42,7 @@ export interface AIUpscalerState {
 const ESRGAN_MODEL_URL =
   'https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x4plus.onnx';
 const GFPGAN_MODEL_URL =
-  'https://huggingface.co/akhaliq/GFPGAN/resolve/main/GFPGANv1.4.onnx';
+  'https://huggingface.co/facefusion/models-3.0.0/resolve/main/gfpgan_1.2.onnx';
 
 const ESRGAN_CACHE_KEY = 'esrgan-model-v2';
 const GFPGAN_CACHE_KEY = 'gfpgan-model-v2';
