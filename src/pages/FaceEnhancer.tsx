@@ -284,6 +284,32 @@ export default function FaceEnhancer() {
           </div>
         )}
 
+        {originalImage && (
+          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mt-6">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <ScanFace className="w-4 h-4 text-pink-400" />
+                  Face Enhancement Strength
+                </h3>
+                <span className="text-sm font-mono text-pink-400">{blendStrength}%</span>
+              </div>
+              <Slider
+                value={[blendStrength]}
+                onValueChange={(v) => setBlendStrength(v[0])}
+                min={0}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-slate-500 mt-1.5">
+                <span>Subtle (natural)</span>
+                <span>Full (maximum restoration)</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
           <Button size="lg" className="bg-pink-600 hover:bg-pink-500 text-white px-8"
             onClick={handleEnhance} disabled={!originalImage || ai.isProcessing || ai.backend === 'canvas-only'}>
