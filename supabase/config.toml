@@ -134,8 +134,6 @@ verify_jwt = true
 [functions.backfill-video-thumbnails]
 verify_jwt = true
 
-[functions.elevenlabs-tts]
-verify_jwt = true
 
 [functions.image-to-video]
 verify_jwt = true
