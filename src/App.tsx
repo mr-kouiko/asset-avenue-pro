@@ -66,6 +66,8 @@ const TextToSpeech = lazy(() => import("./pages/TextToSpeech"));
 const ImageToVideo = lazy(() => import("./pages/ImageToVideo"));
 const ImageConverter = lazy(() => import("./pages/ImageConverter"));
 const ImageUpscale = lazy(() => import("./pages/ImageUpscale"));
+const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
+const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
 
 // Content pages (lazy loaded)
 const ContactEN = lazy(() => import("./pages/en/ContactEN"));
@@ -153,6 +155,8 @@ const App = () => (
                         <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
                         <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
                         <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
+                        <Route path="/ai-upscaler" element={<AIUpscaler />} />
+                        <Route path="/face-enhancer" element={<FaceEnhancer />} />
                         
                         {/* Content pages */}
                         <Route path="/support" element={<Support />} />

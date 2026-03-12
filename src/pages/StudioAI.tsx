@@ -76,11 +76,20 @@ const imageTools: AITool[] = [
     badge: 'Available'
   },
   {
-    id: 'image-upscale',
-    title: 'Image Upscale',
-    description: 'Enlarge images up to 4× their original resolution with sharpening — free and 100% in-browser.',
+    id: 'ai-upscaler',
+    title: 'AI Image Upscaler',
+    description: 'Enlarge images up to 4× with Real-ESRGAN AI — sharper details, no artifacts, 100% in-browser.',
     icon: <ZoomIn className="w-6 h-6" />,
-    href: '/studio-ai/image-upscale',
+    href: '/ai-upscaler',
+    available: true,
+    badge: 'Free'
+  },
+  {
+    id: 'face-enhancer',
+    title: 'AI Face & Skin Enhancer',
+    description: 'Restore facial details — skin, eyes, mouth — using GFPGAN AI face restoration.',
+    icon: <Palette className="w-6 h-6" />,
+    href: '/face-enhancer',
     available: true,
     badge: 'Free'
   },
