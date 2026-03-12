@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   MonitorSmartphone,
+  ScanFace,
+  UserCheck,
 } from 'lucide-react';
 
 interface Props {
@@ -31,7 +33,23 @@ const statusIcons: Record<string, React.ReactNode> = {
   unsupported: <AlertTriangle className="w-4 h-4 text-yellow-400" />,
 };
 
+const faceStatusLabels: Record<string, { icon: React.ReactNode; text: string } | null> = {
+  idle: null,
+  'downloading-model': { icon: <Download className="w-4 h-4 text-pink-400" />, text: 'Downloading face model…' },
+  'loading-model': { icon: <Loader2 className="w-4 h-4 animate-spin text-pink-400" />, text: 'Loading GFPGAN…' },
+  'model-ready': { icon: <CheckCircle2 className="w-4 h-4 text-pink-400" />, text: 'Face model ready' },
+  'detecting-faces': { icon: <ScanFace className="w-4 h-4 text-pink-400 animate-pulse" />, text: 'Detecting faces…' },
+  'enhancing-faces': { icon: <ScanFace className="w-4 h-4 text-pink-400 animate-pulse" />, text: 'Enhancing faces…' },
+  'blending': { icon: <Loader2 className="w-4 h-4 animate-spin text-pink-400" />, text: 'Blending restored faces…' },
+  'complete': { icon: <UserCheck className="w-4 h-4 text-green-400" />, text: 'Face enhancement complete' },
+  'no-faces': { icon: <ScanFace className="w-4 h-4 text-slate-400" />, text: 'No faces detected' },
+  error: { icon: <AlertTriangle className="w-4 h-4 text-red-400" />, text: 'Face enhancement failed' },
+  skipped: { icon: <AlertTriangle className="w-4 h-4 text-yellow-400" />, text: 'Face enhancement skipped' },
+};
+
 export function ModelStatusIndicator({ state }: Props) {
+  const faceInfo = faceStatusLabels[state.faceEnhanceStatus];
+
   return (
     <div className="space-y-3">
       {/* Backend badge */}
@@ -49,6 +67,12 @@ export function ModelStatusIndicator({ state }: Props) {
             <Zap className="w-3 h-3" /> GPU Enabled
           </span>
         )}
+
+        {state.facesDetected > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-xs text-pink-400 font-medium">
+            <ScanFace className="w-3 h-3" /> {state.facesDetected} face(s)
+          </span>
+        )}
       </div>
 
       {/* Model status message */}
@@ -59,16 +83,38 @@ export function ModelStatusIndicator({ state }: Props) {
         </div>
       )}
 
-      {/* Download progress */}
+      {/* Face enhancement status */}
+      {faceInfo && (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          {faceInfo.icon}
+          <span>{faceInfo.text}</span>
+        </div>
+      )}
+
+      {/* ESRGAN download progress */}
       {state.modelStatus === 'downloading' && (
         <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>ESRGAN Model</span>
+            <span>{state.downloadProgress}%</span>
+          </div>
           <Progress value={state.downloadProgress} className="h-2" />
-          <p className="text-xs text-slate-500 text-right">{state.downloadProgress}%</p>
+        </div>
+      )}
+
+      {/* GFPGAN download progress */}
+      {state.faceEnhanceStatus === 'downloading-model' && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>GFPGAN Face Model</span>
+            <span>{state.faceModelDownloadProgress}%</span>
+          </div>
+          <Progress value={state.faceModelDownloadProgress} className="h-2" />
         </div>
       )}
 
       {/* Processing progress */}
-      {state.isProcessing && state.processingProgress > 0 && (
+      {state.isProcessing && state.processingProgress > 0 && state.modelStatus !== 'downloading' && (
         <div className="space-y-1">
           <Progress value={state.processingProgress} className="h-2" />
           <p className="text-xs text-slate-500 text-right">Processing: {state.processingProgress}%</p>

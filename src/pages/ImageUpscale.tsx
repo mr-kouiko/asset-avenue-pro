@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useAIUpscaler, type UpscaleMode } from '@/hooks/useAIUpscaler';
@@ -22,6 +23,7 @@ import {
   Brain,
   ShieldCheck,
   Eye,
+  ScanFace,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -43,11 +45,12 @@ export default function ImageUpscale() {
   const [sharpness, setSharpness] = useState(50);
   const [mode, setMode] = useState<UpscaleMode>('fast');
   const [showZoom, setShowZoom] = useState(false);
+  const [faceEnhance, setFaceEnhance] = useState(false);
 
   useSEO({
-    title: 'AI Image Upscale - Enlarge Images With Neural Network Enhancement | Studio AI',
+    title: 'AI Image Upscale & Face Enhancement | Studio AI',
     description:
-      'Upscale images using Real-ESRGAN AI or fast browser processing. 2× and 4× enlargement with WebGPU acceleration. 100% client-side, no uploads.',
+      'Upscale images with ESRGAN AI and enhance faces with GFPGAN restoration. WebGPU accelerated, 100% client-side, no uploads.',
     type: 'website',
   });
 
@@ -79,20 +82,24 @@ export default function ImageUpscale() {
   const handleUpscale = useCallback(async () => {
     if (!originalImage) return;
     setResultImage(null);
-    const result = await ai.upscale(originalImage, scale, mode, sharpness);
+    const result = await ai.upscale(originalImage, scale, mode, sharpness, faceEnhance);
     if (result) {
       setResultImage(result);
-      toast({ title: mode === 'ai' ? 'AI Upscale Complete!' : 'Upscale Complete!' });
+      const label = faceEnhance && ai.facesDetected > 0
+        ? `Upscaled + ${ai.facesDetected} face(s) enhanced!`
+        : mode === 'ai' ? 'AI Upscale Complete!' : 'Upscale Complete!';
+      toast({ title: label });
     } else {
-      toast({ title: 'Error', description: 'Upscaling failed. Try fast mode.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Processing failed. Try fast mode.', variant: 'destructive' });
     }
-  }, [originalImage, scale, mode, sharpness, ai, toast]);
+  }, [originalImage, scale, mode, sharpness, faceEnhance, ai, toast]);
 
   const handleDownload = () => {
     if (!resultImage) return;
+    const suffix = faceEnhance ? `-${scale}x-${mode}-face-enhanced` : `-${scale}x-${mode}-upscaled`;
     const link = document.createElement('a');
     link.href = resultImage;
-    link.download = fileName.replace(/\.[^/.]+$/, '') + `-${scale}x-${mode}-upscaled.png`;
+    link.download = fileName.replace(/\.[^/.]+$/, '') + `${suffix}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -109,6 +116,7 @@ export default function ImageUpscale() {
 
   const outputW = originalDimensions ? originalDimensions.w * scale : 0;
   const outputH = originalDimensions ? originalDimensions.h * scale : 0;
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
@@ -129,15 +137,14 @@ export default function ImageUpscale() {
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             AI Image{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Upscale
+              Upscale & Face Enhance
             </span>
           </h1>
 
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Enlarge images with neural-network enhancement or instant canvas processing — entirely in your browser.
+            Enlarge images with ESRGAN and restore facial details with GFPGAN — entirely in your browser.
           </p>
 
-          {/* Privacy badge */}
           <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-xs text-green-400 font-medium">
             <ShieldCheck className="w-3.5 h-3.5" />
             Your images are processed locally. No uploads required.
@@ -155,7 +162,7 @@ export default function ImageUpscale() {
         {originalImage && (
           <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-6">
             <CardContent className="p-6">
-              <div className="grid sm:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Mode */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-3">Processing Mode</label>
@@ -179,7 +186,7 @@ export default function ImageUpscale() {
                     </Button>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    {mode === 'fast' ? 'Instant canvas interpolation' : 'ESRGAN neural network enhancement'}
+                    {mode === 'fast' ? 'Instant canvas interpolation' : 'ESRGAN neural network'}
                   </p>
                 </div>
 
@@ -206,10 +213,33 @@ export default function ImageUpscale() {
                   )}
                 </div>
 
+                {/* Face Enhancement Toggle */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-3">Face Enhancement (AI)</label>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={faceEnhance}
+                      onCheckedChange={(checked) => { setFaceEnhance(checked); setResultImage(null); }}
+                      disabled={ai.backend === 'canvas-only'}
+                    />
+                    <ScanFace className={`w-5 h-5 ${faceEnhance ? 'text-pink-400' : 'text-slate-500'}`} />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {faceEnhance
+                      ? 'GFPGAN restores facial details'
+                      : 'Enhances faces using AI restoration'}
+                  </p>
+                  {faceEnhance && isMobile && (
+                    <p className="text-xs text-yellow-400 mt-1">
+                      ⚠ Face enhancement may be slower on mobile
+                    </p>
+                  )}
+                </div>
+
                 {/* Sharpness (fast mode only) */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Sharpness: {sharpness}%{mode === 'ai' && ' (fast mode only)'}
+                    Sharpness: {sharpness}%{mode === 'ai' && ' (fast only)'}
                   </label>
                   <Slider
                     value={[sharpness]}
@@ -243,11 +273,15 @@ export default function ImageUpscale() {
             </CardContent>
           </Card>
         ) : resultImage ? (
-          /* ── Comparison view ─────────────────────────────────── */
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-green-400" /> Result Comparison
+                {ai.facesDetected > 0 && faceEnhance && (
+                  <span className="text-sm font-normal text-pink-400 ml-2">
+                    ({ai.facesDetected} face{ai.facesDetected > 1 ? 's' : ''} enhanced)
+                  </span>
+                )}
               </h3>
               <div className="flex gap-2">
                 <Button
@@ -277,14 +311,13 @@ export default function ImageUpscale() {
                   <ZoomInspector src={originalImage} alt="Original zoom" className="h-64" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400 mb-2 font-medium">Upscaled — hover to zoom</p>
+                  <p className="text-sm text-slate-400 mb-2 font-medium">Enhanced — hover to zoom</p>
                   <ZoomInspector src={resultImage} alt="Result zoom" className="h-64" />
                 </div>
               </div>
             )}
           </div>
         ) : (
-          /* ── Preview before processing ───────────────────────── */
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
               <CardContent className="p-6">
@@ -339,9 +372,9 @@ export default function ImageUpscale() {
             {ai.isProcessing ? (
               <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> {ai.statusMessage || 'Processing…'}</>
             ) : mode === 'ai' ? (
-              <><Brain className="w-5 h-5 mr-2" /> AI Upscale</>
+              <><Brain className="w-5 h-5 mr-2" /> {faceEnhance ? 'AI Upscale + Face Enhance' : 'AI Upscale'}</>
             ) : (
-              <><Zap className="w-5 h-5 mr-2" /> Fast Upscale</>
+              <><Zap className="w-5 h-5 mr-2" /> {faceEnhance ? 'Fast Upscale + Face Enhance' : 'Fast Upscale'}</>
             )}
           </Button>
 
@@ -353,7 +386,13 @@ export default function ImageUpscale() {
 
           {mode === 'ai' && ai.modelStatus !== 'ready' && ai.modelStatus !== 'downloading' && ai.modelStatus !== 'loading' && ai.backend !== 'canvas-only' && (
             <Button size="lg" variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 px-8" onClick={ai.preloadModel}>
-              <Download className="w-5 h-5 mr-2" /> Pre-load AI Model
+              <Download className="w-5 h-5 mr-2" /> Pre-load ESRGAN
+            </Button>
+          )}
+
+          {faceEnhance && ai.faceEnhanceStatus === 'idle' && ai.backend !== 'canvas-only' && (
+            <Button size="lg" variant="outline" className="border-pink-500/50 text-pink-400 hover:bg-pink-500/10 px-8" onClick={ai.preloadFaceModel}>
+              <ScanFace className="w-5 h-5 mr-2" /> Pre-load GFPGAN
             </Button>
           )}
         </div>
@@ -361,10 +400,11 @@ export default function ImageUpscale() {
         {/* Tips */}
         <div className="mt-16 text-center">
           <h2 className="text-xl font-semibold text-white mb-6">Tips for Best Results</h2>
-          <div className="grid sm:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { title: 'AI Mode for Photos', description: 'ESRGAN neural network produces sharper detail on photographs and realistic images.' },
-              { title: 'Fast Mode for Art', description: 'Canvas interpolation is instant and works great for illustrations and vector-style graphics.' },
+              { title: 'AI Mode for Photos', description: 'ESRGAN produces sharper detail on photographs and realistic images.' },
+              { title: 'Face Enhancement', description: 'Enable face enhancement for portraits — GFPGAN restores eyes, skin texture, and facial details.' },
+              { title: 'Fast Mode for Art', description: 'Canvas interpolation is instant and great for illustrations and vector graphics.' },
               { title: 'Keep Input Small', description: 'Images under 2000 px process faster and use less memory, especially in AI mode.' },
             ].map((tip) => (
               <div key={tip.title} className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
