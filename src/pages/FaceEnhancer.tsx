@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
 import { ComparisonSlider } from '@/components/upscale/ComparisonSlider';
 import { ZoomInspector } from '@/components/upscale/ZoomInspector';
+import { Slider } from '@/components/ui/slider';
 import {
   Upload, Download, Loader2, ArrowLeft, Image as ImageIcon, Sparkles,
   RefreshCw, ScanFace, ShieldCheck, Eye, Cpu, Zap,
@@ -105,6 +106,7 @@ export default function FaceEnhancer() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const [showZoom, setShowZoom] = useState(false);
+  const [blendStrength, setBlendStrength] = useState(50);
 
   useSEO({
     title: 'AI Face & Skin Enhancer – GFPGAN Restoration | Studio AI',
@@ -135,7 +137,8 @@ export default function FaceEnhancer() {
   const handleEnhance = useCallback(async () => {
     if (!originalImage) return;
     setResultImage(null);
-    const result = await ai.enhance(originalImage);
+    const strength = blendStrength / 100;
+    const result = await ai.enhance(originalImage, strength);
     if (result) {
       setResultImage(result);
       toast({ title: `${ai.facesDetected} face(s) enhanced!` });
@@ -144,7 +147,7 @@ export default function FaceEnhancer() {
     } else {
       toast({ title: 'Error', description: 'Face enhancement failed.', variant: 'destructive' });
     }
-  }, [originalImage, ai, toast]);
+  }, [originalImage, ai, toast, blendStrength]);
 
   const handleDownload = () => {
     if (!resultImage) return;
@@ -279,6 +282,32 @@ export default function FaceEnhancer() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {originalImage && (
+          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mt-6">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <ScanFace className="w-4 h-4 text-pink-400" />
+                  Face Enhancement Strength
+                </h3>
+                <span className="text-sm font-mono text-pink-400">{blendStrength}%</span>
+              </div>
+              <Slider
+                value={[blendStrength]}
+                onValueChange={(v) => setBlendStrength(v[0])}
+                min={0}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-slate-500 mt-1.5">
+                <span>Subtle (natural)</span>
+                <span>Full (maximum restoration)</span>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">

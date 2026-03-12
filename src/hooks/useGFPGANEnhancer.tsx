@@ -363,7 +363,7 @@ export function useGFPGANEnhancer() {
   );
 
   const enhance = useCallback(
-    async (imgSrc: string): Promise<string | null> => {
+    async (imgSrc: string, strength: number = 0.5): Promise<string | null> => {
       patch({ isProcessing: true, processingProgress: 0, step: 'idle', facesDetected: 0 });
       try {
         const ort = await getOrt();
@@ -419,11 +419,29 @@ export function useGFPGANEnhancer() {
 
             patch({ step: 'blending', statusMessage: `Blending face ${i + 1}/${faces.length}…` });
 
+            // Blend restored face with original using strength parameter
             const blendCanvas = document.createElement('canvas');
             blendCanvas.width = fw;
             blendCanvas.height = fh;
             const blendCtx = blendCanvas.getContext('2d')!;
+
+            // Draw enhanced face scaled to crop size
             blendCtx.drawImage(enhanced, 0, 0, fw, fh);
+            const enhancedData = blendCtx.getImageData(0, 0, fw, fh);
+
+            // Get original face pixels
+            const origFaceCtx = faceCrop.getContext('2d')!;
+            const originalData = origFaceCtx.getImageData(0, 0, fw, fh);
+
+            // Pixel-level blend: result = restored * strength + original * (1 - strength)
+            const blendedData = blendCtx.createImageData(fw, fh);
+            for (let p = 0; p < fw * fh * 4; p += 4) {
+              blendedData.data[p]     = Math.round(enhancedData.data[p]     * strength + originalData.data[p]     * (1 - strength));
+              blendedData.data[p + 1] = Math.round(enhancedData.data[p + 1] * strength + originalData.data[p + 1] * (1 - strength));
+              blendedData.data[p + 2] = Math.round(enhancedData.data[p + 2] * strength + originalData.data[p + 2] * (1 - strength));
+              blendedData.data[p + 3] = 255;
+            }
+            blendCtx.putImageData(blendedData, 0, 0);
 
             const feather = Math.min(fw, fh) * 0.15;
             ctx.save();
