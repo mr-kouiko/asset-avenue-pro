@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
 import { ComparisonSlider } from '@/components/upscale/ComparisonSlider';
 import { ZoomInspector } from '@/components/upscale/ZoomInspector';
+import { Slider } from '@/components/ui/slider';
 import {
   Upload, Download, Loader2, ArrowLeft, Image as ImageIcon, Sparkles,
   RefreshCw, ScanFace, ShieldCheck, Eye, Cpu, Zap,
