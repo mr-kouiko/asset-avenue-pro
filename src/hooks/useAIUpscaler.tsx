@@ -691,6 +691,10 @@ export function useAIUpscaler() {
 
       const img = await loadImage(imgSrc);
       const fit = fitToMax(img.naturalWidth, img.naturalHeight, MAX_INPUT_PX);
+      
+      console.log("Starting ESRGAN inference");
+      console.log("Input size:", fit.w, fit.h);
+      
       const srcCanvas = document.createElement('canvas');
       srcCanvas.width = fit.w;
       srcCanvas.height = fit.h;
@@ -757,6 +761,7 @@ export function useAIUpscaler() {
     },
     [inferEsrganTile, patch, getOrt],
   );
+
 
   // ── Main upscale entry point ──────────────────────────────────────────
   const upscale = useCallback(
