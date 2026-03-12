@@ -137,7 +137,8 @@ export default function FaceEnhancer() {
   const handleEnhance = useCallback(async () => {
     if (!originalImage) return;
     setResultImage(null);
-    const result = await ai.enhance(originalImage);
+    const strength = blendStrength / 100;
+    const result = await ai.enhance(originalImage, strength);
     if (result) {
       setResultImage(result);
       toast({ title: `${ai.facesDetected} face(s) enhanced!` });
@@ -146,7 +147,7 @@ export default function FaceEnhancer() {
     } else {
       toast({ title: 'Error', description: 'Face enhancement failed.', variant: 'destructive' });
     }
-  }, [originalImage, ai, toast]);
+  }, [originalImage, ai, toast, blendStrength]);
 
   const handleDownload = () => {
     if (!resultImage) return;
