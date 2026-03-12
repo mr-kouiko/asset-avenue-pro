@@ -44,6 +44,11 @@ export default function TextToSpeech() {
     if (!text.trim()) { toast.error("Please enter some text to convert"); return; }
     if (text.length > 10000) { toast.error("Text must be 10,000 characters or less"); return; }
 
+    // Create Audio element immediately in user gesture context (iOS Safari fix)
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.play().catch(() => {}); // Unlock for autoplay policy
+
     setIsGenerating(true);
     if (audioUrl) { URL.revokeObjectURL(audioUrl); }
     setAudioUrl(null);
@@ -78,10 +83,15 @@ export default function TextToSpeech() {
       }
 
       const audioBlob = await response.blob();
+      if (audioBlob.size === 0) {
+        throw new Error("Received empty audio data");
+      }
+      console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+      
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
 
-      const audio = new Audio(url);
+      audio.src = url;
       audio.onended = () => setIsPlaying(false);
       setAudioElement(audio);
 
