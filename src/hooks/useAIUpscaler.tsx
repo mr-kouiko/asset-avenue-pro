@@ -417,7 +417,8 @@ export function useAIUpscaler() {
   const getOrt = useCallback(async () => {
     if (ortRef.current) return ortRef.current;
     const ort = await import('onnxruntime-web');
-    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/';
+    ort.env.wasm.numThreads = 1; // avoid SharedArrayBuffer issues in preview
     ortRef.current = ort;
     return ort;
   }, []);
