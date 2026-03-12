@@ -315,90 +315,68 @@ export default function AdjustMusicDuration() {
         </aside>
 
         {/* Main workspace */}
-        <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: 'hsl(var(--editor-bg))' }}>
-          {!audioFile && !resultUrl && (
-            <div className="text-center flex flex-col items-center gap-4">
-              <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                style={{ background: 'hsl(var(--editor-panel))' }}
-              >
-                <Music className="w-10 h-10" style={{ color: 'hsl(var(--editor-text))' }} />
-              </div>
-              <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
-                Upload a music file to get started
-              </p>
-              <p className="text-sm max-w-md" style={{ color: 'hsl(var(--editor-text))' }}>
-                Easily trim or extend your music tracks with our AI-powered online audio shortener and song lengthener.
+        <main className="flex-1 flex flex-col items-center justify-center p-8">
+          {!resultUrl && !isProcessing && (
+            <div className="text-center flex flex-col items-center gap-3">
+              {/* Waveform icon */}
+              <svg width="80" height="50" viewBox="0 0 80 50" fill="none" style={{ color: 'hsl(var(--editor-text))' }}>
+                <rect x="4" y="18" width="3" height="14" rx="1.5" fill="currentColor" opacity="0.5" />
+                <rect x="10" y="12" width="3" height="26" rx="1.5" fill="currentColor" opacity="0.6" />
+                <rect x="16" y="8" width="3" height="34" rx="1.5" fill="currentColor" opacity="0.7" />
+                <rect x="22" y="14" width="3" height="22" rx="1.5" fill="currentColor" opacity="0.8" />
+                <rect x="28" y="4" width="3" height="42" rx="1.5" fill="currentColor" />
+                <rect x="34" y="10" width="3" height="30" rx="1.5" fill="currentColor" />
+                <rect x="40" y="2" width="3" height="46" rx="1.5" fill="currentColor" />
+                <rect x="46" y="10" width="3" height="30" rx="1.5" fill="currentColor" />
+                <rect x="52" y="4" width="3" height="42" rx="1.5" fill="currentColor" />
+                <rect x="58" y="14" width="3" height="22" rx="1.5" fill="currentColor" opacity="0.8" />
+                <rect x="64" y="8" width="3" height="34" rx="1.5" fill="currentColor" opacity="0.7" />
+                <rect x="70" y="12" width="3" height="26" rx="1.5" fill="currentColor" opacity="0.6" />
+                <rect x="76" y="18" width="3" height="14" rx="1.5" fill="currentColor" opacity="0.5" />
+              </svg>
+              <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
+                Click 'Generate' to start adjusting the music.
               </p>
             </div>
           )}
 
-          {(audioUrl || resultUrl) && (
-            <div className="w-full max-w-[700px] flex flex-col gap-6">
-              {/* Original audio */}
+          {isProcessing && (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(var(--editor-accent))' }} />
+              <span className="text-sm" style={{ color: 'hsl(var(--editor-text-bright))' }}>Processing audio...</span>
+            </div>
+          )}
+
+          {resultUrl && (
+            <div className="w-full max-w-[700px] flex flex-col gap-5">
               {audioUrl && (
                 <div
-                  className="rounded-xl p-6 border"
-                  style={{
-                    background: 'hsl(var(--editor-panel))',
-                    borderColor: 'hsl(var(--editor-border))',
-                  }}
+                  className="rounded-xl p-5 border"
+                  style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-border))' }}
                 >
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-2.5 py-1 rounded text-xs font-semibold text-white" style={{ background: 'hsl(140 60% 45%)' }}>
-                      Original
-                    </span>
-                    <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
-                      {audioFile?.name} — {formatTime(originalDuration)}
-                    </span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold text-white" style={{ background: 'hsl(140 60% 45%)' }}>Original</span>
+                    <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>{audioFile?.name} — {formatTime(originalDuration)}</span>
                   </div>
-                  <audio ref={audioRef} src={audioUrl} className="w-full" controls
-                    style={{ filter: 'invert(1) hue-rotate(180deg)', height: '40px' }}
-                  />
+                  <audio ref={audioRef} src={audioUrl} className="w-full" controls style={{ filter: 'invert(1) hue-rotate(180deg)', height: '36px' }} />
                 </div>
               )}
-
-              {/* Result audio */}
-              {resultUrl && (
-                <div
-                  className="rounded-xl p-6 border"
-                  style={{
-                    background: 'hsl(var(--editor-panel))',
-                    borderColor: 'hsl(var(--editor-border))',
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded text-xs font-semibold text-white" style={{ background: 'hsl(220 80% 55%)' }}>
-                        Adjusted
-                      </span>
-                      <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
-                        {formatTime(minutes * 60 + seconds)}
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleDownload}
-                      className="border-[hsl(var(--editor-border))] text-[hsl(var(--editor-text-bright))] hover:bg-[hsl(var(--editor-panel))]"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      Download
-                    </Button>
+              <div
+                className="rounded-xl p-5 border"
+                style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-border))' }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold text-white" style={{ background: 'hsl(220 80% 55%)' }}>Adjusted</span>
+                    <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>{formatTime(minutes * 60 + seconds)}</span>
                   </div>
-                  <audio ref={resultAudioRef} src={resultUrl} className="w-full" controls
-                    style={{ filter: 'invert(1) hue-rotate(180deg)', height: '40px' }}
-                  />
+                  <Button size="sm" variant="outline" onClick={handleDownload}
+                    className="border-[hsl(var(--editor-border))] text-[hsl(var(--editor-text-bright))] hover:bg-[hsl(var(--editor-panel))] h-7 text-xs">
+                    <Download className="w-3.5 h-3.5 mr-1" /> Download
+                  </Button>
                 </div>
-              )}
-
-              {/* Processing indicator */}
-              {isProcessing && (
-                <div className="flex items-center justify-center gap-3 py-8">
-                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'hsl(var(--editor-accent))' }} />
-                  <span style={{ color: 'hsl(var(--editor-text-bright))' }}>Processing audio...</span>
-                </div>
-              )}
+                <audio ref={resultAudioRef} src={resultUrl} className="w-full" controls style={{ filter: 'invert(1) hue-rotate(180deg)', height: '36px' }} />
+              </div>
             </div>
           )}
         </main>
