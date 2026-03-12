@@ -155,6 +155,7 @@ const App = () => (
                         <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
                         <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
                         <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
+                        <Route path="/studio-ai/adjust-music-duration" element={<AdjustMusicDuration />} />
                         <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
                         <Route path="/ai-upscaler" element={<AIUpscaler />} />
                         <Route path="/face-enhancer" element={<FaceEnhancer />} />
