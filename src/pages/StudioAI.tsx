@@ -62,6 +62,15 @@ const videoTools: AITool[] = [
     href: '/studio-ai/video-upscale',
     available: true,
     badge: 'Available'
+  },
+  {
+    id: 'reframe-video',
+    title: 'AI Reframe Video',
+    description: 'Automatically reframe videos to any aspect ratio while keeping the subject centered — perfect for TikTok, Reels & more.',
+    icon: <Crop className="w-6 h-6" />,
+    href: '/studio-ai/reframe-video',
+    available: true,
+    badge: 'New'
   }
 ];
 
