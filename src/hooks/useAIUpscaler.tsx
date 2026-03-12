@@ -401,6 +401,7 @@ export function useAIUpscaler() {
   useEffect(() => {
     detectBackend().then((b) => {
       backendRef.current = b;
+      console.log("AI backend:", b);
       patch({
         backend: b,
         gpuAccelerated: b === 'webgpu' || b === 'webgl',
