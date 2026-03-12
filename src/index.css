@@ -111,15 +111,6 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-  /* Editor surfaces - Dark Blue Theme */
-  --editor-bg: 225 45% 8%;
-  --editor-sidebar: 225 40% 12%;
-  --editor-panel: 225 35% 16%;
-  --editor-border: 225 30% 22%;
-  --editor-text: 220 20% 70%;
-  --editor-text-bright: 220 30% 95%;
-  --editor-accent: 217 90% 60%;
-  --editor-accent-soft: 217 80% 55%;
 }
 
 @layer base {
