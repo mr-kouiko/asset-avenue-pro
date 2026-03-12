@@ -455,12 +455,14 @@ export function useAIUpscaler() {
         await cacheModel(modelData, ESRGAN_CACHE_KEY);
       }
 
+      console.log("ESRGAN model loading...");
       patch({ modelStatus: 'loading', statusMessage: 'Loading ESRGAN model…' });
       const session = await ort.InferenceSession.create(modelData, {
         executionProviders: getProviders(),
       });
 
       esrganSessionRef.current = session;
+      console.log("ESRGAN model loaded");
       patch({ modelStatus: 'ready', statusMessage: 'ESRGAN model ready' });
       return true;
     } catch (err) {
