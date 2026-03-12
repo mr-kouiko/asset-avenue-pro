@@ -75,6 +75,15 @@ const imageTools: AITool[] = [
     badge: 'Available'
   },
   {
+    id: 'image-upscale',
+    title: 'Image Upscale',
+    description: 'Enlarge images up to 4× their original resolution with sharpening — free and 100% in-browser.',
+    icon: <ZoomIn className="w-6 h-6" />,
+    href: '/studio-ai/image-upscale',
+    available: true,
+    badge: 'Free'
+  },
+  {
     id: 'remove-background',
     title: 'Remove Background',
     description: 'Instantly remove backgrounds from images with clean, professional results.',
