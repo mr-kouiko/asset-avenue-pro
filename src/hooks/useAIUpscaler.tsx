@@ -521,9 +521,9 @@ export function useAIUpscaler() {
 
       const input = new Float32Array(3 * height * width);
       for (let i = 0; i < width * height; i++) {
-        input[i] = data[i * 4 + 2] / 255;             // B
-        input[width * height + i] = data[i * 4 + 1] / 255; // G
-        input[2 * width * height + i] = data[i * 4] / 255;  // R
+        input[i] = data[i * 4] / 255;                         // R
+        input[width * height + i] = data[i * 4 + 1] / 255;    // G
+        input[2 * width * height + i] = data[i * 4 + 2] / 255; // B
       }
 
       const tensor = new ort.Tensor('float32', input, [1, 3, height, width]);
