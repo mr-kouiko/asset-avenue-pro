@@ -66,6 +66,8 @@ const TextToSpeech = lazy(() => import("./pages/TextToSpeech"));
 const ImageToVideo = lazy(() => import("./pages/ImageToVideo"));
 const ImageConverter = lazy(() => import("./pages/ImageConverter"));
 const ImageUpscale = lazy(() => import("./pages/ImageUpscale"));
+const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
+const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
 
 // Content pages (lazy loaded)
 const ContactEN = lazy(() => import("./pages/en/ContactEN"));
