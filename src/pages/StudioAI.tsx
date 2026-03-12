@@ -122,6 +122,15 @@ const audioTools: AITool[] = [
     href: '/studio-ai/text-to-speech',
     available: true,
     badge: 'Available'
+  },
+  {
+    id: 'adjust-music-duration',
+    title: 'Adjust Music Duration',
+    description: 'Easily trim or extend your music tracks with AI-powered audio shortener and song lengthener.',
+    icon: <Music className="w-6 h-6" />,
+    href: '/studio-ai/adjust-music-duration',
+    available: true,
+    badge: 'Free'
   }
 ];
 

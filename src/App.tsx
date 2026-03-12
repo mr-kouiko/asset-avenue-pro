@@ -65,6 +65,7 @@ const VideoUpscale = lazy(() => import("./pages/VideoUpscale"));
 const TextToSpeech = lazy(() => import("./pages/TextToSpeech"));
 const ImageToVideo = lazy(() => import("./pages/ImageToVideo"));
 const ImageConverter = lazy(() => import("./pages/ImageConverter"));
+const AdjustMusicDuration = lazy(() => import("./pages/AdjustMusicDuration"));
 const ImageUpscale = lazy(() => import("./pages/ImageUpscale"));
 const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
 const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
