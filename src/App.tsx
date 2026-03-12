@@ -65,6 +65,7 @@ const VideoUpscale = lazy(() => import("./pages/VideoUpscale"));
 const TextToSpeech = lazy(() => import("./pages/TextToSpeech"));
 const ImageToVideo = lazy(() => import("./pages/ImageToVideo"));
 const ImageConverter = lazy(() => import("./pages/ImageConverter"));
+const AdjustMusicDuration = lazy(() => import("./pages/AdjustMusicDuration"));
 const ImageUpscale = lazy(() => import("./pages/ImageUpscale"));
 const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
 const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
@@ -154,6 +155,7 @@ const App = () => (
                         <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
                         <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
                         <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
+                        <Route path="/studio-ai/adjust-music-duration" element={<AdjustMusicDuration />} />
                         <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
                         <Route path="/ai-upscaler" element={<AIUpscaler />} />
                         <Route path="/face-enhancer" element={<FaceEnhancer />} />
