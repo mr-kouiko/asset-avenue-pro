@@ -425,11 +425,10 @@ export function useAIUpscaler() {
 
   // ── Get execution providers ────────────────────────────────────────────
   const getProviders = useCallback((): string[] => {
-    const providers: string[] = [];
-    if (backendRef.current === 'webgpu') providers.push('webgpu');
-    if (backendRef.current === 'webgl') providers.push('webgl');
-    providers.push('wasm');
-    return providers;
+    // Default onnxruntime-web build only ships the 'wasm' EP reliably.
+    // webgpu/webgl EPs require special builds and often cause silent failures,
+    // so we stick with 'wasm' which uses SIMD + threads when available.
+    return ['wasm'];
   }, []);
 
   // ── Load ESRGAN model ─────────────────────────────────────────────────
