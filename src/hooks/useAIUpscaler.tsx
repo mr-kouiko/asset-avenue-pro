@@ -401,6 +401,7 @@ export function useAIUpscaler() {
   useEffect(() => {
     detectBackend().then((b) => {
       backendRef.current = b;
+      console.log("AI backend:", b);
       patch({
         backend: b,
         gpuAccelerated: b === 'webgpu' || b === 'webgl',
@@ -455,12 +456,14 @@ export function useAIUpscaler() {
         await cacheModel(modelData, ESRGAN_CACHE_KEY);
       }
 
+      console.log("ESRGAN model loading...");
       patch({ modelStatus: 'loading', statusMessage: 'Loading ESRGAN model…' });
       const session = await ort.InferenceSession.create(modelData, {
         executionProviders: getProviders(),
       });
 
       esrganSessionRef.current = session;
+      console.log("ESRGAN model loaded");
       patch({ modelStatus: 'ready', statusMessage: 'ESRGAN model ready' });
       return true;
     } catch (err) {
@@ -707,6 +710,7 @@ export function useAIUpscaler() {
       const totalTiles = tilesX * tilesY;
       let processed = 0;
 
+      console.log("Running ESRGAN inference...");
       for (let ty = 0; ty < tilesY; ty++) {
         for (let tx = 0; tx < tilesX; tx++) {
           const sx = tx * TILE_SIZE;
@@ -736,6 +740,7 @@ export function useAIUpscaler() {
           });
         }
       }
+      console.log("ESRGAN inference finished");
 
       if (scale === 2) {
         const finalCanvas = document.createElement('canvas');
