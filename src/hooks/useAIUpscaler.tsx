@@ -528,12 +528,16 @@ export function useAIUpscaler() {
 
       const tensor = new ort.Tensor('float32', input, [1, 3, height, width]);
       const inputName = session.inputNames[0];
+      console.log("Running ONNX session");
       const results = await session.run({ [inputName]: tensor });
       const outputName = session.outputNames[0];
+      console.log("Inference finished");
+      console.log("Output tensor dims:", results[outputName].dims);
       return results[outputName].data as Float32Array;
     },
     [],
   );
+
 
   // ── GFPGAN inference on a face crop ────────────────────────────────────
   const inferGfpganFace = useCallback(
@@ -691,6 +695,10 @@ export function useAIUpscaler() {
 
       const img = await loadImage(imgSrc);
       const fit = fitToMax(img.naturalWidth, img.naturalHeight, MAX_INPUT_PX);
+      
+      console.log("Starting ESRGAN inference");
+      console.log("Input size:", fit.w, fit.h);
+      
       const srcCanvas = document.createElement('canvas');
       srcCanvas.width = fit.w;
       srcCanvas.height = fit.h;
@@ -757,6 +765,7 @@ export function useAIUpscaler() {
     },
     [inferEsrganTile, patch, getOrt],
   );
+
 
   // ── Main upscale entry point ──────────────────────────────────────────
   const upscale = useCallback(
