@@ -111,7 +111,16 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
+    /* Editor surfaces */
+    --editor-bg: 220 20% 7%;
+    --editor-sidebar: 220 20% 10%;
+    --editor-panel: 220 18% 13%;
+    --editor-border: 220 15% 18%;
+    --editor-text: 220 10% 75%;
+    --editor-text-bright: 0 0% 95%;
+    --editor-accent: 217 91% 60%;
+    --editor-accent-soft: 217 91% 60%;
+  }
 
 @layer base {
   * {

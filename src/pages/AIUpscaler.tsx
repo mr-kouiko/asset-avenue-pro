@@ -1,109 +1,61 @@
 import { useState, useRef, useCallback } from 'react';
-import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useESRGANUpscaler, type UpscaleMode } from '@/hooks/useESRGANUpscaler';
+import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
 import { ComparisonSlider } from '@/components/upscale/ComparisonSlider';
-import { ZoomInspector } from '@/components/upscale/ZoomInspector';
 import {
-  Upload, Download, Loader2, ArrowLeft, Image as ImageIcon, Sparkles,
-  RefreshCw, ZoomIn, Zap, Brain, ShieldCheck, Eye, Cpu,
-  CheckCircle2, AlertTriangle, MonitorSmartphone,
+  Upload, Download, Loader2, Image as ImageIcon,
+  Zap, Brain, ScanFace, ChevronLeft,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const SCALE_OPTIONS = [
-  { value: 2, label: '2×' },
-  { value: 4, label: '4×' },
-];
-
-function UpscalerStatus({ state }: { state: ReturnType<typeof useESRGANUpscaler> }) {
-  const backendIcons: Record<string, React.ReactNode> = {
-    webgpu: <Zap className="w-4 h-4 text-green-400" />,
-    webgl: <Zap className="w-4 h-4 text-yellow-400" />,
-    cpu: <Cpu className="w-4 h-4 text-blue-400" />,
-    'canvas-only': <MonitorSmartphone className="w-4 h-4 text-slate-400" />,
-  };
-  const statusIcons: Record<string, React.ReactNode> = {
-    idle: null,
-    'checking-cache': <Loader2 className="w-4 h-4 animate-spin text-blue-400" />,
-    downloading: <Download className="w-4 h-4 text-blue-400" />,
-    loading: <Loader2 className="w-4 h-4 animate-spin text-purple-400" />,
-    ready: <CheckCircle2 className="w-4 h-4 text-green-400" />,
-    error: <AlertTriangle className="w-4 h-4 text-red-400" />,
-    unsupported: <AlertTriangle className="w-4 h-4 text-yellow-400" />,
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300">
-          {backendIcons[state.backend]}
-          {state.backend === 'webgpu' && 'WebGPU Accelerated'}
-          {state.backend === 'webgl' && 'WebGL Accelerated'}
-          {state.backend === 'cpu' && 'CPU Processing'}
-          {state.backend === 'canvas-only' && 'Basic Mode'}
-        </span>
-        {state.gpuAccelerated && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-xs text-green-400 font-medium">
-            <Zap className="w-3 h-3" /> GPU Enabled
-          </span>
-        )}
-      </div>
-      {state.statusMessage && (
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          {statusIcons[state.modelStatus]}
-          <span>{state.statusMessage}</span>
-        </div>
-      )}
-      {state.modelStatus === 'downloading' && (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>ESRGAN Model</span>
-            <span>{state.downloadProgress}%</span>
-          </div>
-          <Progress value={state.downloadProgress} className="h-2" />
-        </div>
-      )}
-      {state.isProcessing && state.processingProgress > 0 && state.modelStatus !== 'downloading' && (
-        <div className="space-y-1">
-          <Progress value={state.processingProgress} className="h-2" />
-          <p className="text-xs text-slate-500 text-right">Processing: {state.processingProgress}%</p>
-        </div>
-      )}
-    </div>
-  );
+// ── History thumbnail type ─────────────────────────────────────────────────
+interface HistoryEntry {
+  id: number;
+  thumb: string;
+  full: string;
+  original: string;
+  label: string;
 }
+
+let historyCounter = 0;
 
 export default function AIUpscaler() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const ai = useESRGANUpscaler();
+  const esrgan = useESRGANUpscaler();
+  const gfpgan = useGFPGANEnhancer();
 
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const [scale, setScale] = useState(2);
-  const [originalDimensions, setOriginalDimensions] = useState<{ w: number; h: number } | null>(null);
   const [sharpness, setSharpness] = useState(50);
   const [mode, setMode] = useState<UpscaleMode>('fast');
-  const [showZoom, setShowZoom] = useState(false);
+  const [faceEnhance, setFaceEnhance] = useState(false);
+  const [faceStrength, setFaceStrength] = useState(50);
+  const [originalDims, setOriginalDims] = useState<{ w: number; h: number } | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  const isProcessing = esrgan.isProcessing || gfpgan.isProcessing;
 
   useSEO({
     title: 'AI Image Upscaler – Enlarge Images with ESRGAN | Studio AI',
-    description: 'Upscale images 2× or 4× with Real-ESRGAN AI. WebGPU accelerated, 100% client-side, no uploads required.',
+    description: 'Upscale images 2× or 4× with Real-ESRGAN AI. WebGPU accelerated, 100% client-side.',
     type: 'website',
   });
 
+  // ── File handling ────────────────────────────────────────────────────────
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast({ title: 'Invalid file type', description: 'Please upload an image (JPG, PNG, WebP).', variant: 'destructive' });
+      toast({ title: 'Invalid file type', description: 'Upload JPG, PNG or WebP.', variant: 'destructive' });
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
@@ -117,247 +69,381 @@ export default function AIUpscaler() {
       const src = ev.target?.result as string;
       setOriginalImage(src);
       const img = new Image();
-      img.onload = () => setOriginalDimensions({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onload = () => setOriginalDims({ w: img.naturalWidth, h: img.naturalHeight });
       img.src = src;
     };
     reader.readAsDataURL(file);
   };
 
+  // ── Process ──────────────────────────────────────────────────────────────
   const handleUpscale = useCallback(async () => {
     if (!originalImage) return;
     setResultImage(null);
-    const result = await ai.upscale(originalImage, scale, mode, sharpness);
-    if (result) {
-      setResultImage(result);
-      toast({ title: mode === 'ai' ? 'AI Upscale Complete!' : 'Upscale Complete!' });
-    } else {
-      toast({ title: 'Error', description: 'Processing failed. Try fast mode.', variant: 'destructive' });
-    }
-  }, [originalImage, scale, mode, sharpness, ai, toast]);
 
+    let result = await esrgan.upscale(originalImage, scale, mode, sharpness);
+    if (!result) {
+      toast({ title: 'Error', description: 'Upscale failed.', variant: 'destructive' });
+      return;
+    }
+
+    // Optional face enhance pass
+    if (faceEnhance && result) {
+      const faceResult = await gfpgan.enhance(result, faceStrength / 100);
+      if (faceResult) result = faceResult;
+    }
+
+    setResultImage(result);
+    toast({ title: 'Done!' });
+
+    // Add to history
+    setHistory((h) => {
+      const entry: HistoryEntry = {
+        id: ++historyCounter,
+        thumb: result!,
+        full: result!,
+        original: originalImage!,
+        label: `${scale}× ${mode}${faceEnhance ? ' +face' : ''}`,
+      };
+      return [entry, ...h].slice(0, 8);
+    });
+  }, [originalImage, scale, mode, sharpness, faceEnhance, faceStrength, esrgan, gfpgan, toast]);
+
+  // ── Download ─────────────────────────────────────────────────────────────
   const handleDownload = () => {
     if (!resultImage) return;
     const link = document.createElement('a');
     link.href = resultImage;
-    link.download = fileName.replace(/\.[^/.]+$/, '') + `-${scale}x-${mode}-upscaled.png`;
+    link.download = fileName.replace(/\.[^/.]+$/, '') + `-${scale}x-upscaled.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleReset = () => {
-    setOriginalImage(null);
-    setResultImage(null);
-    setFileName('');
-    setOriginalDimensions(null);
-    setShowZoom(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  // ── Restore from history ────────────────────────────────────────────────
+  const restoreHistory = (entry: HistoryEntry) => {
+    setOriginalImage(entry.original);
+    setResultImage(entry.full);
   };
 
-  const outputW = originalDimensions ? originalDimensions.w * scale : 0;
-  const outputH = originalDimensions ? originalDimensions.h * scale : 0;
+  const outputW = originalDims ? originalDims.w * scale : 0;
+  const outputH = originalDims ? originalDims.h * scale : 0;
+
+  // ── Status message ──────────────────────────────────────────────────────
+  const statusMsg = esrgan.isProcessing
+    ? esrgan.statusMessage
+    : gfpgan.isProcessing
+      ? gfpgan.statusMessage
+      : esrgan.statusMessage;
+
+  const progress = esrgan.isProcessing
+    ? esrgan.processingProgress
+    : gfpgan.isProcessing
+      ? gfpgan.processingProgress
+      : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
-      <Header />
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <Link to="/studio-ai" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Studio AI
-        </Link>
-
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 mb-6">
-            <ZoomIn className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium text-blue-400">AI-Powered · 100% Browser-Based</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            AI Image{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Upscaler</span>
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      {/* ── Top bar ──────────────────────────────────────────────────── */}
+      <header
+        className="h-12 flex items-center justify-between px-4 border-b shrink-0 z-20"
+        style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link
+            to="/studio-ai"
+            className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity"
+            style={{ color: 'hsl(var(--editor-text))' }}
+          >
+            <ChevronLeft className="w-4 h-4" /> Studio AI
+          </Link>
+          <span className="w-px h-5" style={{ background: 'hsl(var(--editor-border))' }} />
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+            AI Image Upscaler
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Enlarge images with Real-ESRGAN neural network — sharper details, no artifacts, entirely in your browser.
-          </p>
-          <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-xs text-green-400 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Your images are processed locally. No uploads required.
-          </div>
         </div>
+        <div className="flex items-center gap-2">
+          {statusMsg && (
+            <span className="text-xs mr-2" style={{ color: 'hsl(var(--editor-text))' }}>
+              {statusMsg}
+            </span>
+          )}
+          {resultImage && (
+            <Button size="sm" variant="outline" onClick={handleDownload}
+              className="h-8 gap-1.5 border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10">
+              <Download className="w-3.5 h-3.5" /> Download
+            </Button>
+          )}
+        </div>
+      </header>
 
-        <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-6">
-          <CardContent className="p-5">
-            <UpscalerStatus state={ai} />
-          </CardContent>
-        </Card>
-
-        {originalImage && (
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-6">
-            <CardContent className="p-6">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">Processing Mode</label>
-                  <div className="flex gap-3">
-                    <Button size="sm" variant={mode === 'fast' ? 'default' : 'outline'}
-                      className={mode === 'fast' ? 'bg-yellow-600 hover:bg-yellow-500' : 'border-slate-600 text-slate-300'}
-                      onClick={() => { setMode('fast'); setResultImage(null); }}>
-                      <Zap className="w-4 h-4 mr-1" /> Fast
-                    </Button>
-                    <Button size="sm" variant={mode === 'ai' ? 'default' : 'outline'}
-                      className={mode === 'ai' ? 'bg-purple-600 hover:bg-purple-500' : 'border-slate-600 text-slate-300'}
-                      onClick={() => { setMode('ai'); setResultImage(null); }}
-                      disabled={ai.backend === 'canvas-only'}>
-                      <Brain className="w-4 h-4 mr-1" /> AI (HD)
-                    </Button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">{mode === 'fast' ? 'Instant canvas interpolation' : 'ESRGAN neural network'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">Scale Factor</label>
-                  <div className="flex gap-3">
-                    {SCALE_OPTIONS.map((opt) => (
-                      <Button key={opt.value} variant={scale === opt.value ? 'default' : 'outline'} size="sm"
-                        className={scale === opt.value ? 'bg-blue-600 hover:bg-blue-500' : 'border-slate-600 text-slate-300'}
-                        onClick={() => { setScale(opt.value); setResultImage(null); }}>
-                        {opt.label}
-                      </Button>
-                    ))}
-                  </div>
-                  {originalDimensions && (
-                    <p className="text-xs text-slate-500 mt-2">{originalDimensions.w}×{originalDimensions.h} → {outputW}×{outputH} px</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Sharpness: {sharpness}%{mode === 'ai' && ' (fast only)'}
-                  </label>
-                  <Slider value={[sharpness]} onValueChange={([v]) => { setSharpness(v); setResultImage(null); }}
-                    min={0} max={100} step={5} className="w-full" disabled={mode === 'ai'} />
-                  <p className="text-xs text-slate-500 mt-1">Edge sharpening for fast mode</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!originalImage ? (
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-blue-400" /> Upload Image
-              </h3>
-              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-blue-500/50 hover:bg-slate-800/30 transition-all">
-                <Upload className="w-10 h-10 text-slate-500 mb-3" />
-                <p className="mb-2 text-sm text-slate-400"><span className="font-semibold">Click to upload</span> or drag & drop</p>
-                <p className="text-xs text-slate-500">PNG, JPG or WebP (max 25 MB)</p>
+      {/* ── Body: sidebar + canvas ──────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+        {/* ── Left sidebar ───────────────────────────────────────────── */}
+        <aside
+          className="w-64 shrink-0 overflow-y-auto border-r flex flex-col"
+          style={{ background: 'hsl(var(--editor-sidebar))', borderColor: 'hsl(var(--editor-border))' }}
+        >
+          <div className="p-4 space-y-5 flex-1">
+            {/* Upload */}
+            <div>
+              <label
+                className="flex items-center justify-center gap-2 w-full h-10 rounded-lg text-sm font-medium cursor-pointer transition-colors"
+                style={{
+                  background: originalImage ? 'hsl(var(--editor-panel))' : 'hsl(var(--editor-accent) / .15)',
+                  color: originalImage ? 'hsl(var(--editor-text))' : 'hsl(var(--editor-accent))',
+                  border: `1px solid hsl(var(--editor-border))`,
+                }}
+              >
+                {originalImage ? (
+                  <><ImageIcon className="w-4 h-4" /> Change Image</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Upload Image</>
+                )}
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
               </label>
-            </CardContent>
-          </Card>
-        ) : resultImage ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-green-400" /> Result Comparison
-              </h3>
+              {originalDims && (
+                <p className="text-xs mt-2 tabular-nums" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {originalDims.w} × {originalDims.h} → {outputW} × {outputH} px
+                </p>
+              )}
+            </div>
+
+            {/* Scale */}
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text))' }}>
+                Upscale Factor
+              </label>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="border-slate-600 text-slate-300" onClick={() => setShowZoom(!showZoom)}>
-                  <Eye className="w-4 h-4 mr-1" /> {showZoom ? 'Hide' : 'Show'} Zoom
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleReset}>
-                  <RefreshCw className="w-4 h-4 mr-1" /> New Image
-                </Button>
+                {[2, 4].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => { setScale(v); setResultImage(null); }}
+                    className="flex-1 h-9 rounded-md text-sm font-semibold transition-colors"
+                    style={{
+                      background: scale === v ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-panel))',
+                      color: scale === v ? '#fff' : 'hsl(var(--editor-text))',
+                    }}
+                  >
+                    {v}×
+                  </button>
+                ))}
               </div>
             </div>
-            <ComparisonSlider originalSrc={originalImage} resultSrc={resultImage} className="h-[400px] md:h-[500px]" />
-            {showZoom && (
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-slate-400 mb-2 font-medium">Original — hover to zoom</p>
-                  <ZoomInspector src={originalImage} alt="Original zoom" className="h-64" />
+
+            {/* Mode */}
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text))' }}>
+                Processing Mode
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setMode('fast'); setResultImage(null); }}
+                  className="flex-1 h-9 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                  style={{
+                    background: mode === 'fast' ? 'hsl(45 90% 50%)' : 'hsl(var(--editor-panel))',
+                    color: mode === 'fast' ? '#000' : 'hsl(var(--editor-text))',
+                  }}
+                >
+                  <Zap className="w-3.5 h-3.5" /> Fast
+                </button>
+                <button
+                  onClick={() => { setMode('ai'); setResultImage(null); }}
+                  disabled={esrgan.backend === 'canvas-only'}
+                  className="flex-1 h-9 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-colors disabled:opacity-40"
+                  style={{
+                    background: mode === 'ai' ? 'hsl(270 70% 55%)' : 'hsl(var(--editor-panel))',
+                    color: mode === 'ai' ? '#fff' : 'hsl(var(--editor-text))',
+                  }}
+                >
+                  <Brain className="w-3.5 h-3.5" /> AI (HD)
+                </button>
+              </div>
+            </div>
+
+            {/* Sharpness (fast mode only) */}
+            <div style={{ opacity: mode === 'ai' ? 0.35 : 1 }}>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
+                  Sharpness
+                </label>
+                <span className="text-xs tabular-nums" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {sharpness}%
+                </span>
+              </div>
+              <Slider
+                value={[sharpness]}
+                onValueChange={([v]) => { setSharpness(v); setResultImage(null); }}
+                min={0} max={100} step={5}
+                disabled={mode === 'ai'}
+              />
+            </div>
+
+            {/* Separator */}
+            <div className="h-px" style={{ background: 'hsl(var(--editor-border))' }} />
+
+            {/* Face enhance toggle */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <ScanFace className="w-3.5 h-3.5" /> Face Enhancement
+                </label>
+                <Switch checked={faceEnhance} onCheckedChange={setFaceEnhance} />
+              </div>
+              <p className="text-[11px] mt-1" style={{ color: 'hsl(var(--editor-text) / .6)' }}>
+                GFPGAN face restoration
+              </p>
+            </div>
+
+            {/* Face strength */}
+            {faceEnhance && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
+                    Face Strength
+                  </label>
+                  <span className="text-xs tabular-nums" style={{ color: 'hsl(var(--editor-text))' }}>
+                    {faceStrength}%
+                  </span>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-400 mb-2 font-medium">Enhanced — hover to zoom</p>
-                  <ZoomInspector src={resultImage} alt="Result zoom" className="h-64" />
+                <Slider
+                  value={[faceStrength]}
+                  onValueChange={([v]) => setFaceStrength(v)}
+                  min={0} max={100} step={5}
+                />
+                <div className="flex justify-between text-[10px] mt-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>
+                  <span>Natural</span><span>Full</span>
                 </div>
               </div>
             )}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-blue-400" /> Original
-                </h3>
-                <div className="relative">
-                  <img src={originalImage} alt="Original" className="w-full h-64 object-contain rounded-xl bg-slate-800" />
-                  <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleReset}>
-                    <RefreshCw className="w-4 h-4 mr-1" /> Change
-                  </Button>
+
+            {/* Separator */}
+            <div className="h-px" style={{ background: 'hsl(var(--editor-border))' }} />
+
+            {/* Model status */}
+            <div>
+              <p className="text-[11px] mb-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>Engine</p>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    background: esrgan.gpuAccelerated
+                      ? 'hsl(140 70% 50%)'
+                      : 'hsl(var(--editor-text) / .3)',
+                  }}
+                />
+                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {esrgan.backend.toUpperCase()}
+                </span>
+              </div>
+              {(esrgan.modelStatus === 'downloading' || gfpgan.modelStatus === 'downloading') && (
+                <div className="mt-2 space-y-1">
+                  <Progress
+                    value={esrgan.modelStatus === 'downloading' ? esrgan.downloadProgress : gfpgan.downloadProgress}
+                    className="h-1.5"
+                  />
+                  <p className="text-[10px]" style={{ color: 'hsl(var(--editor-text) / .5)' }}>
+                    Downloading model…
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-green-400" /> Result
-                </h3>
-                {ai.isProcessing ? (
-                  <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/50">
-                    <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-3" />
-                    <p className="text-sm text-slate-400">{ai.statusMessage || 'Processing…'}</p>
-                    {ai.processingProgress > 0 && <p className="text-xs text-slate-500 mt-1">{ai.processingProgress}%</p>}
+              )}
+            </div>
+          </div>
+
+          {/* Process button at bottom of sidebar */}
+          <div className="p-4 border-t" style={{ borderColor: 'hsl(var(--editor-border))' }}>
+            <Button
+              className="w-full h-10 font-semibold"
+              onClick={handleUpscale}
+              disabled={!originalImage || isProcessing}
+              style={{
+                background: isProcessing ? 'hsl(var(--editor-panel))' : 'hsl(var(--editor-accent))',
+                color: '#fff',
+              }}
+            >
+              {isProcessing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing…</>
+              ) : (
+                <><Zap className="w-4 h-4 mr-2" /> Upscale {scale}×</>
+              )}
+            </Button>
+            {isProcessing && progress > 0 && (
+              <Progress value={progress} className="h-1 mt-2" />
+            )}
+          </div>
+        </aside>
+
+        {/* ── Center viewer ──────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+            {!originalImage ? (
+              <label
+                className="w-full max-w-[1100px] aspect-[16/10] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors hover:border-[hsl(var(--editor-accent)/.5)]"
+                style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-panel) / .5)' }}
+              >
+                <Upload className="w-10 h-10 mb-3" style={{ color: 'hsl(var(--editor-text) / .4)' }} />
+                <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <span className="font-medium" style={{ color: 'hsl(var(--editor-accent))' }}>Click to upload</span> or drag & drop
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text) / .4)' }}>
+                  PNG, JPG, WebP · Max 25 MB
+                </p>
+                <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+              </label>
+            ) : resultImage ? (
+              <div className="w-full max-w-[1100px] h-full min-h-0">
+                <ComparisonSlider
+                  originalSrc={originalImage}
+                  resultSrc={resultImage}
+                  className="w-full h-full rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="w-full max-w-[1100px] h-full min-h-0 flex items-center justify-center rounded-lg overflow-hidden"
+                style={{ background: 'hsl(var(--editor-panel))' }}
+              >
+                {isProcessing ? (
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'hsl(var(--editor-accent))' }} />
+                    <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>{statusMsg}</p>
+                    {progress > 0 && (
+                      <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>{progress}%</p>
+                    )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                    <ZoomIn className="w-10 h-10 text-slate-600 mb-3" />
-                    <p className="text-sm text-slate-500">Press Upscale to begin</p>
-                  </div>
+                  <img
+                    src={originalImage}
+                    alt="Original"
+                    className="max-w-full max-h-full object-contain"
+                  />
                 )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
-          <Button size="lg"
-            className={mode === 'ai' ? 'bg-purple-600 hover:bg-purple-500 text-white px-8' : 'bg-blue-600 hover:bg-blue-500 text-white px-8'}
-            onClick={handleUpscale} disabled={!originalImage || ai.isProcessing}>
-            {ai.isProcessing ? (
-              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> {ai.statusMessage || 'Processing…'}</>
-            ) : mode === 'ai' ? (
-              <><Brain className="w-5 h-5 mr-2" /> AI Upscale</>
-            ) : (
-              <><Zap className="w-5 h-5 mr-2" /> Fast Upscale</>
-            )}
-          </Button>
-          {resultImage && (
-            <Button size="lg" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-8" onClick={handleDownload}>
-              <Download className="w-5 h-5 mr-2" /> Download PNG
-            </Button>
-          )}
-          {mode === 'ai' && ai.modelStatus !== 'ready' && ai.modelStatus !== 'downloading' && ai.modelStatus !== 'loading' && ai.backend !== 'canvas-only' && (
-            <Button size="lg" variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 px-8" onClick={ai.preloadModel}>
-              <Download className="w-5 h-5 mr-2" /> Pre-load ESRGAN
-            </Button>
-          )}
-        </div>
-
-        <div className="mt-16 text-center">
-          <h2 className="text-xl font-semibold text-white mb-6">Tips for Best Results</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: 'AI Mode for Photos', description: 'ESRGAN produces sharper detail on photographs and realistic images.' },
-              { title: 'Fast Mode for Art', description: 'Canvas interpolation is instant and great for illustrations and vector graphics.' },
-              { title: 'Keep Input Small', description: 'Images under 2000 px process faster and use less memory, especially in AI mode.' },
-            ].map((tip) => (
-              <div key={tip.title} className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
-                <h3 className="text-white font-medium mb-2">{tip.title}</h3>
-                <p className="text-sm text-slate-400">{tip.description}</p>
               </div>
-            ))}
+            )}
           </div>
+
+          {/* ── Bottom history strip ──────────────────────────────────── */}
+          {history.length > 0 && (
+            <div
+              className="h-20 border-t flex items-center gap-2 px-4 overflow-x-auto shrink-0 scrollbar-hide"
+              style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+            >
+              {history.map((entry) => (
+                <button
+                  key={entry.id}
+                  onClick={() => restoreHistory(entry)}
+                  className="h-14 w-14 shrink-0 rounded-md overflow-hidden border-2 transition-all hover:border-[hsl(var(--editor-accent))]"
+                  style={{ borderColor: 'hsl(var(--editor-border))' }}
+                  title={entry.label}
+                >
+                  <img src={entry.thumb} alt={entry.label} className="w-full h-full object-cover" />
+                </button>
+              ))}
+              <span className="text-[10px] shrink-0 ml-1" style={{ color: 'hsl(var(--editor-text) / .4)' }}>
+                Recent results
+              </span>
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

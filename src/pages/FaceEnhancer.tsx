@@ -1,101 +1,26 @@
 import { useState, useRef, useCallback } from 'react';
-import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
 import { ComparisonSlider } from '@/components/upscale/ComparisonSlider';
-import { ZoomInspector } from '@/components/upscale/ZoomInspector';
-import { Slider } from '@/components/ui/slider';
 import {
-  Upload, Download, Loader2, ArrowLeft, Image as ImageIcon, Sparkles,
-  RefreshCw, ScanFace, ShieldCheck, Eye, Cpu, Zap,
-  CheckCircle2, AlertTriangle, MonitorSmartphone, UserCheck,
+  Upload, Download, Loader2, Image as ImageIcon,
+  ScanFace, ChevronLeft,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-function FaceModelStatus({ state }: { state: ReturnType<typeof useGFPGANEnhancer> }) {
-  const backendIcons: Record<string, React.ReactNode> = {
-    webgpu: <Zap className="w-4 h-4 text-green-400" />,
-    webgl: <Zap className="w-4 h-4 text-yellow-400" />,
-    cpu: <Cpu className="w-4 h-4 text-blue-400" />,
-    'canvas-only': <MonitorSmartphone className="w-4 h-4 text-slate-400" />,
-  };
-  const statusIcons: Record<string, React.ReactNode> = {
-    idle: null,
-    'checking-cache': <Loader2 className="w-4 h-4 animate-spin text-pink-400" />,
-    downloading: <Download className="w-4 h-4 text-pink-400" />,
-    loading: <Loader2 className="w-4 h-4 animate-spin text-pink-400" />,
-    ready: <CheckCircle2 className="w-4 h-4 text-green-400" />,
-    error: <AlertTriangle className="w-4 h-4 text-red-400" />,
-    unsupported: <AlertTriangle className="w-4 h-4 text-yellow-400" />,
-  };
-
-  const stepLabels: Record<string, { icon: React.ReactNode; text: string } | null> = {
-    idle: null,
-    'detecting-faces': { icon: <ScanFace className="w-4 h-4 text-pink-400 animate-pulse" />, text: 'Detecting faces…' },
-    'enhancing-faces': { icon: <ScanFace className="w-4 h-4 text-pink-400 animate-pulse" />, text: 'Enhancing faces…' },
-    blending: { icon: <Loader2 className="w-4 h-4 animate-spin text-pink-400" />, text: 'Blending restored faces…' },
-    complete: { icon: <UserCheck className="w-4 h-4 text-green-400" />, text: 'Face enhancement complete' },
-    'no-faces': { icon: <ScanFace className="w-4 h-4 text-slate-400" />, text: 'No faces detected' },
-    error: { icon: <AlertTriangle className="w-4 h-4 text-red-400" />, text: 'Face enhancement failed' },
-  };
-
-  const stepInfo = stepLabels[state.step];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300">
-          {backendIcons[state.backend]}
-          {state.backend === 'webgpu' && 'WebGPU Accelerated'}
-          {state.backend === 'webgl' && 'WebGL Accelerated'}
-          {state.backend === 'cpu' && 'CPU Processing'}
-          {state.backend === 'canvas-only' && 'Basic Mode'}
-        </span>
-        {state.gpuAccelerated && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-xs text-green-400 font-medium">
-            <Zap className="w-3 h-3" /> GPU Enabled
-          </span>
-        )}
-        {state.facesDetected > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-xs text-pink-400 font-medium">
-            <ScanFace className="w-3 h-3" /> {state.facesDetected} face(s)
-          </span>
-        )}
-      </div>
-      {state.statusMessage && (
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          {statusIcons[state.modelStatus]}
-          <span>{state.statusMessage}</span>
-        </div>
-      )}
-      {stepInfo && (
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          {stepInfo.icon}
-          <span>{stepInfo.text}</span>
-        </div>
-      )}
-      {state.modelStatus === 'downloading' && (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>GFPGAN Model</span>
-            <span>{state.downloadProgress}%</span>
-          </div>
-          <Progress value={state.downloadProgress} className="h-2" />
-        </div>
-      )}
-      {state.isProcessing && state.processingProgress > 0 && state.modelStatus !== 'downloading' && (
-        <div className="space-y-1">
-          <Progress value={state.processingProgress} className="h-2" />
-          <p className="text-xs text-slate-500 text-right">Processing: {state.processingProgress}%</p>
-        </div>
-      )}
-    </div>
-  );
+interface HistoryEntry {
+  id: number;
+  thumb: string;
+  full: string;
+  original: string;
+  label: string;
 }
+
+let historyCounter = 0;
 
 export default function FaceEnhancer() {
   const { toast } = useToast();
@@ -105,12 +30,12 @@ export default function FaceEnhancer() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
-  const [showZoom, setShowZoom] = useState(false);
   const [blendStrength, setBlendStrength] = useState(50);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useSEO({
-    title: 'AI Face & Skin Enhancer – GFPGAN Restoration | Studio AI',
-    description: 'Enhance facial details, skin, eyes and mouth with GFPGAN AI. 100% client-side, no uploads required.',
+    title: 'AI Face & Skin Enhancer – GFPGAN | Studio AI',
+    description: 'Enhance facial details with GFPGAN AI. 100% client-side, no uploads.',
     type: 'website',
   });
 
@@ -118,7 +43,7 @@ export default function FaceEnhancer() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast({ title: 'Invalid file type', description: 'Please upload an image (JPG, PNG, WebP).', variant: 'destructive' });
+      toast({ title: 'Invalid file type', description: 'Upload JPG, PNG or WebP.', variant: 'destructive' });
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
@@ -128,20 +53,27 @@ export default function FaceEnhancer() {
     setFileName(file.name);
     setResultImage(null);
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setOriginalImage(ev.target?.result as string);
-    };
+    reader.onload = (ev) => setOriginalImage(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleEnhance = useCallback(async () => {
     if (!originalImage) return;
     setResultImage(null);
-    const strength = blendStrength / 100;
-    const result = await ai.enhance(originalImage, strength);
+    const result = await ai.enhance(originalImage, blendStrength / 100);
     if (result) {
       setResultImage(result);
       toast({ title: `${ai.facesDetected} face(s) enhanced!` });
+      setHistory((h) => {
+        const entry: HistoryEntry = {
+          id: ++historyCounter,
+          thumb: result,
+          full: result,
+          original: originalImage!,
+          label: `${blendStrength}% strength`,
+        };
+        return [entry, ...h].slice(0, 8);
+      });
     } else if (ai.step === 'no-faces') {
       toast({ title: 'No faces detected', description: 'Try a photo with visible faces.', variant: 'destructive' });
     } else {
@@ -159,194 +91,224 @@ export default function FaceEnhancer() {
     document.body.removeChild(link);
   };
 
-  const handleReset = () => {
-    setOriginalImage(null);
-    setResultImage(null);
-    setFileName('');
-    setShowZoom(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const restoreHistory = (entry: HistoryEntry) => {
+    setOriginalImage(entry.original);
+    setResultImage(entry.full);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-pink-950/20 to-slate-950">
-      <Header />
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <Link to="/studio-ai" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Studio AI
-        </Link>
-
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/10 border border-pink-500/30 mb-6">
-            <ScanFace className="w-4 h-4 text-pink-400" />
-            <span className="text-sm font-medium text-pink-400">AI-Powered · 100% Browser-Based</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            AI Face &{' '}
-            <span className="bg-gradient-to-r from-pink-400 via-rose-400 to-fuchsia-400 bg-clip-text text-transparent">Skin Enhancer</span>
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      {/* ── Top bar ───────────────────────────────────────────────── */}
+      <header
+        className="h-12 flex items-center justify-between px-4 border-b shrink-0 z-20"
+        style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link
+            to="/studio-ai"
+            className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity"
+            style={{ color: 'hsl(var(--editor-text))' }}
+          >
+            <ChevronLeft className="w-4 h-4" /> Studio AI
+          </Link>
+          <span className="w-px h-5" style={{ background: 'hsl(var(--editor-border))' }} />
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+            AI Face & Skin Enhancer
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Restore facial details — skin texture, eyes, mouth — using GFPGAN AI, entirely in your browser.
-          </p>
-          <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-xs text-green-400 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Your images are processed locally. No uploads required.
-          </div>
         </div>
+        <div className="flex items-center gap-2">
+          {ai.statusMessage && (
+            <span className="text-xs mr-2" style={{ color: 'hsl(var(--editor-text))' }}>
+              {ai.statusMessage}
+            </span>
+          )}
+          {resultImage && (
+            <Button size="sm" variant="outline" onClick={handleDownload}
+              className="h-8 gap-1.5 border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10">
+              <Download className="w-3.5 h-3.5" /> Download
+            </Button>
+          )}
+        </div>
+      </header>
 
-        <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-6">
-          <CardContent className="p-5">
-            <FaceModelStatus state={ai} />
-          </CardContent>
-        </Card>
-
-        {!originalImage ? (
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-pink-400" /> Upload a Portrait
-              </h3>
-              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-pink-500/50 hover:bg-slate-800/30 transition-all">
-                <Upload className="w-10 h-10 text-slate-500 mb-3" />
-                <p className="mb-2 text-sm text-slate-400"><span className="font-semibold">Click to upload</span> or drag & drop</p>
-                <p className="text-xs text-slate-500">PNG, JPG or WebP (max 25 MB) · Works best with visible faces</p>
+      {/* ── Body ──────────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+        {/* ── Left sidebar ────────────────────────────────────────── */}
+        <aside
+          className="w-64 shrink-0 overflow-y-auto border-r flex flex-col"
+          style={{ background: 'hsl(var(--editor-sidebar))', borderColor: 'hsl(var(--editor-border))' }}
+        >
+          <div className="p-4 space-y-5 flex-1">
+            {/* Upload */}
+            <div>
+              <label
+                className="flex items-center justify-center gap-2 w-full h-10 rounded-lg text-sm font-medium cursor-pointer transition-colors"
+                style={{
+                  background: originalImage ? 'hsl(var(--editor-panel))' : 'hsl(var(--editor-accent) / .15)',
+                  color: originalImage ? 'hsl(var(--editor-text))' : 'hsl(var(--editor-accent))',
+                  border: '1px solid hsl(var(--editor-border))',
+                }}
+              >
+                {originalImage ? (
+                  <><ImageIcon className="w-4 h-4" /> Change Image</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Upload Portrait</>
+                )}
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
               </label>
-            </CardContent>
-          </Card>
-        ) : resultImage ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-green-400" /> Result Comparison
-                {ai.facesDetected > 0 && (
-                  <span className="text-sm font-normal text-pink-400 ml-2">
-                    ({ai.facesDetected} face{ai.facesDetected > 1 ? 's' : ''} enhanced)
-                  </span>
-                )}
-              </h3>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="border-slate-600 text-slate-300" onClick={() => setShowZoom(!showZoom)}>
-                  <Eye className="w-4 h-4 mr-1" /> {showZoom ? 'Hide' : 'Show'} Zoom
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleReset}>
-                  <RefreshCw className="w-4 h-4 mr-1" /> New Image
-                </Button>
-              </div>
             </div>
-            <ComparisonSlider originalSrc={originalImage} resultSrc={resultImage} className="h-[400px] md:h-[500px]" />
-            {showZoom && (
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-slate-400 mb-2 font-medium">Original — hover to zoom</p>
-                  <ZoomInspector src={originalImage} alt="Original zoom" className="h-64" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400 mb-2 font-medium">Enhanced — hover to zoom</p>
-                  <ZoomInspector src={resultImage} alt="Result zoom" className="h-64" />
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-pink-400" /> Original
-                </h3>
-                <div className="relative">
-                  <img src={originalImage} alt="Original" className="w-full h-64 object-contain rounded-xl bg-slate-800" />
-                  <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleReset}>
-                    <RefreshCw className="w-4 h-4 mr-1" /> Change
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-green-400" /> Result
-                </h3>
-                {ai.isProcessing ? (
-                  <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/50">
-                    <Loader2 className="w-10 h-10 text-pink-400 animate-spin mb-3" />
-                    <p className="text-sm text-slate-400">{ai.statusMessage || 'Processing…'}</p>
-                    {ai.processingProgress > 0 && <p className="text-xs text-slate-500 mt-1">{ai.processingProgress}%</p>}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                    <ScanFace className="w-10 h-10 text-slate-600 mb-3" />
-                    <p className="text-sm text-slate-500">Press Enhance to begin</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
-        {originalImage && (
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mt-6">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <ScanFace className="w-4 h-4 text-pink-400" />
-                  Face Enhancement Strength
-                </h3>
-                <span className="text-sm font-mono text-pink-400">{blendStrength}%</span>
+            {/* Strength slider */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <ScanFace className="w-3.5 h-3.5" /> Enhancement Strength
+                </label>
+                <span className="text-xs tabular-nums" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {blendStrength}%
+                </span>
               </div>
               <Slider
                 value={[blendStrength]}
-                onValueChange={(v) => setBlendStrength(v[0])}
-                min={0}
-                max={100}
-                step={1}
-                className="w-full"
+                onValueChange={([v]) => setBlendStrength(v)}
+                min={0} max={100} step={5}
               />
-              <div className="flex justify-between text-xs text-slate-500 mt-1.5">
-                <span>Subtle (natural)</span>
-                <span>Full (maximum restoration)</span>
+              <div className="flex justify-between text-[10px] mt-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>
+                <span>Natural</span><span>Full</span>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
-          <Button size="lg" className="bg-pink-600 hover:bg-pink-500 text-white px-8"
-            onClick={handleEnhance} disabled={!originalImage || ai.isProcessing || ai.backend === 'canvas-only'}>
-            {ai.isProcessing ? (
-              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> {ai.statusMessage || 'Processing…'}</>
-            ) : (
-              <><ScanFace className="w-5 h-5 mr-2" /> Enhance Faces</>
+            {/* Separator */}
+            <div className="h-px" style={{ background: 'hsl(var(--editor-border))' }} />
+
+            {/* Face info */}
+            {ai.facesDetected > 0 && (
+              <div className="flex items-center gap-2">
+                <ScanFace className="w-4 h-4" style={{ color: 'hsl(330 80% 60%)' }} />
+                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {ai.facesDetected} face(s) detected
+                </span>
+              </div>
             )}
-          </Button>
-          {resultImage && (
-            <Button size="lg" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-8" onClick={handleDownload}>
-              <Download className="w-5 h-5 mr-2" /> Download PNG
-            </Button>
-          )}
-          {ai.modelStatus !== 'ready' && ai.modelStatus !== 'downloading' && ai.modelStatus !== 'loading' && ai.backend !== 'canvas-only' && (
-            <Button size="lg" variant="outline" className="border-pink-500/50 text-pink-400 hover:bg-pink-500/10 px-8" onClick={ai.preloadModel}>
-              <Download className="w-5 h-5 mr-2" /> Pre-load GFPGAN
-            </Button>
-          )}
-        </div>
 
-        <div className="mt-16 text-center">
-          <h2 className="text-xl font-semibold text-white mb-6">Tips for Best Results</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: 'Clear Portraits', description: 'Works best on photos where faces are clearly visible and reasonably sized.' },
-              { title: 'Multiple Faces', description: 'Detects and enhances up to 5 faces per image automatically.' },
-              { title: 'Max Resolution', description: 'For best results, use images under 4096px. Larger images will be skipped.' },
-            ].map((tip) => (
-              <div key={tip.title} className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
-                <h3 className="text-white font-medium mb-2">{tip.title}</h3>
-                <p className="text-sm text-slate-400">{tip.description}</p>
+            {/* Engine status */}
+            <div>
+              <p className="text-[11px] mb-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>Engine</p>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    background: ai.gpuAccelerated
+                      ? 'hsl(140 70% 50%)'
+                      : 'hsl(var(--editor-text) / .3)',
+                  }}
+                />
+                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {ai.backend.toUpperCase()}
+                </span>
               </div>
-            ))}
+              {ai.modelStatus === 'downloading' && (
+                <div className="mt-2 space-y-1">
+                  <Progress value={ai.downloadProgress} className="h-1.5" />
+                  <p className="text-[10px]" style={{ color: 'hsl(var(--editor-text) / .5)' }}>
+                    Downloading GFPGAN…
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Enhance button */}
+          <div className="p-4 border-t" style={{ borderColor: 'hsl(var(--editor-border))' }}>
+            <Button
+              className="w-full h-10 font-semibold"
+              onClick={handleEnhance}
+              disabled={!originalImage || ai.isProcessing || ai.backend === 'canvas-only'}
+              style={{
+                background: ai.isProcessing ? 'hsl(var(--editor-panel))' : 'hsl(330 80% 55%)',
+                color: '#fff',
+              }}
+            >
+              {ai.isProcessing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing…</>
+              ) : (
+                <><ScanFace className="w-4 h-4 mr-2" /> Enhance Faces</>
+              )}
+            </Button>
+            {ai.isProcessing && ai.processingProgress > 0 && (
+              <Progress value={ai.processingProgress} className="h-1 mt-2" />
+            )}
+          </div>
+        </aside>
+
+        {/* ── Center viewer ──────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+            {!originalImage ? (
+              <label
+                className="w-full max-w-[1100px] aspect-[16/10] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors hover:border-[hsl(330_80%_55%/.5)]"
+                style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-panel) / .5)' }}
+              >
+                <ScanFace className="w-10 h-10 mb-3" style={{ color: 'hsl(var(--editor-text) / .4)' }} />
+                <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <span className="font-medium" style={{ color: 'hsl(330 80% 55%)' }}>Click to upload</span> a portrait
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text) / .4)' }}>
+                  Works best with visible faces · Max 25 MB
+                </p>
+                <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+              </label>
+            ) : resultImage ? (
+              <div className="w-full max-w-[1100px] h-full min-h-0">
+                <ComparisonSlider
+                  originalSrc={originalImage}
+                  resultSrc={resultImage}
+                  className="w-full h-full rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="w-full max-w-[1100px] h-full min-h-0 flex items-center justify-center rounded-lg overflow-hidden"
+                style={{ background: 'hsl(var(--editor-panel))' }}
+              >
+                {ai.isProcessing ? (
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'hsl(330 80% 55%)' }} />
+                    <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>{ai.statusMessage}</p>
+                    {ai.processingProgress > 0 && (
+                      <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>{ai.processingProgress}%</p>
+                    )}
+                  </div>
+                ) : (
+                  <img src={originalImage} alt="Original" className="max-w-full max-h-full object-contain" />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Bottom history strip ──────────────────────────────── */}
+          {history.length > 0 && (
+            <div
+              className="h-20 border-t flex items-center gap-2 px-4 overflow-x-auto shrink-0 scrollbar-hide"
+              style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+            >
+              {history.map((entry) => (
+                <button
+                  key={entry.id}
+                  onClick={() => restoreHistory(entry)}
+                  className="h-14 w-14 shrink-0 rounded-md overflow-hidden border-2 transition-all hover:border-[hsl(330_80%_55%)]"
+                  style={{ borderColor: 'hsl(var(--editor-border))' }}
+                  title={entry.label}
+                >
+                  <img src={entry.thumb} alt={entry.label} className="w-full h-full object-cover" />
+                </button>
+              ))}
+              <span className="text-[10px] shrink-0 ml-1" style={{ color: 'hsl(var(--editor-text) / .4)' }}>
+                Recent results
+              </span>
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
