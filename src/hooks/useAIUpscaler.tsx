@@ -45,7 +45,7 @@ const GFPGAN_MODEL_URL =
   'https://huggingface.co/facefusion/models-3.0.0/resolve/main/gfpgan_1.2.onnx';
 
 const ESRGAN_CACHE_KEY = 'esrgan-model-v2';
-const GFPGAN_CACHE_KEY = 'gfpgan-model-v2';
+const GFPGAN_CACHE_KEY = 'gfpgan-model-v3';
 const DB_NAME = 'ai-upscaler-cache';
 const DB_STORE = 'models';
 const MAX_INPUT_PX = 2000;
