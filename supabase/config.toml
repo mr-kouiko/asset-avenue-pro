@@ -172,3 +172,6 @@ verify_jwt = false
 
 [functions.scan-content]
 verify_jwt = false
+
+[functions.edge-tts]
+verify_jwt = true
