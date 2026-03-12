@@ -750,9 +750,12 @@ export function useAIUpscaler() {
           const tmpCtx = tmpCanvas.getContext('2d')!;
           const tileImageData = tmpCtx.createImageData(ow, oh);
           for (let i = 0; i < ow * oh; i++) {
-            tileImageData.data[i * 4] = Math.min(255, Math.max(0, Math.round(outputData[2 * ow * oh + i] * 255)));     // R ← channel 2
-            tileImageData.data[i * 4 + 1] = Math.min(255, Math.max(0, Math.round(outputData[ow * oh + i] * 255)));     // G ← channel 1
-            tileImageData.data[i * 4 + 2] = Math.min(255, Math.max(0, Math.round(outputData[i] * 255)));               // B ← channel 0
+            const r = (outputData[2 * ow * oh + i] * 0.5 + 0.5) * 255;
+            const g = (outputData[ow * oh + i] * 0.5 + 0.5) * 255;
+            const b = (outputData[i] * 0.5 + 0.5) * 255;
+            tileImageData.data[i * 4] = Math.min(255, Math.max(0, Math.round(r)));
+            tileImageData.data[i * 4 + 1] = Math.min(255, Math.max(0, Math.round(g)));
+            tileImageData.data[i * 4 + 2] = Math.min(255, Math.max(0, Math.round(b)));
             tileImageData.data[i * 4 + 3] = 255;
           }
           tmpCtx.putImageData(tileImageData, 0, 0);
