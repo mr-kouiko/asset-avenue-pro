@@ -137,16 +137,18 @@ export default function AdjustMusicDuration() {
   const encodeWav = (buffer: AudioBuffer): Blob => {
     const numCh = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
-    const length = buffer.length * numCh * 2 + 44;
-    const arrayBuffer = new ArrayBuffer(length);
+    const totalSamples = buffer.length * numCh;
+    const dataSize = totalSamples * 2;
+    const headerSize = 44;
+    const arrayBuffer = new ArrayBuffer(headerSize + dataSize);
     const view = new DataView(arrayBuffer);
 
+    // Write WAV header
     const writeString = (offset: number, str: string) => {
       for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
     };
-
     writeString(0, 'RIFF');
-    view.setUint32(4, length - 8, true);
+    view.setUint32(4, headerSize + dataSize - 8, true);
     writeString(8, 'WAVE');
     writeString(12, 'fmt ');
     view.setUint32(16, 16, true);
@@ -157,14 +159,16 @@ export default function AdjustMusicDuration() {
     view.setUint16(32, numCh * 2, true);
     view.setUint16(34, 16, true);
     writeString(36, 'data');
-    view.setUint32(40, buffer.length * numCh * 2, true);
+    view.setUint32(40, dataSize, true);
 
-    let offset = 44;
+    // Fast interleaved PCM write using Int16Array
+    const pcm = new Int16Array(arrayBuffer, headerSize);
+    const channels = Array.from({ length: numCh }, (_, ch) => buffer.getChannelData(ch));
     for (let i = 0; i < buffer.length; i++) {
+      const base = i * numCh;
       for (let ch = 0; ch < numCh; ch++) {
-        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-        offset += 2;
+        const s = channels[ch][i];
+        pcm[base + ch] = s < 0 ? (s * 0x8000) | 0 : (s * 0x7FFF) | 0;
       }
     }
     return new Blob([arrayBuffer], { type: 'audio/wav' });
