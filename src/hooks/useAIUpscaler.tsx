@@ -417,18 +417,18 @@ export function useAIUpscaler() {
   const getOrt = useCallback(async () => {
     if (ortRef.current) return ortRef.current;
     const ort = await import('onnxruntime-web');
-    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/';
+    ort.env.wasm.numThreads = 1; // avoid SharedArrayBuffer issues in preview
     ortRef.current = ort;
     return ort;
   }, []);
 
   // ── Get execution providers ────────────────────────────────────────────
   const getProviders = useCallback((): string[] => {
-    const providers: string[] = [];
-    if (backendRef.current === 'webgpu') providers.push('webgpu');
-    if (backendRef.current === 'webgl') providers.push('webgl');
-    providers.push('wasm');
-    return providers;
+    // Default onnxruntime-web build only ships the 'wasm' EP reliably.
+    // webgpu/webgl EPs require special builds and often cause silent failures,
+    // so we stick with 'wasm' which uses SIMD + threads when available.
+    return ['wasm'];
   }, []);
 
   // ── Load ESRGAN model ─────────────────────────────────────────────────
