@@ -40,12 +40,12 @@ export interface AIUpscalerState {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const ESRGAN_MODEL_URL =
-  'https://huggingface.co/Xenova/realesrgan-x4plus/resolve/main/realesrgan-x4plus.onnx';
+  'https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x4plus.onnx';
 const GFPGAN_MODEL_URL =
-  'https://huggingface.co/Xenova/gfpgan/resolve/main/gfpgan.onnx';
+  'https://huggingface.co/akhaliq/GFPGAN/resolve/main/GFPGANv1.4.onnx';
 
-const ESRGAN_CACHE_KEY = 'esrgan-model-v1';
-const GFPGAN_CACHE_KEY = 'gfpgan-model-v1';
+const ESRGAN_CACHE_KEY = 'esrgan-model-v2';
+const GFPGAN_CACHE_KEY = 'gfpgan-model-v2';
 const DB_NAME = 'ai-upscaler-cache';
 const DB_STORE = 'models';
 const MAX_INPUT_PX = 2000;
