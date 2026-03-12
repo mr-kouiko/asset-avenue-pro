@@ -5,10 +5,9 @@ import { Progress } from '@/components/ui/progress';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
-import { ComparisonSlider } from '@/components/upscale/ComparisonSlider';
 import {
-  Upload, Download, Loader2, Image as ImageIcon,
-  ScanFace, ChevronLeft,
+  Upload, Download, Loader2, ImagePlus,
+  ScanFace, ChevronLeft, RotateCcw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -72,7 +71,7 @@ export default function FaceEnhancer() {
           original: originalImage!,
           label: `${blendStrength}% strength`,
         };
-        return [entry, ...h].slice(0, 8);
+        return [entry, ...h].slice(0, 12);
       });
     } else if (ai.step === 'no-faces') {
       toast({ title: 'No faces detected', description: 'Try a photo with visible faces.', variant: 'destructive' });
@@ -97,216 +96,207 @@ export default function FaceEnhancer() {
   };
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
-      {/* ── Top bar ───────────────────────────────────────────────── */}
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(220 20% 7%)' }}>
+      {/* Top bar */}
       <header
-        className="h-12 flex items-center justify-between px-4 border-b shrink-0 z-20"
-        style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
+        style={{ borderBottom: '1px solid hsl(220 15% 15%)', background: 'hsl(220 20% 9%)' }}
       >
         <div className="flex items-center gap-3">
-          <Link
-            to="/studio-ai"
-            className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity"
-            style={{ color: 'hsl(var(--editor-text))' }}
-          >
-            <ChevronLeft className="w-4 h-4" /> Studio AI
+          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(220 10% 60%)' }}>
+            <ChevronLeft className="w-4 h-4" />
           </Link>
-          <span className="w-px h-5" style={{ background: 'hsl(var(--editor-border))' }} />
-          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
-            AI Face & Skin Enhancer
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(0 0% 90%)' }}>
+            Face & Skin Enhancer
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {ai.statusMessage && (
-            <span className="text-xs mr-2" style={{ color: 'hsl(var(--editor-text))' }}>
-              {ai.statusMessage}
-            </span>
-          )}
           {resultImage && (
-            <Button size="sm" variant="outline" onClick={handleDownload}
-              className="h-8 gap-1.5 border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10">
-              <Download className="w-3.5 h-3.5" /> Download
-            </Button>
+            <>
+              <Button size="sm" variant="ghost" onClick={handleDownload} className="h-8 w-8 p-0" style={{ color: 'hsl(220 10% 60%)' }}>
+                <Download className="w-4 h-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setResultImage(null)} className="h-8 w-8 p-0" style={{ color: 'hsl(220 10% 60%)' }}>
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+            </>
           )}
         </div>
       </header>
 
-      {/* ── Body ──────────────────────────────────────────────────── */}
+      {/* Body */}
       <div className="flex flex-1 min-h-0">
-        {/* ── Left sidebar ────────────────────────────────────────── */}
+        {/* Left sidebar */}
         <aside
-          className="w-64 shrink-0 overflow-y-auto border-r flex flex-col"
-          style={{ background: 'hsl(var(--editor-sidebar))', borderColor: 'hsl(var(--editor-border))' }}
+          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
+          style={{ background: 'hsl(220 20% 9%)', borderRight: '1px solid hsl(220 15% 15%)' }}
         >
-          <div className="p-4 space-y-5 flex-1">
-            {/* Upload */}
-            <div>
-              <label
-                className="flex items-center justify-center gap-2 w-full h-10 rounded-lg text-sm font-medium cursor-pointer transition-colors"
-                style={{
-                  background: originalImage ? 'hsl(var(--editor-panel))' : 'hsl(var(--editor-accent) / .15)',
-                  color: originalImage ? 'hsl(var(--editor-text))' : 'hsl(var(--editor-accent))',
-                  border: '1px solid hsl(var(--editor-border))',
-                }}
-              >
-                {originalImage ? (
-                  <><ImageIcon className="w-4 h-4" /> Change Image</>
-                ) : (
-                  <><Upload className="w-4 h-4" /> Upload Portrait</>
-                )}
-                <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-              </label>
-            </div>
+          <div className="p-4 space-y-4 flex-1">
+            {/* Add Image */}
+            <label
+              className="flex flex-col items-center justify-center w-full h-[140px] rounded-xl border border-dashed cursor-pointer transition-colors"
+              style={{ borderColor: 'hsl(220 15% 20%)', background: 'hsl(220 18% 11%)' }}
+            >
+              <ImagePlus className="w-8 h-8 mb-2" style={{ color: 'hsl(220 10% 50%)' }} />
+              <span className="text-sm font-medium" style={{ color: 'hsl(220 10% 70%)' }}>
+                {originalImage ? 'Change Image' : 'Add Image'}
+              </span>
+              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+            </label>
 
-            {/* Strength slider */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
-                  <ScanFace className="w-3.5 h-3.5" /> Enhancement Strength
-                </label>
-                <span className="text-xs tabular-nums" style={{ color: 'hsl(var(--editor-text))' }}>
-                  {blendStrength}%
-                </span>
-              </div>
-              <Slider
-                value={[blendStrength]}
-                onValueChange={([v]) => setBlendStrength(v)}
-                min={0} max={100} step={5}
-              />
-              <div className="flex justify-between text-[10px] mt-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>
-                <span>Natural</span><span>Full</span>
-              </div>
-            </div>
-
-            {/* Separator */}
-            <div className="h-px" style={{ background: 'hsl(var(--editor-border))' }} />
-
-            {/* Face info */}
-            {ai.facesDetected > 0 && (
-              <div className="flex items-center gap-2">
-                <ScanFace className="w-4 h-4" style={{ color: 'hsl(330 80% 60%)' }} />
-                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
-                  {ai.facesDetected} face(s) detected
-                </span>
-              </div>
-            )}
-
-            {/* Engine status */}
-            <div>
-              <p className="text-[11px] mb-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>Engine</p>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    background: ai.gpuAccelerated
-                      ? 'hsl(140 70% 50%)'
-                      : 'hsl(var(--editor-text) / .3)',
-                  }}
-                />
-                <span className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>
-                  {ai.backend.toUpperCase()}
-                </span>
-              </div>
-              {ai.modelStatus === 'downloading' && (
-                <div className="mt-2 space-y-1">
-                  <Progress value={ai.downloadProgress} className="h-1.5" />
-                  <p className="text-[10px]" style={{ color: 'hsl(var(--editor-text) / .5)' }}>
-                    Downloading GFPGAN…
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Enhance button */}
-          <div className="p-4 border-t" style={{ borderColor: 'hsl(var(--editor-border))' }}>
+            {/* Enhance button */}
             <Button
-              className="w-full h-10 font-semibold"
+              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleEnhance}
               disabled={!originalImage || ai.isProcessing || ai.backend === 'canvas-only'}
               style={{
-                background: ai.isProcessing ? 'hsl(var(--editor-panel))' : 'hsl(330 80% 55%)',
-                color: '#fff',
+                background: 'hsl(220 18% 15%)',
+                color: ai.isProcessing ? 'hsl(220 10% 40%)' : 'hsl(220 10% 60%)',
+                border: '1px solid hsl(220 15% 18%)',
               }}
             >
               {ai.isProcessing ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing…</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
               ) : (
-                <><ScanFace className="w-4 h-4 mr-2" /> Enhance Faces</>
+                <><ScanFace className="w-4 h-4" /> Enhance</>
               )}
             </Button>
+
             {ai.isProcessing && ai.processingProgress > 0 && (
-              <Progress value={ai.processingProgress} className="h-1 mt-2" />
+              <Progress value={ai.processingProgress} className="h-1" />
             )}
+
+            {/* Settings header */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: 'hsl(0 0% 85%)' }}>
+                  Enhance Settings
+                </span>
+                <button
+                  onClick={() => { setBlendStrength(50); setResultImage(null); }}
+                  className="text-xs flex items-center gap-1 hover:opacity-80 transition-opacity"
+                  style={{ color: 'hsl(220 10% 50%)' }}
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset
+                </button>
+              </div>
+
+              {/* Enhancement Strength */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium" style={{ color: 'hsl(0 0% 85%)' }}>Enhancement Strength</label>
+                  <span className="text-[11px] tabular-nums" style={{ color: 'hsl(220 10% 45%)' }}>{blendStrength}%</span>
+                </div>
+                <Slider value={[blendStrength]} onValueChange={([v]) => setBlendStrength(v)} min={0} max={100} step={5} />
+                <div className="flex justify-between text-[10px] mt-1.5" style={{ color: 'hsl(220 10% 40%)' }}>
+                  <span>Natural</span><span>Full Restoration</span>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-px my-3" style={{ background: 'hsl(220 15% 15%)' }} />
+
+              {/* Face info */}
+              {ai.facesDetected > 0 && (
+                <div className="flex items-center gap-2 mb-3">
+                  <ScanFace className="w-4 h-4" style={{ color: 'hsl(330 70% 60%)' }} />
+                  <span className="text-xs" style={{ color: 'hsl(220 10% 70%)' }}>
+                    {ai.facesDetected} face(s) detected
+                  </span>
+                </div>
+              )}
+
+              {/* Engine status */}
+              <div>
+                <p className="text-[11px] mb-1" style={{ color: 'hsl(220 10% 40%)' }}>Engine</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: ai.gpuAccelerated ? 'hsl(140 70% 50%)' : 'hsl(220 10% 30%)' }} />
+                  <span className="text-xs" style={{ color: 'hsl(220 10% 60%)' }}>{ai.backend.toUpperCase()}</span>
+                </div>
+                {ai.modelStatus === 'downloading' && (
+                  <div className="mt-2 space-y-1">
+                    <Progress value={ai.downloadProgress} className="h-1" />
+                    <p className="text-[10px]" style={{ color: 'hsl(220 10% 40%)' }}>Downloading GFPGAN…</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </aside>
 
-        {/* ── Center viewer ──────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 flex items-center justify-center p-6 min-h-0">
-            {!originalImage ? (
-              <label
-                className="w-full max-w-[1100px] aspect-[16/10] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors hover:border-[hsl(330_80%_55%/.5)]"
-                style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-panel) / .5)' }}
-              >
-                <ScanFace className="w-10 h-10 mb-3" style={{ color: 'hsl(var(--editor-text) / .4)' }} />
-                <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
-                  <span className="font-medium" style={{ color: 'hsl(330 80% 55%)' }}>Click to upload</span> a portrait
-                </p>
-                <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text) / .4)' }}>
-                  Works best with visible faces · Max 25 MB
-                </p>
-                <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-              </label>
-            ) : resultImage ? (
-              <div className="w-full max-w-[1100px] h-full min-h-0">
-                <ComparisonSlider
-                  originalSrc={originalImage}
-                  resultSrc={resultImage}
-                  className="w-full h-full rounded-lg"
-                />
+        {/* Center area */}
+        <div className="flex-1 flex flex-col min-h-0" style={{ background: 'hsl(220 15% 11%)' }}>
+          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-8 gap-6 min-h-0">
+            {!originalImage && !resultImage ? (
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-4" style={{ color: 'hsl(0 0% 90%)' }}>
+                  Add an Image to get started
+                </h2>
+                <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-colors"
+                  style={{ background: 'hsl(220 18% 15%)', color: 'hsl(220 10% 70%)', border: '1px solid hsl(220 15% 20%)' }}
+                >
+                  <Upload className="w-4 h-4" /> Add an image
+                  <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+                </label>
               </div>
             ) : (
-              <div className="w-full max-w-[1100px] h-full min-h-0 flex items-center justify-center rounded-lg overflow-hidden"
-                style={{ background: 'hsl(var(--editor-panel))' }}
-              >
-                {ai.isProcessing ? (
-                  <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'hsl(330 80% 55%)' }} />
-                    <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>{ai.statusMessage}</p>
-                    {ai.processingProgress > 0 && (
-                      <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text) / .5)' }}>{ai.processingProgress}%</p>
-                    )}
+              <>
+                {originalImage && (
+                  <div className="relative max-w-[700px] w-full">
+                    <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold"
+                      style={{ background: 'hsl(140 60% 45%)', color: '#fff' }}>
+                      Input
+                    </span>
+                    <img src={originalImage} alt="Input" className="w-full rounded-lg object-contain"
+                      style={{ maxHeight: resultImage ? '280px' : '450px', background: 'hsl(220 15% 8%)' }} />
                   </div>
-                ) : (
-                  <img src={originalImage} alt="Original" className="max-w-full max-h-full object-contain" />
                 )}
-              </div>
+
+                {ai.isProcessing && (
+                  <div className="text-center py-6">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'hsl(330 70% 60%)' }} />
+                    <p className="text-sm" style={{ color: 'hsl(220 10% 60%)' }}>{ai.statusMessage}</p>
+                    {ai.processingProgress > 0 && <p className="text-xs mt-1" style={{ color: 'hsl(220 10% 40%)' }}>{ai.processingProgress}%</p>}
+                  </div>
+                )}
+
+                {resultImage && (
+                  <div className="relative max-w-[900px] w-full">
+                    <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold"
+                      style={{ background: 'hsl(220 80% 55%)', color: '#fff' }}>
+                      Output
+                    </span>
+                    <img src={resultImage} alt="Output" className="w-full rounded-lg object-contain"
+                      style={{ maxHeight: '450px', background: 'hsl(220 15% 8%)' }} />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          {/* ── Bottom history strip ──────────────────────────────── */}
-          {history.length > 0 && (
-            <div
-              className="h-20 border-t flex items-center gap-2 px-4 overflow-x-auto shrink-0 scrollbar-hide"
-              style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
-            >
-              {history.map((entry) => (
+          {/* Bottom thumbnail strip */}
+          <div
+            className="h-[72px] flex items-center gap-2 px-4 overflow-x-auto shrink-0 scrollbar-hide"
+            style={{ borderTop: '1px solid hsl(220 15% 15%)', background: 'hsl(220 20% 9%)' }}
+          >
+            {history.length > 0 ? (
+              history.map((entry) => (
                 <button
                   key={entry.id}
                   onClick={() => restoreHistory(entry)}
-                  className="h-14 w-14 shrink-0 rounded-md overflow-hidden border-2 transition-all hover:border-[hsl(330_80%_55%)]"
-                  style={{ borderColor: 'hsl(var(--editor-border))' }}
+                  className="h-[52px] w-[52px] shrink-0 rounded-lg overflow-hidden transition-all hover:ring-2"
+                  style={{ border: '2px solid hsl(220 15% 18%)', '--tw-ring-color': 'hsl(330 70% 60%)' } as React.CSSProperties}
                   title={entry.label}
                 >
                   <img src={entry.thumb} alt={entry.label} className="w-full h-full object-cover" />
                 </button>
-              ))}
-              <span className="text-[10px] shrink-0 ml-1" style={{ color: 'hsl(var(--editor-text) / .4)' }}>
-                Recent results
+              ))
+            ) : (
+              <span className="text-xs mx-auto" style={{ color: 'hsl(220 10% 30%)' }}>
+                Recent results will appear here
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
