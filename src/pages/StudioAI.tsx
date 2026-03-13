@@ -406,13 +406,14 @@ export default function StudioAI() {
             {benefits.map((benefit) => (
               <div 
                 key={benefit.title}
-                className="bg-slate-800/30 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/30 transition-all text-center"
+                className="rounded-xl p-6 transition-all text-center"
+                style={{ background: 'hsl(var(--editor-panel))', border: '1px solid hsl(var(--editor-border))' }}
               >
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30 mx-auto mb-4">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl mx-auto mb-4" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
                   {benefit.icon}
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{benefit.title}</h3>
-                <p className="text-sm text-slate-400">{benefit.description}</p>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{benefit.title}</h3>
+                <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>{benefit.description}</p>
               </div>
             ))}
           </div>
