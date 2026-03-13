@@ -270,7 +270,7 @@ export default function StudioAI() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
+    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
       <Header />
       
       <main>
