@@ -724,7 +724,7 @@ const Marketplace = () => {
                 <Skeleton className="h-4 w-32" />
               ) : (
                 <span className="text-sm text-muted-foreground">
-                  {filteredContent.length} results found
+                  {(filteredContent.length + pexelsTotalCount).toLocaleString()} results found
                 </span>
               )}
               <Badge variant="secondary">All</Badge>
