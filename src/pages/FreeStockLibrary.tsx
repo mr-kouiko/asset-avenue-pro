@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Search, Camera, Video, Download, ExternalLink, Loader2, User } from 'lucide-react';
+import { Search, Camera, Video, Download, ExternalLink, Loader2, User, Music, FileText } from 'lucide-react';
 import { LazyImage } from '@/components/LazyImage';
 import { useSEO } from '@/hooks/useSEO';
+import { useFreeContent, FreeItem } from '@/hooks/useFreeContent';
+import { useNavigate } from 'react-router-dom';
 
 interface PexelsPhoto {
   id: number;
@@ -40,29 +42,46 @@ interface PexelsVideo {
   video_files: { id: number; quality: string; file_type: string; link: string; width: number; height: number }[];
 }
 
-type MediaType = 'photos' | 'videos';
+type MediaType = 'all' | 'photos' | 'videos';
+
+interface UnifiedItem {
+  source: 'pexels' | 'visustock';
+  type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook';
+  id: string;
+  thumbnail: string;
+  title: string;
+  author: string;
+  authorUrl?: string;
+  originalUrl?: string;
+  pexelsPhoto?: PexelsPhoto;
+  pexelsVideo?: PexelsVideo;
+  visustockItem?: FreeItem;
+}
 
 const FreeStockLibrary = () => {
   useSEO({
     title: 'Free Stock Library | Photos & Videos | VisuStock',
-    description: 'Browse and download free stock photos and videos powered by Pexels. High-quality media for your creative projects.',
+    description: 'Browse and download free stock photos and videos. High-quality media from VisuStock creators and Pexels.',
   });
 
-  const [query, setQuery] = useState('');
+  const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
-  const [mediaType, setMediaType] = useState<MediaType>('photos');
-  const [photos, setPhotos] = useState<PexelsPhoto[]>([]);
-  const [videos, setVideos] = useState<PexelsVideo[]>([]);
+  const [query, setQuery] = useState('');
+  const [mediaType, setMediaType] = useState<MediaType>('all');
+  const [pexelsPhotos, setPexelsPhotos] = useState<PexelsPhoto[]>([]);
+  const [pexelsVideos, setPexelsVideos] = useState<PexelsVideo[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
-  const [selectedPhoto, setSelectedPhoto] = useState<PexelsPhoto | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<PexelsVideo | null>(null);
+  const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const fetchMedia = useCallback(async (searchQuery: string, type: MediaType, pageNum: number, append = false) => {
+  // Fetch VisuStock free content
+  const { content: visustockContent, loading: visustockLoading } = useFreeContent(50);
+
+  const fetchPexels = useCallback(async (searchQuery: string, type: 'photos' | 'videos', pageNum: number, append = false) => {
     setLoading(true);
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -75,11 +94,7 @@ const FreeStockLibrary = () => {
 
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/pexels-search?${params}`,
-        {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        }
+        { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
       );
 
       if (!res.ok) throw new Error('Failed to fetch');
@@ -87,13 +102,13 @@ const FreeStockLibrary = () => {
 
       if (type === 'photos') {
         const newPhotos = result.photos || [];
-        setPhotos(prev => append ? [...prev, ...newPhotos] : newPhotos);
-        setTotalResults(result.total_results || 0);
+        setPexelsPhotos(prev => append ? [...prev, ...newPhotos] : newPhotos);
+        setTotalResults(prev => append ? prev : (result.total_results || 0));
         setHasMore(newPhotos.length === 30);
       } else {
         const newVideos = result.videos || [];
-        setVideos(prev => append ? [...prev, ...newVideos] : newVideos);
-        setTotalResults(result.total_results || 0);
+        setPexelsVideos(prev => append ? [...prev, ...newVideos] : newVideos);
+        setTotalResults(prev => append ? prev : (result.total_results || 0));
         setHasMore(newVideos.length === 30);
       }
     } catch (err) {
@@ -103,25 +118,31 @@ const FreeStockLibrary = () => {
     }
   }, []);
 
-  // Initial load with curated content
+  // Initial load
   useEffect(() => {
-    fetchMedia('', mediaType, 1);
+    if (mediaType === 'all' || mediaType === 'photos') {
+      fetchPexels('', 'photos', 1);
+    }
+    if (mediaType === 'videos') {
+      fetchPexels('', 'videos', 1);
+    }
   }, [mediaType]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setQuery(searchInput);
     setPage(1);
-    setPhotos([]);
-    setVideos([]);
-    fetchMedia(searchInput, mediaType, 1);
+    setPexelsPhotos([]);
+    setPexelsVideos([]);
+    const pexelType = mediaType === 'videos' ? 'videos' : 'photos';
+    fetchPexels(searchInput, pexelType, 1);
   };
 
   const handleTypeChange = (type: MediaType) => {
     setMediaType(type);
     setPage(1);
-    setPhotos([]);
-    setVideos([]);
+    setPexelsPhotos([]);
+    setPexelsVideos([]);
   };
 
   // Infinite scroll
@@ -133,7 +154,8 @@ const FreeStockLibrary = () => {
         if (entry.isIntersecting && hasMore && !loading) {
           const nextPage = page + 1;
           setPage(nextPage);
-          fetchMedia(query, mediaType, nextPage, true);
+          const pexelType = mediaType === 'videos' ? 'videos' : 'photos';
+          fetchPexels(query, pexelType, nextPage, true);
         }
       },
       { threshold: 0.1 }
@@ -144,15 +166,123 @@ const FreeStockLibrary = () => {
     }
 
     return () => observerRef.current?.disconnect();
-  }, [hasMore, loading, page, query, mediaType, fetchMedia]);
+  }, [hasMore, loading, page, query, mediaType, fetchPexels]);
 
-  const handleDownloadPhoto = (photo: PexelsPhoto) => {
+  // Build unified items
+  const unifiedItems: UnifiedItem[] = (() => {
+    const items: UnifiedItem[] = [];
+
+    // Add VisuStock free items (filtered by media type and search query)
+    const filteredVisustock = visustockContent.filter(item => {
+      if (mediaType === 'photos' && item.type !== 'photo') return false;
+      if (mediaType === 'videos' && item.type !== 'video') return false;
+      if (query) {
+        const q = query.toLowerCase();
+        return item.title.toLowerCase().includes(q) || item.author.toLowerCase().includes(q);
+      }
+      return true;
+    });
+
+    filteredVisustock.forEach(item => {
+      items.push({
+        source: 'visustock',
+        type: item.type,
+        id: `vs-${item.id}`,
+        thumbnail: item.thumbnail,
+        title: item.title,
+        author: item.author,
+        visustockItem: item,
+      });
+    });
+
+    // Add Pexels photos
+    if (mediaType !== 'videos') {
+      pexelsPhotos.forEach(photo => {
+        items.push({
+          source: 'pexels',
+          type: 'photo',
+          id: `px-photo-${photo.id}`,
+          thumbnail: photo.src.medium,
+          title: photo.alt || 'Pexels photo',
+          author: photo.photographer,
+          authorUrl: photo.photographer_url,
+          originalUrl: photo.url,
+          pexelsPhoto: photo,
+        });
+      });
+    }
+
+    // Add Pexels videos
+    if (mediaType === 'videos' || mediaType === 'all') {
+      pexelsVideos.forEach(video => {
+        items.push({
+          source: 'pexels',
+          type: 'video',
+          id: `px-video-${video.id}`,
+          thumbnail: video.image,
+          title: `Video by ${video.user.name}`,
+          author: video.user.name,
+          authorUrl: video.user.url,
+          originalUrl: video.url,
+          pexelsVideo: video,
+        });
+      });
+    }
+
+    // Interleave: put VisuStock items at intervals among Pexels items
+    const vsItems = items.filter(i => i.source === 'visustock');
+    const pxItems = items.filter(i => i.source === 'pexels');
+
+    if (vsItems.length === 0) return pxItems;
+    if (pxItems.length === 0) return vsItems;
+
+    const mixed: UnifiedItem[] = [];
+    const interval = Math.max(1, Math.floor(pxItems.length / (vsItems.length + 1)));
+    let vsIdx = 0;
+
+    pxItems.forEach((item, i) => {
+      mixed.push(item);
+      if (vsIdx < vsItems.length && (i + 1) % interval === 0) {
+        mixed.push(vsItems[vsIdx]);
+        vsIdx++;
+      }
+    });
+
+    // Append remaining VisuStock items
+    while (vsIdx < vsItems.length) {
+      mixed.push(vsItems[vsIdx]);
+      vsIdx++;
+    }
+
+    return mixed;
+  })();
+
+  const handleItemClick = (item: UnifiedItem) => {
+    if (item.source === 'visustock' && item.visustockItem) {
+      // Navigate to product detail for VisuStock items
+      navigate(`/product/${item.visustockItem.id}`);
+    } else {
+      setSelectedItem(item);
+    }
+  };
+
+  const handleDownloadPexelsPhoto = (photo: PexelsPhoto) => {
     window.open(photo.src.original, '_blank');
   };
 
-  const handleDownloadVideo = (video: PexelsVideo) => {
+  const handleDownloadPexelsVideo = (video: PexelsVideo) => {
     const best = video.video_files.reduce((a, b) => (a.width > b.width ? a : b));
     window.open(best.link, '_blank');
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'video': return <Video className="h-3 w-3" />;
+      case 'audio': return <Music className="h-3 w-3" />;
+      case 'pdf':
+      case 'ebook': return <FileText className="h-3 w-3" />;
+      default: return <Camera className="h-3 w-3" />;
+    }
   };
 
   return (
@@ -165,7 +295,7 @@ const FreeStockLibrary = () => {
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold mb-3">Free Stock Library</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Browse millions of free photos and videos powered by Pexels. Use them in your projects or enhance them with our AI tools.
+            Browse free content from VisuStock creators and millions of photos &amp; videos from Pexels — all in one place.
           </p>
         </div>
 
@@ -188,6 +318,13 @@ const FreeStockLibrary = () => {
 
           <div className="flex items-center justify-center gap-2">
             <Button
+              variant={mediaType === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleTypeChange('all')}
+            >
+              All
+            </Button>
+            <Button
               variant={mediaType === 'photos' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleTypeChange('photos')}
@@ -207,134 +344,117 @@ const FreeStockLibrary = () => {
             </Button>
           </div>
 
-          {totalResults > 0 && (
+          {(totalResults > 0 || visustockContent.length > 0) && (
             <p className="text-center text-sm text-muted-foreground">
-              {totalResults.toLocaleString()} results {query && `for "${query}"`}
+              {visustockContent.length > 0 && (
+                <span>{visustockContent.length} VisuStock items</span>
+              )}
+              {visustockContent.length > 0 && totalResults > 0 && ' + '}
+              {totalResults > 0 && (
+                <span>{totalResults.toLocaleString()} Pexels results</span>
+              )}
+              {query && ` for "${query}"`}
             </p>
           )}
         </div>
 
-        {/* Photo Grid */}
-        {mediaType === 'photos' && (
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="break-inside-avoid group relative cursor-pointer rounded-lg overflow-hidden border border-border"
-                onClick={() => setSelectedPhoto(photo)}
-              >
-                <div style={{ aspectRatio: `${photo.width}/${photo.height}` }}>
-                  <LazyImage
-                    src={photo.src.medium}
-                    alt={photo.alt || 'Pexels photo'}
-                    className="w-full h-full"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <User className="h-3.5 w-3.5 text-white shrink-0" />
-                        <span className="text-white text-xs truncate">{photo.photographer}</span>
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] shrink-0 bg-white/20 text-white border-0">
-                        via Pexels
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Video Grid */}
-        {mediaType === 'videos' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {videos.map((video) => (
-              <div
-                key={video.id}
-                className="group relative cursor-pointer rounded-lg overflow-hidden border border-border aspect-video"
-                onClick={() => setSelectedVideo(video)}
-              >
+        {/* Unified Grid */}
+        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+          {unifiedItems.map((item) => (
+            <div
+              key={item.id}
+              className="break-inside-avoid group relative cursor-pointer rounded-lg overflow-hidden border border-border"
+              onClick={() => handleItemClick(item)}
+            >
+              <div className={item.type === 'video' ? 'aspect-video' : ''} style={
+                item.pexelsPhoto ? { aspectRatio: `${item.pexelsPhoto.width}/${item.pexelsPhoto.height}` } : 
+                item.type !== 'video' ? { aspectRatio: '4/3' } : undefined
+              }>
                 <LazyImage
-                  src={video.image}
-                  alt={`Video by ${video.user.name}`}
+                  src={item.thumbnail}
+                  alt={item.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-2 left-2">
-                  <Badge className="bg-black/60 text-white border-0 text-[10px]">
-                    <Video className="h-3 w-3 mr-1" />
-                    Video
+              </div>
+
+              {/* Source & Type badges */}
+              <div className="absolute top-2 left-2 flex gap-1.5">
+                <Badge className={`text-[10px] border-0 ${
+                  item.source === 'visustock'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-black/60 text-white'
+                }`}>
+                  {item.source === 'visustock' ? 'VisuStock' : 'Pexels'}
+                </Badge>
+                {item.type !== 'photo' && (
+                  <Badge className="bg-black/60 text-white border-0 text-[10px] gap-1">
+                    {getTypeIcon(item.type)}
+                    {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                   </Badge>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-white" />
-                      <span className="text-white text-xs">{video.user.name}</span>
+                )}
+              </div>
+
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <User className="h-3.5 w-3.5 text-white shrink-0" />
+                      <span className="text-white text-xs truncate">{item.author}</span>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] bg-white/20 text-white border-0">
-                      via Pexels
-                    </Badge>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
 
         {/* Loading / Load more trigger */}
-        {loading && (
+        {(loading || visustockLoading) && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
-        {!loading && hasMore && (photos.length > 0 || videos.length > 0) && (
+        {!loading && hasMore && unifiedItems.length > 0 && (
           <div ref={loadMoreRef} className="h-20" />
         )}
-        {!loading && !hasMore && (photos.length > 0 || videos.length > 0) && (
+        {!loading && !hasMore && unifiedItems.length > 0 && (
           <p className="text-center py-8 text-muted-foreground">No more results</p>
         )}
       </main>
 
-      {/* Photo Preview Modal */}
-      <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
+      {/* Pexels Photo Preview Modal */}
+      <Dialog open={!!selectedItem?.pexelsPhoto} onOpenChange={() => setSelectedItem(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogTitle className="sr-only">Photo Preview</DialogTitle>
-          {selectedPhoto && (
+          {selectedItem?.pexelsPhoto && (
             <div className="space-y-4">
               <img
-                src={selectedPhoto.src.large2x}
-                alt={selectedPhoto.alt || 'Photo preview'}
+                src={selectedItem.pexelsPhoto.src.large2x}
+                alt={selectedItem.pexelsPhoto.alt || 'Photo preview'}
                 className="w-full rounded-lg"
               />
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <p className="font-medium">
                     Photo by{' '}
-                    <a
-                      href={selectedPhoto.photographer_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {selectedPhoto.photographer}
+                    <a href={selectedItem.pexelsPhoto.photographer_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {selectedItem.pexelsPhoto.photographer}
                     </a>{' '}
                     <span className="text-muted-foreground">via Pexels</span>
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedPhoto.width} × {selectedPhoto.height}
+                    {selectedItem.pexelsPhoto.width} × {selectedItem.pexelsPhoto.height}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <a href={selectedPhoto.url} target="_blank" rel="noopener noreferrer" className="gap-2">
+                    <a href={selectedItem.pexelsPhoto.url} target="_blank" rel="noopener noreferrer" className="gap-2">
                       <ExternalLink className="h-4 w-4" />
                       View on Pexels
                     </a>
                   </Button>
-                  <Button size="sm" onClick={() => handleDownloadPhoto(selectedPhoto)} className="gap-2">
+                  <Button size="sm" onClick={() => handleDownloadPexelsPhoto(selectedItem.pexelsPhoto!)} className="gap-2">
                     <Download className="h-4 w-4" />
                     Download
                   </Button>
@@ -345,44 +465,39 @@ const FreeStockLibrary = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Video Preview Modal */}
-      <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+      {/* Pexels Video Preview Modal */}
+      <Dialog open={!!selectedItem?.pexelsVideo} onOpenChange={() => setSelectedItem(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogTitle className="sr-only">Video Preview</DialogTitle>
-          {selectedVideo && (
+          {selectedItem?.pexelsVideo && (
             <div className="space-y-4">
               <video
-                src={selectedVideo.video_files.find(f => f.quality === 'hd')?.link || selectedVideo.video_files[0]?.link}
+                src={selectedItem.pexelsVideo.video_files.find(f => f.quality === 'hd')?.link || selectedItem.pexelsVideo.video_files[0]?.link}
                 controls
                 className="w-full rounded-lg"
-                poster={selectedVideo.image}
+                poster={selectedItem.pexelsVideo.image}
               />
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <p className="font-medium">
                     Video by{' '}
-                    <a
-                      href={selectedVideo.user.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {selectedVideo.user.name}
+                    <a href={selectedItem.pexelsVideo.user.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {selectedItem.pexelsVideo.user.name}
                     </a>{' '}
                     <span className="text-muted-foreground">via Pexels</span>
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedVideo.width} × {selectedVideo.height}
+                    {selectedItem.pexelsVideo.width} × {selectedItem.pexelsVideo.height}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <a href={selectedVideo.url} target="_blank" rel="noopener noreferrer" className="gap-2">
+                    <a href={selectedItem.pexelsVideo.url} target="_blank" rel="noopener noreferrer" className="gap-2">
                       <ExternalLink className="h-4 w-4" />
                       View on Pexels
                     </a>
                   </Button>
-                  <Button size="sm" onClick={() => handleDownloadVideo(selectedVideo)} className="gap-2">
+                  <Button size="sm" onClick={() => handleDownloadPexelsVideo(selectedItem.pexelsVideo!)} className="gap-2">
                     <Download className="h-4 w-4" />
                     Download
                   </Button>
