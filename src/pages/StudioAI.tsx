@@ -286,9 +286,9 @@ export default function StudioAI() {
           <div className="relative container mx-auto px-4 py-20 md:py-28 max-w-6xl">
             <div className="text-center">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 mb-8">
-                <Sparkles className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">AI-Powered Creative Suite</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ background: 'hsl(var(--editor-accent) / 0.1)', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
+                <Sparkles className="w-4 h-4" style={{ color: 'hsl(var(--editor-accent))' }} />
+                <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-accent))' }}>AI-Powered Creative Suite</span>
               </div>
               
               {/* Title */}
