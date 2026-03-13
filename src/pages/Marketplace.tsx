@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { SlidersHorizontal, ChevronDown, Video, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSearchParams, useParams, useLocation } from "react-router-dom";
+import { useSearchParams, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
@@ -33,6 +33,14 @@ const Marketplace = () => {
   const { t, language } = useLanguage();
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Redirect ?price=free to the unified Free Stock Library page
+  useEffect(() => {
+    if (searchParams.get('price') === 'free') {
+      navigate('/free-stock-library', { replace: true });
+    }
+  }, [searchParams, navigate]);
   
   // Detect if page has filters/search that should not be indexed
   const hasFilterParams = useMemo(() => {
