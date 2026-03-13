@@ -6,10 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Search, Camera, Video, Download, ExternalLink, Loader2, X, User } from 'lucide-react';
+import { Search, Camera, Video, Download, ExternalLink, Loader2, User } from 'lucide-react';
 import { LazyImage } from '@/components/LazyImage';
 import { useSEO } from '@/hooks/useSEO';
-import { supabase } from '@/integrations/supabase/client';
 
 interface PexelsPhoto {
   id: number;
