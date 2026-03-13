@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Wand2, Download, ChevronLeft, AlertTriangle } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Loader2, Sparkles, Wand2, Download, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
 
@@ -197,186 +197,122 @@ export default function AIImageGenerator() {
   };
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
-      {/* Top bar */}
-      <header
-        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
-        style={{ borderBottom: '1px solid hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
-      >
-        <div className="flex items-center gap-3">
-          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
-            <ChevronLeft className="w-4 h-4" />
-          </Link>
-          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
-            {t.title}
-          </h1>
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(var(--editor-accent) / 0.2)', color: 'hsl(var(--editor-accent))' }}>
-            AI
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {generatedImage && (
-            <Button size="sm" variant="ghost" onClick={handleDownload} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
-              <Download className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </header>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{t.title}</h1>
+        <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
+          {language === 'en' ? 'Transform your ideas into stunning visuals' : 'Transformez vos idées en visuels époustouflants'}
+        </p>
+      </div>
 
-      {/* Body */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left sidebar */}
-        <aside
-          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
-          style={{ background: 'hsl(var(--editor-sidebar))', borderRight: '1px solid hsl(var(--editor-border))' }}
-        >
-          <div className="p-4 space-y-4 flex-1">
-            {/* Credits info */}
-            {user && creditsBalance !== null && (
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Sidebar */}
+        <div className="md:col-span-1 space-y-4">
+          {/* Credits */}
+          {user && creditsBalance !== null && (
+            <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
               <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: creditsBalance > 0 ? 'hsl(var(--editor-accent))' : 'hsl(0 70% 60%)' }}>
+                <span className="text-sm" style={{ color: creditsBalance > 0 ? 'hsl(var(--editor-accent))' : 'hsl(0 70% 60%)' }}>
                   {t.creditsAvailable(creditsBalance)}
                 </span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => navigate('/buy-credits')}
-                  className="text-xs p-0 h-auto"
-                  style={{ color: 'hsl(var(--editor-accent))' }}
-                >
+                <Button variant="link" size="sm" onClick={() => navigate('/buy-credits')} className="p-0 h-auto text-sm" style={{ color: 'hsl(var(--editor-accent))' }}>
                   {t.buyCredits}
                 </Button>
               </div>
-            )}
-
-            {/* Prompt input */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'hsl(var(--editor-text))' }}>
-                <Sparkles className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-accent))' }} />
-                {t.promptLabel}
-              </label>
-              <Textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={t.promptPlaceholder}
-                rows={8}
-                className="resize-none text-sm"
-                disabled={isGenerating}
-                style={{
-                  background: 'hsl(var(--editor-bg))',
-                  borderColor: 'hsl(var(--editor-border))',
-                  color: 'hsl(var(--editor-text-bright))',
-                }}
-              />
             </div>
+          )}
+
+          {/* Prompt Input */}
+          <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+              <Sparkles className="w-4 h-4 inline mr-1" style={{ color: 'hsl(var(--editor-accent))' }} />
+              {t.promptLabel}
+            </label>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={t.promptPlaceholder}
+              rows={6}
+              className="resize-none mb-3"
+              disabled={isGenerating}
+              style={{
+                background: 'hsl(var(--editor-bg))',
+                borderColor: 'hsl(var(--editor-border))',
+                color: 'hsl(var(--editor-text-bright))'
+              }}
+            />
 
             {/* Error warnings */}
             {aiErrorCode && (
-              <div className="flex items-start gap-2 p-2 rounded-lg text-xs" style={{ background: 'hsl(0 70% 50% / 0.1)', color: 'hsl(0 70% 70%)' }}>
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 p-3 rounded-lg text-xs mb-3" style={{ background: 'hsl(0 70% 50% / 0.1)', color: 'hsl(0 70% 70%)' }}>
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{aiErrorCode === 'quota_exceeded' ? t.quotaDesc : aiErrorCode === 'rate_limited' ? t.rateLimitedDesc : t.workspaceCreditsDesc}</span>
               </div>
             )}
 
-            {/* Generate button */}
             <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded'}
-              style={{
-                background: 'hsl(var(--editor-accent))',
-                color: '#fff',
-                opacity: (isGenerating || !prompt.trim()) ? 0.5 : 1,
-              }}
+              className="w-full gap-2"
+              style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
             >
-              {isGenerating ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> {t.generating}</>
-              ) : (
-                <><Wand2 className="w-4 h-4" /> {t.generate}</>
-              )}
+              {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> {t.generating}</> : <><Wand2 className="w-4 h-4" /> {t.generate}</>}
             </Button>
+          </div>
 
-            {/* Divider */}
-            <div className="h-px" style={{ background: 'hsl(var(--editor-border))' }} />
-
-            {/* Prompt suggestions */}
+          {/* Suggestions */}
+          <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+            <h3 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--editor-text-bright))' }}>{t.suggestions}</h3>
             <div className="space-y-2">
-              <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: 'hsl(var(--editor-text-bright))' }}>
-                {t.suggestions}
-              </span>
-              <div className="space-y-1.5">
-                {t.examplePrompts.map((example, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPrompt(example)}
-                    disabled={isGenerating}
-                    className="w-full text-left p-2.5 rounded-lg text-xs transition-colors hover:opacity-80 disabled:opacity-40 line-clamp-2"
-                    style={{
-                      background: 'hsl(var(--editor-bg))',
-                      color: 'hsl(var(--editor-text))',
-                      border: '1px solid hsl(var(--editor-border))',
-                    }}
-                  >
-                    {example}
-                  </button>
-                ))}
-              </div>
+              {t.examplePrompts.map((example, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPrompt(example)}
+                  disabled={isGenerating}
+                  className="w-full text-left p-2 rounded-lg text-xs transition-colors hover:opacity-80 disabled:opacity-40"
+                  style={{
+                    background: 'hsl(var(--editor-bg))',
+                    color: 'hsl(var(--editor-text))',
+                    border: '1px solid hsl(var(--editor-border))'
+                  }}
+                >
+                  {example}
+                </button>
+              ))}
             </div>
           </div>
-        </aside>
+        </div>
 
-        {/* Main workspace */}
-        <main className="flex-1 flex items-center justify-center p-8 overflow-auto" style={{ background: 'hsl(var(--editor-bg))' }}>
-          <div className="w-full max-w-[800px]">
+        {/* Main Area */}
+        <div className="md:col-span-2">
+          <div className="rounded-xl p-6 min-h-[500px] flex items-center justify-center" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
             {generatedImage ? (
-              <div className="space-y-4">
-                <div className="relative">
-                  <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
-                    Generated
-                  </span>
-                  <img
-                    src={generatedImage}
-                    alt="AI Generated"
-                    className="w-full rounded-lg object-contain"
-                    style={{ maxHeight: '550px', background: 'hsl(var(--editor-panel))' }}
-                  />
-                </div>
-                <div className="flex justify-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDownload}
-                    style={{ color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
-                  >
-                    <Download className="mr-2 h-4 w-4" /> {t.download}
-                  </Button>
-                </div>
+              <div className="w-full text-center">
+                <img
+                  src={generatedImage}
+                  alt="AI Generated"
+                  className="w-full max-w-lg mx-auto rounded-lg mb-4"
+                  style={{ background: 'hsl(var(--editor-bg))' }}
+                />
+                <Button onClick={handleDownload} variant="outline" className="gap-2" style={{ color: 'hsl(var(--editor-text-bright))', borderColor: 'hsl(var(--editor-border))' }}>
+                  <Download className="w-4 h-4" /> {t.download}
+                </Button>
+              </div>
+            ) : isGenerating ? (
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: 'hsl(var(--editor-accent))' }} />
+                <p style={{ color: 'hsl(var(--editor-text))' }}>{t.generating}</p>
               </div>
             ) : (
-              <div
-                className="flex flex-col items-center justify-center h-[400px] rounded-xl"
-                style={{ border: '1px dashed hsl(var(--editor-border))', background: 'hsl(var(--editor-panel))' }}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-16 h-16 mb-4 animate-spin" style={{ color: 'hsl(var(--editor-accent))' }} />
-                    <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>{t.generating}</p>
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-16 h-16 mb-4" style={{ color: 'hsl(var(--editor-text))' }} />
-                    <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>
-                      {language === 'en' ? 'Enter a prompt and click generate' : 'Entrez un prompt et cliquez sur générer'}
-                    </p>
-                    <p className="text-[10px] mt-2 opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
-                      Powered by Google Gemini
-                    </p>
-                  </>
-                )}
+              <div className="text-center">
+                <Wand2 className="w-16 h-16 mx-auto mb-4" style={{ color: 'hsl(var(--editor-text))' }} />
+                <p style={{ color: 'hsl(var(--editor-text))' }}>
+                  {language === 'en' ? 'Enter a prompt and click generate' : 'Entrez un prompt et cliquez sur générer'}
+                </p>
               </div>
             )}
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

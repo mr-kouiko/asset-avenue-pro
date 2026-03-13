@@ -4,10 +4,8 @@ import { Slider } from '@/components/ui/slider';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Upload, Download, RefreshCw, ChevronLeft,
-  ImagePlus, FileType, ArrowRightLeft, Check, RotateCcw
+  Upload, Download, RefreshCw, ImagePlus, FileType, ArrowRightLeft, Check
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 type OutputFormat = 'png' | 'jpeg' | 'webp' | 'pdf';
 
@@ -159,199 +157,149 @@ export default function ImageConverter() {
   const showQuality = outputFormat === 'jpeg' || outputFormat === 'webp';
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       <canvas ref={canvasRef} className="hidden" />
+      
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>Image Converter</h1>
+        <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
+          Convert images between PNG, JPEG, WebP and PDF for free
+        </p>
+      </div>
 
-      {/* Top bar */}
-      <header
-        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
-        style={{ borderBottom: '1px solid hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
-      >
-        <div className="flex items-center gap-3">
-          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
-            <ChevronLeft className="w-4 h-4" />
-          </Link>
-          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
-            Image Converter
-          </h1>
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(140 60% 45% / 0.2)', color: 'hsl(140 60% 55%)' }}>FREE</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {result && (
-            <Button size="sm" variant="ghost" onClick={handleDownload} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
-              <Download className="w-4 h-4" />
-            </Button>
-          )}
-          {originalImage && (
-            <Button size="sm" variant="ghost" onClick={handleReset} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </header>
-
-      {/* Body */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left sidebar */}
-        <aside
-          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
-          style={{ background: 'hsl(var(--editor-sidebar))', borderRight: '1px solid hsl(var(--editor-border))' }}
-        >
-          <div className="p-4 space-y-4 flex-1">
-            {/* Upload area */}
-            <label
-              className="flex flex-col items-center justify-center w-full h-[140px] rounded-xl border border-dashed cursor-pointer transition-colors"
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Sidebar */}
+        <div className="md:col-span-1 space-y-4">
+          {/* Upload */}
+          <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+            <label className="flex flex-col items-center justify-center w-full h-32 rounded-xl border border-dashed cursor-pointer transition-colors"
               style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-bg))' }}
             >
               <ImagePlus className="w-8 h-8 mb-2" style={{ color: 'hsl(var(--editor-text))' }} />
-              <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
-                {originalImage ? 'Change Image' : 'Add Image'}
+              <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                {originalImage ? 'Change Image' : 'Upload Image'}
               </span>
               {originalImage && (
-                <span className="text-[10px] mt-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                <span className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text))' }}>
                   {originalFormat} · {formatFileSize(originalSize)}
                 </span>
               )}
               <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
             </label>
-
-            {/* Output Format */}
-            <div>
-              <span className="text-xs font-semibold tracking-wide uppercase block mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
-                Output Format
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {formats.map((f) => (
-                  <button
-                    key={f.value}
-                    onClick={() => { setOutputFormat(f.value); setResult(null); }}
-                    className="relative flex flex-col items-center p-3 rounded-lg transition-all text-xs"
-                    style={{
-                      background: outputFormat === f.value ? 'hsl(var(--editor-accent) / 0.15)' : 'hsl(var(--editor-bg))',
-                      border: `1px solid ${outputFormat === f.value ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-border))'}`,
-                      color: outputFormat === f.value ? 'hsl(var(--editor-text-bright))' : 'hsl(var(--editor-text))',
-                    }}
-                  >
-                    {outputFormat === f.value && <Check className="absolute top-1.5 right-1.5 w-3 h-3" style={{ color: 'hsl(var(--editor-accent))' }} />}
-                    <span className="font-bold">{f.label}</span>
-                    <span className="text-[10px] opacity-60">{f.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quality slider */}
-            {showQuality && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>Quality</label>
-                  <span className="text-[10px] font-mono" style={{ color: 'hsl(var(--editor-text))' }}>{quality}%</span>
-                </div>
-                <Slider
-                  value={[quality]}
-                  onValueChange={(v) => { setQuality(v[0]); setResult(null); }}
-                  min={10} max={100} step={5}
-                />
-                <div className="flex justify-between text-[9px] opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
-                  <span>Smaller</span><span>Higher quality</span>
-                </div>
-              </div>
-            )}
-
-            {/* Size comparison */}
-            {result && (
-              <div className="flex items-center justify-between p-2.5 rounded-lg text-[11px]" style={{ background: 'hsl(var(--editor-bg))', border: '1px solid hsl(var(--editor-border))' }}>
-                <div className="text-center">
-                  <p className="opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>Original</p>
-                  <p className="font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>{formatFileSize(originalSize)}</p>
-                </div>
-                <ArrowRightLeft className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-text))' }} />
-                <div className="text-center">
-                  <p className="opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>Converted</p>
-                  <p className="font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>{formatFileSize(result.size)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>Δ</p>
-                  <p className="font-medium" style={{ color: result.size < originalSize ? 'hsl(140 60% 55%)' : 'hsl(40 80% 60%)' }}>
-                    {result.size < originalSize ? '-' : '+'}{Math.abs(Math.round((1 - result.size / originalSize) * 100))}%
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Convert button */}
-            <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
-              onClick={handleConvert}
-              disabled={!originalImage}
-              style={{
-                background: 'hsl(var(--editor-accent))',
-                color: '#fff',
-                opacity: !originalImage ? 0.5 : 1,
-              }}
-            >
-              <RefreshCw className="w-4 h-4" /> Convert to {outputFormat.toUpperCase()}
-            </Button>
-
-            {result && (
-              <Button
-                className="w-full h-10 rounded-lg font-medium text-sm gap-2"
-                variant="ghost"
-                onClick={handleDownload}
-                style={{ color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
-              >
-                <Download className="w-4 h-4" /> Download
-              </Button>
-            )}
           </div>
-        </aside>
 
-        {/* Main workspace */}
-        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto" style={{ background: 'hsl(var(--editor-bg))' }}>
-          {!originalImage ? (
-            <div className="text-center">
-              <h2 className="text-xl font-semibold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
-                Add an Image to convert
-              </h2>
-              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-colors"
-                style={{ background: 'hsl(var(--editor-panel))', color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
-              >
-                <Upload className="w-4 h-4" /> Add an image
-                <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-              </label>
+          {/* Format Selection */}
+          <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+            <h3 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--editor-text-bright))' }}>Output Format</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {formats.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => { setOutputFormat(f.value); setResult(null); }}
+                  className="relative flex flex-col items-center p-2 rounded-lg transition-all text-xs"
+                  style={{
+                    background: outputFormat === f.value ? 'hsl(var(--editor-accent) / 0.15)' : 'hsl(var(--editor-bg))',
+                    border: `1px solid ${outputFormat === f.value ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-border))'}`,
+                    color: outputFormat === f.value ? 'hsl(var(--editor-text-bright))' : 'hsl(var(--editor-text))',
+                  }}
+                >
+                  {outputFormat === f.value && <Check className="absolute top-1 right-1 w-3 h-3" style={{ color: 'hsl(var(--editor-accent))' }} />}
+                  <span className="font-bold">{f.label}</span>
+                  <span className="text-[10px] opacity-60">{f.desc}</span>
+                </button>
+              ))}
             </div>
-          ) : (
-            <div className="w-full max-w-[800px] space-y-6">
-              {/* Original */}
-              <div className="relative">
-                <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(140 60% 45%)', color: '#fff' }}>
-                  Input · {originalFormat}
-                </span>
-                <img src={originalImage} alt="Input" className="w-full rounded-lg object-contain"
-                  style={{ maxHeight: result ? '280px' : '450px', background: 'hsl(var(--editor-panel))' }} />
-              </div>
+          </div>
 
-              {/* Result */}
-              {result && (
-                <div className="relative">
-                  <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
-                    Output · {result.format.toUpperCase()}
-                  </span>
-                  {result.format === 'pdf' ? (
-                    <div className="flex flex-col items-center justify-center h-[200px] rounded-lg" style={{ background: 'hsl(var(--editor-panel))' }}>
-                      <FileType className="w-12 h-12 mb-3" style={{ color: 'hsl(0 60% 55%)' }} />
-                      <p className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>PDF Ready</p>
-                      <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text))' }}>{formatFileSize(result.size)}</p>
-                    </div>
-                  ) : (
-                    <img src={result.url} alt="Converted" className="w-full rounded-lg object-contain"
-                      style={{ maxHeight: '350px', background: 'hsl(var(--editor-panel))' }} />
-                  )}
-                </div>
-              )}
+          {/* Quality */}
+          {showQuality && (
+            <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>Quality</label>
+                <span className="text-xs font-mono" style={{ color: 'hsl(var(--editor-text))' }}>{quality}%</span>
+              </div>
+              <Slider value={[quality]} onValueChange={(v) => { setQuality(v[0]); setResult(null); }} min={10} max={100} step={5} />
+              <div className="flex justify-between text-xs mt-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                <span>Smaller</span>
+                <span>Higher quality</span>
+              </div>
             </div>
           )}
-        </main>
+
+          {/* Convert Button */}
+          <Button
+            onClick={handleConvert}
+            disabled={!originalImage}
+            className="w-full gap-2"
+            style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
+          >
+            <RefreshCw className="w-4 h-4" /> Convert
+          </Button>
+
+          {/* Size Comparison */}
+          {result && (
+            <div className="p-4 rounded-xl" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+              <div className="flex items-center justify-between text-sm">
+                <div className="text-center">
+                  <p className="text-xs opacity-60" style={{ color: 'hsl(var(--editor-text))' }}>Original</p>
+                  <p className="font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>{formatFileSize(originalSize)}</p>
+                </div>
+                <ArrowRightLeft className="w-4 h-4" style={{ color: 'hsl(var(--editor-text))' }} />
+                <div className="text-center">
+                  <p className="text-xs opacity-60" style={{ color: 'hsl(var(--editor-text))' }}>Converted</p>
+                  <p className="font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>{formatFileSize(result.size)}</p>
+                </div>
+              </div>
+              <Button onClick={handleDownload} className="w-full mt-3 gap-2" variant="outline" style={{ borderColor: 'hsl(var(--editor-border))', color: 'hsl(var(--editor-text-bright))' }}>
+                <Download className="w-4 h-4" /> Download
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Main Area */}
+        <div className="md:col-span-2">
+          <div className="rounded-xl p-6 min-h-[500px] flex items-center justify-center" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+            {!originalImage ? (
+              <div className="text-center">
+                <Upload className="w-16 h-16 mx-auto mb-4" style={{ color: 'hsl(var(--editor-text))' }} />
+                <p className="text-lg mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>Upload an image to get started</p>
+                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer font-medium transition-colors"
+                  style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
+                >
+                  <Upload className="w-4 h-4" /> Choose Image
+                  <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+                </label>
+              </div>
+            ) : (
+              <div className="w-full space-y-4">
+                <div className="relative">
+                  <span className="absolute top-2 left-2 px-2 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(140 60% 45%)', color: '#fff' }}>
+                    Original · {originalFormat}
+                  </span>
+                  <img src={originalImage} alt="Original" className="w-full rounded-lg object-contain max-h-[250px]" style={{ background: 'hsl(var(--editor-bg))' }} />
+                </div>
+
+                {result && (
+                  <div className="relative">
+                    <span className="absolute top-2 left-2 px-2 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
+                      Output · {result.format.toUpperCase()}
+                    </span>
+                    {result.format === 'pdf' ? (
+                      <div className="flex flex-col items-center justify-center h-32 rounded-lg" style={{ background: 'hsl(var(--editor-bg))' }}>
+                        <FileType className="w-10 h-10 mb-2" style={{ color: 'hsl(0 60% 55%)' }} />
+                        <p className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>PDF Ready</p>
+                        <p className="text-xs" style={{ color: 'hsl(var(--editor-text))' }}>{formatFileSize(result.size)}</p>
+                      </div>
+                    ) : (
+                      <img src={result.url} alt="Converted" className="w-full rounded-lg object-contain max-h-[250px]" style={{ background: 'hsl(var(--editor-bg))' }} />
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
