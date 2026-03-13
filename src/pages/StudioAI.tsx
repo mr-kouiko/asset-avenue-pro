@@ -359,10 +359,10 @@ export default function StudioAI() {
         <section className="relative py-20" style={{ background: 'hsl(var(--editor-sidebar))' }}>
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
                 How Studio AI Works
               </h2>
-              <p className="text-slate-400 max-w-xl mx-auto">
+              <p className="max-w-xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
                 Create professional content in three simple steps
               </p>
             </div>
