@@ -1,30 +1,22 @@
 import { useState, useRef } from 'react';
-import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Upload, 
-  Download, 
-  Loader2, 
-  Scissors, 
-  ArrowLeft,
-  Image as ImageIcon,
-  Sparkles,
-  RefreshCw
+import {
+  Upload, Download, Loader2, Scissors,
+  ImagePlus, ChevronLeft, RotateCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function RemoveBackground() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [fileName, setFileName] = useState<string>('');
+  const [fileName, setFileName] = useState('');
 
   useSEO({
     title: 'Remove Background - AI Background Remover | Studio AI',
@@ -35,49 +27,26 @@ export default function RemoveBackground() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please upload an image file (JPG, PNG, WebP).',
-        variant: 'destructive'
-      });
+      toast({ title: 'Invalid file type', description: 'Please upload an image file (JPG, PNG, WebP).', variant: 'destructive' });
       return;
     }
-
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: 'Please upload an image smaller than 10MB.',
-        variant: 'destructive'
-      });
+      toast({ title: 'File too large', description: 'Please upload an image smaller than 10MB.', variant: 'destructive' });
       return;
     }
-
     setFileName(file.name);
     setResultImage(null);
-
-    // Convert to base64 for preview and processing
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setOriginalImage(base64);
-    };
+    reader.onload = (event) => setOriginalImage(event.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleRemoveBackground = async () => {
     if (!originalImage) {
-      toast({
-        title: 'No image selected',
-        description: 'Please upload an image first.',
-        variant: 'destructive'
-      });
+      toast({ title: 'No image selected', description: 'Please upload an image first.', variant: 'destructive' });
       return;
     }
-
     setIsProcessing(true);
     setResultImage(null);
 
@@ -85,50 +54,26 @@ export default function RemoveBackground() {
       const { data, error } = await supabase.functions.invoke('remove-background', {
         body: { imageUrl: originalImage }
       });
-
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       if (data?.error) {
         if (data.error === 'rate_limited') {
-          toast({
-            title: 'Rate Limit Reached',
-            description: 'Please wait a few minutes before trying again.',
-            variant: 'destructive'
-          });
+          toast({ title: 'Rate Limit Reached', description: 'Please wait a few minutes before trying again.', variant: 'destructive' });
         } else if (data.error === 'payment_required') {
-          toast({
-            title: 'Credits Exhausted',
-            description: 'The AI service needs more credits. Please contact support.',
-            variant: 'destructive'
-          });
+          toast({ title: 'Credits Exhausted', description: 'The AI service needs more credits. Please contact support.', variant: 'destructive' });
         } else {
-          toast({
-            title: 'Processing Failed',
-            description: data.message || 'Unable to remove background. Please try again.',
-            variant: 'destructive'
-          });
+          toast({ title: 'Processing Failed', description: data.message || 'Unable to remove background. Please try again.', variant: 'destructive' });
         }
         return;
       }
-
       if (data?.resultUrl) {
         setResultImage(data.resultUrl);
-        toast({
-          title: 'Background Removed!',
-          description: 'Your image is ready to download.'
-        });
+        toast({ title: 'Background Removed!', description: 'Your image is ready to download.' });
       } else {
         throw new Error('No result image returned');
       }
     } catch (error: any) {
       console.error('Error removing background:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to process image. Please try again.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: 'Failed to process image. Please try again.', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
     }
@@ -136,7 +81,6 @@ export default function RemoveBackground() {
 
   const handleDownload = () => {
     if (!resultImage) return;
-
     const link = document.createElement('a');
     link.href = resultImage;
     link.download = fileName.replace(/\.[^/.]+$/, '') + '-no-bg.png';
@@ -149,203 +93,175 @@ export default function RemoveBackground() {
     setOriginalImage(null);
     setResultImage(null);
     setFileName('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Back Link */}
-        <Link 
-          to="/studio-ai" 
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Studio AI
-        </Link>
-
-        {/* Hero Section */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 mb-6">
-            <Scissors className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium text-blue-400">AI-Powered</span>
-          </div>
-          
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            Remove{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Background
-            </span>
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      {/* Top bar */}
+      <header
+        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
+        style={{ borderBottom: '1px solid hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+            Remove Background
           </h1>
-          
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Instantly remove backgrounds from images with clean, professional results. 
-            Perfect for product photos, portraits, and more.
-          </p>
+          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(var(--editor-accent) / 0.2)', color: 'hsl(var(--editor-accent))' }}>AI</span>
         </div>
-
-        {/* Main Content */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Upload / Original Image Card */}
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-blue-400" />
-                Original Image
-              </h3>
-              
-              {!originalImage ? (
-                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-blue-500/50 hover:bg-slate-800/30 transition-all">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 text-slate-500 mb-3" />
-                    <p className="mb-2 text-sm text-slate-400">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-slate-500">PNG, JPG or WebP (max 10MB)</p>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                  />
-                </label>
-              ) : (
-                <div className="relative">
-                  <img 
-                    src={originalImage} 
-                    alt="Original" 
-                    className="w-full h-64 object-contain rounded-xl bg-slate-800"
-                  />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={handleReset}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1" />
-                    Change
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Result Image Card */}
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-green-400" />
-                Result
-              </h3>
-              
-              {isProcessing ? (
-                <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/50">
-                  <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-3" />
-                  <p className="text-sm text-slate-400">Removing background...</p>
-                </div>
-              ) : resultImage ? (
-                <div className="relative">
-                  {/* Checkered background to show transparency */}
-                  <div 
-                    className="w-full h-64 rounded-xl overflow-hidden"
-                    style={{
-                      backgroundImage: `
-                        linear-gradient(45deg, #374151 25%, transparent 25%),
-                        linear-gradient(-45deg, #374151 25%, transparent 25%),
-                        linear-gradient(45deg, transparent 75%, #374151 75%),
-                        linear-gradient(-45deg, transparent 75%, #374151 75%)
-                      `,
-                      backgroundSize: '20px 20px',
-                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-                      backgroundColor: '#1f2937'
-                    }}
-                  >
-                    <img 
-                      src={resultImage} 
-                      alt="Result" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                  <Scissors className="w-10 h-10 text-slate-600 mb-3" />
-                  <p className="text-sm text-slate-500">Result will appear here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
-          <Button
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-500 text-white px-8"
-            onClick={handleRemoveBackground}
-            disabled={!originalImage || isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Scissors className="w-5 h-5 mr-2" />
-                Remove Background
-              </>
-            )}
-          </Button>
-          
+        <div className="flex items-center gap-2">
           {resultImage && (
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-8"
-              onClick={handleDownload}
-            >
-              <Download className="w-5 h-5 mr-2" />
-              Download PNG
+            <Button size="sm" variant="ghost" onClick={handleDownload} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
+          {originalImage && (
+            <Button size="sm" variant="ghost" onClick={handleReset} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
+              <RotateCcw className="w-4 h-4" />
             </Button>
           )}
         </div>
+      </header>
 
-        {/* Tips Section */}
-        <div className="mt-16 text-center">
-          <h2 className="text-xl font-semibold text-white mb-6">Tips for Best Results</h2>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {[
-              {
-                title: 'Clear Subject',
-                description: 'Use images with a distinct subject and clear edges for best results.'
-              },
-              {
-                title: 'Good Lighting',
-                description: 'Well-lit images with good contrast produce cleaner cutouts.'
-              },
-              {
-                title: 'High Resolution',
-                description: 'Higher resolution images allow for more precise edge detection.'
-              }
-            ].map((tip) => (
-              <div 
-                key={tip.title}
-                className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50"
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left sidebar */}
+        <aside
+          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
+          style={{ background: 'hsl(var(--editor-sidebar))', borderRight: '1px solid hsl(var(--editor-border))' }}
+        >
+          <div className="p-4 space-y-4 flex-1">
+            {/* Upload area */}
+            <label
+              className="flex flex-col items-center justify-center w-full h-[140px] rounded-xl border border-dashed cursor-pointer transition-colors"
+              style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-bg))' }}
+            >
+              <ImagePlus className="w-8 h-8 mb-2" style={{ color: 'hsl(var(--editor-text))' }} />
+              <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
+                {originalImage ? 'Change Image' : 'Add Image'}
+              </span>
+              <span className="text-[10px] mt-1 opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>
+                PNG, JPG, WebP (max 10MB)
+              </span>
+              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+            </label>
+
+            {/* Remove Background button */}
+            <Button
+              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              onClick={handleRemoveBackground}
+              disabled={!originalImage || isProcessing}
+              style={{
+                background: 'hsl(var(--editor-accent))',
+                color: '#fff',
+                opacity: (!originalImage || isProcessing) ? 0.5 : 1,
+              }}
+            >
+              {isProcessing ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+              ) : (
+                <><Scissors className="w-4 h-4" /> Remove Background</>
+              )}
+            </Button>
+
+            {resultImage && (
+              <Button
+                className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+                variant="ghost"
+                onClick={handleDownload}
+                style={{ color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
               >
-                <h3 className="text-white font-medium mb-2">{tip.title}</h3>
-                <p className="text-sm text-slate-400">{tip.description}</p>
-              </div>
-            ))}
+                <Download className="w-4 h-4" /> Download PNG
+              </Button>
+            )}
+
+            {/* Divider */}
+            <div className="h-px" style={{ background: 'hsl(var(--editor-border))' }} />
+
+            {/* Tips */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                Tips
+              </span>
+              {[
+                { title: 'Clear Subject', desc: 'Distinct subject with clear edges works best.' },
+                { title: 'Good Lighting', desc: 'Well-lit images with good contrast produce cleaner cutouts.' },
+                { title: 'High Resolution', desc: 'Higher resolution allows for more precise edge detection.' },
+              ].map((tip) => (
+                <div key={tip.title} className="p-2.5 rounded-lg text-xs" style={{ background: 'hsl(var(--editor-bg))', border: '1px solid hsl(var(--editor-border))' }}>
+                  <p className="font-medium mb-0.5" style={{ color: 'hsl(var(--editor-text-bright))' }}>{tip.title}</p>
+                  <p className="opacity-60" style={{ color: 'hsl(var(--editor-text))' }}>{tip.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </main>
+        </aside>
+
+        {/* Main workspace */}
+        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto" style={{ background: 'hsl(var(--editor-bg))' }}>
+          {!originalImage ? (
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                Add an Image to get started
+              </h2>
+              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-colors"
+                style={{ background: 'hsl(var(--editor-panel))', color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
+              >
+                <Upload className="w-4 h-4" /> Add an image
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+              </label>
+            </div>
+          ) : (
+            <div className="w-full max-w-[800px] space-y-6">
+              {/* Input image */}
+              <div className="relative">
+                <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(140 60% 45%)', color: '#fff' }}>
+                  Input
+                </span>
+                <img src={originalImage} alt="Input" className="w-full rounded-lg object-contain"
+                  style={{ maxHeight: resultImage ? '280px' : '450px', background: 'hsl(var(--editor-panel))' }} />
+              </div>
+
+              {/* Processing state */}
+              {isProcessing && (
+                <div className="text-center py-6">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'hsl(var(--editor-accent))' }} />
+                  <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>Removing background...</p>
+                </div>
+              )}
+
+              {/* Output image */}
+              {resultImage && (
+                <div className="relative">
+                  <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
+                    Output
+                  </span>
+                  <div
+                    className="w-full rounded-lg overflow-hidden"
+                    style={{
+                      maxHeight: '400px',
+                      backgroundImage: `
+                        linear-gradient(45deg, hsl(var(--editor-panel)) 25%, transparent 25%),
+                        linear-gradient(-45deg, hsl(var(--editor-panel)) 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, hsl(var(--editor-panel)) 75%),
+                        linear-gradient(-45deg, transparent 75%, hsl(var(--editor-panel)) 75%)
+                      `,
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                      backgroundColor: 'hsl(var(--editor-bg))',
+                    }}
+                  >
+                    <img src={resultImage} alt="Result" className="w-full h-full object-contain" style={{ maxHeight: '400px' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

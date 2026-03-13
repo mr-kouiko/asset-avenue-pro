@@ -1,19 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
-import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Upload,
-  Download,
-  RefreshCw,
-  ArrowLeft,
-  Image as ImageIcon,
-  FileType,
-  ArrowRightLeft,
-  Check
+  Upload, Download, RefreshCw, ChevronLeft,
+  ImagePlus, FileType, ArrowRightLeft, Check, RotateCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -43,7 +35,6 @@ export default function ImageConverter() {
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('png');
   const [quality, setQuality] = useState(85);
   const [result, setResult] = useState<ConversionResult | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
 
   useSEO({
     title: 'Image Converter - Free Online Format Converter | Studio AI',
@@ -60,12 +51,10 @@ export default function ImageConverter() {
       toast({ title: 'File too large', description: 'Max file size is 50 MB.', variant: 'destructive' });
       return;
     }
-
     setOriginalSize(file.size);
     setOriginalName(file.name);
     setOriginalFormat(file.type.split('/')[1]?.toUpperCase() || 'Unknown');
     setResult(null);
-
     const reader = new FileReader();
     reader.onload = (e) => setOriginalImage(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -76,16 +65,8 @@ export default function ImageConverter() {
     if (file) loadImage(file);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) loadImage(file);
-  }, [loadImage]);
-
   const handleConvert = useCallback(() => {
     if (!originalImage) return;
-
     const img = new Image();
     img.onload = () => {
       const canvas = canvasRef.current || document.createElement('canvas');
@@ -93,100 +74,57 @@ export default function ImageConverter() {
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-
-      // For JPEG, fill white background (no transparency)
       if (outputFormat === 'jpeg') {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
-
       ctx.drawImage(img, 0, 0);
 
       if (outputFormat === 'pdf') {
-        // Build a minimal single-page PDF from the canvas JPEG data
         const jpegDataUrl = canvas.toDataURL('image/jpeg', quality / 100);
         const raw = atob(jpegDataUrl.split(',')[1]);
         const bytes = new Uint8Array(raw.length);
         for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-
-        const w = canvas.width;
-        const h = canvas.height;
-        // Scale to fit A4-ish page (595x842 points) while keeping aspect ratio
-        const pageW = 595;
-        const pageH = 842;
+        const w = canvas.width, h = canvas.height;
+        const pageW = 595, pageH = 842;
         const scale = Math.min(pageW / w, pageH / h);
-        const imgW = Math.round(w * scale);
-        const imgH = Math.round(h * scale);
-        const offX = Math.round((pageW - imgW) / 2);
-        const offY = Math.round((pageH - imgH) / 2);
-
+        const imgW = Math.round(w * scale), imgH = Math.round(h * scale);
+        const offX = Math.round((pageW - imgW) / 2), offY = Math.round((pageH - imgH) / 2);
         const imgLen = bytes.length;
-
-        // Build PDF manually
         const enc = new TextEncoder();
         const parts: (Uint8Array | string)[] = [];
         const offsets: number[] = [];
         let pos = 0;
         const add = (s: string) => { parts.push(s); pos += enc.encode(s).length; };
-
         add('%PDF-1.4\n');
-
-        offsets[1] = pos;
-        add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
-
-        offsets[2] = pos;
-        add(`2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`);
-
-        offsets[3] = pos;
-        add(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents 4 0 R /Resources << /XObject << /Img 5 0 R >> >> >>\nendobj\n`);
-
+        offsets[1] = pos; add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+        offsets[2] = pos; add(`2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`);
+        offsets[3] = pos; add(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents 4 0 R /Resources << /XObject << /Img 5 0 R >> >> >>\nendobj\n`);
         const stream = `q ${imgW} 0 0 ${imgH} ${offX} ${offY} cm /Img Do Q`;
-        offsets[4] = pos;
-        add(`4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
-
-        offsets[5] = pos;
-        add(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgLen} >>\nstream\n`);
-        parts.push(bytes);
-        pos += imgLen;
+        offsets[4] = pos; add(`4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
+        offsets[5] = pos; add(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgLen} >>\nstream\n`);
+        parts.push(bytes); pos += imgLen;
         add('\nendstream\nendobj\n');
-
         const xrefPos = pos;
-        add('xref\n');
-        add(`0 6\n`);
-        add('0000000000 65535 f \n');
-        for (let i = 1; i <= 5; i++) {
-          add(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
-        }
+        add('xref\n'); add(`0 6\n`); add('0000000000 65535 f \n');
+        for (let i = 1; i <= 5; i++) add(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
         add('trailer\n<< /Size 6 /Root 1 0 R >>\n');
         add(`startxref\n${xrefPos}\n%%EOF\n`);
-
-        // Combine all parts
         const totalLen = parts.reduce((a, p) => a + (typeof p === 'string' ? enc.encode(p).length : p.length), 0);
         const pdfBytes = new Uint8Array(totalLen);
         let off = 0;
-        for (const p of parts) {
-          const chunk = typeof p === 'string' ? enc.encode(p) : p;
-          pdfBytes.set(chunk, off);
-          off += chunk.length;
-        }
-
+        for (const p of parts) { const chunk = typeof p === 'string' ? enc.encode(p) : p; pdfBytes.set(chunk, off); off += chunk.length; }
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         setResult({ url: URL.createObjectURL(blob), size: blob.size, format: 'pdf' });
-        toast({ title: 'Converted!', description: `Image converted to PDF.` });
+        toast({ title: 'Converted!', description: 'Image converted to PDF.' });
       } else {
         const mimeMap: Record<string, string> = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' };
-        const mime = mimeMap[outputFormat];
         const q = outputFormat === 'png' ? undefined : quality / 100;
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return;
-            setResult({ url: URL.createObjectURL(blob), size: blob.size, format: outputFormat });
-            toast({ title: 'Converted!', description: `Image converted to ${outputFormat.toUpperCase()}.` });
-          },
-          mime,
-          q
-        );
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          setResult({ url: URL.createObjectURL(blob), size: blob.size, format: outputFormat });
+          toast({ title: 'Converted!', description: `Image converted to ${outputFormat.toUpperCase()}.` });
+        }, mimeMap[outputFormat], q);
       }
     };
     img.src = originalImage;
@@ -212,253 +150,209 @@ export default function ImageConverter() {
   };
 
   const formats: { value: OutputFormat; label: string; desc: string }[] = [
-    { value: 'png', label: 'PNG', desc: 'Lossless, transparent' },
-    { value: 'jpeg', label: 'JPEG', desc: 'Small size, photos' },
-    { value: 'webp', label: 'WebP', desc: 'Modern, best ratio' },
-    { value: 'pdf', label: 'PDF', desc: 'Print-ready document' },
+    { value: 'png', label: 'PNG', desc: 'Lossless' },
+    { value: 'jpeg', label: 'JPEG', desc: 'Photos' },
+    { value: 'webp', label: 'WebP', desc: 'Modern' },
+    { value: 'pdf', label: 'PDF', desc: 'Print' },
   ];
 
   const showQuality = outputFormat === 'jpeg' || outputFormat === 'webp';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
-      <Header />
+    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
       <canvas ref={canvasRef} className="hidden" />
 
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Back Link */}
-        <Link
-          to="/studio-ai"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Studio AI
-        </Link>
-
-        {/* Hero */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 mb-6">
-            <RefreshCw className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium text-blue-400">Free — No Server Cost</span>
-          </div>
-
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            Image{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Converter
-            </span>
+      {/* Top bar */}
+      <header
+        className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
+        style={{ borderBottom: '1px solid hsl(var(--editor-border))', background: 'hsl(var(--editor-sidebar))' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+            Image Converter
           </h1>
-
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Convert images between PNG, JPEG, WebP and PDF instantly. Everything runs in your browser — no upload, no cost.
-          </p>
+          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(140 60% 45% / 0.2)', color: 'hsl(140 60% 55%)' }}>FREE</span>
         </div>
+        <div className="flex items-center gap-2">
+          {result && (
+            <Button size="sm" variant="ghost" onClick={handleDownload} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
+          {originalImage && (
+            <Button size="sm" variant="ghost" onClick={handleReset} className="h-8 w-8 p-0" style={{ color: 'hsl(var(--editor-text))' }}>
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </header>
 
-        {/* Upload or Preview */}
-        {!originalImage ? (
-          <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm max-w-2xl mx-auto">
-            <CardContent className="p-6">
-              <label
-                className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-                  isDragOver
-                    ? 'border-blue-400 bg-blue-500/10'
-                    : 'border-slate-600 hover:border-blue-500/50 hover:bg-slate-800/30'
-                }`}
-                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={handleDrop}
-              >
-                <Upload className="w-10 h-10 text-slate-500 mb-3" />
-                <p className="mb-2 text-sm text-slate-400">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-slate-500">JPG, PNG, WebP, BMP, GIF, TIFF (max 50 MB)</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                />
-              </label>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {/* Side-by-side previews */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Original */}
-              <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5 text-blue-400" />
-                      Original
-                    </h3>
-                    <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">
-                      {originalFormat} · {formatFileSize(originalSize)}
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <img
-                      src={originalImage}
-                      alt="Original"
-                      className="w-full h-64 object-contain rounded-xl bg-slate-800"
-                    />
-                    <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleReset}>
-                      <RefreshCw className="w-4 h-4 mr-1" /> Change
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left sidebar */}
+        <aside
+          className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
+          style={{ background: 'hsl(var(--editor-sidebar))', borderRight: '1px solid hsl(var(--editor-border))' }}
+        >
+          <div className="p-4 space-y-4 flex-1">
+            {/* Upload area */}
+            <label
+              className="flex flex-col items-center justify-center w-full h-[140px] rounded-xl border border-dashed cursor-pointer transition-colors"
+              style={{ borderColor: 'hsl(var(--editor-border))', background: 'hsl(var(--editor-bg))' }}
+            >
+              <ImagePlus className="w-8 h-8 mb-2" style={{ color: 'hsl(var(--editor-text))' }} />
+              <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text))' }}>
+                {originalImage ? 'Change Image' : 'Add Image'}
+              </span>
+              {originalImage && (
+                <span className="text-[10px] mt-1" style={{ color: 'hsl(var(--editor-text))' }}>
+                  {originalFormat} · {formatFileSize(originalSize)}
+                </span>
+              )}
+              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+            </label>
 
-              {/* Result */}
-              <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <FileType className="w-5 h-5 text-green-400" />
-                      Converted
-                    </h3>
-                    {result && (
-                      <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">
-                        {result.format.toUpperCase()} · {formatFileSize(result.size)}
-                      </span>
-                    )}
-                  </div>
-                  {result ? (
-                    result.format === 'pdf' ? (
-                      <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/50">
-                        <FileType className="w-12 h-12 text-red-400 mb-3" />
-                        <p className="text-sm text-slate-300 font-medium">PDF Ready</p>
-                        <p className="text-xs text-slate-500 mt-1">{formatFileSize(result.size)}</p>
-                      </div>
-                    ) : (
-                      <img
-                        src={result.url}
-                        alt="Converted"
-                        className="w-full h-64 object-contain rounded-xl bg-slate-800"
-                      />
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center justify-center w-full h-64 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                      <ArrowRightLeft className="w-10 h-10 text-slate-600 mb-3" />
-                      <p className="text-sm text-slate-500">Choose a format and convert</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            {/* Output Format */}
+            <div>
+              <span className="text-xs font-semibold tracking-wide uppercase block mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                Output Format
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {formats.map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => { setOutputFormat(f.value); setResult(null); }}
+                    className="relative flex flex-col items-center p-3 rounded-lg transition-all text-xs"
+                    style={{
+                      background: outputFormat === f.value ? 'hsl(var(--editor-accent) / 0.15)' : 'hsl(var(--editor-bg))',
+                      border: `1px solid ${outputFormat === f.value ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-border))'}`,
+                      color: outputFormat === f.value ? 'hsl(var(--editor-text-bright))' : 'hsl(var(--editor-text))',
+                    }}
+                  >
+                    {outputFormat === f.value && <Check className="absolute top-1.5 right-1.5 w-3 h-3" style={{ color: 'hsl(var(--editor-accent))' }} />}
+                    <span className="font-bold">{f.label}</span>
+                    <span className="text-[10px] opacity-60">{f.desc}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Format Selector + Quality + Actions */}
-            <Card className="border-slate-700/50 bg-slate-900/50 backdrop-blur-sm mb-8">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Output Format</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                  {formats.map((f) => (
-                    <button
-                      key={f.value}
-                      onClick={() => { setOutputFormat(f.value); setResult(null); }}
-                      className={`relative flex flex-col items-center p-4 rounded-xl border transition-all ${
-                        outputFormat === f.value
-                          ? 'border-blue-500 bg-blue-500/10 text-white'
-                          : 'border-slate-700/50 bg-slate-800/30 text-slate-400 hover:border-slate-500'
-                      }`}
-                    >
-                      {outputFormat === f.value && (
-                        <Check className="absolute top-2 right-2 w-4 h-4 text-blue-400" />
-                      )}
-                      <span className="text-lg font-bold mb-1">{f.label}</span>
-                      <span className="text-xs">{f.desc}</span>
-                    </button>
-                  ))}
+            {/* Quality slider */}
+            {showQuality && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium" style={{ color: 'hsl(var(--editor-text))' }}>Quality</label>
+                  <span className="text-[10px] font-mono" style={{ color: 'hsl(var(--editor-text))' }}>{quality}%</span>
                 </div>
+                <Slider
+                  value={[quality]}
+                  onValueChange={(v) => { setQuality(v[0]); setResult(null); }}
+                  min={10} max={100} step={5}
+                />
+                <div className="flex justify-between text-[9px] opacity-40" style={{ color: 'hsl(var(--editor-text))' }}>
+                  <span>Smaller</span><span>Higher quality</span>
+                </div>
+              </div>
+            )}
 
-                {showQuality && (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-slate-300">Quality</span>
-                      <span className="text-sm font-medium text-white">{quality}%</span>
-                    </div>
-                    <Slider
-                      value={[quality]}
-                      onValueChange={(v) => { setQuality(v[0]); setResult(null); }}
-                      min={10}
-                      max={100}
-                      step={5}
-                    />
-                    <div className="flex justify-between mt-1">
-                      <span className="text-xs text-slate-500">Smaller file</span>
-                      <span className="text-xs text-slate-500">Higher quality</span>
-                    </div>
-                  </div>
-                )}
+            {/* Size comparison */}
+            {result && (
+              <div className="flex items-center justify-between p-2.5 rounded-lg text-[11px]" style={{ background: 'hsl(var(--editor-bg))', border: '1px solid hsl(var(--editor-border))' }}>
+                <div className="text-center">
+                  <p className="opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>Original</p>
+                  <p className="font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>{formatFileSize(originalSize)}</p>
+                </div>
+                <ArrowRightLeft className="w-3.5 h-3.5" style={{ color: 'hsl(var(--editor-text))' }} />
+                <div className="text-center">
+                  <p className="opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>Converted</p>
+                  <p className="font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>{formatFileSize(result.size)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="opacity-50" style={{ color: 'hsl(var(--editor-text))' }}>Δ</p>
+                  <p className="font-medium" style={{ color: result.size < originalSize ? 'hsl(140 60% 55%)' : 'hsl(40 80% 60%)' }}>
+                    {result.size < originalSize ? '-' : '+'}{Math.abs(Math.round((1 - result.size / originalSize) * 100))}%
+                  </p>
+                </div>
+              </div>
+            )}
 
-                {/* Size comparison */}
-                {result && (
-                  <div className="flex items-center justify-center gap-4 mb-6 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                    <div className="text-center">
-                      <p className="text-xs text-slate-500">Original</p>
-                      <p className="text-sm font-medium text-slate-300">{formatFileSize(originalSize)}</p>
-                    </div>
-                    <ArrowRightLeft className="w-4 h-4 text-slate-500" />
-                    <div className="text-center">
-                      <p className="text-xs text-slate-500">Converted</p>
-                      <p className="text-sm font-medium text-slate-300">{formatFileSize(result.size)}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-slate-500">Change</p>
-                      <p className={`text-sm font-medium ${result.size < originalSize ? 'text-green-400' : 'text-amber-400'}`}>
-                        {result.size < originalSize ? '-' : '+'}{Math.abs(Math.round((1 - result.size / originalSize) * 100))}%
-                      </p>
-                    </div>
-                  </div>
-                )}
+            {/* Convert button */}
+            <Button
+              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              onClick={handleConvert}
+              disabled={!originalImage}
+              style={{
+                background: 'hsl(var(--editor-accent))',
+                color: '#fff',
+                opacity: !originalImage ? 0.5 : 1,
+              }}
+            >
+              <RefreshCw className="w-4 h-4" /> Convert to {outputFormat.toUpperCase()}
+            </Button>
 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-8 w-full sm:w-auto"
-                    onClick={handleConvert}
-                  >
-                    <RefreshCw className="w-5 h-5 mr-2" />
-                    Convert to {outputFormat.toUpperCase()}
-                  </Button>
+            {result && (
+              <Button
+                className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+                variant="ghost"
+                onClick={handleDownload}
+                style={{ color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
+              >
+                <Download className="w-4 h-4" /> Download
+              </Button>
+            )}
+          </div>
+        </aside>
 
-                  {result && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-8 w-full sm:w-auto"
-                      onClick={handleDownload}
-                    >
-                      <Download className="w-5 h-5 mr-2" />
-                      Download
-                    </Button>
+        {/* Main workspace */}
+        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto" style={{ background: 'hsl(var(--editor-bg))' }}>
+          {!originalImage ? (
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                Add an Image to convert
+              </h2>
+              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-colors"
+                style={{ background: 'hsl(var(--editor-panel))', color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' }}
+              >
+                <Upload className="w-4 h-4" /> Add an image
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+              </label>
+            </div>
+          ) : (
+            <div className="w-full max-w-[800px] space-y-6">
+              {/* Original */}
+              <div className="relative">
+                <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(140 60% 45%)', color: '#fff' }}>
+                  Input · {originalFormat}
+                </span>
+                <img src={originalImage} alt="Input" className="w-full rounded-lg object-contain"
+                  style={{ maxHeight: result ? '280px' : '450px', background: 'hsl(var(--editor-panel))' }} />
+              </div>
+
+              {/* Result */}
+              {result && (
+                <div className="relative">
+                  <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded text-xs font-semibold" style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
+                    Output · {result.format.toUpperCase()}
+                  </span>
+                  {result.format === 'pdf' ? (
+                    <div className="flex flex-col items-center justify-center h-[200px] rounded-lg" style={{ background: 'hsl(var(--editor-panel))' }}>
+                      <FileType className="w-12 h-12 mb-3" style={{ color: 'hsl(0 60% 55%)' }} />
+                      <p className="text-sm font-medium" style={{ color: 'hsl(var(--editor-text-bright))' }}>PDF Ready</p>
+                      <p className="text-xs mt-1" style={{ color: 'hsl(var(--editor-text))' }}>{formatFileSize(result.size)}</p>
+                    </div>
+                  ) : (
+                    <img src={result.url} alt="Converted" className="w-full rounded-lg object-contain"
+                      style={{ maxHeight: '350px', background: 'hsl(var(--editor-panel))' }} />
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Info Section */}
-        <div className="mt-16 text-center">
-          <h2 className="text-xl font-semibold text-white mb-6">Why Use This Converter?</h2>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {[
-              { title: '100% Free', description: 'No sign-up, no watermark, no hidden fees. Convert as many images as you want.' },
-              { title: 'Private & Secure', description: 'Your images never leave your device. All processing happens locally in your browser.' },
-              { title: 'All Major Formats', description: 'Convert between PNG, JPEG, WebP, and PDF. Supports BMP, GIF, and TIFF as input.' },
-            ].map((tip) => (
-              <div key={tip.title} className="bg-slate-800/30 rounded-xl p-5 border border-slate-700/50">
-                <h3 className="text-white font-medium mb-2">{tip.title}</h3>
-                <p className="text-sm text-slate-400">{tip.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
