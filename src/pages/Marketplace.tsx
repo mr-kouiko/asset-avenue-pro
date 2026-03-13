@@ -258,6 +258,27 @@ const Marketplace = () => {
     }
   }, [marketplaceContent]);
 
+  // Fetch Pexels total count to include in marketplace stats
+  useEffect(() => {
+    const fetchPexelsCount = async () => {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const params = new URLSearchParams({ type: 'photos', per_page: '1', page: '1' });
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/pexels-search?${params}`,
+          { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setPexelsTotalCount(data.total_results || 0);
+        }
+      } catch (err) {
+        console.error('Failed to fetch Pexels count:', err);
+      }
+    };
+    fetchPexelsCount();
+  }, []);
+
   const priceRanges = [
     { value: "all", label: "All prices" },
     { value: "free", label: "Free" },
