@@ -292,7 +292,7 @@ export default function StudioAI() {
               </div>
               
               {/* Title */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight" style={{ color: 'hsl(var(--editor-text-bright))' }}>
                 Studio{' '}
                 <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                   AI
@@ -300,12 +300,12 @@ export default function StudioAI() {
               </h1>
               
               {/* Subtitle */}
-              <p className="text-xl md:text-2xl text-slate-300 mb-4 max-w-3xl mx-auto">
+              <p className="text-xl md:text-2xl mb-4 max-w-3xl mx-auto" style={{ color: 'hsl(var(--editor-text-bright) / 0.8)' }}>
                 All-in-one AI tools to create, enhance and transform visual, video and audio content.
               </p>
               
               {/* Description */}
-              <p className="text-base text-slate-400 mb-10 max-w-2xl mx-auto">
+              <p className="text-base mb-10 max-w-2xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
                 Studio AI helps creators, marketers and businesses generate professional content faster — no technical skills required.
               </p>
               
