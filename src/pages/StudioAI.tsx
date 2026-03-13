@@ -193,36 +193,41 @@ function ToolCard({ tool }: { tool: AITool }) {
   
   return (
     <Card 
-      className={`group relative overflow-hidden border-slate-700/50 bg-slate-900/50 backdrop-blur-sm transition-all duration-300 hover:border-blue-500/50 hover:bg-slate-800/50 ${tool.available ? 'cursor-pointer' : 'opacity-75'}`}
+      className={`group relative overflow-hidden backdrop-blur-sm transition-all duration-300 ${tool.available ? 'cursor-pointer' : 'opacity-75'}`}
+      style={{
+        background: 'hsl(var(--editor-panel))',
+        borderColor: 'hsl(var(--editor-border))',
+      }}
       onClick={() => tool.available && navigate(tool.href)}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
             {tool.icon}
           </div>
           {tool.badge && (
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
               tool.available 
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                : 'bg-slate-700/50 text-slate-400 border border-slate-600/50'
-            }`}>
+                : ''
+            }`} style={!tool.available ? { background: 'hsl(var(--editor-border) / 0.5)', color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' } : {}}>
               {tool.badge}
             </span>
           )}
         </div>
         
-        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
+        <h3 className="text-lg font-semibold mb-2 transition-colors" style={{ color: 'hsl(var(--editor-text-bright))' }}>
           {tool.title}
         </h3>
-        <p className="text-sm text-slate-400 leading-relaxed mb-4">
+        <p className="text-sm leading-relaxed mb-4" style={{ color: 'hsl(var(--editor-text))' }}>
           {tool.description}
         </p>
         
         <Button 
           variant={tool.available ? "default" : "secondary"}
           size="sm"
-          className={`w-full ${tool.available ? 'bg-blue-600 hover:bg-blue-500' : ''}`}
+          className="w-full"
+          style={tool.available ? { background: 'hsl(var(--editor-accent))', color: '#fff' } : {}}
           disabled={!tool.available}
         >
           {tool.available ? 'Try Now' : 'Coming Soon'}
