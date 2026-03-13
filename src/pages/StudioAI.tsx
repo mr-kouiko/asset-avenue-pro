@@ -423,20 +423,21 @@ export default function StudioAI() {
         <section className="relative py-20 overflow-hidden">
           {/* Background effects */}
           <div className="absolute inset-0">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full blur-3xl" style={{ background: 'hsl(var(--editor-accent) / 0.1)' }} />
           </div>
           
           <div className="relative container mx-auto px-4 max-w-4xl">
-            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-3xl p-10 md:p-14 border border-slate-700/50 text-center backdrop-blur-sm">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <div className="rounded-3xl p-10 md:p-14 text-center backdrop-blur-sm" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
                 Create Faster with Studio AI
               </h2>
-              <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+              <p className="mb-8 max-w-xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
                 Join thousands of creators using AI to produce professional content in minutes.
               </p>
               <Button 
                 size="lg" 
-                className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-6 text-lg rounded-xl"
+                className="text-white px-10 py-6 text-lg rounded-xl"
+                style={{ background: 'hsl(var(--editor-accent))' }}
                 onClick={scrollToTools}
               >
                 Explore Studio AI
