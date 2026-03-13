@@ -372,18 +372,18 @@ export default function StudioAI() {
                 <div key={step.number} className="relative">
                   {/* Connection line for desktop */}
                   {index < steps.length - 1 && (
-                    <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-blue-500/50 to-transparent" />
+                    <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5" style={{ background: `linear-gradient(to right, hsl(var(--editor-accent) / 0.5), transparent)` }} />
                   )}
                   
-                  <div className="relative bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 hover:border-blue-500/30 transition-all">
+                  <div className="relative rounded-2xl p-8 transition-all" style={{ background: 'hsl(var(--editor-panel))', border: '1px solid hsl(var(--editor-border))' }}>
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30">
+                      <div className="flex items-center justify-center w-14 h-14 rounded-xl" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
                         {step.icon}
                       </div>
-                      <span className="text-4xl font-bold text-slate-700">{step.number}</span>
+                      <span className="text-4xl font-bold" style={{ color: 'hsl(var(--editor-border))' }}>{step.number}</span>
                     </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">{step.title}</h3>
-                    <p className="text-slate-400">{step.description}</p>
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{step.title}</h3>
+                    <p style={{ color: 'hsl(var(--editor-text))' }}>{step.description}</p>
                   </div>
                 </div>
               ))}
