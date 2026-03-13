@@ -74,12 +74,6 @@ const FreeStockLibrary = () => {
         per_page: '30',
       });
 
-      const { data, error } = await supabase.functions.invoke('pexels-search', {
-        body: null,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      // Use fetch directly since we need query params
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/pexels-search?${params}`,
         {
