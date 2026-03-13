@@ -242,10 +242,10 @@ function ToolSection({ title, icon, tools }: { title: string; icon: React.ReactN
   return (
     <div className="mb-12">
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
           {icon}
         </div>
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
+        <h2 className="text-2xl font-bold" style={{ color: 'hsl(var(--editor-text-bright))' }}>{title}</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool) => (
