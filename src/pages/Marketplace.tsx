@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { SlidersHorizontal, ChevronDown, Video, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSearchParams, useParams, useLocation } from "react-router-dom";
+import { useSearchParams, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
