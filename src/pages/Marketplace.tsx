@@ -33,6 +33,14 @@ const Marketplace = () => {
   const { t, language } = useLanguage();
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Redirect ?price=free to the unified Free Stock Library page
+  useEffect(() => {
+    if (searchParams.get('price') === 'free') {
+      navigate('/free-stock-library', { replace: true });
+    }
+  }, [searchParams, navigate]);
   
   // Detect if page has filters/search that should not be indexed
   const hasFilterParams = useMemo(() => {
