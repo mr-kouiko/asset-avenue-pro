@@ -230,12 +230,13 @@ const FreeStockLibrary = () => {
                 className="break-inside-avoid group relative cursor-pointer rounded-lg overflow-hidden border border-border"
                 onClick={() => setSelectedPhoto(photo)}
               >
-                <LazyImage
-                  src={photo.src.medium}
-                  alt={photo.alt || 'Pexels photo'}
-                  className="w-full"
-                  style={{ aspectRatio: `${photo.width}/${photo.height}` }}
-                />
+                <div style={{ aspectRatio: `${photo.width}/${photo.height}` }}>
+                  <LazyImage
+                    src={photo.src.medium}
+                    alt={photo.alt || 'Pexels photo'}
+                    className="w-full h-full"
+                  />
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="absolute bottom-0 left-0 right-0 p-3">
                     <div className="flex items-center justify-between">

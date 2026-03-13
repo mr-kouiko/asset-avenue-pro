@@ -162,6 +162,7 @@ const App = () => (
                         <Route path="/ai-upscaler" element={<AIUpscaler />} />
                         <Route path="/face-enhancer" element={<FaceEnhancer />} />
                         <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
+                        <Route path="/free-stock-library" element={<FreeStockLibrary />} />
                         
                         {/* Content pages */}
                         <Route path="/support" element={<Support />} />
