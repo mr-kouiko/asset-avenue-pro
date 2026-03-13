@@ -466,7 +466,7 @@ export default function ReframeVideo() {
               </p>
               <Button
                 variant="outline"
-                className="mt-2 border-slate-600 text-slate-300 hover:bg-white/5 gap-2"
+                className="mt-2 border-slate-600 text-black hover:bg-white/5 gap-2"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="w-4 h-4" /> Upload Video
