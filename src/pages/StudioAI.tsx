@@ -193,36 +193,41 @@ function ToolCard({ tool }: { tool: AITool }) {
   
   return (
     <Card 
-      className={`group relative overflow-hidden border-slate-700/50 bg-slate-900/50 backdrop-blur-sm transition-all duration-300 hover:border-blue-500/50 hover:bg-slate-800/50 ${tool.available ? 'cursor-pointer' : 'opacity-75'}`}
+      className={`group relative overflow-hidden backdrop-blur-sm transition-all duration-300 ${tool.available ? 'cursor-pointer' : 'opacity-75'}`}
+      style={{
+        background: 'hsl(var(--editor-panel))',
+        borderColor: 'hsl(var(--editor-border))',
+      }}
       onClick={() => tool.available && navigate(tool.href)}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
             {tool.icon}
           </div>
           {tool.badge && (
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
               tool.available 
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                : 'bg-slate-700/50 text-slate-400 border border-slate-600/50'
-            }`}>
+                : ''
+            }`} style={!tool.available ? { background: 'hsl(var(--editor-border) / 0.5)', color: 'hsl(var(--editor-text))', border: '1px solid hsl(var(--editor-border))' } : {}}>
               {tool.badge}
             </span>
           )}
         </div>
         
-        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
+        <h3 className="text-lg font-semibold mb-2 transition-colors" style={{ color: 'hsl(var(--editor-text-bright))' }}>
           {tool.title}
         </h3>
-        <p className="text-sm text-slate-400 leading-relaxed mb-4">
+        <p className="text-sm leading-relaxed mb-4" style={{ color: 'hsl(var(--editor-text))' }}>
           {tool.description}
         </p>
         
         <Button 
           variant={tool.available ? "default" : "secondary"}
           size="sm"
-          className={`w-full ${tool.available ? 'bg-blue-600 hover:bg-blue-500' : ''}`}
+          className="w-full"
+          style={tool.available ? { background: 'hsl(var(--editor-accent))', color: '#fff' } : {}}
           disabled={!tool.available}
         >
           {tool.available ? 'Try Now' : 'Coming Soon'}
@@ -237,10 +242,10 @@ function ToolSection({ title, icon, tools }: { title: string; icon: React.ReactN
   return (
     <div className="mb-12">
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
           {icon}
         </div>
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
+        <h2 className="text-2xl font-bold" style={{ color: 'hsl(var(--editor-text-bright))' }}>{title}</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool) => (
@@ -265,7 +270,7 @@ export default function StudioAI() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
+    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
       <Header />
       
       <main>
@@ -273,21 +278,21 @@ export default function StudioAI() {
         <section className="relative overflow-hidden">
           {/* Animated background effects */}
           <div className="absolute inset-0">
-            <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+            <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse" style={{ background: 'hsl(var(--editor-accent) / 0.15)' }} />
+            <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse delay-700" style={{ background: 'hsl(262 83% 58% / 0.12)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full blur-3xl animate-pulse delay-1000" style={{ background: 'hsl(var(--editor-accent) / 0.08)' }} />
           </div>
           
           <div className="relative container mx-auto px-4 py-20 md:py-28 max-w-6xl">
             <div className="text-center">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 mb-8">
-                <Sparkles className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">AI-Powered Creative Suite</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ background: 'hsl(var(--editor-accent) / 0.1)', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
+                <Sparkles className="w-4 h-4" style={{ color: 'hsl(var(--editor-accent))' }} />
+                <span className="text-sm font-medium" style={{ color: 'hsl(var(--editor-accent))' }}>AI-Powered Creative Suite</span>
               </div>
               
               {/* Title */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight" style={{ color: 'hsl(var(--editor-text-bright))' }}>
                 Studio{' '}
                 <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                   AI
@@ -295,12 +300,12 @@ export default function StudioAI() {
               </h1>
               
               {/* Subtitle */}
-              <p className="text-xl md:text-2xl text-slate-300 mb-4 max-w-3xl mx-auto">
+              <p className="text-xl md:text-2xl mb-4 max-w-3xl mx-auto" style={{ color: 'hsl(var(--editor-text-bright) / 0.8)' }}>
                 All-in-one AI tools to create, enhance and transform visual, video and audio content.
               </p>
               
               {/* Description */}
-              <p className="text-base text-slate-400 mb-10 max-w-2xl mx-auto">
+              <p className="text-base mb-10 max-w-2xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
                 Studio AI helps creators, marketers and businesses generate professional content faster — no technical skills required.
               </p>
               
@@ -308,7 +313,8 @@ export default function StudioAI() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button 
                   size="lg" 
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-6 text-lg rounded-xl"
+                  className="text-white px-8 py-6 text-lg rounded-xl"
+                  style={{ background: 'hsl(var(--editor-accent))' }}
                   onClick={() => navigate('/ai-image-generator')}
                 >
                   Start Creating
@@ -317,7 +323,8 @@ export default function StudioAI() {
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-800 px-8 py-6 text-lg rounded-xl"
+                  className="px-8 py-6 text-lg rounded-xl"
+                  style={{ borderColor: 'hsl(var(--editor-border))', color: 'hsl(var(--editor-text-bright))' }}
                   onClick={scrollToTools}
                 >
                   Explore AI Tools
@@ -349,13 +356,13 @@ export default function StudioAI() {
         </section>
 
         {/* How It Works Section */}
-        <section className="relative py-20 bg-slate-900/50">
+        <section className="relative py-20" style={{ background: 'hsl(var(--editor-sidebar))' }}>
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
                 How Studio AI Works
               </h2>
-              <p className="text-slate-400 max-w-xl mx-auto">
+              <p className="max-w-xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
                 Create professional content in three simple steps
               </p>
             </div>
@@ -365,18 +372,18 @@ export default function StudioAI() {
                 <div key={step.number} className="relative">
                   {/* Connection line for desktop */}
                   {index < steps.length - 1 && (
-                    <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-blue-500/50 to-transparent" />
+                    <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5" style={{ background: `linear-gradient(to right, hsl(var(--editor-accent) / 0.5), transparent)` }} />
                   )}
                   
-                  <div className="relative bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 hover:border-blue-500/30 transition-all">
+                  <div className="relative rounded-2xl p-8 transition-all" style={{ background: 'hsl(var(--editor-panel))', border: '1px solid hsl(var(--editor-border))' }}>
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30">
+                      <div className="flex items-center justify-center w-14 h-14 rounded-xl" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
                         {step.icon}
                       </div>
-                      <span className="text-4xl font-bold text-slate-700">{step.number}</span>
+                      <span className="text-4xl font-bold" style={{ color: 'hsl(var(--editor-border))' }}>{step.number}</span>
                     </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">{step.title}</h3>
-                    <p className="text-slate-400">{step.description}</p>
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{step.title}</h3>
+                    <p style={{ color: 'hsl(var(--editor-text))' }}>{step.description}</p>
                   </div>
                 </div>
               ))}
@@ -387,10 +394,10 @@ export default function StudioAI() {
         {/* Why Studio AI Section */}
         <section className="container mx-auto px-4 py-20 max-w-6xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
               Why Studio AI
             </h2>
-            <p className="text-slate-400 max-w-xl mx-auto">
+            <p className="max-w-xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
               Everything you need to create stunning content
             </p>
           </div>
@@ -399,13 +406,14 @@ export default function StudioAI() {
             {benefits.map((benefit) => (
               <div 
                 key={benefit.title}
-                className="bg-slate-800/30 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/30 transition-all text-center"
+                className="rounded-xl p-6 transition-all text-center"
+                style={{ background: 'hsl(var(--editor-panel))', border: '1px solid hsl(var(--editor-border))' }}
               >
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30 mx-auto mb-4">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl mx-auto mb-4" style={{ background: 'hsl(var(--editor-accent) / 0.15)', color: 'hsl(var(--editor-accent))', border: '1px solid hsl(var(--editor-accent) / 0.3)' }}>
                   {benefit.icon}
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{benefit.title}</h3>
-                <p className="text-sm text-slate-400">{benefit.description}</p>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{benefit.title}</h3>
+                <p className="text-sm" style={{ color: 'hsl(var(--editor-text))' }}>{benefit.description}</p>
               </div>
             ))}
           </div>
@@ -415,20 +423,21 @@ export default function StudioAI() {
         <section className="relative py-20 overflow-hidden">
           {/* Background effects */}
           <div className="absolute inset-0">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full blur-3xl" style={{ background: 'hsl(var(--editor-accent) / 0.1)' }} />
           </div>
           
           <div className="relative container mx-auto px-4 max-w-4xl">
-            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-3xl p-10 md:p-14 border border-slate-700/50 text-center backdrop-blur-sm">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <div className="rounded-3xl p-10 md:p-14 text-center backdrop-blur-sm" style={{ background: 'hsl(var(--editor-sidebar))', border: '1px solid hsl(var(--editor-border))' }}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
                 Create Faster with Studio AI
               </h2>
-              <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+              <p className="mb-8 max-w-xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
                 Join thousands of creators using AI to produce professional content in minutes.
               </p>
               <Button 
                 size="lg" 
-                className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-6 text-lg rounded-xl"
+                className="text-white px-10 py-6 text-lg rounded-xl"
+                style={{ background: 'hsl(var(--editor-accent))' }}
                 onClick={scrollToTools}
               >
                 Explore Studio AI
