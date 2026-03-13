@@ -324,7 +324,7 @@ export default function StudioAI() {
                   size="lg" 
                   variant="outline"
                   className="px-8 py-6 text-lg rounded-xl"
-                  style={{ borderColor: 'hsl(var(--editor-border))', color: 'hsl(var(--editor-text-bright))' }}
+                  style={{ borderColor: 'hsl(var(--editor-border))', color: '#000000' }}
                   onClick={scrollToTools}
                 >
                   Explore AI Tools
