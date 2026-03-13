@@ -61,6 +61,7 @@ const Marketplace = () => {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("recent");
+  const [pexelsTotalCount, setPexelsTotalCount] = useState(0);
   const [categories, setCategories] = useState([
     { value: "all", label: "All Categories", count: "0" }
   ]);
