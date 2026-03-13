@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.edge-tts]
 verify_jwt = true
+
+[functions.pexels-search]
+verify_jwt = false
