@@ -356,7 +356,7 @@ export default function StudioAI() {
         </section>
 
         {/* How It Works Section */}
-        <section className="relative py-20 bg-slate-900/50">
+        <section className="relative py-20" style={{ background: 'hsl(var(--editor-sidebar))' }}>
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
