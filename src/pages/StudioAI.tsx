@@ -278,9 +278,9 @@ export default function StudioAI() {
         <section className="relative overflow-hidden">
           {/* Animated background effects */}
           <div className="absolute inset-0">
-            <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+            <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse" style={{ background: 'hsl(var(--editor-accent) / 0.15)' }} />
+            <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl animate-pulse delay-700" style={{ background: 'hsl(262 83% 58% / 0.12)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full blur-3xl animate-pulse delay-1000" style={{ background: 'hsl(var(--editor-accent) / 0.08)' }} />
           </div>
           
           <div className="relative container mx-auto px-4 py-20 md:py-28 max-w-6xl">
