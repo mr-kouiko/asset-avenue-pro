@@ -313,7 +313,8 @@ export default function StudioAI() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button 
                   size="lg" 
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-6 text-lg rounded-xl"
+                  className="text-white px-8 py-6 text-lg rounded-xl"
+                  style={{ background: 'hsl(var(--editor-accent))' }}
                   onClick={() => navigate('/ai-image-generator')}
                 >
                   Start Creating
@@ -322,7 +323,8 @@ export default function StudioAI() {
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-800 px-8 py-6 text-lg rounded-xl"
+                  className="px-8 py-6 text-lg rounded-xl"
+                  style={{ borderColor: 'hsl(var(--editor-border))', color: 'hsl(var(--editor-text-bright))' }}
                   onClick={scrollToTools}
                 >
                   Explore AI Tools
