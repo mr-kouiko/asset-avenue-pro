@@ -394,10 +394,10 @@ export default function StudioAI() {
         {/* Why Studio AI Section */}
         <section className="container mx-auto px-4 py-20 max-w-6xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'hsl(var(--editor-text-bright))' }}>
               Why Studio AI
             </h2>
-            <p className="text-slate-400 max-w-xl mx-auto">
+            <p className="max-w-xl mx-auto" style={{ color: 'hsl(var(--editor-text))' }}>
               Everything you need to create stunning content
             </p>
           </div>
