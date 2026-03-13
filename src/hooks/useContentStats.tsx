@@ -25,25 +25,44 @@ export const useContentStats = () => {
     try {
       setLoading(true);
       
-      // Get ALL approved content with file types + category_id
-      const { data: submissions, error } = await supabase
-        .from('content_submissions')
-        .select(`
-          id,
-          status,
-          category_id,
-          content_files!inner (
-            file_type,
-            is_original
-          )
-        `)
-        .eq('status', 'approved')
-        .eq('content_files.is_original', true);
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      // Fetch DB stats and Pexels counts in parallel
+      const [submissionsResult, pexelsPhotosRes, pexelsVideosRes] = await Promise.all([
+        supabase
+          .from('content_submissions')
+          .select(`
+            id,
+            status,
+            category_id,
+            content_files!inner (
+              file_type,
+              is_original
+            )
+          `)
+          .eq('status', 'approved')
+          .eq('content_files.is_original', true),
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/pexels-search?type=photos&per_page=1&page=1`,
+          { headers: { apikey: apiKey } }
+        ).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/pexels-search?type=videos&per_page=1&page=1`,
+          { headers: { apikey: apiKey } }
+        ).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+
+      const { data: submissions, error } = submissionsResult;
 
       if (error) {
         console.error('Error fetching content stats:', error);
         return;
       }
+
+      // Pexels totals
+      const pexelsPhotoCount = pexelsPhotosRes?.total_results || 0;
+      const pexelsVideoCount = pexelsVideosRes?.total_results || 0;
 
       // Count by type - prefer category_id (seller edits), fallback to file_type
       let photos = 0;
@@ -100,6 +119,10 @@ export const useContentStats = () => {
           photos++;
         }
       });
+
+      // Add Pexels counts to photos and videos
+      photos += pexelsPhotoCount;
+      videos += pexelsVideoCount;
 
       const total = photos + videos + audios + ebooks + vfx;
 
