@@ -1,38 +1,53 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MarketplaceContent {
   id: string;
-  slug?: string; // SEO-friendly URL slug
+  slug?: string;
   title: string;
   author: string;
   price: number;
-  /** True only when the creator explicitly set the product as free (price = 0 in DB). */
   isFree?: boolean;
   type: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx';
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
-  coverUrl?: string; // For ebooks/PDF
+  coverUrl?: string;
   likes: number;
   downloads: number;
   isLiked?: boolean;
   category_id?: string;
   tags?: string[];
-  duration?: string; // Audio duration (e.g., "3:45")
-  bpm?: number; // Beats per minute for audio
-  created_at?: string; // Upload date for sorting
-  original_language?: string; // Original language of the content
-  isAiGenerated?: boolean; // AI-generated content flag
-  /** True only for real vector assets (SVG). */
+  duration?: string;
+  bpm?: number;
+  created_at?: string;
+  original_language?: string;
+  isAiGenerated?: boolean;
   isVector?: boolean;
 }
 
+export interface MarketplaceFilters {
+  category?: string;
+  searchQuery?: string;
+  subjectTags?: string[];
+  styleTags?: string[];
+  useCaseTags?: string[];
+  orientationTags?: string[];
+  colorTags?: string[];
+  effectTags?: string[];
+  platformTags?: string[];
+  aiGenerated?: boolean | null;
+  freeOnly?: boolean;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  withPeople?: boolean | null;
+  sortBy?: string;
+  page?: number;
+}
 
-// Throttle duration for focus refetch (5 minutes in milliseconds)
-const FOCUS_THROTTLE_MS = 5 * 60 * 1000;
+export const PAGE_SIZE = 40;
 
-// Category slug to UUID mapping for server-side filtering
+// Category slug to UUID mapping
 const categorySlugToId: Record<string, string> = {
   'photo': 'e6eb8946-abab-4a0b-9249-da012b7a87af',
   'video': 'b4fe5f6a-554b-4409-8eaa-71c87d225b33',
@@ -42,7 +57,7 @@ const categorySlugToId: Record<string, string> = {
   'vfx': 'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c',
 };
 
-// Cache for public URLs to avoid re-computation
+// Cache for public URLs
 const urlCache = new Map<string, string>();
 
 const buildPublicUrlCached = (bucket: string, path: string): string => {
@@ -53,228 +68,86 @@ const buildPublicUrlCached = (bucket: string, path: string): string => {
   return url;
 };
 
-export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
-  const [content, setContent] = useState<MarketplaceContent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
-  
-  // Track when the tab was last active for throttled focus refresh
-  const lastActiveRef = useRef<number>(Date.now());
-  const isInitialLoadRef = useRef<boolean>(true);
-  
-  // Track previous category to detect changes
-  const prevCategoryRef = useRef<string | undefined>(categoryFilter);
+// ============================================================================
+// CONTENT PROCESSING (shared between all fetch paths)
+// ============================================================================
 
-  // Silent background refresh - updates data without clearing content or showing loading
-  const backgroundRefresh = async () => {
-    try {
-      console.log('🔄 [MARKETPLACE] Background refresh - preserving UI state', { categoryFilter });
-      
-      // Build query with optional category filter
-      let query = supabase
-        .from('content_submissions')
-        .select(`
-          id,
-          title,
-          description,
-          price,
-          tags,
-          created_at,
-          category_id,
-          slug,
-          creator_id,
-          content_files!inner(id)
-        `)
-        .eq('status', 'approved');
-      
-      // Apply server-side category filter
-      if (categoryFilter && categoryFilter !== 'all') {
-        const categoryUUID = categorySlugToId[categoryFilter];
-        if (categoryUUID) {
-          query = query.eq('category_id', categoryUUID);
-        }
-      }
-      
-      const { data: marketplaceData, error } = await query
-        .order('created_at', { ascending: false })
-        .range(0, initialLimit - 1);
+const isImagePath = (p?: string) => !!p && /\.(jpg|jpeg|png|webp|gif)$/i.test(p);
 
-      if (error) {
-        console.error('Error in background refresh:', error);
-        return;
-      }
+const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx'> = {
+  'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',
+  'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',
+  '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',
+  'ceca4e62-559c-4dc6-98fe-64017d537192': 'photo',
+  '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',
+  'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c': 'vfx',
+};
 
-      // Fetch creator info using secure public RPC (works for anonymous users)
-      const creatorIds = [...new Set((marketplaceData || []).map((item: any) => item.creator_id))];
-      const { data: creators } = await supabase
-        .rpc('get_creator_public_info', { creator_ids: creatorIds });
-      
-      const creatorMap = new Map((creators as any[])?.map(c => [c.user_id, c.store_name || c.display_name]) || []);
-
-      // Fetch all files in one query
-      const submissionIds = (marketplaceData || []).map((item: any) => item.id);
-      const { data: allFiles } = await supabase
-        .from('content_files')
-        .select('*')
-        .in('submission_id', submissionIds);
-
-      // Group files by submission_id
-      const filesBySubmission = new Map<string, any[]>();
-      (allFiles || []).forEach(file => {
-        const existing = filesBySubmission.get(file.submission_id) || [];
-        filesBySubmission.set(file.submission_id, [...existing, file]);
-      });
-
-      // Batch-fetch engagement stats (likes + downloads)
-      const [likesResult, downloadsResult] = await Promise.all([
-        supabase
-          .from('content_likes')
-          .select('submission_id')
-          .in('submission_id', submissionIds),
-        supabase
-          .from('downloads')
-          .select('submission_id')
-          .in('submission_id', submissionIds)
-      ]);
-
-      const likesMap = new Map<string, number>();
-      (likesResult.data || []).forEach(row => {
-        likesMap.set(row.submission_id, (likesMap.get(row.submission_id) || 0) + 1);
-      });
-      const downloadsMap = new Map<string, number>();
-      (downloadsResult.data || []).forEach(row => {
-        downloadsMap.set(row.submission_id, (downloadsMap.get(row.submission_id) || 0) + 1);
-      });
-
-      // Process items (same logic as fetchMarketplaceContent)
-      const newContent = processMarketplaceData(marketplaceData || [], filesBySubmission, creatorMap, likesMap, downloadsMap);
-      
-      // Only update if there are actual changes to avoid unnecessary re-renders
-      setContent(prev => {
-        const prevIds = new Set(prev.map(p => p.id));
-        const newIds = new Set(newContent.map(n => n.id));
-        const hasChanges = prev.length !== newContent.length || 
-          [...newIds].some(id => !prevIds.has(id)) ||
-          [...prevIds].some(id => !newIds.has(id));
-        
-        if (hasChanges) {
-          console.log('📊 [MARKETPLACE] Content updated in background');
-          return newContent;
-        }
-        return prev;
-      });
-      
-      setHasMore(marketplaceData && marketplaceData.length === initialLimit);
-      setOffset(initialLimit);
-    } catch (error) {
-      console.error('Background refresh error:', error);
-    }
-  };
-
-  // Helper function to process marketplace data (extracted for reuse) - memoized
-  const processMarketplaceData = useCallback((
-    marketplaceData: any[], 
-    filesBySubmission: Map<string, any[]>,
-    creatorMap: Map<string, string>,
-    likesMap: Map<string, number> = new Map(),
-    downloadsMap: Map<string, number> = new Map()
-  ): MarketplaceContent[] => {
-    const isImagePath = (p?: string) => !!p && /\.(jpg|jpeg|png|webp|gif)$/i.test(p);
-
-    const contentWithFiles = marketplaceData.map((item: any) => {
+function processMarketplaceData(
+  marketplaceData: any[],
+  filesBySubmission: Map<string, any[]>,
+  creatorMap: Map<string, string>,
+  likesMap: Map<string, number>,
+  downloadsMap: Map<string, number>
+): MarketplaceContent[] {
+  return marketplaceData
+    .map((item: any) => {
       const files = filesBySubmission.get(item.id) || [];
-      
-      if (!files || files.length === 0) {
-        return null;
-      }
+      if (!files.length) return null;
 
-      const originalFile = files?.find(f => f.is_original);
+      const originalFile = files.find((f: any) => f.is_original);
 
-      // Thumbnail logic - optimized with cached URL builder
+      // Thumbnail
       let thumbnailUrl = '';
-      const imageThumb = files?.find(f => isImagePath(f.thumbnail_path));
+      const imageThumb = files.find((f: any) => isImagePath(f.thumbnail_path));
       if (imageThumb?.thumbnail_path) {
         thumbnailUrl = imageThumb.thumbnail_path.startsWith('http')
           ? imageThumb.thumbnail_path
           : buildPublicUrlCached('thumbnails', imageThumb.thumbnail_path);
       }
       if (!thumbnailUrl) {
-        const imagePreview = files?.find(f => isImagePath(f.preview_path));
+        const imagePreview = files.find((f: any) => isImagePath(f.preview_path));
         if (imagePreview?.preview_path) {
           thumbnailUrl = imagePreview.preview_path.startsWith('http')
             ? imagePreview.preview_path
             : buildPublicUrlCached('previews', imagePreview.preview_path);
         }
       }
-      if (!thumbnailUrl) {
-        thumbnailUrl = '/placeholder.svg';
-      }
+      if (!thumbnailUrl) thumbnailUrl = '/placeholder.svg';
 
-      // Content type detection - prioritize category_id over file type
+      // Content type
       let contentType: 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx' = 'photo';
-      
-      // Category ID to type mapping (from database categories table)
-      const categoryTypeMap: Record<string, 'photo' | 'video' | 'audio' | 'pdf' | 'ebook' | 'vfx'> = {
-        'e6eb8946-abab-4a0b-9249-da012b7a87af': 'photo',      // Photo
-        'b4fe5f6a-554b-4409-8eaa-71c87d225b33': 'video',      // Vidéo
-        '0b9e322e-cecb-494f-ba8d-c5397e913b99': 'audio',      // Audio
-        'ceca4e62-559c-4dc6-98fe-64017d537192': 'photo',      // Vector (now treated as photo)
-        '9ec96e29-199f-4ce2-b951-4ca18c62c87c': 'ebook',      // Ebooks
-        'f8a21c7e-3d5b-4e9f-a1c2-8b6d9e4f7a3c': 'vfx',        // Visual Effects
-      };
-      
-      // Use category_id first if available
       if (item.category_id && categoryTypeMap[item.category_id]) {
         contentType = categoryTypeMap[item.category_id];
       } else if (originalFile) {
-        // Fallback to file type detection
         const fileType = originalFile.file_type?.toLowerCase() || '';
         const fileFormat = originalFile.file_format?.toLowerCase() || '';
-        
-        if (fileType.includes('video')) {
-          contentType = 'video';
-        } else if (fileType.includes('audio')) {
-          contentType = 'audio';
-        } else if (fileType === 'document' || fileFormat === 'application/pdf') {
-          contentType = 'ebook';
-        }
+        if (fileType.includes('video')) contentType = 'video';
+        else if (fileType.includes('audio')) contentType = 'audio';
+        else if (fileType === 'document' || fileFormat === 'application/pdf') contentType = 'ebook';
       }
 
-      // Media URL - optimized with cached URL builder
-      // CRITICAL: For videos, we MUST have a valid URL for hover autoplay
+      // Media URL
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
-        // Priority 1: Watermarked preview (preferred for marketplace)
-        const fileWithPreview = files?.find(f => f.preview_path);
+        const fileWithPreview = files.find((f: any) => f.preview_path);
         if (fileWithPreview?.preview_path) {
           mediaUrl = fileWithPreview.preview_path.startsWith('http')
             ? fileWithPreview.preview_path
             : buildPublicUrlCached('previews', fileWithPreview.preview_path);
         }
-        
-        // Priority 2: Original file path (fallback)
         if (!mediaUrl && originalFile?.file_path) {
           mediaUrl = originalFile.file_path.startsWith('http')
             ? originalFile.file_path
             : buildPublicUrlCached('uploads', originalFile.file_path);
         }
-        
-        // Priority 3: Any video file in the submission
         if (!mediaUrl) {
-          const anyVideoFile = files?.find(f => 
-            f.file_type?.toLowerCase().includes('video') && f.file_path
-          );
+          const anyVideoFile = files.find((f: any) => f.file_type?.toLowerCase().includes('video') && f.file_path);
           if (anyVideoFile?.file_path) {
             mediaUrl = anyVideoFile.file_path.startsWith('http')
               ? anyVideoFile.file_path
               : buildPublicUrlCached('uploads', anyVideoFile.file_path);
           }
-        }
-        
-        // Debug: Log when video has no URL (should not happen)
-        if (!mediaUrl && process.env.NODE_ENV === 'development') {
-          console.warn(`⚠️ [MARKETPLACE] Video "${item.title}" (${item.id}) has no playable URL`, { files });
         }
       } else if (contentType === 'audio') {
         if (originalFile?.file_path) {
@@ -284,22 +157,13 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         }
       }
 
-      // VFX video preview URL - check if preview is an MP4 video
+      // VFX video preview
       if (contentType === 'vfx') {
-        // Method 1: Check if preview_path ends with .mp4
-        const videoPreviewFile = files?.find(f => 
-          f.preview_path?.toLowerCase().endsWith('.mp4')
+        const videoPreviewFile = files.find((f: any) => f.preview_path?.toLowerCase().endsWith('.mp4'));
+        const hasVideoPreviewMetadata = files.find((f: any) =>
+          f.metadata && typeof f.metadata === 'object' && 'previewMediaType' in f.metadata && f.metadata.previewMediaType === 'video'
         );
-        
-        // Method 2: Check metadata for previewMediaType === 'video'
-        const hasVideoPreviewMetadata = files?.find(f => 
-          f.metadata && typeof f.metadata === 'object' && 
-          'previewMediaType' in f.metadata && 
-          f.metadata.previewMediaType === 'video'
-        );
-        
         const vfxVideoFile = videoPreviewFile || hasVideoPreviewMetadata;
-        
         if (vfxVideoFile?.preview_path) {
           mediaUrl = vfxVideoFile.preview_path.startsWith('http')
             ? vfxVideoFile.preview_path
@@ -310,13 +174,11 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
       // Cover URL for ebooks
       let coverUrl: string | undefined;
       if (contentType === 'ebook') {
-        if (thumbnailUrl && thumbnailUrl !== '/placeholder.svg') {
-          coverUrl = thumbnailUrl;
-        }
+        if (thumbnailUrl && thumbnailUrl !== '/placeholder.svg') coverUrl = thumbnailUrl;
         if (!coverUrl) {
-          const coverFile = files?.find(f => 
-            f.file_name?.toLowerCase().includes('cover') || 
-            (f.metadata && typeof f.metadata === 'object' && 'isCover' in f.metadata) || 
+          const coverFile = files.find((f: any) =>
+            f.file_name?.toLowerCase().includes('cover') ||
+            (f.metadata && typeof f.metadata === 'object' && 'isCover' in f.metadata) ||
             (f.file_type?.startsWith('image/') && f.id !== originalFile?.id)
           );
           if (coverFile?.file_path) {
@@ -327,20 +189,15 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         }
       }
 
-      const isAiGenerated = originalFile?.metadata && typeof originalFile.metadata === 'object' && 
+      const isAiGenerated = originalFile?.metadata && typeof originalFile.metadata === 'object' &&
         ('isAiGenerated' in originalFile.metadata ? originalFile.metadata.isAiGenerated === true : false);
 
       const isVector = (() => {
         const fileName = (originalFile?.file_name || originalFile?.file_path || '').toLowerCase();
         const fileType = (originalFile?.file_type || '').toLowerCase();
         const fileFormat = (originalFile?.file_format || '').toLowerCase();
-        return (
-          fileName.endsWith('.svg') ||
-          fileType.includes('svg') ||
-          fileFormat.includes('svg') ||
-          fileType.includes('vector') ||
-          fileFormat.includes('vector')
-        );
+        return fileName.endsWith('.svg') || fileType.includes('svg') || fileFormat.includes('svg') ||
+          fileType.includes('vector') || fileFormat.includes('vector');
       })();
 
       return {
@@ -360,201 +217,139 @@ export const useMarketplace = (initialLimit = 200, categoryFilter?: string) => {
         category_id: item.category_id,
         tags: item.tags || [],
         created_at: item.created_at,
-        duration: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'duration' in originalFile.metadata 
-          ? originalFile.metadata.duration as string 
-          : undefined,
-        bpm: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'bpm' in originalFile.metadata 
-          ? originalFile.metadata.bpm as number 
-          : undefined,
-        isAiGenerated: isAiGenerated,
+        duration: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'duration' in originalFile.metadata
+          ? originalFile.metadata.duration as string : undefined,
+        bpm: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'bpm' in originalFile.metadata
+          ? originalFile.metadata.bpm as number : undefined,
+        isAiGenerated,
         isVector,
       } as MarketplaceContent;
-    });
+    })
+    .filter((item): item is MarketplaceContent => item !== null);
+}
 
-    return contentWithFiles.filter((item): item is MarketplaceContent => item !== null);
-  }, []);
+// ============================================================================
+// HOOK
+// ============================================================================
 
-  const fetchMarketplaceContent = async (reset = false) => {
+export const useMarketplace = (filters: MarketplaceFilters = {}) => {
+  const [content, setContent] = useState<MarketplaceContent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const abortRef = useRef(0);
+
+  const fetchContent = useCallback(async (currentFilters: MarketplaceFilters) => {
+    const fetchId = ++abortRef.current;
+    setLoading(true);
+
     try {
-      // Only show loading spinner on initial load, not on refreshes
-      if (isInitialLoadRef.current) {
-        setLoading(true);
-      }
-      
-      const currentOffset = reset ? 0 : offset;
-      
-      console.log('🏪 [MARKETPLACE] Fetching content', { categoryFilter, currentOffset, initialLimit });
-      
-      // Build query with optional category filter
-      let query = supabase
-        .from('content_submissions')
-        .select(`
-          id,
-          title,
-          description,
-          price,
-          tags,
-          created_at,
-          category_id,
-          slug,
-          creator_id,
-          content_files!inner(id)
-        `)
-        .eq('status', 'approved');
-      
-      // Apply server-side category filter
-      if (categoryFilter && categoryFilter !== 'all') {
-        const categoryUUID = categorySlugToId[categoryFilter];
-        if (categoryUUID) {
-          query = query.eq('category_id', categoryUUID);
-          console.log(`📁 [MARKETPLACE] Server-side filter: ${categoryFilter} -> ${categoryUUID}`);
-        }
-      }
-      
-      const { data: marketplaceData, error } = await query
-        .order('created_at', { ascending: false })
-        .range(currentOffset, currentOffset + initialLimit - 1);
+      const page = currentFilters.page || 1;
+      const offset = (page - 1) * PAGE_SIZE;
+
+      const categoryId = currentFilters.category && currentFilters.category !== 'all'
+        ? categorySlugToId[currentFilters.category] || null
+        : null;
+
+      const { data: rpcData, error } = await (supabase.rpc as any)('search_marketplace', {
+        p_category_id: categoryId,
+        p_search: currentFilters.searchQuery?.trim() || null,
+        p_subject_tags: currentFilters.subjectTags?.length ? currentFilters.subjectTags : null,
+        p_style_tags: currentFilters.styleTags?.length ? currentFilters.styleTags : null,
+        p_use_case_tags: currentFilters.useCaseTags?.length ? currentFilters.useCaseTags : null,
+        p_orientation_tags: currentFilters.orientationTags?.length ? currentFilters.orientationTags : null,
+        p_color_tags: currentFilters.colorTags?.length ? currentFilters.colorTags : null,
+        p_effect_tags: currentFilters.effectTags?.length ? currentFilters.effectTags : null,
+        p_platform_tags: currentFilters.platformTags?.length ? currentFilters.platformTags : null,
+        p_ai_generated: currentFilters.aiGenerated ?? null,
+        p_free_only: currentFilters.freeOnly || false,
+        p_price_min: currentFilters.priceMin ?? null,
+        p_price_max: currentFilters.priceMax ?? null,
+        p_with_people: currentFilters.withPeople ?? null,
+        p_sort: currentFilters.sortBy || 'recent',
+        p_offset: offset,
+        p_limit: PAGE_SIZE,
+      });
+
+      // Abort if a newer fetch started
+      if (fetchId !== abortRef.current) return;
 
       if (error) {
-        console.error('Error fetching marketplace content:', error);
+        console.error('❌ [MARKETPLACE] RPC error:', error);
+        setContent([]);
+        setTotalCount(0);
         return;
       }
 
-      setHasMore(marketplaceData && marketplaceData.length === initialLimit);
-      
-      console.log('🏪 [MARKETPLACE] Processing', marketplaceData?.length || 0, 'items');
-      
-      const creatorIds = [...new Set((marketplaceData || []).map((item: any) => item.creator_id))];
-      const submissionIds = (marketplaceData || []).map((item: any) => item.id);
-      
-      // PARALLEL FETCH: Creators, Files, Likes, and Downloads all at once
-      const parallelStart = Date.now();
+      if (!rpcData || rpcData.length === 0) {
+        setContent([]);
+        setTotalCount(0);
+        return;
+      }
+
+      const total = Number(rpcData[0]?.total_count || 0);
+      setTotalCount(total);
+
+      // Parallel fetch: creators, files, likes, downloads
+      const submissionIds = rpcData.map((item: any) => item.id);
+      const creatorIds = [...new Set(rpcData.map((item: any) => item.creator_id))];
+
       const [creatorsResult, filesResult, likesResult, downloadsResult] = await Promise.all([
         supabase.rpc('get_creator_public_info', { creator_ids: creatorIds }),
         supabase
           .from('content_files')
           .select('id, submission_id, file_name, file_path, file_type, file_format, is_original, is_preview, preview_path, thumbnail_path, metadata')
           .in('submission_id', submissionIds),
-        supabase
-          .from('content_likes')
-          .select('submission_id')
-          .in('submission_id', submissionIds),
-        supabase
-          .from('downloads')
-          .select('submission_id')
-          .in('submission_id', submissionIds)
+        supabase.from('content_likes').select('submission_id').in('submission_id', submissionIds),
+        supabase.from('downloads').select('submission_id').in('submission_id', submissionIds),
       ]);
-      
-      const parallelTime = Date.now() - parallelStart;
-      console.log(`⚡ [MARKETPLACE] PARALLEL fetch (creators + files + stats): ${parallelTime}ms`);
-      
+
+      if (fetchId !== abortRef.current) return;
+
       const creatorMap = new Map((creatorsResult.data as any[])?.map(c => [c.user_id, c.store_name || c.display_name]) || []);
-      
-      if (filesResult.error) {
-        console.error('❌ [MARKETPLACE] Error loading files:', filesResult.error);
-      }
 
       const filesBySubmission = new Map<string, any[]>();
-      (filesResult.data || []).forEach(file => {
+      (filesResult.data || []).forEach((file: any) => {
         const existing = filesBySubmission.get(file.submission_id) || [];
         filesBySubmission.set(file.submission_id, [...existing, file]);
       });
 
       const likesMap = new Map<string, number>();
-      (likesResult.data || []).forEach(row => {
+      (likesResult.data || []).forEach((row: any) => {
         likesMap.set(row.submission_id, (likesMap.get(row.submission_id) || 0) + 1);
       });
+
       const downloadsMap = new Map<string, number>();
-      (downloadsResult.data || []).forEach(row => {
+      (downloadsResult.data || []).forEach((row: any) => {
         downloadsMap.set(row.submission_id, (downloadsMap.get(row.submission_id) || 0) + 1);
       });
 
-      const validContent = processMarketplaceData(marketplaceData || [], filesBySubmission, creatorMap, likesMap, downloadsMap);
-      console.log(`✅ [MARKETPLACE] Showing ${validContent.length} valid items`);
-
-      if (reset) {
-        setContent(validContent);
-        setOffset(initialLimit);
-      } else {
-        setContent(prev => [...prev, ...validContent]);
-        setOffset(prev => prev + initialLimit);
+      const processed = processMarketplaceData(rpcData, filesBySubmission, creatorMap, likesMap, downloadsMap);
+      setContent(processed);
+    } catch (err) {
+      console.error('Error fetching marketplace:', err);
+      if (fetchId === abortRef.current) {
+        setContent([]);
+        setTotalCount(0);
       }
-      
-      isInitialLoadRef.current = false;
-    } catch (error) {
-      console.error('Error in fetchMarketplaceContent:', error);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      fetchMarketplaceContent(false);
-    }
-  };
-
-  // Single effect for initial fetch + category changes
-  useEffect(() => {
-    const isInitial = prevCategoryRef.current === undefined && categoryFilter === undefined;
-    const categoryChanged = prevCategoryRef.current !== categoryFilter;
-    
-    if (categoryChanged) {
-      console.log(`🔀 [MARKETPLACE] Category changed: ${prevCategoryRef.current} -> ${categoryFilter}`);
-      prevCategoryRef.current = categoryFilter;
-      isInitialLoadRef.current = true;
-      setOffset(0);
-    }
-    
-    fetchMarketplaceContent(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter]);
-
-  useEffect(() => {
-    
-    // Listen for explicit refresh events (triggered by user actions like search, filter, sort)
-    const handleRefresh = () => {
-      console.log('🔄 [MARKETPLACE] Explicit refresh event - updating content');
-      // Use background refresh to avoid clearing content/scroll position
-      backgroundRefresh();
-    };
-    
-    // Throttled focus handler - only refresh if tab was inactive for 5+ minutes
-    const handleFocus = () => {
-      const now = Date.now();
-      const timeSinceLastActive = now - lastActiveRef.current;
-      
-      if (timeSinceLastActive >= FOCUS_THROTTLE_MS) {
-        console.log(`🔄 [MARKETPLACE] Tab refocused after ${Math.round(timeSinceLastActive / 60000)}min - background refresh`);
-        backgroundRefresh();
-      } else {
-        console.log(`⏭️ [MARKETPLACE] Tab refocused but only ${Math.round(timeSinceLastActive / 1000)}s inactive - skipping refresh`);
+      if (fetchId === abortRef.current) {
+        setLoading(false);
       }
-      
-      lastActiveRef.current = now;
-    };
-    
-    // Track when tab becomes hidden to measure inactivity
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        handleFocus();
-      }
-    };
-    
-    window.addEventListener('refreshMarketplace', handleRefresh);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      window.removeEventListener('refreshMarketplace', handleRefresh);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    }
   }, []);
+
+  // Refetch when filters change
+  const filtersKey = JSON.stringify(filters);
+  useEffect(() => {
+    fetchContent(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   return {
     content,
     loading,
-    hasMore,
-    loadMore,
-    refreshContent: backgroundRefresh // Use background refresh for manual calls too
+    totalCount,
+    totalPages: Math.ceil(totalCount / PAGE_SIZE),
+    refreshContent: () => fetchContent(filters),
   };
 };
