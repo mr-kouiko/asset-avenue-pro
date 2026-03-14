@@ -71,6 +71,7 @@ const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
 const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
 const ReframeVideo = lazy(() => import("./pages/ReframeVideo"));
 const FreeStockLibrary = lazy(() => import("./pages/FreeStockLibrary"));
+const PexelsAssetDetail = lazy(() => import("./pages/PexelsAssetDetail"));
 
 // Content pages (lazy loaded)
 const ContactEN = lazy(() => import("./pages/en/ContactEN"));
@@ -163,6 +164,8 @@ const App = () => (
                         <Route path="/face-enhancer" element={<FaceEnhancer />} />
                         <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
                         <Route path="/free-stock-library" element={<FreeStockLibrary />} />
+                        <Route path="/free-photo/:pexelsId" element={<PexelsAssetDetail />} />
+                        <Route path="/free-video/:pexelsId" element={<PexelsAssetDetail />} />
                         
                         {/* Content pages */}
                         <Route path="/support" element={<Support />} />
