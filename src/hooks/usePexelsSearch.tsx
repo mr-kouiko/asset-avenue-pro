@@ -40,14 +40,21 @@ export interface PexelsVideo {
     height: number;
     link: string;
   }[];
+  video_pictures: {
+    id: number;
+    picture: string;
+    nr: number;
+  }[];
 }
 
 export interface PexelsItem {
   id: string;
+  numericId: number;
   title: string;
   photographer: string;
   photographerUrl: string;
   thumbnail: string;
+  largeThumbnail: string;
   originalUrl: string;
   pexelsUrl: string;
   type: 'photo' | 'video';
@@ -55,6 +62,7 @@ export interface PexelsItem {
   height: number;
   duration?: number;
   videoUrl?: string;
+  alt?: string;
 }
 
 interface PexelsSearchParams {
@@ -104,15 +112,18 @@ function setCache(key: string, data: CacheEntry['data']) {
 function normalizePhoto(photo: PexelsPhoto): PexelsItem {
   return {
     id: `pexels-photo-${photo.id}`,
+    numericId: photo.id,
     title: photo.alt || 'Pexels Photo',
     photographer: photo.photographer,
     photographerUrl: photo.photographer_url,
     thumbnail: photo.src.medium,
+    largeThumbnail: photo.src.large2x,
     originalUrl: photo.src.original,
     pexelsUrl: photo.url,
     type: 'photo',
     width: photo.width,
     height: photo.height,
+    alt: photo.alt,
   };
 }
 
@@ -120,10 +131,12 @@ function normalizeVideo(video: PexelsVideo): PexelsItem {
   const hdFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
   return {
     id: `pexels-video-${video.id}`,
+    numericId: video.id,
     title: `Video by ${video.user.name}`,
     photographer: video.user.name,
     photographerUrl: video.user.url,
     thumbnail: video.image,
+    largeThumbnail: video.image,
     originalUrl: hdFile?.link || '',
     pexelsUrl: video.url,
     type: 'video',
@@ -134,6 +147,58 @@ function normalizeVideo(video: PexelsVideo): PexelsItem {
   };
 }
 
+// ── Single item fetch (for detail pages) ──────────────────────
+export async function fetchPexelsPhotoById(id: number): Promise<PexelsItem | null> {
+  const cacheKey = `${CACHE_PREFIX}photo_detail_${id}`;
+  const cached = getFromCache(cacheKey);
+  if (cached && cached.items.length > 0) return cached.items[0];
+
+  try {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/pexels-search?type=photos&id=${id}`,
+      { headers: { apikey: apiKey } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.id) {
+      const item = normalizePhoto(data as PexelsPhoto);
+      setCache(cacheKey, { items: [item], totalResults: 1 });
+      return item;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchPexelsVideoById(id: number): Promise<PexelsItem | null> {
+  const cacheKey = `${CACHE_PREFIX}video_detail_${id}`;
+  const cached = getFromCache(cacheKey);
+  if (cached && cached.items.length > 0) return cached.items[0];
+
+  try {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/pexels-search?type=videos&id=${id}`,
+      { headers: { apikey: apiKey } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.id) {
+      const item = normalizeVideo(data as PexelsVideo);
+      setCache(cacheKey, { items: [item], totalResults: 1 });
+      return item;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Search hook ───────────────────────────────────────────────
 export const usePexelsSearch = (params: {
   query: string;
   category: string;
@@ -222,7 +287,7 @@ export const usePexelsSearch = (params: {
   }, [shouldFetch, query, pexelsType, orientation]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchPexels, 400); // debounce slightly after marketplace
+    const timer = setTimeout(fetchPexels, 400);
     return () => clearTimeout(timer);
   }, [fetchPexels]);
 

@@ -21,12 +21,14 @@ serve(async (req) => {
     const type = url.searchParams.get('type') || 'photos'; // photos or videos
     const page = url.searchParams.get('page') || '1';
     const per_page = url.searchParams.get('per_page') || '30';
+    const orientation = url.searchParams.get('orientation') || '';
+    const id = url.searchParams.get('id') || '';
 
-    if (!query) {
-      // Return curated/popular content when no query
+    // ── Single item fetch by ID ───────────────────────────────
+    if (id) {
       const endpoint = type === 'videos'
-        ? `https://api.pexels.com/videos/popular?per_page=${per_page}&page=${page}`
-        : `https://api.pexels.com/v1/curated?per_page=${per_page}&page=${page}`;
+        ? `https://api.pexels.com/videos/videos/${id}`
+        : `https://api.pexels.com/v1/photos/${id}`;
 
       const response = await fetch(endpoint, {
         headers: { Authorization: PEXELS_API_KEY },
@@ -42,9 +44,27 @@ serve(async (req) => {
       });
     }
 
-    const endpoint = type === 'videos'
-      ? `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=${per_page}&page=${page}`
-      : `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${per_page}&page=${page}`;
+    // ── Build search/curated URL ──────────────────────────────
+    let endpoint: string;
+
+    if (!query) {
+      // Curated/popular content when no query
+      endpoint = type === 'videos'
+        ? `https://api.pexels.com/videos/popular?per_page=${per_page}&page=${page}`
+        : `https://api.pexels.com/v1/curated?per_page=${per_page}&page=${page}`;
+    } else {
+      // Search with query
+      const params = new URLSearchParams({
+        query,
+        per_page,
+        page,
+      });
+      if (orientation) params.set('orientation', orientation);
+
+      endpoint = type === 'videos'
+        ? `https://api.pexels.com/videos/search?${params}`
+        : `https://api.pexels.com/v1/search?${params}`;
+    }
 
     const response = await fetch(endpoint, {
       headers: { Authorization: PEXELS_API_KEY },
