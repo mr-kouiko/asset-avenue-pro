@@ -721,9 +721,7 @@ export function applyPhotoHardFilters(
     filters.aiPhotos.length > 0 ||
     filters.style.length > 0 ||
     filters.subject.length > 0 ||
-    filters.format.length > 0 ||
-    filters.orientation !== null ||
-    filters.resolution !== null ||
+    filters.orientation.length > 0 ||
     filters.aiGenerated !== null ||
     filters.withPeople !== null ||
     filters.numberOfPeople !== null ||
