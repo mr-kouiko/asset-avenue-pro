@@ -721,9 +721,7 @@ export function applyPhotoHardFilters(
     filters.aiPhotos.length > 0 ||
     filters.style.length > 0 ||
     filters.subject.length > 0 ||
-    filters.format.length > 0 ||
-    filters.orientation !== null ||
-    filters.resolution !== null ||
+    filters.orientation.length > 0 ||
     filters.aiGenerated !== null ||
     filters.withPeople !== null ||
     filters.numberOfPeople !== null ||
@@ -767,17 +765,9 @@ export function applyPhotoHardFilters(
       if (!matches) return false;
     }
     
-    if (filters.format.length > 0) {
-      const matches = filters.format.some(f => taxonomy.format.includes(f));
+    if (filters.orientation.length > 0) {
+      const matches = filters.orientation.some(f => taxonomy.orientation === f);
       if (!matches) return false;
-    }
-    
-    if (filters.orientation !== null) {
-      if (taxonomy.orientation !== filters.orientation) return false;
-    }
-    
-    if (filters.resolution !== null) {
-      if (taxonomy.resolution !== filters.resolution) return false;
     }
     
     if (filters.aiGenerated !== null) {
@@ -877,14 +867,11 @@ export function countActivePhotoFilters(filters: PhotoFilters): number {
   count += filters.aiPhotos.length;
   count += filters.style.length;
   count += filters.subject.length;
-  count += filters.format.length;
-  if (filters.orientation !== null) count++;
-  if (filters.resolution !== null) count++;
+  count += filters.orientation.length;
   if (filters.aiGenerated !== null) count++;
   if (filters.withPeople !== null) count++;
   if (filters.numberOfPeople !== null) count++;
   if (filters.copySpace !== null) count++;
   if (filters.color !== null) count++;
-  if (filters.license !== null) count++;
   return count;
 }
