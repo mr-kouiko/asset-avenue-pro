@@ -24,11 +24,8 @@ export const useContentStats = () => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      // Fetch DB stats only (Pexels counts no longer inflated)
+      // Fetch DB stats only — Pexels counts are no longer inflated into totals
       const submissionsResult = await supabase
           .from('content_submissions')
           .select(`
