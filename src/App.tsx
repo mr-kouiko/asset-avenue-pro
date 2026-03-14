@@ -71,6 +71,7 @@ const AIUpscaler = lazy(() => import("./pages/AIUpscaler"));
 const FaceEnhancer = lazy(() => import("./pages/FaceEnhancer"));
 const ReframeVideo = lazy(() => import("./pages/ReframeVideo"));
 const FreeStockLibrary = lazy(() => import("./pages/FreeStockLibrary"));
+const PexelsAssetDetail = lazy(() => import("./pages/PexelsAssetDetail"));
 
 // Content pages (lazy loaded)
 const ContactEN = lazy(() => import("./pages/en/ContactEN"));
