@@ -2,13 +2,16 @@ import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
+import { PexelsCard } from "@/components/PexelsCard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Video, Camera } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Video, Camera, Sparkles, Gift, Globe } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { useSearchParams, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useMarketplace, PAGE_SIZE, type MarketplaceFilters } from "@/hooks/useMarketplace";
+import { usePexelsSearch } from "@/hooks/usePexelsSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -35,6 +38,29 @@ import {
   VIDEO_PLATFORM_TAGS,
 } from "@/utils/filterTagMapper";
 
+// ── Section Header ────────────────────────────────────────────
+const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
+  icon: React.ElementType;
+  title: string;
+  count?: number;
+  variant?: "default" | "free" | "pexels";
+}) => {
+  const colors = {
+    default: "text-primary border-primary/20 bg-primary/5",
+    free: "text-emerald-600 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/30",
+    pexels: "text-muted-foreground border-border bg-muted/50",
+  };
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${colors[variant]} mb-4`}>
+      <Icon className="h-5 w-5 flex-shrink-0" />
+      <span className="font-semibold text-sm">{title}</span>
+      {count !== undefined && count > 0 && (
+        <Badge variant="secondary" className="text-xs ml-auto">{count}</Badge>
+      )}
+    </div>
+  );
+};
+
 const Marketplace = () => {
   const { t, language } = useLanguage();
   const [searchParams] = useSearchParams();
@@ -55,14 +81,10 @@ const Marketplace = () => {
   }, [searchParams]);
 
   useSEO({
-    title: language === 'en'
-      ? "Marketplace - Browse Creative Content"
-      : "Marketplace - Browse Creative Content",
-    description: language === 'en'
-      ? "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects."
-      : "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects.",
+    title: "Marketplace - Browse Creative Content",
+    description: "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects.",
     type: 'website',
-    noindex: hasFilterParams
+    noindex: hasFilterParams,
   });
 
   // ── Core state ──────────────────────────────────────────────
@@ -70,7 +92,6 @@ const Marketplace = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [page, setPage] = useState(1);
-  const [pexelsTotalCount, setPexelsTotalCount] = useState(0);
   const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
 
   const getInitialCategory = () => {
@@ -104,7 +125,7 @@ const Marketplace = () => {
   const [isMobileVideoFilterOpen, setIsMobileVideoFilterOpen] = useState(false);
   const [isMobilePhotoFilterOpen, setIsMobilePhotoFilterOpen] = useState(false);
 
-  // Audio filter states (remain client-side for now - metadata-based)
+  // Audio filter states
   const [isAudioFilterOpen, setIsAudioFilterOpen] = useState(false);
   const [audioSortBy, setAudioSortBy] = useState("relevant");
   const [infinityFilter, setInfinityFilter] = useState("all");
@@ -147,24 +168,6 @@ const Marketplace = () => {
     if (themeParam) setSearchQuery(themeParam);
   }, [searchParams]);
 
-  // ── Pexels total count ──────────────────────────────────────
-  useEffect(() => {
-    const fetchPexelsCount = async () => {
-      try {
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-        const res = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/pexels-search?type=photos&per_page=1&page=1`,
-          { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setPexelsTotalCount(data.total_results || 0);
-        }
-      } catch { /* silent */ }
-    };
-    fetchPexelsCount();
-  }, []);
-
   // ── Build server-side filters ───────────────────────────────
   const marketplaceFilters = useMemo<MarketplaceFilters>(() => {
     const f: MarketplaceFilters = {
@@ -182,8 +185,6 @@ const Marketplace = () => {
       if (photoFilters.color) f.colorTags = resolveFilterTags([photoFilters.color], COLOR_TAGS);
       if (photoFilters.withPeople !== null) f.withPeople = photoFilters.withPeople;
       if (photoFilters.aiGenerated !== null) f.aiGenerated = photoFilters.aiGenerated;
-
-      // AI subcategory: set aiGenerated flag + merge subject tags
       if (photoFilters.aiPhotos.length > 0) {
         f.aiGenerated = true;
         if (!photoFilters.aiPhotos.includes("ai-generated")) {
@@ -201,17 +202,44 @@ const Marketplace = () => {
       if (videoFilters.platform.length) f.platformTags = resolveFilterTags(videoFilters.platform, VIDEO_PLATFORM_TAGS);
       if (videoFilters.aiGenerated !== null) f.aiGenerated = videoFilters.aiGenerated;
       if (videoFilters.withPeople !== null) f.withPeople = videoFilters.withPeople;
-
-      if (videoFilters.aiVideos.length > 0) {
-        f.aiGenerated = true;
-      }
+      if (videoFilters.aiVideos.length > 0) f.aiGenerated = true;
     }
 
     return f;
   }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection]);
 
-  // ── Fetch data ──────────────────────────────────────────────
+  // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
+
+  // ── Fetch Pexels data (supplemental) ────────────────────────
+  const pexelsOrientation = useMemo(() => {
+    if (isPhotoSection && photoFilters.orientation.length === 1) {
+      const map: Record<string, string> = { vertical: 'portrait', horizontal: 'landscape', square: 'square' };
+      return map[photoFilters.orientation[0]] || undefined;
+    }
+    return undefined;
+  }, [isPhotoSection, photoFilters.orientation]);
+
+  const { items: pexelsItems, loading: pexelsLoading } = usePexelsSearch({
+    query: debouncedSearch,
+    category: selectedCategory,
+    orientation: pexelsOrientation,
+    enabled: !isAudioSection && selectedCategory !== 'ebook' && selectedCategory !== 'vfx',
+  });
+
+  // ── Split marketplace content into paid & free ──────────────
+  const { premiumContent, freeCreatorContent } = useMemo(() => {
+    const premium: typeof marketplaceContent = [];
+    const free: typeof marketplaceContent = [];
+    for (const item of marketplaceContent) {
+      if (item.isFree || item.price === 0) {
+        free.push(item);
+      } else {
+        premium.push(item);
+      }
+    }
+    return { premiumContent: premium, freeCreatorContent: free };
+  }, [marketplaceContent]);
 
   // ── Reset handlers ──────────────────────────────────────────
   const resetPhotoFilters = () => setPhotoFilters({
@@ -259,7 +287,7 @@ const Marketplace = () => {
   };
 
   // ── SEO noindex ─────────────────────────────────────────────
-  const hasEmptyResults = !loading && marketplaceContent.length === 0;
+  const hasEmptyResults = !loading && marketplaceContent.length === 0 && pexelsItems.length === 0;
   const shouldApplyNoIndex = shouldNoIndexPage({
     hasResults: marketplaceContent.length > 0,
     resultCount: marketplaceContent.length,
@@ -296,6 +324,82 @@ const Marketplace = () => {
     { value: "25-50", label: "€25 - €50" },
     { value: "50+", label: "€50 and up" },
   ];
+
+  // ── Grid class helper ───────────────────────────────────────
+  const gridClass = isAudioSection
+    ? "flex flex-col gap-4 w-full"
+    : isVideoSection
+      ? "grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+      : isPhotoSection
+        ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+        : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3";
+
+  // ── Render content sections ─────────────────────────────────
+  const renderContentSections = () => {
+    const hasPremium = premiumContent.length > 0;
+    const hasFreeCreator = freeCreatorContent.length > 0;
+    const hasPexels = pexelsItems.length > 0;
+    const showSectionHeaders = (hasPremium && (hasFreeCreator || hasPexels)) ||
+      (hasFreeCreator && hasPexels);
+
+    return (
+      <>
+        {/* Premium Marketplace Assets */}
+        {hasPremium && (
+          <div className="mb-8">
+            {showSectionHeaders && (
+              <SectionHeader icon={Sparkles} title="Premium Assets" count={premiumContent.length} variant="default" />
+            )}
+            <div className={gridClass}>
+              {premiumContent.map((content) => (
+                <ContentCard key={content.id} {...content} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Free Creator Assets */}
+        {hasFreeCreator && (
+          <div className="mb-8">
+            {showSectionHeaders && (
+              <SectionHeader icon={Gift} title="Free Creator Assets" count={freeCreatorContent.length} variant="free" />
+            )}
+            <div className={gridClass}>
+              {freeCreatorContent.map((content) => (
+                <ContentCard key={content.id} {...content} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pexels Free Stock */}
+        {hasPexels && (
+          <div className="mb-8">
+            <Separator className="mb-6" />
+            <SectionHeader icon={Globe} title="Free Stock — Powered by Pexels" count={pexelsItems.length} variant="pexels" />
+            <div className={isVideoSection
+              ? "grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+              : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+            }>
+              {pexelsItems.map((item) => (
+                <PexelsCard key={item.id} item={item} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pexelsLoading && !hasPexels && (
+          <div className="mt-8">
+            <Separator className="mb-6" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground px-4 py-3">
+              <Globe className="h-4 w-4 animate-pulse" />
+              Loading free stock from Pexels…
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   // ── Pagination ──────────────────────────────────────────────
   const renderPagination = () => {
@@ -493,12 +597,17 @@ const Marketplace = () => {
 
           {/* Results Info and Sort */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {loading ? (
                 <Skeleton className="h-4 w-32" />
               ) : (
                 <span className="text-sm text-muted-foreground">
-                  {(totalCount + pexelsTotalCount).toLocaleString()} results found
+                  {totalCount.toLocaleString()} marketplace results
+                </span>
+              )}
+              {pexelsItems.length > 0 && (
+                <span className="text-xs text-muted-foreground/70">
+                  + {pexelsItems.length} free via Pexels
                 </span>
               )}
               {page > 1 && (
@@ -530,7 +639,7 @@ const Marketplace = () => {
           )}
         </div>
 
-        {/* Content Grid */}
+        {/* Content */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {Array.from({ length: 20 }).map((_, i) => (
@@ -541,7 +650,7 @@ const Marketplace = () => {
               </div>
             ))}
           </div>
-        ) : marketplaceContent.length === 0 ? (
+        ) : marketplaceContent.length === 0 && pexelsItems.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-muted-foreground text-lg">No content found</div>
             <p className="text-muted-foreground/60 mt-2">Try adjusting your search filters</p>
@@ -551,47 +660,24 @@ const Marketplace = () => {
           </div>
         ) : (
           <>
-            {isVideoSection ? (
+            {(isVideoSection || isPhotoSection) ? (
               <div className="flex gap-6">
                 <div className="hidden lg:block flex-shrink-0 sticky top-4 self-start">
-                  <VideoFiltersPanel filters={videoFilters} onFiltersChange={setVideoFilters} onReset={resetVideoFilters} />
+                  {isVideoSection ? (
+                    <VideoFiltersPanel filters={videoFilters} onFiltersChange={setVideoFilters} onReset={resetVideoFilters} />
+                  ) : (
+                    <PhotoFiltersPanel filters={photoFilters} onFiltersChange={setPhotoFilters} onReset={resetPhotoFilters} />
+                  )}
                 </div>
                 <div className="flex-1">
-                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {marketplaceContent.map((content) => (
-                      <ContentCard key={content.id} {...content} />
-                    ))}
-                  </div>
+                  {renderContentSections()}
                 </div>
-              </div>
-            ) : isPhotoSection ? (
-              <div className="flex gap-6">
-                <div className="hidden lg:block flex-shrink-0 sticky top-4 self-start">
-                  <PhotoFiltersPanel filters={photoFilters} onFiltersChange={setPhotoFilters} onReset={resetPhotoFilters} />
-                </div>
-                <div className="flex-1">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {marketplaceContent.map((content) => (
-                      <ContentCard key={content.id} {...content} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : selectedCategory === "audio" ? (
-              <div className="flex flex-col gap-4 w-full">
-                {marketplaceContent.map((content) => (
-                  <ContentCard key={content.id} {...content} />
-                ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {marketplaceContent.map((content) => (
-                  <ContentCard key={content.id} {...content} />
-                ))}
-              </div>
+              renderContentSections()
             )}
 
-            {/* Pagination */}
+            {/* Pagination (marketplace only) */}
             {renderPagination()}
           </>
         )}
