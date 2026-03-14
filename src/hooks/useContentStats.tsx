@@ -103,9 +103,6 @@ export const useContentStats = () => {
         }
       });
 
-      // Add Pexels counts to photos and videos
-      photos += pexelsPhotoCount;
-      videos += pexelsVideoCount;
 
       const total = photos + videos + audios + ebooks + vfx;
 
