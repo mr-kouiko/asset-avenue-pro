@@ -294,7 +294,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
       const creatorIds = [...new Set(rpcData.map((item: any) => item.creator_id))];
 
       const [creatorsResult, filesResult, likesResult, downloadsResult] = await Promise.all([
-        supabase.rpc('get_creator_public_info', { creator_ids: creatorIds }),
+        supabase.rpc('get_creator_public_info', { creator_ids: creatorIds as string[] }),
         supabase
           .from('content_files')
           .select('id, submission_id, file_name, file_path, file_type, file_format, is_original, is_preview, preview_path, thumbnail_path, metadata')

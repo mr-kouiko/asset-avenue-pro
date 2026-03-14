@@ -867,14 +867,11 @@ export function countActivePhotoFilters(filters: PhotoFilters): number {
   count += filters.aiPhotos.length;
   count += filters.style.length;
   count += filters.subject.length;
-  count += filters.format.length;
-  if (filters.orientation !== null) count++;
-  if (filters.resolution !== null) count++;
+  count += filters.orientation.length;
   if (filters.aiGenerated !== null) count++;
   if (filters.withPeople !== null) count++;
   if (filters.numberOfPeople !== null) count++;
   if (filters.copySpace !== null) count++;
   if (filters.color !== null) count++;
-  if (filters.license !== null) count++;
   return count;
 }
