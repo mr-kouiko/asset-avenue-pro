@@ -19,18 +19,25 @@ import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
 import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
 
 const PexelsAssetDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, pexelsId } = useParams<{ slug?: string; pexelsId?: string }>();
   const navigate = useNavigate();
   const [item, setItem] = useState<PexelsItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Parse slug to get type + id
+  // Parse slug to get type + id — support both new and legacy routes
   const parsed = useMemo(() => {
-    if (!slug) return null;
-    // Support new /pexels/{slug} format
-    return parsePexelsSlug(slug);
-  }, [slug]);
+    if (slug) return parsePexelsSlug(slug);
+    // Legacy: /free-photo/pexels-{id} or /free-video/pexels-{id}
+    if (pexelsId) {
+      const match = pexelsId.match(/pexels-(\d+)/);
+      if (match) {
+        const isLegacyVideo = window.location.pathname.startsWith('/free-video/');
+        return { type: (isLegacyVideo ? 'video' : 'photo') as 'photo' | 'video', numericId: parseInt(match[1], 10) };
+      }
+    }
+    return null;
+  }, [slug, pexelsId]);
 
   const isVideo = parsed?.type === 'video';
 
