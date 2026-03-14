@@ -765,17 +765,9 @@ export function applyPhotoHardFilters(
       if (!matches) return false;
     }
     
-    if (filters.format.length > 0) {
-      const matches = filters.format.some(f => taxonomy.format.includes(f));
+    if (filters.orientation.length > 0) {
+      const matches = filters.orientation.some(f => taxonomy.orientation === f);
       if (!matches) return false;
-    }
-    
-    if (filters.orientation !== null) {
-      if (taxonomy.orientation !== filters.orientation) return false;
-    }
-    
-    if (filters.resolution !== null) {
-      if (taxonomy.resolution !== filters.resolution) return false;
     }
     
     if (filters.aiGenerated !== null) {
