@@ -31,15 +31,12 @@ export interface PhotoFilters {
   aiPhotos: string[];
   style: string[];
   subject: string[];
-  format: string[];
-  orientation: string | null;
-  resolution: string | null;
+  orientation: string[];
   aiGenerated: boolean | null;
   withPeople: boolean | null;
   numberOfPeople: string | null;
   copySpace: boolean | null;
   color: string | null;
-  license: string | null;
 }
 
 interface PhotoFiltersPanelProps {
@@ -74,7 +71,6 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  // Photo taxonomy data
   const useCaseOptions = [
     { value: "social-media", label: language === 'en' ? "Social Media" : "Réseaux sociaux" },
     { value: "website-hero", label: language === 'en' ? "Website & Hero Images" : "Sites web & Images d'en-tête" },
@@ -118,7 +114,7 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
     { value: "abstract-textures", label: language === 'en' ? "Abstract & Textures" : "Abstraits & Textures", icon: Palette },
   ];
 
-  const formatOptions = [
+  const orientationOptions = [
     { value: "vertical", label: language === 'en' ? "Vertical (Portrait)" : "Vertical (Portrait)", icon: Smartphone },
     { value: "horizontal", label: language === 'en' ? "Horizontal (Landscape)" : "Horizontal (Paysage)", icon: Monitor },
     { value: "square", label: language === 'en' ? "Square (1:1)" : "Carré (1:1)", icon: Square },
@@ -146,9 +142,7 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
     filters.aiPhotos.length + 
     filters.style.length + 
     filters.subject.length + 
-    filters.format.length +
-    (filters.orientation ? 1 : 0) +
-    (filters.resolution ? 1 : 0) +
+    filters.orientation.length +
     (filters.aiGenerated !== null ? 1 : 0) +
     (filters.withPeople !== null ? 1 : 0) +
     (filters.numberOfPeople ? 1 : 0) +
@@ -189,26 +183,16 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
                   {language === 'en' ? "By Use Case" : "Par Utilisation"}
                 </span>
                 {filters.useCase.length > 0 && (
-                  <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                    {filters.useCase.length}
-                  </Badge>
+                  <Badge variant="outline" className="h-5 px-1.5 text-xs">{filters.useCase.length}</Badge>
                 )}
               </div>
               <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("useCase") ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-1.5">
               {useCaseOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={filters.useCase.includes(option.value)}
-                    onCheckedChange={() => updateArrayFilter("useCase", option.value)}
-                  />
-                  <span className="text-muted-foreground hover:text-foreground transition-colors">
-                    {option.label}
-                  </span>
+                <label key={option.value} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm">
+                  <Checkbox checked={filters.useCase.includes(option.value)} onCheckedChange={() => updateArrayFilter("useCase", option.value)} />
+                  <span className="text-muted-foreground hover:text-foreground transition-colors">{option.label}</span>
                 </label>
               ))}
             </CollapsibleContent>
@@ -216,38 +200,24 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
 
           <Separator />
 
-          {/* AI Photos Section - Highlighted */}
+          {/* AI Photos Section */}
           <Collapsible open={openSections.includes("aiPhotos")} onOpenChange={() => toggleSection("aiPhotos")}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-md transition-colors bg-gradient-to-r from-purple-500/10 to-pink-500/10">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-purple-500" />
-                <span className="text-sm font-medium">
-                  {language === 'en' ? "AI Photos" : "Photos IA"}
-                </span>
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">
-                  ⭐
-                </Badge>
+                <span className="text-sm font-medium">{language === 'en' ? "AI Photos" : "Photos IA"}</span>
+                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">⭐</Badge>
                 {filters.aiPhotos.length > 0 && (
-                  <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                    {filters.aiPhotos.length}
-                  </Badge>
+                  <Badge variant="outline" className="h-5 px-1.5 text-xs">{filters.aiPhotos.length}</Badge>
                 )}
               </div>
               <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("aiPhotos") ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-1.5">
               {aiPhotoOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={filters.aiPhotos.includes(option.value)}
-                    onCheckedChange={() => updateArrayFilter("aiPhotos", option.value)}
-                  />
-                  <span className="text-muted-foreground hover:text-foreground transition-colors">
-                    {option.label}
-                  </span>
+                <label key={option.value} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm">
+                  <Checkbox checked={filters.aiPhotos.includes(option.value)} onCheckedChange={() => updateArrayFilter("aiPhotos", option.value)} />
+                  <span className="text-muted-foreground hover:text-foreground transition-colors">{option.label}</span>
                 </label>
               ))}
             </CollapsibleContent>
@@ -260,31 +230,19 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
             <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-md transition-colors">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">
-                  {language === 'en' ? "By Subject" : "Par Sujet"}
-                </span>
+                <span className="text-sm font-medium">{language === 'en' ? "By Subject" : "Par Sujet"}</span>
                 {filters.subject.length > 0 && (
-                  <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                    {filters.subject.length}
-                  </Badge>
+                  <Badge variant="outline" className="h-5 px-1.5 text-xs">{filters.subject.length}</Badge>
                 )}
               </div>
               <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("subject") ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-1.5">
               {subjectOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={filters.subject.includes(option.value)}
-                    onCheckedChange={() => updateArrayFilter("subject", option.value)}
-                  />
+                <label key={option.value} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm">
+                  <Checkbox checked={filters.subject.includes(option.value)} onCheckedChange={() => updateArrayFilter("subject", option.value)} />
                   <option.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground hover:text-foreground transition-colors">
-                    {option.label}
-                  </span>
+                  <span className="text-muted-foreground hover:text-foreground transition-colors">{option.label}</span>
                 </label>
               ))}
             </CollapsibleContent>
@@ -297,30 +255,18 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
             <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-md transition-colors">
               <div className="flex items-center gap-2">
                 <Palette className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">
-                  {language === 'en' ? "By Style" : "Par Style"}
-                </span>
+                <span className="text-sm font-medium">{language === 'en' ? "By Style" : "Par Style"}</span>
                 {filters.style.length > 0 && (
-                  <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                    {filters.style.length}
-                  </Badge>
+                  <Badge variant="outline" className="h-5 px-1.5 text-xs">{filters.style.length}</Badge>
                 )}
               </div>
               <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("style") ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-1.5">
               {styleOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={filters.style.includes(option.value)}
-                    onCheckedChange={() => updateArrayFilter("style", option.value)}
-                  />
-                  <span className="text-muted-foreground hover:text-foreground transition-colors">
-                    {option.label}
-                  </span>
+                <label key={option.value} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm">
+                  <Checkbox checked={filters.style.includes(option.value)} onCheckedChange={() => updateArrayFilter("style", option.value)} />
+                  <span className="text-muted-foreground hover:text-foreground transition-colors">{option.label}</span>
                 </label>
               ))}
             </CollapsibleContent>
@@ -328,36 +274,24 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
 
           <Separator />
 
-          {/* Format Section */}
-          <Collapsible open={openSections.includes("format")} onOpenChange={() => toggleSection("format")}>
+          {/* Orientation Section (merged from old Format + Orientation) */}
+          <Collapsible open={openSections.includes("orientation")} onOpenChange={() => toggleSection("orientation")}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-md transition-colors">
               <div className="flex items-center gap-2">
                 <Maximize2 className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm font-medium">
-                  {language === 'en' ? "By Format" : "Par Format"}
-                </span>
-                {filters.format.length > 0 && (
-                  <Badge variant="outline" className="h-5 px-1.5 text-xs">
-                    {filters.format.length}
-                  </Badge>
+                <span className="text-sm font-medium">{language === 'en' ? "Orientation" : "Orientation"}</span>
+                {filters.orientation.length > 0 && (
+                  <Badge variant="outline" className="h-5 px-1.5 text-xs">{filters.orientation.length}</Badge>
                 )}
               </div>
-              <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("format") ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("orientation") ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-1.5">
-              {formatOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={filters.format.includes(option.value)}
-                    onCheckedChange={() => updateArrayFilter("format", option.value)}
-                  />
+              {orientationOptions.map((option) => (
+                <label key={option.value} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer text-sm">
+                  <Checkbox checked={filters.orientation.includes(option.value)} onCheckedChange={() => updateArrayFilter("orientation", option.value)} />
                   <option.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground hover:text-foreground transition-colors">
-                    {option.label}
-                  </span>
+                  <span className="text-muted-foreground hover:text-foreground transition-colors">{option.label}</span>
                 </label>
               ))}
             </CollapsibleContent>
@@ -370,51 +304,6 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {language === 'en' ? "Quick Filters" : "Filtres rapides"}
             </Label>
-
-            {/* Orientation */}
-            <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Orientation" : "Orientation"}</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { value: "vertical", label: language === 'en' ? "Portrait" : "Portrait", icon: Smartphone },
-                  { value: "horizontal", label: language === 'en' ? "Landscape" : "Paysage", icon: Monitor },
-                  { value: "square", label: language === 'en' ? "Square" : "Carré", icon: Square },
-                ].map((option) => (
-                  <Button
-                    key={option.value}
-                    variant={filters.orientation === option.value ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => updateSingleFilter("orientation", filters.orientation === option.value ? null : option.value)}
-                  >
-                    <option.icon className="h-3 w-3" />
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Resolution */}
-            <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Resolution" : "Résolution"}</Label>
-              <div className="flex gap-1.5">
-                {[
-                  { value: "web", label: language === 'en' ? "Web" : "Web" },
-                  { value: "print", label: language === 'en' ? "Print" : "Print" },
-                  { value: "4k", label: "4K+" },
-                ].map((option) => (
-                  <Button
-                    key={option.value}
-                    variant={filters.resolution === option.value ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => updateSingleFilter("resolution", filters.resolution === option.value ? null : option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
 
             {/* Color Tone */}
             <div className="space-y-2">
@@ -438,64 +327,76 @@ const PhotoFiltersPanel = ({ filters, onFiltersChange, onReset }: PhotoFiltersPa
             <div className="space-y-2">
               <Label className="text-sm">{language === 'en' ? "People" : "Personnes"}</Label>
               <div className="flex flex-wrap gap-1.5">
-                {peopleOptions.map((option) => (
-                  <Button
-                    key={option.value}
-                    variant={filters.numberOfPeople === option.value ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => updateSingleFilter("numberOfPeople", filters.numberOfPeople === option.value ? null : option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
+                <Button
+                  variant={filters.withPeople === true ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => updateBooleanFilter("withPeople", filters.withPeople === true ? null : true)}
+                >
+                  {language === 'en' ? "With People" : "Avec personnes"}
+                </Button>
+                <Button
+                  variant={filters.withPeople === false ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => updateBooleanFilter("withPeople", filters.withPeople === false ? null : false)}
+                >
+                  {language === 'en' ? "No People" : "Sans personnes"}
+                </Button>
+              </div>
+
+              {filters.withPeople === true && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {peopleOptions.filter(o => o.value !== "no-people").map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={filters.numberOfPeople === option.value ? "default" : "outline"}
+                      size="sm"
+                      className="h-6 text-[11px]"
+                      onClick={() => updateSingleFilter("numberOfPeople", filters.numberOfPeople === option.value ? null : option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Copy Space */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="copySpace"
+                  checked={filters.copySpace === true}
+                  onCheckedChange={(checked) => updateBooleanFilter("copySpace", checked ? true : null)}
+                />
+                <label htmlFor="copySpace" className="text-sm cursor-pointer">
+                  {language === 'en' ? "Has Copy Space" : "Espace pour texte"}
+                </label>
               </div>
             </div>
 
-            {/* Toggle Filters */}
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">{language === 'en' ? "AI Generated" : "Généré par IA"}</Label>
-                <div className="flex gap-1">
-                  <Button
-                    variant={filters.aiGenerated === true ? "default" : "outline"}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => updateBooleanFilter("aiGenerated", filters.aiGenerated === true ? null : true)}
-                  >
-                    {language === 'en' ? "Yes" : "Oui"}
-                  </Button>
-                  <Button
-                    variant={filters.aiGenerated === false ? "default" : "outline"}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => updateBooleanFilter("aiGenerated", filters.aiGenerated === false ? null : false)}
-                  >
-                    {language === 'en' ? "No" : "Non"}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">{language === 'en' ? "Copy Space" : "Espace texte"}</Label>
-                <div className="flex gap-1">
-                  <Button
-                    variant={filters.copySpace === true ? "default" : "outline"}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => updateBooleanFilter("copySpace", filters.copySpace === true ? null : true)}
-                  >
-                    {language === 'en' ? "Yes" : "Oui"}
-                  </Button>
-                  <Button
-                    variant={filters.copySpace === false ? "default" : "outline"}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => updateBooleanFilter("copySpace", filters.copySpace === false ? null : false)}
-                  >
-                    {language === 'en' ? "No" : "Non"}
-                  </Button>
-                </div>
+            {/* AI Generated Toggle */}
+            <div className="space-y-2">
+              <Label className="text-sm">{language === 'en' ? "AI Content" : "Contenu IA"}</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  variant={filters.aiGenerated === true ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => updateBooleanFilter("aiGenerated", filters.aiGenerated === true ? null : true)}
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  {language === 'en' ? "AI Only" : "IA uniquement"}
+                </Button>
+                <Button
+                  variant={filters.aiGenerated === false ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => updateBooleanFilter("aiGenerated", filters.aiGenerated === false ? null : false)}
+                >
+                  {language === 'en' ? "No AI" : "Sans IA"}
+                </Button>
               </div>
             </div>
           </div>
