@@ -13,27 +13,38 @@ import { ArrowLeft, Download, ExternalLink, Camera, Video, Sparkles } from "luci
 import { fetchPexelsPhotoById, fetchPexelsVideoById, type PexelsItem } from "@/hooks/usePexelsSearch";
 import { useMarketplace, type MarketplaceFilters } from "@/hooks/useMarketplace";
 import { useSEO } from "@/hooks/useSEO";
+import { parsePexelsSlug } from "@/utils/pexelsSlug";
+import { PexelsSchemaOrg } from "@/components/pexels/PexelsSchemaOrg";
+import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
+import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
 
 const PexelsAssetDetail = () => {
-  const { pexelsId } = useParams<{ pexelsId: string }>();
+  const { slug, pexelsId } = useParams<{ slug?: string; pexelsId?: string }>();
   const navigate = useNavigate();
   const [item, setItem] = useState<PexelsItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Determine type from the route path
-  const isVideo = window.location.pathname.startsWith('/free-video/');
+  // Parse slug to get type + id — support both new and legacy routes
+  const parsed = useMemo(() => {
+    if (slug) return parsePexelsSlug(slug);
+    // Legacy: /free-photo/pexels-{id} or /free-video/pexels-{id}
+    if (pexelsId) {
+      const match = pexelsId.match(/pexels-(\d+)/);
+      if (match) {
+        const isLegacyVideo = window.location.pathname.startsWith('/free-video/');
+        return { type: (isLegacyVideo ? 'video' : 'photo') as 'photo' | 'video', numericId: parseInt(match[1], 10) };
+      }
+    }
+    return null;
+  }, [slug, pexelsId]);
 
-  // Extract numeric ID from "pexels-12345"
-  const numericId = useMemo(() => {
-    const match = pexelsId?.match(/pexels-(\d+)/);
-    return match ? parseInt(match[1], 10) : null;
-  }, [pexelsId]);
+  const isVideo = parsed?.type === 'video';
 
   // Fetch the Pexels item
   useEffect(() => {
-    if (!numericId) {
-      setError('Invalid asset ID');
+    if (!parsed) {
+      setError('Invalid asset URL');
       setLoading(false);
       return;
     }
@@ -41,9 +52,9 @@ const PexelsAssetDetail = () => {
     const fetchItem = async () => {
       setLoading(true);
       try {
-        const result = isVideo
-          ? await fetchPexelsVideoById(numericId)
-          : await fetchPexelsPhotoById(numericId);
+        const result = parsed.type === 'video'
+          ? await fetchPexelsVideoById(parsed.numericId)
+          : await fetchPexelsPhotoById(parsed.numericId);
 
         if (result) {
           setItem(result);
@@ -58,15 +69,15 @@ const PexelsAssetDetail = () => {
     };
 
     fetchItem();
-  }, [numericId, isVideo]);
+  }, [parsed]);
 
   // SEO metadata
   const seoTitle = item
-    ? `Free ${isVideo ? 'Video' : 'Photo'}${item.alt ? ` – ${item.alt}` : ''} by ${item.photographer} | VisuStock`
-    : `Free ${isVideo ? 'Video' : 'Photo'} – Pexels | VisuStock`;
+    ? `Free ${isVideo ? 'Stock Video' : 'Stock Photo'}${item.alt ? ` – ${item.alt}` : ''} by ${item.photographer} | VisuStock`
+    : `Free ${isVideo ? 'Video' : 'Photo'} | VisuStock`;
 
   const seoDescription = item
-    ? `Download this free ${isVideo ? 'video' : 'photo'}${item.alt ? ` of ${item.alt}` : ''} by ${item.photographer} from Pexels. Explore premium alternatives on VisuStock.`
+    ? `Download this free ${isVideo ? 'stock video' : 'stock photo'}${item.alt ? ` of ${item.alt}` : ''} by ${item.photographer} from Pexels. Explore premium alternatives on VisuStock.`
     : `Free ${isVideo ? 'video' : 'photo'} from Pexels. Browse premium alternatives on VisuStock.`;
 
   useSEO({
@@ -75,27 +86,6 @@ const PexelsAssetDetail = () => {
     type: 'article',
     image: item?.largeThumbnail,
   });
-
-  // ── Premium alternatives query ──────────────────────────────
-  // Extract keywords from title/alt for related content search
-  const searchQuery = useMemo(() => {
-    if (!item) return '';
-    const text = item.alt || item.title || '';
-    // Take first 3 meaningful words
-    const words = text.split(/\s+/).filter(w => w.length > 3).slice(0, 3);
-    return words.join(' ');
-  }, [item]);
-
-  const alternativesFilters = useMemo<MarketplaceFilters>(() => ({
-    category: isVideo ? 'video' : 'photo',
-    searchQuery: searchQuery || undefined,
-    sortBy: 'popular',
-    page: 1,
-  }), [isVideo, searchQuery]);
-
-  const { content: premiumAlternatives, loading: alternativesLoading } = useMarketplace(
-    searchQuery ? alternativesFilters : { page: 1, category: isVideo ? 'video' : 'photo', sortBy: 'popular' }
-  );
 
   // ── Render ──────────────────────────────────────────────────
   if (loading) {
@@ -134,7 +124,10 @@ const PexelsAssetDetail = () => {
       <Header />
       <Navigation />
 
-      <div className="container py-8 max-w-6xl">
+      {/* Schema.org structured data */}
+      <PexelsSchemaOrg item={item} isVideo={isVideo} slug={slug || ''} />
+
+      <article className="container py-8 max-w-6xl">
         {/* Back button */}
         <Button variant="ghost" className="mb-6 gap-2" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
@@ -144,6 +137,11 @@ const PexelsAssetDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main preview */}
           <div className="lg:col-span-2">
+            {/* H1 title for SEO */}
+            <h1 className="text-2xl font-bold text-foreground mb-4">
+              {item.alt || item.title}
+            </h1>
+
             <div className="relative rounded-xl overflow-hidden bg-muted">
               {isVideo && item.videoUrl ? (
                 <video
@@ -159,7 +157,7 @@ const PexelsAssetDetail = () => {
               ) : (
                 <LazyImage
                   src={item.largeThumbnail || item.thumbnail}
-                  alt={item.title}
+                  alt={item.alt || item.title}
                   className="w-full object-contain"
                 />
               )}
@@ -188,102 +186,40 @@ const PexelsAssetDetail = () => {
                 </a>
               </p>
             </div>
+
+            {/* SEO descriptive content */}
+            {item.alt && (
+              <div className="mt-6">
+                <h2 className="text-lg font-semibold text-foreground mb-2">About this {isVideo ? 'video' : 'photo'}</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  This free {isVideo ? 'stock video' : 'stock photo'} — "{item.alt}" — was created by {item.photographer} and is available for download via Pexels.
+                  It can be used for personal and commercial projects. Looking for similar premium content? Browse the VisuStock marketplace for exclusive, high-quality {isVideo ? 'videos' : 'photos'}.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Title & info */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Badge className="bg-emerald-500 text-white font-bold">FREE</Badge>
-                <Badge variant="secondary">Pexels</Badge>
-                <Badge variant="outline" className="gap-1">
-                  {isVideo ? <Video className="h-3 w-3" /> : <Camera className="h-3 w-3" />}
-                  {isVideo ? 'Video' : 'Photo'}
-                </Badge>
-              </div>
-              <h1 className="text-xl font-bold text-foreground mb-2">{item.title}</h1>
-              {item.alt && item.alt !== item.title && (
-                <p className="text-sm text-muted-foreground">{item.alt}</p>
-              )}
-            </div>
-
-            {/* Details */}
-            <Card className="p-4 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Dimensions</span>
-                <span className="font-medium text-foreground">{item.width} × {item.height}</span>
-              </div>
-              {item.duration && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Duration</span>
-                  <span className="font-medium text-foreground">
-                    {Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">License</span>
-                <span className="font-medium text-foreground">Free to use</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Source</span>
-                <span className="font-medium text-foreground">Pexels</span>
-              </div>
-            </Card>
-
-            {/* Actions */}
-            <div className="space-y-3">
-              <Button className="w-full gap-2" size="lg" asChild>
-                <a href={item.originalUrl} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4" />
-                  Download Free
-                </a>
-              </Button>
-              <Button variant="outline" className="w-full gap-2" asChild>
-                <a href={item.pexelsUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                  View on Pexels
-                </a>
-              </Button>
-            </div>
-          </div>
+          <PexelsDetailSidebar item={item} isVideo={isVideo} />
         </div>
 
         {/* Premium Alternatives */}
         <Separator className="my-12" />
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-foreground">Premium Alternatives</h2>
-          </div>
-          <p className="text-sm text-muted-foreground mb-6">
-            Looking for higher quality or exclusive content? Explore these premium {isVideo ? 'videos' : 'photos'} from VisuStock creators.
-          </p>
+        <PexelsPremiumAlternatives item={item} isVideo={isVideo} />
 
-          {alternativesLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="aspect-[4/3] w-full rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : premiumAlternatives.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {premiumAlternatives.slice(0, 10).map((content) => (
-                <ContentCard key={content.id} {...content} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Browse our <Link to="/marketplace" className="text-primary hover:underline">marketplace</Link> for premium content.</p>
-            </div>
-          )}
+        {/* Internal links for SEO */}
+        <div className="mt-12 pt-8 border-t border-border">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Explore More on VisuStock</h2>
+          <nav className="flex flex-wrap gap-3">
+            <Link to="/marketplace" className="text-sm text-primary hover:underline">Browse Marketplace</Link>
+            <Link to="/free-stock-library" className="text-sm text-primary hover:underline">Free Stock Library</Link>
+            <Link to="/collections" className="text-sm text-primary hover:underline">Curated Collections</Link>
+            <Link to="/photos/business" className="text-sm text-primary hover:underline">Business Photos</Link>
+            <Link to="/videos/nature" className="text-sm text-primary hover:underline">Nature Videos</Link>
+            <Link to="/become-seller" className="text-sm text-primary hover:underline">Sell Your Content</Link>
+          </nav>
         </div>
-      </div>
+      </article>
     </div>
   );
 };
