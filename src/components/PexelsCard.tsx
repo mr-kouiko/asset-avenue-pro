@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LazyImage } from "./LazyImage";
 import { useNavigate } from "react-router-dom";
 import type { PexelsItem } from "@/hooks/usePexelsSearch";
-import { generatePexelsSlug } from "@/utils/pexelsSlug";
+import { generatePexelsProductSlug } from "@/utils/pexelsSlug";
 
 interface PexelsCardProps {
   item: PexelsItem;
