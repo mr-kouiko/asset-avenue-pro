@@ -402,9 +402,9 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For video files, resolve playback URL
+        // For video files, resolve playback URL — ONLY from watermarked preview_path
+        // SECURITY: Never fall back to original file_path. If no preview exists, show "processing" state.
         if (contentType === 'video' && filesList.length > 0) {
-          // First try preview_path (watermarked preview - preferred for security)
           const videoFileWithPreview = filesList.find((f: any) => f.preview_path);
           if (videoFileWithPreview?.preview_path) {
             console.log('🎬 Using preview_path for video playback:', videoFileWithPreview.preview_path);
@@ -416,20 +416,10 @@ export const useProductDetail = (productId: string) => {
                 .getPublicUrl(videoFileWithPreview.preview_path);
               previewUrl = publicData.publicUrl;
             }
+            console.log('📺 Final video URL (preview only):', previewUrl);
           } else {
-            // No preview_path - only allow fallback if file_path is already a public URL
-            // (public uploads bucket). NEVER query DB for private file paths.
-            const videoFile = filesList.find((f: any) => f.is_original);
-            if (videoFile?.file_path && videoFile.file_path.startsWith('http')) {
-              console.log('🎬 No preview_path, using already-public file_path:', videoFile.file_path);
-              previewUrl = videoFile.file_path;
-            } else {
-              console.warn('⚠️ No preview_path and no public file_path - preview unavailable');
-              previewUrl = undefined;
-            }
-          }
-          if (previewUrl) {
-            console.log('📺 Final video URL:', previewUrl);
+            console.warn('⚠️ No watermarked preview available — video preview unavailable until processed');
+            previewUrl = undefined;
           }
         }
 
