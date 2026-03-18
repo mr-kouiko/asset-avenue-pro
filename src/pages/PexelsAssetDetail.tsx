@@ -25,9 +25,15 @@ const PexelsAssetDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Parse slug to get type + id — support both new and legacy routes
+  // Parse slug to get type + id — support product-style, old /pexels/, and legacy routes
   const parsed = useMemo(() => {
-    if (slug) return parsePexelsSlug(slug);
+    if (slug) {
+      // Try product-style slug first: free-photo-keywords-pexels-12345
+      const productParsed = parsePexelsProductSlug(slug);
+      if (productParsed) return productParsed;
+      // Fallback to old /pexels/ slug: photo-12345-keywords
+      return parsePexelsSlug(slug);
+    }
     // Legacy: /free-photo/pexels-{id} or /free-video/pexels-{id}
     if (pexelsId) {
       const match = pexelsId.match(/pexels-(\d+)/);
