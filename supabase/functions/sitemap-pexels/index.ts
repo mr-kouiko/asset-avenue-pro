@@ -44,7 +44,7 @@ async function fetchPexelsItems(apiKey: string, type: "photos" | "videos", pages
 
         const t = type === "videos" ? "video" : "photo";
         const keywordPart = words.length > 0 ? `-${words.join("-")}` : "";
-        const slug = `${t}-${id}${keywordPart}`;
+        const slug = `free-${t}${keywordPart}-pexels-${id}`;
 
         items.push({ slug, type: t });
       }
@@ -83,7 +83,7 @@ serve(async (req) => {
 
     for (const item of allItems) {
       xml += `  <url>
-    <loc>${SITE_URL}/pexels/${item.slug}</loc>
+    <loc>${SITE_URL}/products/${item.slug}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

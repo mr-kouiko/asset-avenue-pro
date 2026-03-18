@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -37,6 +37,9 @@ import { useSEO } from "@/hooks/useSEO";
 import { ReportModal } from "@/components/ReportModal";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
+import { isPexelsProductSlug } from "@/utils/pexelsSlug";
+import { lazy } from "react";
+const PexelsAssetDetail = lazy(() => import("./PexelsAssetDetail"));
 
 /** Prominent download preview button - fetches as blob for proper file download */
 const DownloadPreviewButton = ({ previewUrl, title, type }: { previewUrl: string; title: string; type: 'video' | 'audio' }) => {
@@ -99,11 +102,12 @@ const DownloadPreviewButton = ({ previewUrl, title, type }: { previewUrl: string
   );
 };
 
-const ProductDetail = () => {
+const ProductDetailInner = () => {
   // Support both new /products/:slug and legacy /product/:id routes
   const { slug, id } = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+
   const productIdentifier = slug || id || '';
   const { product, loading: productLoading, error } = useProductDetail(productIdentifier);
   const { content: marketplaceContent } = useMarketplace();
@@ -1005,6 +1009,15 @@ const ProductDetail = () => {
       </div>
     </div>
   );
+};
+
+/** Wrapper that delegates to PexelsAssetDetail for Pexels slugs */
+const ProductDetail = () => {
+  const { slug } = useParams<{ slug?: string }>();
+  if (slug && isPexelsProductSlug(slug)) {
+    return <Suspense fallback={null}><PexelsAssetDetail /></Suspense>;
+  }
+  return <ProductDetailInner />;
 };
 
 export default ProductDetail;

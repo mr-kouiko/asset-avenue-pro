@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LazyImage } from "./LazyImage";
 import { useNavigate } from "react-router-dom";
 import type { PexelsItem } from "@/hooks/usePexelsSearch";
-import { generatePexelsSlug } from "@/utils/pexelsSlug";
+import { generatePexelsProductSlug } from "@/utils/pexelsSlug";
 
 interface PexelsCardProps {
   item: PexelsItem;
@@ -19,8 +19,8 @@ export const PexelsCard = memo(({ item }: PexelsCardProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const handleClick = () => {
-    const slug = generatePexelsSlug(item.type, item.numericId, item.title, item.alt);
-    navigate(`/pexels/${slug}`);
+    const slug = generatePexelsProductSlug(item.type, item.numericId, item.title, item.alt);
+    navigate(`/products/${slug}`);
   };
 
   const handleDownload = (e: React.MouseEvent) => {

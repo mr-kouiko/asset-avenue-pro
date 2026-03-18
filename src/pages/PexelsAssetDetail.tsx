@@ -13,7 +13,7 @@ import { ArrowLeft, Download, ExternalLink, Camera, Video, Sparkles } from "luci
 import { fetchPexelsPhotoById, fetchPexelsVideoById, type PexelsItem } from "@/hooks/usePexelsSearch";
 import { useMarketplace, type MarketplaceFilters } from "@/hooks/useMarketplace";
 import { useSEO } from "@/hooks/useSEO";
-import { parsePexelsSlug } from "@/utils/pexelsSlug";
+import { parsePexelsSlug, parsePexelsProductSlug, generatePexelsProductSlug } from "@/utils/pexelsSlug";
 import { PexelsSchemaOrg } from "@/components/pexels/PexelsSchemaOrg";
 import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
 import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
@@ -25,9 +25,15 @@ const PexelsAssetDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Parse slug to get type + id — support both new and legacy routes
+  // Parse slug to get type + id — support product-style, old /pexels/, and legacy routes
   const parsed = useMemo(() => {
-    if (slug) return parsePexelsSlug(slug);
+    if (slug) {
+      // Try product-style slug first: free-photo-keywords-pexels-12345
+      const productParsed = parsePexelsProductSlug(slug);
+      if (productParsed) return productParsed;
+      // Fallback to old /pexels/ slug: photo-12345-keywords
+      return parsePexelsSlug(slug);
+    }
     // Legacy: /free-photo/pexels-{id} or /free-video/pexels-{id}
     if (pexelsId) {
       const match = pexelsId.match(/pexels-(\d+)/);
@@ -125,7 +131,7 @@ const PexelsAssetDetail = () => {
       <Navigation />
 
       {/* Schema.org structured data */}
-      <PexelsSchemaOrg item={item} isVideo={isVideo} slug={slug || ''} />
+      <PexelsSchemaOrg item={item} isVideo={isVideo} slug={generatePexelsProductSlug(item.type as 'photo' | 'video', item.numericId, item.title, item.alt)} productStyle />
 
       <article className="container py-8 max-w-6xl">
         {/* Back button */}

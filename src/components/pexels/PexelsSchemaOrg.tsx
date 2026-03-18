@@ -4,10 +4,13 @@ interface Props {
   item: PexelsItem;
   isVideo: boolean;
   slug: string;
+  productStyle?: boolean;
 }
 
-export const PexelsSchemaOrg = ({ item, isVideo, slug }: Props) => {
-  const pageUrl = `https://visustock.com/pexels/${slug}`;
+export const PexelsSchemaOrg = ({ item, isVideo, slug, productStyle }: Props) => {
+  const pageUrl = productStyle
+    ? `https://visustock.com/products/${slug}`
+    : `https://visustock.com/pexels/${slug}`;
 
   const schema = isVideo
     ? {
