@@ -127,7 +127,7 @@ function processMarketplaceData(
         else if (fileType === 'document' || fileFormat === 'application/pdf') contentType = 'ebook';
       }
 
-      // Media URL
+      // Media URL — SECURITY: Only use preview_path, NEVER expose original file_path
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
         const fileWithPreview = files.find((f: any) => f.preview_path);
@@ -136,24 +136,14 @@ function processMarketplaceData(
             ? fileWithPreview.preview_path
             : buildPublicUrlCached('previews', fileWithPreview.preview_path);
         }
-        if (!mediaUrl && originalFile?.file_path) {
-          mediaUrl = originalFile.file_path.startsWith('http')
-            ? originalFile.file_path
-            : buildPublicUrlCached('uploads', originalFile.file_path);
-        }
-        if (!mediaUrl) {
-          const anyVideoFile = files.find((f: any) => f.file_type?.toLowerCase().includes('video') && f.file_path);
-          if (anyVideoFile?.file_path) {
-            mediaUrl = anyVideoFile.file_path.startsWith('http')
-              ? anyVideoFile.file_path
-              : buildPublicUrlCached('uploads', anyVideoFile.file_path);
-          }
-        }
+        // No fallback to original file_path — if no preview exists, video is "processing"
       } else if (contentType === 'audio') {
-        if (originalFile?.file_path) {
-          mediaUrl = originalFile.file_path.startsWith('http')
-            ? originalFile.file_path
-            : buildPublicUrlCached('uploads', originalFile.file_path);
+        // Audio uses preview_path if available, otherwise no URL exposed
+        const audioPreview = files.find((f: any) => f.preview_path);
+        if (audioPreview?.preview_path) {
+          mediaUrl = audioPreview.preview_path.startsWith('http')
+            ? audioPreview.preview_path
+            : buildPublicUrlCached('previews', audioPreview.preview_path);
         }
       }
 
