@@ -7,9 +7,10 @@ import type { PexelsItem } from "@/hooks/usePexelsSearch";
 interface Props {
   item: PexelsItem;
   isVideo: boolean;
+  keywords?: string[];
 }
 
-export const PexelsDetailSidebar = ({ item, isVideo }: Props) => (
+export const PexelsDetailSidebar = ({ item, isVideo, keywords }: Props) => (
   <aside className="space-y-6">
     {/* Badges */}
     <div>
@@ -60,6 +61,18 @@ export const PexelsDetailSidebar = ({ item, isVideo }: Props) => (
         </a>
       </div>
     </Card>
+
+    {/* Visual style badges from AI */}
+    {keywords && keywords.length > 0 && (
+      <Card className="p-4">
+        <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Visual Style</p>
+        <div className="flex flex-wrap gap-1.5">
+          {keywords.map((kw, i) => (
+            <Badge key={i} variant="secondary" className="text-xs">{kw}</Badge>
+          ))}
+        </div>
+      </Card>
+    )}
 
     {/* Actions */}
     <div className="space-y-3">
