@@ -1011,4 +1011,13 @@ const ProductDetailInner = () => {
   );
 };
 
+/** Wrapper that delegates to PexelsAssetDetail for Pexels slugs */
+const ProductDetail = () => {
+  const { slug } = useParams<{ slug?: string }>();
+  if (slug && isPexelsProductSlug(slug)) {
+    return <Suspense fallback={null}><PexelsAssetDetail /></Suspense>;
+  }
+  return <ProductDetailInner />;
+};
+
 export default ProductDetail;
