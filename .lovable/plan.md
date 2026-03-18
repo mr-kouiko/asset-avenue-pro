@@ -1,35 +1,58 @@
 
-# Private Uploads Bucket with Signed URL Pipeline — IMPLEMENTED
 
-## What was done
+## Plan: Marketplace-Style URLs for Pexels Assets
 
-### 1. Created `generate-signed-url` edge function
-- Authenticated endpoint that validates file ownership (path must start with user's ID)
-- Returns a 15-minute signed URL using service_role credentials
-- Used by the upload hook to access private originals during preview generation
+### Current State
+- Pexels assets use `/pexels/photo-12345-business-team-meeting`
+- Marketplace products use `/products/business-team-meeting-office`
+- These are visually different URL structures, making Pexels content look external
 
-### 2. Updated `proxy-video` edge function
-- Detects `content-uploads` bucket URLs and generates signed URLs server-side
-- Uses service_role to access private files without exposing credentials to clients
-- Maintains CORS proxy functionality for preview generation
+### Proposed URL Structure
+Pexels assets will use the same `/products/` prefix as marketplace content:
 
-### 3. Updated `useEnhancedUpload` hook
-- After uploading to `content-uploads`, requests a signed URL via `generate-signed-url`
-- Uploads watermarked previews to the **`previews`** bucket (public) instead of `content-uploads`
-- Stores the public preview URL in `content_files.preview_path`
+```text
+/products/free-photo-business-team-meeting-pexels-12345
+/products/free-video-sunset-ocean-waves-pexels-98765
+```
 
-### 4. Updated `secure-download` edge function
-- Default bucket changed from `original-files` to `content-uploads`
-- Uses service_role signed URLs for purchased file access
+The slug format: `free-{type}-{keywords}-pexels-{numericId}`
 
-## Manual steps required
+The trailing `pexels-{id}` suffix lets the system distinguish Pexels assets from database products without any ambiguity.
 
-### Create the `previews` bucket (PUBLIC)
-Go to Supabase Dashboard → Storage → Create bucket named `previews`, set it as **public**.
+### Changes
 
-### Make `content-uploads` bucket PRIVATE
-Go to Supabase Dashboard → Storage → `content-uploads` → Settings → Disable public access.
+**1. Update slug generator** (`src/utils/pexelsSlug.ts`)
+- New function `generatePexelsProductSlug()` producing `free-photo-keywords-pexels-12345`
+- New parser `parsePexelsProductSlug()` that detects the `pexels-{id}` suffix and extracts type + ID
+- Keep old functions for backward compatibility
 
-### Migrate existing preview URLs
-Existing `content_files.preview_path` entries pointing to `content-uploads` will break.
-Run a migration to copy existing preview files to the `previews` bucket.
+**2. Update ProductDetail page** (`src/pages/ProductDetail.tsx`)
+- At the top of the component, check if the slug matches the Pexels pattern (`-pexels-\d+$`)
+- If it does, render the `PexelsAssetDetail` component instead of the normal product detail
+- This keeps a single route handler for `/products/:slug`
+
+**3. Update PexelsCard** (`src/components/PexelsCard.tsx`)
+- Change `navigate('/pexels/...')` to `navigate('/products/free-photo-...-pexels-123')`
+
+**4. Update PexelsAssetDetail** (`src/pages/PexelsAssetDetail.tsx`)
+- Accept the new slug format via `parsePexelsProductSlug()`
+- Keep backward compatibility with old `/pexels/:slug` and `/free-photo/:id` routes
+
+**5. Update routing** (`src/App.tsx`)
+- Keep `/pexels/:slug` route as a redirect to the new `/products/` URL (301-style via `navigate(..., { replace: true })`)
+- Keep `/free-photo/:id` and `/free-video/:id` legacy redirects
+- No new route needed since `/products/:slug` already exists
+
+**6. Update sitemap** (`supabase/functions/sitemap-pexels/index.ts`)
+- Generate URLs as `/products/free-photo-...-pexels-123` instead of `/pexels/photo-123-...`
+
+### Technical Details
+
+- Detection logic in ProductDetail: `const pexelsMatch = slug?.match(/-pexels-(\d+)$/)`
+- If matched, extract type from slug prefix (`free-photo-` or `free-video-`), render Pexels detail view
+- If not matched, proceed with normal Supabase product lookup
+- Old `/pexels/` URLs auto-redirect to preserve any existing indexed pages
+
+### No Database Changes Required
+Everything is client-side routing and slug generation.
+
