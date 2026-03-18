@@ -37,6 +37,9 @@ import { useSEO } from "@/hooks/useSEO";
 import { ReportModal } from "@/components/ReportModal";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import mockPhoto1 from "@/assets/mock-photo1.jpg";
+import { isPexelsProductSlug } from "@/utils/pexelsSlug";
+import { lazy } from "react";
+const PexelsAssetDetail = lazy(() => import("./PexelsAssetDetail"));
 
 /** Prominent download preview button - fetches as blob for proper file download */
 const DownloadPreviewButton = ({ previewUrl, title, type }: { previewUrl: string; title: string; type: 'video' | 'audio' }) => {
