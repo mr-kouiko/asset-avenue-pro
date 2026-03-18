@@ -13,7 +13,7 @@ import { ArrowLeft, Download, ExternalLink, Camera, Video, Sparkles } from "luci
 import { fetchPexelsPhotoById, fetchPexelsVideoById, type PexelsItem } from "@/hooks/usePexelsSearch";
 import { useMarketplace, type MarketplaceFilters } from "@/hooks/useMarketplace";
 import { useSEO } from "@/hooks/useSEO";
-import { parsePexelsSlug } from "@/utils/pexelsSlug";
+import { parsePexelsSlug, parsePexelsProductSlug, generatePexelsProductSlug } from "@/utils/pexelsSlug";
 import { PexelsSchemaOrg } from "@/components/pexels/PexelsSchemaOrg";
 import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
 import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
