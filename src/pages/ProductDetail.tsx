@@ -107,6 +107,12 @@ const ProductDetail = () => {
   const { slug, id } = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // If this is a Pexels product slug, delegate to PexelsAssetDetail
+  if (slug && isPexelsProductSlug(slug)) {
+    return <PexelsAssetDetail />;
+  }
+
   const productIdentifier = slug || id || '';
   const { product, loading: productLoading, error } = useProductDetail(productIdentifier);
   const { content: marketplaceContent } = useMarketplace();

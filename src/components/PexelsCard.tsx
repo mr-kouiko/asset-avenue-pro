@@ -19,8 +19,8 @@ export const PexelsCard = memo(({ item }: PexelsCardProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const handleClick = () => {
-    const slug = generatePexelsSlug(item.type, item.numericId, item.title, item.alt);
-    navigate(`/pexels/${slug}`);
+    const slug = generatePexelsProductSlug(item.type, item.numericId, item.title, item.alt);
+    navigate(`/products/${slug}`);
   };
 
   const handleDownload = (e: React.MouseEvent) => {

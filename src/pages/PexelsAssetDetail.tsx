@@ -131,7 +131,7 @@ const PexelsAssetDetail = () => {
       <Navigation />
 
       {/* Schema.org structured data */}
-      <PexelsSchemaOrg item={item} isVideo={isVideo} slug={slug || ''} />
+      <PexelsSchemaOrg item={item} isVideo={isVideo} slug={generatePexelsProductSlug(item.type as 'photo' | 'video', item.numericId, item.title, item.alt)} productStyle />
 
       <article className="container py-8 max-w-6xl">
         {/* Back button */}

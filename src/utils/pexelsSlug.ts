@@ -49,3 +49,44 @@ export function parsePexelsSlug(slug: string): { type: 'photo' | 'video'; numeri
     numericId: parseInt(match[2], 10),
   };
 }
+
+/**
+ * Generate a marketplace-style product slug for a Pexels asset.
+ * Format: free-{type}-{keywords}-pexels-{numericId}
+ * Example: free-photo-business-team-meeting-pexels-12345
+ */
+export function generatePexelsProductSlug(
+  type: 'photo' | 'video',
+  numericId: number,
+  title?: string,
+  alt?: string,
+): string {
+  const rawText = alt || title || '';
+  const words = cleanText(rawText)
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOP_WORDS.has(w))
+    .slice(0, 6);
+
+  const keywordPart = words.length > 0 ? `-${words.join('-')}` : '';
+  return `free-${type}${keywordPart}-pexels-${numericId}`;
+}
+
+/**
+ * Parse a marketplace-style Pexels product slug.
+ * Accepts: "free-photo-business-team-pexels-12345" or "free-video-sunset-pexels-99999"
+ */
+export function parsePexelsProductSlug(slug: string): { type: 'photo' | 'video'; numericId: number } | null {
+  const match = slug.match(/^free-(photo|video)-.*-pexels-(\d+)$/);
+  if (!match) return null;
+  return {
+    type: match[1] as 'photo' | 'video',
+    numericId: parseInt(match[2], 10),
+  };
+}
+
+/**
+ * Quick check if a slug is a Pexels product slug.
+ */
+export function isPexelsProductSlug(slug: string): boolean {
+  return /^free-(photo|video)-.*-pexels-\d+$/.test(slug);
+}

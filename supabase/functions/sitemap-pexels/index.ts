@@ -83,7 +83,7 @@ serve(async (req) => {
 
     for (const item of allItems) {
       xml += `  <url>
-    <loc>${SITE_URL}/pexels/${item.slug}</loc>
+    <loc>${SITE_URL}/products/${item.slug}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

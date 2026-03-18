@@ -164,8 +164,8 @@ const App = () => (
                         <Route path="/face-enhancer" element={<FaceEnhancer />} />
                         <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
                         <Route path="/free-stock-library" element={<FreeStockLibrary />} />
+                        {/* Legacy Pexels routes — redirect to /products/free-{type}-...-pexels-{id} */}
                         <Route path="/pexels/:slug" element={<PexelsAssetDetail />} />
-                        {/* Legacy routes redirect */}
                         <Route path="/free-photo/:pexelsId" element={<PexelsAssetDetail />} />
                         <Route path="/free-video/:pexelsId" element={<PexelsAssetDetail />} />
                         
