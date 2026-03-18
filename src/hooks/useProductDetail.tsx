@@ -379,26 +379,23 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For audio files, use public URL from original-files bucket
+        // For audio files — SECURITY: Only use preview_path, never expose original file_path
         if (contentType === 'audio' && filesList.length > 0) {
-          const audioFile = filesList.find((f: any) =>
-            f.is_original && (
-              f.file_type?.toLowerCase().startsWith('audio') ||
-              f.file_format?.toLowerCase().startsWith('audio/') ||
-              /\.(mp3|wav|ogg|m4a)$/.test((f.file_path || '').toLowerCase())
-            )
-          );
-          if (audioFile?.file_path) {
-            console.log('🎵 Creating public URL for audio:', audioFile.file_path);
-            if (audioFile.file_path.startsWith('http')) {
-              previewUrl = audioFile.file_path;
+          const audioPreview = filesList.find((f: any) => f.preview_path);
+          if (audioPreview?.preview_path) {
+            console.log('🎵 Using audio preview_path:', audioPreview.preview_path);
+            if (audioPreview.preview_path.startsWith('http')) {
+              previewUrl = audioPreview.preview_path;
             } else {
               const { data: publicData } = supabase.storage
-                .from('uploads')
-                .getPublicUrl(audioFile.file_path);
+                .from('previews')
+                .getPublicUrl(audioPreview.preview_path);
               previewUrl = publicData.publicUrl;
             }
-            console.log('🔊 Audio URL created:', previewUrl);
+            console.log('🔊 Audio preview URL:', previewUrl);
+          } else {
+            console.warn('⚠️ No audio preview available — playback unavailable until processed');
+            previewUrl = undefined;
           }
         }
 
