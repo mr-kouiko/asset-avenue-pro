@@ -44,7 +44,7 @@ async function fetchPexelsItems(apiKey: string, type: "photos" | "videos", pages
 
         const t = type === "videos" ? "video" : "photo";
         const keywordPart = words.length > 0 ? `-${words.join("-")}` : "";
-        const slug = `${t}-${id}${keywordPart}`;
+        const slug = `free-${t}${keywordPart}-pexels-${id}`;
 
         items.push({ slug, type: t });
       }
