@@ -933,6 +933,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pexels_seo_content: {
+        Row: {
+          about_section: Json | null
+          created_at: string
+          h1: string | null
+          internal_links: Json | null
+          intro: string | null
+          keywords: string[] | null
+          main_content: string | null
+          meta_description: string | null
+          pexels_id: number
+          seo_title: string | null
+          type: string
+          use_cases: string[] | null
+          visual_style: string[] | null
+        }
+        Insert: {
+          about_section?: Json | null
+          created_at?: string
+          h1?: string | null
+          internal_links?: Json | null
+          intro?: string | null
+          keywords?: string[] | null
+          main_content?: string | null
+          meta_description?: string | null
+          pexels_id: number
+          seo_title?: string | null
+          type?: string
+          use_cases?: string[] | null
+          visual_style?: string[] | null
+        }
+        Update: {
+          about_section?: Json | null
+          created_at?: string
+          h1?: string | null
+          internal_links?: Json | null
+          intro?: string | null
+          keywords?: string[] | null
+          main_content?: string | null
+          meta_description?: string | null
+          pexels_id?: number
+          seo_title?: string | null
+          type?: string
+          use_cases?: string[] | null
+          visual_style?: string[] | null
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           ai_auto_generate_enabled: boolean
