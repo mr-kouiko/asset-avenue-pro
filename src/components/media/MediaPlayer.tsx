@@ -5,8 +5,6 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { VideoWatermark } from '@/components/VideoWatermark';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/components/ui/use-toast';
-import { useServerVideoPreview } from '@/hooks/useServerVideoPreview';
-import { useVideoPreviewGenerator } from '@/hooks/useVideoPreviewGenerator';
 import { useAudioWatermark } from '@/hooks/useAudioWatermark';
 
 interface MediaPlayerProps {
@@ -20,8 +18,7 @@ interface MediaPlayerProps {
   muted?: boolean;
   compact?: boolean;
   watermarkSize?: 'normal' | 'large' | 'thumbnail';
-  contentId?: string;      // For server-side preview generation
-  storagePath?: string;    // Storage path for the video (for server-side preview)
+  contentId?: string;
   previewPath?: string;    // Pre-generated preview path (if available)
 }
 
@@ -48,11 +45,10 @@ function getMimeFromSrc(src: string | undefined, kind: 'video' | 'audio'): strin
 }
 
 /**
- * Universal Media Player
- * - Device-aware playback with mobile/desktop optimizations
- * - Proper MIME type handling and source management
- * - Retry logic and error handling
- * - Touch-friendly controls on mobile
+ * Universal Media Player — Security-Hardened
+ * - ONLY plays watermarked preview URLs (never original files)
+ * - Download only available for pre-generated previews
+ * - No client-side or server-side preview generation fallbacks
  */
 export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   src,
@@ -66,7 +62,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   compact = false,
   watermarkSize = 'normal',
   contentId,
-  storagePath,
   previewPath: existingPreviewPath,
 }) => {
   const deviceInfo = useDeviceDetection();
@@ -85,10 +80,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  // Preview generators - server-side (preferred) and client-side (fallback)
   const { toast } = useToast();
-  const serverPreview = useServerVideoPreview();
-  const clientPreview = useVideoPreviewGenerator();
 
   // Audio watermark hook - only active for audio type
   useAudioWatermark({ 
@@ -96,15 +88,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     mainVolume: volume, 
     isMuted
   });
-
-  // Determine if preview generation is in progress
-  const isGeneratingPreview = serverPreview.isGenerating || clientPreview.isGenerating;
-  const previewStage = serverPreview.isGenerating 
-    ? serverPreview.stage 
-    : clientPreview.state.stage;
-  const previewProgress = serverPreview.isGenerating 
-    ? serverPreview.progress 
-    : clientPreview.state.progress;
 
   // Helper: fetch a URL as blob and trigger download as a proper file
   const downloadUrlAsFile = useCallback(async (url: string, filename: string) => {
@@ -123,7 +106,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       return true;
     } catch (err) {
       console.warn('[MediaPlayer] Blob download failed, using direct link fallback:', err);
-      // Fallback: direct link (may open in tab for cross-origin)
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -135,124 +117,38 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     }
   }, []);
 
+  /**
+   * SECURITY: Download preview — ONLY from pre-generated watermarked preview.
+   * No fallback to source URL, no client-side generation, no server-side generation.
+   */
   const handleDownloadPreview = useCallback(async () => {
-    if (type !== 'video' || !src) return;
+    if (type !== 'video') return;
     
     const filenameBase = (title || 'video').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
 
-    // Option 1: If pre-generated preview exists, download as blob for proper MP4
-    if (existingPreviewPath) {
-      console.log('[MediaPlayer] Using pre-generated preview:', existingPreviewPath);
+    if (!existingPreviewPath) {
       toast({ 
-        title: 'Downloading preview…', 
-        description: 'Preparing MP4 file', 
-        duration: 10000 
-      });
-      await downloadUrlAsFile(existingPreviewPath, `${filenameBase}_preview.mp4`);
-      toast({ 
-        title: 'Preview ready', 
-        description: 'Watermarked preview downloaded.', 
-        duration: 3000 
+        title: 'Preview not available', 
+        description: 'The watermarked preview is still being generated. Please try again later.', 
+        variant: 'destructive',
+        duration: 5000 
       });
       return;
     }
 
-    // Option 2: Try to download the source video directly as preview (watermarked)
-    // This uses the preview URL (which is already watermarked) and downloads it as a real file
-    if (src) {
-      const cleanSrc = src.split('#')[0]; // Remove any #t=2 fragments
-      console.log('[MediaPlayer] Downloading source as preview:', cleanSrc);
-      toast({ 
-        title: 'Downloading preview…', 
-        description: 'Preparing watermarked MP4 file', 
-        duration: 30000 
-      });
-      
-      try {
-        await downloadUrlAsFile(cleanSrc, `${filenameBase}_preview.mp4`);
-        toast({ 
-          title: 'Preview ready', 
-          description: 'Watermarked preview downloaded.', 
-          duration: 3000 
-        });
-        return;
-      } catch (err) {
-        console.warn('[MediaPlayer] Direct download failed, trying server generation:', err);
-      }
-    }
-
-    // Option 3: Try server-side generation (fallback)
-    if (storagePath) {
-      toast({ 
-        title: 'Generating preview…', 
-        description: 'Server processing (720p MP4)', 
-        duration: 60000 
-      });
-      
-      try {
-        const result = await serverPreview.generate({
-          videoPath: storagePath,
-          contentId,
-          resolution: 720,
-        });
-        
-        console.log('[MediaPlayer] Server preview generated:', result);
-        await downloadUrlAsFile(result.previewUrl, `${filenameBase}_preview.mp4`);
-        
-        toast({ 
-          title: 'Preview ready', 
-          description: result.cached 
-            ? 'Downloaded from cache.' 
-            : `Generated in ${(result.processingTimeMs / 1000).toFixed(1)}s`, 
-          duration: 3000 
-        });
-        return;
-      } catch (serverErr) {
-        console.warn('[MediaPlayer] Server preview failed, falling back to client-side:', serverErr);
-      }
-    }
-
-    // Option 4: Fallback to client-side generation (slower, may produce WebM)
+    console.log('[MediaPlayer] Downloading pre-generated preview:', existingPreviewPath);
     toast({ 
-      title: 'Generating preview…', 
-      description: 'Processing in browser (720p)', 
-      duration: 60000 
+      title: 'Downloading preview…', 
+      description: 'Preparing watermarked file', 
+      duration: 10000 
     });
-    
-    try {
-      const blob = await clientPreview.generate({ 
-        url: src, 
-        targetWidth: 1280,
-        fps: 24, 
-        videoBitsPerSecond: 2500000
-      });
-      
-      const a = document.createElement('a');
-      const href = URL.createObjectURL(blob);
-      a.href = href;
-      const ext = blob.type === 'video/mp4' ? 'mp4' : 'webm';
-      a.download = `${filenameBase}_preview.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(href);
-      a.remove();
-      
-      toast({ 
-        title: 'Preview ready', 
-        description: 'Watermarked preview downloaded.', 
-        duration: 3000 
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unable to create preview';
-      console.error('[MediaPlayer] Preview generation failed:', errorMessage);
-      toast({ 
-        title: 'Generation failed', 
-        description: errorMessage, 
-        variant: 'destructive',
-        duration: 5000
-      });
-    }
-  }, [src, type, title, existingPreviewPath, storagePath, contentId, serverPreview, clientPreview, toast]);
+    await downloadUrlAsFile(existingPreviewPath, `${filenameBase}_preview.mp4`);
+    toast({ 
+      title: 'Preview ready', 
+      description: 'Watermarked preview downloaded.', 
+      duration: 3000 
+    });
+  }, [type, title, existingPreviewPath, toast, downloadUrlAsFile]);
 
   // User interaction tracking for mobile autoplay restrictions
   const userInteractedRef = useRef<boolean>(false);
@@ -260,17 +156,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   // MIME type calculation
   const mimeType = useMemo(() => getMimeFromSrc(src, type), [src, type]);
 
-// Reload key for forcing media reload on src change or retry
+  // Reload key for forcing media reload on src change or retry
   const mediaKey = useMemo(() => `${src || 'no-src'}::${retryCount}`, [src, retryCount]);
   
-  // Decide whether to set crossOrigin attribute (only when server supports CORS)
+  // Decide whether to set crossOrigin attribute
   const shouldUseCrossOrigin = useMemo(() => {
     if (!src) return false;
     try {
       const host = new URL(src).hostname;
-      // Enable CORS for Supabase assets (including proxy-video) or same-origin media only
-      // Note: cdn.visustock.com is NOT included because R2 CDN may not serve CORS headers,
-      // and setting crossOrigin without server support blocks the entire resource load.
       return host.includes('supabase.co') || host === window.location.hostname;
     } catch {
       return false;
@@ -393,8 +286,6 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   ]);
 
   // Reset player state when source changes
-  // The key={mediaKey} prop forces React to remount the element,
-  // so we just reset our tracking state here.
   const prevSrcRef = useRef<string | undefined>();
   useEffect(() => {
     if (prevSrcRef.current !== src) {
@@ -587,8 +478,9 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       }`}
       role="group"
       aria-label={title}
+      onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Media element with typed source */}
+      {/* Media element — SECURITY: src is always a watermarked preview URL */}
       {type === 'video' ? (
         <video
           key={mediaKey}
@@ -603,6 +495,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           className="w-full h-full object-cover"
           style={{ opacity: isLoading ? 0 : 1 }}
           controls={false}
+          controlsList="nodownload"
+          disablePictureInPicture
         />
       ) : (
         <audio
@@ -614,12 +508,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
           style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
           controls={false}
+          controlsList="nodownload"
         >
           <source src={src} type={mimeType} />
         </audio>
       )}
 
-      {/* Video Watermark - ALWAYS show for videos, even when loading */}
+      {/* Video Watermark overlay — additional visual protection */}
       {type === 'video' && !hasError && (
         <VideoWatermark size={watermarkSize} />
       )}
@@ -732,46 +627,31 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
                   {type === 'video' && (
                     <>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size={deviceInfo.touchCapable ? 'default' : 'sm'}
-                            className={`text-white hover:bg-white/20 ${
-                              deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
-                            } p-0 rounded-full`}
-                            aria-label="Options"
-                          >
-                            <MoreVertical className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-[260px]">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={handleDownloadPreview} disabled={isGeneratingPreview}>
-                            {isGeneratingPreview ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {previewStage === 'loading' && 'Loading video...'}
-                                {previewStage === 'requesting' && 'Requesting server...'}
-                                {previewStage === 'processing' && `Processing (${previewProgress}%)`}
-                                {previewStage === 'recording' && `Recording (${previewProgress}%)`}
-                                {previewStage === 'downloading' && 'Downloading...'}
-                              </>
-                            ) : existingPreviewPath ? (
-                              <>
-                                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                                Download preview (cached)
-                              </>
-                            ) : (
-                              <>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download preview (720p)
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {/* Download preview — only shown when a pre-generated preview exists */}
+                      {existingPreviewPath && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size={deviceInfo.touchCapable ? 'default' : 'sm'}
+                              className={`text-white hover:bg-white/20 ${
+                                deviceInfo.touchCapable ? 'h-10 w-10 touch-manipulation' : 'h-8 w-8'
+                              } p-0 rounded-full`}
+                              aria-label="Options"
+                            >
+                              <MoreVertical className={deviceInfo.touchCapable ? 'h-5 w-5' : 'h-4 w-4'} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[260px]">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleDownloadPreview}>
+                              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                              Download watermarked preview
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
 
                       <Button
                         variant="ghost"
