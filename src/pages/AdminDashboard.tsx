@@ -519,6 +519,9 @@ const AdminDashboard = () => {
           {/* Integrity Scanner Tab */}
           <TabsContent value="integrity">
             <AdminIntegrityPanel />
+            <div className="mt-6">
+              <AdminVideoBackfill />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
