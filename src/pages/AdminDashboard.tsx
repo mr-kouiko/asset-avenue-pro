@@ -38,6 +38,7 @@ import { AdminContentReports } from "@/components/admin/AdminContentReports";
 import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
 import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
 import { AdminModerationQueue } from "@/components/admin/AdminModerationQueue";
+import { AdminVideoBackfill } from "@/components/admin/AdminVideoBackfill";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
