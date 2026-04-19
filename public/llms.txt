@@ -1,0 +1,79 @@
+# VisuStock
+
+> VisuStock is a premium digital marketplace for stock assets and creative resources — high-quality photos, videos, audio tracks, ebooks and AI-generated content sold by independent creators worldwide. Buyers get instant, properly licensed downloads. Creators earn fair revenue with transparent payouts.
+
+VisuStock combines a curated stock library, a creator-driven marketplace, and built-in AI tools (image generation, upscaling, background removal, video/audio editing) in a single platform. Every asset is reviewed for quality, originality and licensing compliance.
+
+## What VisuStock Offers
+
+- **Stock photos**: Royalty-free and premium photography for marketing, editorial, social media and print.
+- **Stock videos**: 4K and HD footage, b-roll, motion backgrounds and cinematic clips.
+- **Audio & music**: Background music, sound effects, loops and podcast-ready tracks.
+- **Ebooks & digital downloads**: Guides, templates, design assets and educational content.
+- **AI-generated assets**: Curated AI imagery with clear provenance labeling.
+- **AI creative tools**: Image generation, image/video upscaling, background removal, face enhancement, text-to-speech, video reframing and audio duration adjustment.
+
+## Who It's For
+
+- **Buyers**: Marketers, agencies, video editors, social media managers, content creators, podcasters, publishers and small businesses needing licensed creative assets fast.
+- **Sellers / Creators**: Photographers, videographers, musicians, illustrators, designers and AI artists looking to monetize their work with fair commission rates.
+
+## Why Choose VisuStock
+
+- Instant downloads after purchase
+- Clear, simple licensing (commercial-ready)
+- Curated quality — every submission is reviewed
+- AI-content transparency and integrity scanning
+- Fair creator revenue share with PayPal payouts
+- Flexible pricing: pay-per-asset, credit packs and subscriptions
+- Built-in AI tools that work alongside the marketplace
+
+## Key Pages
+
+- [Homepage](https://visustock.com/): Discover the full marketplace and creative tools.
+- [Marketplace](https://visustock.com/marketplace): Browse all photos, videos, audio and ebooks.
+- [Categories — Photos](https://visustock.com/s/categories/photo)
+- [Categories — Videos](https://visustock.com/s/categories/video)
+- [Categories — Audio](https://visustock.com/s/categories/audio)
+- [Categories — Ebooks](https://visustock.com/s/categories/ebooks)
+- [Collections](https://visustock.com/collections): Themed, hand-picked asset bundles.
+- [Pricing & Packages](https://visustock.com/packages-pricing): Credits, subscriptions and one-off purchases.
+- [Buy Credits](https://visustock.com/buy-credits): Top up download credits.
+- [Become a Seller](https://visustock.com/become-seller): Join as a creator and start selling.
+- [Licenses](https://visustock.com/licenses): Full license terms for buyers.
+- [AI Image Generator](https://visustock.com/ai-image-generator): Generate original imagery on-platform.
+- [Free Stock Library](https://visustock.com/free-stock-library): Curated free assets.
+- [About](https://visustock.com/about)
+- [Contact](https://visustock.com/contact)
+- [Support](https://visustock.com/support)
+- [Blog](https://visustock.com/blog)
+
+## Trust & Safety
+
+- Every uploaded asset is moderated before going live.
+- AI-detection and integrity scanning prevent fraudulent or stolen content.
+- Secure, time-limited download URLs protect buyers and creators.
+- Transparent dispute and reporting workflow.
+- GDPR-compliant data handling.
+
+## How to Buy
+
+1. Browse the marketplace or search by keyword, category or theme.
+2. Preview watermarked content before purchase.
+3. Buy a single asset, use credits, or subscribe for ongoing access.
+4. Download the original, high-resolution, watermark-free file instantly.
+
+## How to Sell
+
+1. Sign up at [Become a Seller](https://visustock.com/become-seller).
+2. Submit your portfolio for review.
+3. Upload assets with titles, descriptions and tags (AI-assisted).
+4. Earn a transparent revenue share, paid via PayPal.
+
+## Resources
+
+- [Sitemap](https://visustock.com/sitemap.xml)
+- [Index](https://visustock.com/index.md)
+- [Privacy Policy](https://visustock.com/en/privacy-policy)
+- [Terms of Service](https://visustock.com/en/terms)
+- [License Agreement](https://visustock.com/en/license-agreement)

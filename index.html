@@ -6,10 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Primary Meta Tags -->
-    <title>VisuStock - Creative Content Marketplace</title>
-    <meta name="title" content="VisuStock - Creative Content Marketplace" />
-    <meta name="description" content="Discover millions of professional photos, videos, illustrations and audio. Buy and sell creative content on VisuStock - the global marketplace for creators." />
-    <meta name="keywords" content="stock photos, stock videos, royalty free images, audio files, illustrations, creative marketplace, buy photos, sell photos" />
+    <title>VisuStock — Premium Digital Marketplace for Stock Assets, AI Tools & Creative Resources</title>
+    <meta name="title" content="VisuStock — Premium Digital Marketplace for Stock Assets, AI Tools & Creative Resources" />
+    <meta name="description" content="VisuStock is a premium digital marketplace for stock photos, videos, audio, ebooks and AI-generated assets. Instant downloads, clear licensing, fair creator revenue, plus built-in AI tools for image generation, upscaling and editing." />
+    <meta name="keywords" content="digital marketplace, digital downloads, stock assets, creative resources, AI tools marketplace, premium downloads, design assets, templates marketplace, stock photos, stock videos, royalty free music, AI image generation, ebooks marketplace" />
+
+    <!-- AI / LLM discovery -->
+    <link rel="alternate" type="text/markdown" title="VisuStock for LLMs" href="/llms.txt" />
+    <link rel="alternate" type="text/markdown" title="VisuStock Index" href="/index.md" />
     <meta name="author" content="VisuStock" />
     <meta name="robots" content="index, follow" />
     <meta name="p:domain_verify" content="d778a14f1800094faa0bba4a5ae207f0"/>
@@ -52,6 +56,44 @@
     
     <!-- Preload critical hero video poster for LCP -->
     <link rel="preload" as="image" href="/src/assets/hero-image.jpg" fetchpriority="high" />
+
+    <!-- Organization & WebSite structured data for AI/Search -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://visustock.com/#organization",
+          "name": "VisuStock",
+          "url": "https://visustock.com/",
+          "logo": "https://visustock.com/favicon.png",
+          "description": "Premium digital marketplace for stock photos, videos, audio, ebooks and AI-generated creative assets, with built-in AI tools for creators.",
+          "sameAs": []
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://visustock.com/#website",
+          "url": "https://visustock.com/",
+          "name": "VisuStock",
+          "publisher": { "@id": "https://visustock.com/#organization" },
+          "inLanguage": ["en", "fr"],
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://visustock.com/marketplace?search={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "OnlineStore",
+          "name": "VisuStock Marketplace",
+          "url": "https://visustock.com/marketplace",
+          "description": "Buy and sell premium digital downloads: stock photos, videos, audio, ebooks, design assets and AI-generated content.",
+          "parentOrganization": { "@id": "https://visustock.com/#organization" }
+        }
+      ]
+    }
+    </script>
   </head>
 
   <body>
