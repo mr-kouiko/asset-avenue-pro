@@ -16,22 +16,22 @@ export const HeroSection = () => {
 
   const content = {
     fr: {
-      title: "Découvrez des millions de",
-      titleHighlight: "contenus créatifs",
-      subtitle: "Photos, vidéos, sons et bien plus. Trouvez le contenu parfait pour vos projets créatifs et professionnels.",
-      searchPlaceholder: "Rechercher...",
+      title: "La marketplace digitale premium pour",
+      titleHighlight: "créateurs et professionnels",
+      subtitle: "Photos, vidéos, musiques, ebooks et contenus IA — téléchargements instantanés, licences commerciales claires et outils créatifs IA intégrés. Vendez vos créations ou trouvez l'asset parfait pour votre projet.",
+      searchPlaceholder: "Rechercher photos, vidéos, audio, ebooks...",
       statsLabels: {
         photos: "Photos",
-        videos: "Vidéos", 
+        videos: "Vidéos",
         audio: "Audio",
         ebooks: "Ebooks"
       }
     },
     en: {
-      title: "Discover millions of",
-      titleHighlight: "creative content",
-      subtitle: "Photos, videos, audio and more. Find the perfect content for your creative and professional projects.",
-      searchPlaceholder: "Search...",
+      title: "The premium digital marketplace for",
+      titleHighlight: "creators and professionals",
+      subtitle: "Stock photos, videos, music, ebooks and AI-generated assets — instant downloads, clear commercial licensing and built-in AI creative tools. Sell your work or find the perfect asset for your next project.",
+      searchPlaceholder: "Search photos, videos, audio, ebooks...",
       statsLabels: {
         photos: "Photos",
         videos: "Videos",
