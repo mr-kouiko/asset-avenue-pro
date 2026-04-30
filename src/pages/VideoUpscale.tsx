@@ -58,6 +58,30 @@ const VideoUpscale = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  useSEO({
+    title: 'AI Video Upscaler – Upscale Video to 4K Online Free',
+    description: 'Free AI video upscaler: upscale video to 4K, enhance video quality, sharpen details and remove noise online. No signup, no watermark.',
+    type: 'website',
+    tags: ['video upscaler', 'AI video upscaler', 'upscale video to 4K', 'enhance video quality', 'video enhancer AI']
+  });
+
+  useEffect(() => {
+    const ids = ['vu-schema-software', 'vu-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
