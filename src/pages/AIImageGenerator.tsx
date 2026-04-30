@@ -262,6 +262,35 @@ export default function AIImageGenerator() {
               }}
             />
 
+            {/* Aspect ratio selector */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                {language === 'en' ? 'Aspect ratio' : "Ratio d'aspect"}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {ASPECT_RATIOS.map((r) => {
+                  const active = aspectRatio === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setAspectRatio(r.value)}
+                      disabled={isGenerating}
+                      className="p-2 rounded-lg text-xs transition-all disabled:opacity-40"
+                      style={{
+                        background: active ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-bg))',
+                        color: active ? '#fff' : 'hsl(var(--editor-text))',
+                        border: `1px solid ${active ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-border))'}`,
+                      }}
+                    >
+                      <div className="font-semibold">{r.label}</div>
+                      <div className="opacity-70 text-[10px]">{r.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Error warnings */}
             {aiErrorCode && (
               <div className="flex items-start gap-2 p-3 rounded-lg text-xs mb-3" style={{ background: 'hsl(0 70% 50% / 0.1)', color: 'hsl(0 70% 70%)' }}>
