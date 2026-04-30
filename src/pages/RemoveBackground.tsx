@@ -53,10 +53,28 @@ export default function RemoveBackground() {
   const [fileName, setFileName] = useState('');
 
   useSEO({
-    title: 'Remove Background - AI Background Remover | Studio AI',
-    description: 'Instantly remove backgrounds from images with AI. Get clean, professional results with transparent backgrounds in seconds.',
-    type: 'website'
+    title: 'AI Background Remover Online – Remove Background Free',
+    description: 'Remove background from images online with AI. Get a transparent PNG in seconds — free, automatic, no signup, no watermark.',
+    type: 'website',
+    tags: ['remove background', 'background remover', 'remove background online', 'AI background remover', 'transparent background image', 'remove bg']
   });
+
+  useEffect(() => {
+    const ids = ['rb-schema-software', 'rb-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
