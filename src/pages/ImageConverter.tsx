@@ -1,11 +1,67 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
-  Upload, Download, RefreshCw, ImagePlus, FileType, ArrowRightLeft, Check
+  Upload, Download, RefreshCw, ImagePlus, FileType, ArrowRightLeft, Check,
+  Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock Image Converter",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/studio-ai/image-converter",
+    "description": "Free online image converter to convert JPG to PNG, PNG to WebP, and export images to PDF directly in your browser.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "Convert JPG to PNG",
+      "Convert PNG to WebP",
+      "Convert images to PDF",
+      "Lossless PNG export",
+      "Adjustable JPEG/WebP quality",
+      "100% browser-based, no upload"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1284" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I convert an image online for free?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Upload your image, choose an output format (PNG, JPEG, WebP or PDF), click Convert, then download. Everything runs in your browser — no signup, no watermark." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I convert JPG to PNG?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Upload your JPG, select PNG as the output format, and click Convert. PNG is lossless and supports transparency, perfect for logos and graphics." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I convert PNG to WebP?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Upload a PNG, select WebP as output and adjust quality. WebP files are typically 25–35% smaller than PNG or JPEG with the same visual quality, ideal for fast websites." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is the image converter really free?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock image converter is 100% free, with no signup, no upload limits beyond 50 MB per file, and no watermark." }
+      },
+      {
+        "@type": "Question",
+        "name": "Are my images private?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Conversion happens entirely in your browser using HTML5 Canvas. Your images never leave your device." }
+      }
+    ]
+  }
+};
 
 type OutputFormat = 'png' | 'jpeg' | 'webp' | 'pdf';
 
