@@ -1,9 +1,11 @@
-import { useState, useRef } from "react";
-import { Upload, Video, Download, Loader2, Sparkles, X, ChevronLeft } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Upload, Video, Download, Loader2, Sparkles, X, ChevronLeft, Wand2, Maximize, Eraser, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 import { supabase } from "@/integrations/supabase/client";
 
 const ImageToVideo = () => {
