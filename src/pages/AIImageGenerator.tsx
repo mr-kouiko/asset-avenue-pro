@@ -343,7 +343,7 @@ export default function AIImageGenerator() {
                   className="w-full max-w-lg mx-auto rounded-lg mb-4"
                   style={{ background: 'hsl(var(--editor-bg))' }}
                 />
-                <Button onClick={handleDownload} variant="outline" className="gap-2" style={{ color: 'hsl(var(--editor-text-bright))', borderColor: 'hsl(var(--editor-border))' }}>
+                <Button onClick={handleDownload} variant="outline" className="gap-2" style={{ color: '#000', borderColor: 'hsl(var(--editor-border))' }}>
                   <Download className="w-4 h-4" /> {t.download}
                 </Button>
               </div>
