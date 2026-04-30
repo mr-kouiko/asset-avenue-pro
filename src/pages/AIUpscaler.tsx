@@ -78,10 +78,28 @@ export default function AIUpscaler() {
   const isProcessing = esrgan.isProcessing || gfpgan.isProcessing;
 
   useSEO({
-    title: 'AI Image Upscaler – Enlarge Images with ESRGAN | Studio AI',
-    description: 'Upscale images 2× or 4× with Real-ESRGAN AI. WebGPU accelerated, 100% client-side.',
+    title: 'AI Image Upscaler – Upscale Image Online 2× & 4× Free',
+    description: 'Free AI image upscaler: increase image resolution 2× or 4×, enhance details, remove noise. Browser-based, no signup, no watermark.',
     type: 'website',
+    tags: ['AI image upscaler', 'upscale image online', 'increase image resolution', 'enhance image quality', 'image enhancer AI', 'image upscaler 4x']
   });
+
+  useEffect(() => {
+    const ids = ['ups-schema-software', 'ups-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
