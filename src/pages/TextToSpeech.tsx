@@ -221,7 +221,7 @@ export default function TextToSpeech() {
   const selectedVoiceInfo = VOICES.find(v => v.id === selectedVoice);
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
       {/* Top bar */}
       <header
         className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
