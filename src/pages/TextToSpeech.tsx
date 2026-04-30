@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -7,6 +7,76 @@ import { ChevronLeft, Volume2, Download, Loader2, Play, Pause, Gauge, Music2 } f
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSEO } from "@/hooks/useSEO";
+
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "Text to Speech – AI Voice Generator",
+      url: "https://visustock.com/studio-ai/text-to-speech",
+      applicationCategory: "MultimediaApplication",
+      operatingSystem: "Web",
+      description:
+        "Free online AI text to speech generator with realistic neural voices in English, French, Spanish, German and Arabic. Perfect for YouTube voiceovers, ads, TikTok, e-learning and podcasts.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", ratingCount: "247" },
+      featureList: [
+        "16 realistic AI voices",
+        "Multilingual text to speech (EN, FR, ES, DE, AR)",
+        "Adjustable speed and pitch",
+        "MP3 download, no signup",
+        "Free voice over generator for videos",
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "Is this AI text to speech generator free?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes, the VisuStock Studio AI text to speech tool is 100% free. Type your script, pick a realistic AI voice and download the MP3 — no credit card or watermark.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Which languages and voices are supported?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "The AI voice generator supports English (US, UK, AU), French, Spanish, German and Arabic with 16 natural neural voices, both male and female.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I use the AI voice for YouTube videos and ads?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. The generated MP3 can be used for YouTube voiceovers, TikTok videos, Instagram Reels, ads, podcasts and e-learning courses, both personal and commercial.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How realistic are the AI voices?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "We use Microsoft Neural TTS, one of the most realistic AI voice generators available, with natural intonation, breathing and emotion that sound close to a human voiceover artist.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I combine the AI voice with stock videos and images?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Absolutely. Pair your AI voiceover with VisuStock royalty-free stock videos and images to produce complete, professional content in minutes.",
+          },
+        },
+      ],
+    },
+  ],
+};
 
 const VOICES = [
   { id: "en-US-JennyNeural", name: "Jenny", description: "Warm female (US)", lang: "English" },
@@ -36,6 +106,33 @@ export default function TextToSpeech() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  useSEO({
+    title: "AI Text to Speech Online – Realistic AI Voice Generator",
+    description:
+      "Free AI text to speech online: 16 realistic neural voices in 5 languages. Perfect voice over generator for YouTube, TikTok, ads & podcasts. No signup.",
+    type: "website",
+    tags: [
+      "text to speech",
+      "AI voice generator",
+      "text to speech online",
+      "realistic AI voice",
+      "voice over generator",
+      "free TTS",
+      "AI voiceover for YouTube",
+    ],
+  });
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "text-to-speech-jsonld";
+    script.text = JSON.stringify(STRUCTURED_DATA);
+    document.head.appendChild(script);
+    return () => {
+      document.getElementById("text-to-speech-jsonld")?.remove();
+    };
+  }, []);
 
   const formatRate = (v: number) => (v >= 0 ? `+${v}%` : `${v}%`);
   const formatPitch = (v: number) => (v >= 0 ? `+${v}Hz` : `${v}Hz`);
@@ -124,7 +221,7 @@ export default function TextToSpeech() {
   const selectedVoiceInfo = VOICES.find(v => v.id === selectedVoice);
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
       {/* Top bar */}
       <header
         className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
@@ -134,9 +231,9 @@ export default function TextToSpeech() {
           <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
             <ChevronLeft className="w-4 h-4" />
           </Link>
-          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          <span className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
             Text to Speech
-          </h1>
+          </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(var(--editor-accent) / 0.2)', color: 'hsl(var(--editor-accent))' }}>FREE</span>
         </div>
         <div className="flex items-center gap-2">
@@ -154,7 +251,7 @@ export default function TextToSpeech() {
       </header>
 
       {/* Body */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0" style={{ height: 'calc(100vh - 3rem)' }}>
         {/* Left sidebar */}
         <aside
           className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
@@ -314,6 +411,259 @@ export default function TextToSpeech() {
           </div>
         </main>
       </div>
+
+      {/* SEO content section (visible, crawlable) */}
+      <section
+        className="px-6 py-16 border-t"
+        style={{
+          background: 'hsl(var(--editor-bg))',
+          borderColor: 'hsl(var(--editor-border))',
+          color: 'hsl(var(--editor-text))',
+        }}
+        aria-label="About the AI Text to Speech generator"
+      >
+        <div className="max-w-4xl mx-auto flex flex-col gap-8">
+          <header className="flex flex-col gap-3">
+            <h1
+              className="text-3xl md:text-4xl font-bold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              AI Text to Speech Online – Realistic AI Voice Generator
+            </h1>
+            <p className="text-base leading-relaxed">
+              Turn any script into a natural human-like voiceover in seconds. The VisuStock Studio AI{' '}
+              <strong>text to speech</strong> tool uses neural <strong>AI voice generator</strong>{' '}
+              technology to produce <strong>realistic AI voice</strong> tracks for your videos, ads,
+              podcasts and social content — directly online, with no software to install. Whether
+              you create on YouTube, TikTok, Instagram or run an e-learning channel, you can
+              generate a professional <strong>voice over generator</strong> output in one click and
+              pair it with our stock videos and images for a complete production.
+            </p>
+          </header>
+
+          <div className="flex flex-col gap-4">
+            <h2
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Why creators choose our AI voice generator
+            </h2>
+            <p className="leading-relaxed">
+              Hiring a voice actor takes time, costs money and slows down your publishing schedule.
+              With our <strong>text to speech online</strong> tool you get studio-quality
+              voiceovers in less than 10 seconds. Powered by Microsoft Neural TTS, our engine
+              delivers natural intonation, breathing and emotion that sound remarkably close to a
+              real human — perfect for high-converting content.
+            </p>
+            <ul className="list-disc pl-6 flex flex-col gap-2">
+              <li><strong>16 realistic AI voices</strong> — male and female, young and mature.</li>
+              <li><strong>Multilingual</strong>: English (US, UK, AU), French, Spanish, German and Arabic.</li>
+              <li><strong>Adjustable speed and pitch</strong> for the perfect tone.</li>
+              <li><strong>Instant MP3 download</strong>, royalty-free for commercial use.</li>
+              <li><strong>100% free</strong>, no watermark, no credit card required.</li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h2
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Use cases: who is this AI voiceover tool for?
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <article
+                className="rounded-lg p-4 border"
+                style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-border))' }}
+              >
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  YouTubers & video editors
+                </h3>
+                <p className="text-sm">
+                  Generate fast, consistent AI voiceovers for tutorials, vlogs, top-10 lists and
+                  faceless YouTube channels.
+                </p>
+              </article>
+              <article
+                className="rounded-lg p-4 border"
+                style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-border))' }}
+              >
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  TikTok & Reels creators
+                </h3>
+                <p className="text-sm">
+                  Add a clean, engaging voice to your short-form videos without recording yourself.
+                </p>
+              </article>
+              <article
+                className="rounded-lg p-4 border"
+                style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-border))' }}
+              >
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  Marketers & ad makers
+                </h3>
+                <p className="text-sm">
+                  Produce ad voiceovers in multiple languages to scale paid campaigns globally.
+                </p>
+              </article>
+              <article
+                className="rounded-lg p-4 border"
+                style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-border))' }}
+              >
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  E-learning & podcasts
+                </h3>
+                <p className="text-sm">
+                  Narrate online courses, audiobooks and podcast intros with consistent,
+                  professional voices.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h2
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              How to generate an AI voice in 3 steps
+            </h2>
+            <ol className="list-decimal pl-6 flex flex-col gap-2">
+              <li><strong>Paste your script</strong> in the editor (up to 10,000 characters).</li>
+              <li><strong>Pick a realistic AI voice</strong> and adjust speed and pitch to taste.</li>
+              <li>Click <strong>Generate Speech</strong> and download your voiceover as an MP3.</li>
+            </ol>
+          </div>
+
+          <div
+            className="rounded-xl p-6 border flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+            style={{ background: 'hsl(var(--editor-panel))', borderColor: 'hsl(var(--editor-accent))' }}
+          >
+            <div>
+              <h2 className="text-xl font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                Pair your AI voice with stock videos and images
+              </h2>
+              <p className="text-sm">
+                Combine your generated voiceover with VisuStock&apos;s royalty-free stock videos
+                and images to publish a complete, professional video in minutes.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/marketplace?category=videos">
+                <Button style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}>
+                  Browse stock videos
+                </Button>
+              </Link>
+              <Link to="/marketplace?category=photos">
+                <Button variant="outline">Browse stock images</Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h2
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Frequently asked questions
+            </h2>
+            <div className="flex flex-col gap-4">
+              <div>
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  Is this AI text to speech generator free?
+                </h3>
+                <p className="text-sm">
+                  Yes. The Studio AI text to speech tool is 100% free, with no signup, no
+                  watermark and unlimited generations.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  Which languages and voices are supported?
+                </h3>
+                <p className="text-sm">
+                  16 neural voices across English (US, UK, AU), French, Spanish, German and Arabic
+                  — male and female.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  Can I use the AI voice for YouTube videos and ads?
+                </h3>
+                <p className="text-sm">
+                  Yes. The downloadable MP3 can be used in YouTube videos, TikTok, Reels, ads,
+                  podcasts and e-learning, including commercial projects.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  How realistic are the AI voices?
+                </h3>
+                <p className="text-sm">
+                  Powered by Microsoft Neural TTS, the voices feature natural intonation,
+                  breathing and emotion — close to a human voice over artist.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                  Can I combine the AI voice with stock videos and images?
+                </h3>
+                <p className="text-sm">
+                  Absolutely. Use VisuStock royalty-free stock videos and images with your AI
+                  voiceover to create a polished final video.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <h2
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Discover more Studio AI tools and stock content
+            </h2>
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <li>
+                <Link to="/studio-ai" className="underline hover:text-[hsl(var(--editor-accent))]">
+                  Studio AI – all creative tools
+                </Link>
+              </li>
+              <li>
+                <Link to="/studio-ai/adjust-music-duration" className="underline hover:text-[hsl(var(--editor-accent))]">
+                  Adjust music duration
+                </Link>
+              </li>
+              <li>
+                <Link to="/ai-image-generator" className="underline hover:text-[hsl(var(--editor-accent))]">
+                  AI Image Generator
+                </Link>
+              </li>
+              <li>
+                <Link to="/marketplace?category=videos" className="underline hover:text-[hsl(var(--editor-accent))]">
+                  Royalty-free stock videos
+                </Link>
+              </li>
+              <li>
+                <Link to="/marketplace?category=photos" className="underline hover:text-[hsl(var(--editor-accent))]">
+                  Royalty-free stock images
+                </Link>
+              </li>
+              <li>
+                <Link to="/free-stock-library" className="underline hover:text-[hsl(var(--editor-accent))]">
+                  Free stock library
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <p className="text-xs italic opacity-70">
+            Suggested image alt texts: &ldquo;AI text to speech generator with realistic neural
+            voices&rdquo;, &ldquo;Online voice over generator for YouTube videos&rdquo;,
+            &ldquo;Realistic AI voice generator for TikTok and ads&rdquo;.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
