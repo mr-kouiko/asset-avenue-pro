@@ -251,7 +251,7 @@ export default function TextToSpeech() {
       </header>
 
       {/* Body */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0" style={{ height: 'calc(100vh - 3rem)' }}>
         {/* Left sidebar */}
         <aside
           className="w-[280px] shrink-0 overflow-y-auto flex flex-col"
