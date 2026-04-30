@@ -192,7 +192,8 @@ serve(async (req) => {
             aspectRatio: params.aspectRatio,
             durationSeconds: params.duration,
             resolution: params.resolution === 1080 ? "1080p" : "720p",
-            generateAudio: params.audio,
+            // generateAudio is only supported on veo-3 (not on veo-3-fast)
+            ...(params.model === "veo-3" ? { generateAudio: params.audio } : {}),
             personGeneration: "allow_adult",
             sampleCount: 1,
           },
