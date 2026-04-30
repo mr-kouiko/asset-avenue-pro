@@ -330,7 +330,6 @@ const VideoUpscale = () => {
             </div>
           )}
         </main>
-        </main>
       </div>
     </div>
 
