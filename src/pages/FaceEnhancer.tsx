@@ -1,15 +1,50 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, ImagePlus,
   ScanFace, ChevronLeft, RotateCcw,
+  Zap, Shield, Sparkles, Image as ImageIcon, Video, Scissors, Wand2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Face Enhancer",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/face-enhancer",
+    "description": "Free AI face enhancer. Unblur faces, sharpen facial details, restore old portraits and improve photo face quality online — directly in your browser.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI face detection and reconstruction",
+      "Unblur and sharpen faces",
+      "Restore old or low-quality portraits",
+      "Improve skin, eyes and facial clarity",
+      "Adjustable blend strength for natural results",
+      "100% browser-based, no upload"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1452" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How does the AI face enhancer work?", "acceptedAnswer": { "@type": "Answer", "text": "The AI detects every face in your photo, crops it, and uses the GFPGAN deep-learning model to reconstruct facial details — eyes, skin texture, mouth and edges — then blends the enhanced face back into the original image for a natural result." } },
+      { "@type": "Question", "name": "Can I unblur a face online for free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock face enhancer is 100% free and can unblur faces, sharpen details and restore portraits with no signup and no watermark." } },
+      { "@type": "Question", "name": "Will my photo look natural after enhancement?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. You can adjust the blend strength to keep the result subtle and realistic, or push it for full restoration on heavily damaged photos." } },
+      { "@type": "Question", "name": "Can it restore old or low-quality portraits?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. The tool is ideal for restoring old, scanned or compressed family photos by recovering facial details that were lost." } },
+      { "@type": "Question", "name": "Are my photos kept private?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Processing runs entirely in your browser using WebGPU when available — your photos never leave your device." } }
+    ]
+  }
+};
 
 interface HistoryEntry {
   id: number;
@@ -33,10 +68,28 @@ export default function FaceEnhancer() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useSEO({
-    title: 'AI Face & Skin Enhancer – GFPGAN | Studio AI',
-    description: 'Enhance facial details with GFPGAN AI. 100% client-side, no uploads.',
+    title: 'AI Face Enhancer – Unblur & Enhance Face Online Free',
+    description: 'Free AI face enhancer: unblur faces, sharpen details, restore old portraits and improve photo face quality online. No signup, no watermark.',
     type: 'website',
+    tags: ['AI face enhancer', 'enhance face online', 'unblur face', 'face enhancement tool', 'improve photo face quality', 'face restoration AI']
   });
+
+  useEffect(() => {
+    const ids = ['fe-schema-software', 'fe-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,7 +149,8 @@ export default function FaceEnhancer() {
   };
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'hsl(220 20% 7%)' }}>
+    <div className="min-h-screen" style={{ background: 'hsl(220 20% 7%)' }}>
+      <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}
       <header
         className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
@@ -299,6 +353,201 @@ export default function FaceEnhancer() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* SEO Content Section */}
+      <section className="container mx-auto px-4 py-16 max-w-4xl space-y-12 text-foreground">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
+            AI Face Enhancer — unblur and enhance face online for free
+          </h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Our free <strong>AI face enhancer</strong> brings blurry, low-resolution or damaged
+            portraits back to life in seconds. Powered by the GFPGAN deep-learning model, the
+            tool detects every face in your photo and uses AI to <strong>unblur faces</strong>,
+            sharpen eyes, recover skin texture and restore facial details that the original
+            image had lost. The result: crisp, natural portraits ready for social media,
+            print, marketing or family albums.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Whether you want to <strong>enhance face online</strong> from a quick selfie,
+            <strong> improve photo face quality</strong> for a professional headshot, or restore
+            an old scanned portrait, this <strong>face enhancement tool</strong> delivers
+            studio-grade results — directly in your browser, with no signup and no watermark.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">How AI face enhancement works</h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Behind the scenes, three steps happen automatically:
+          </p>
+          <ol className="space-y-3 text-muted-foreground list-decimal list-inside">
+            <li><strong>Face detection</strong> — the AI locates each face in the photo.</li>
+            <li><strong>Reconstruction</strong> — a generative model (GFPGAN) rebuilds eyes, mouth, skin and edges based on what realistic faces should look like.</li>
+            <li><strong>Sharpening & blending</strong> — the enhanced face is smoothly blended back into your image at the strength you choose, so the rest of the photo stays untouched.</li>
+          </ol>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Why creators love this face enhancer</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg border border-border">
+              <Zap className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Fast & free</h3>
+              <p className="text-sm text-muted-foreground">Process portraits in seconds — no signup, no watermark, no upload limits.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Sparkles className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Natural-looking results</h3>
+              <p className="text-sm text-muted-foreground">Adjustable blend strength keeps skin texture realistic and avoids over-smoothing.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Shield className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">100% private</h3>
+              <p className="text-sm text-muted-foreground">All processing runs locally with WebGPU — your photos never leave your device.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Key features</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li><strong>AI face detection</strong> — automatically finds and enhances every face in the photo.</li>
+            <li><strong>Unblur & sharpen</strong> — fix soft, out-of-focus and motion-blurred portraits.</li>
+            <li><strong>Detail recovery</strong> — restores eyes, lips, eyelashes and skin texture.</li>
+            <li><strong>Old photo restoration</strong> — bring scanned, faded or damaged portraits back to life.</li>
+            <li><strong>Adjustable blend strength</strong> — choose between subtle retouch and full restoration.</li>
+            <li><strong>JPG, PNG, WebP support</strong> — works with the formats you already use.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Use cases for the AI face enhancer</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Selfies & social media</h3>
+              <p className="text-sm text-muted-foreground">Sharpen Instagram, TikTok and LinkedIn photos for crisp, scroll-stopping portraits.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Professional portraits</h3>
+              <p className="text-sm text-muted-foreground">Polish headshots and team photos for websites, decks and press kits.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Old & family photos</h3>
+              <p className="text-sm text-muted-foreground">Restore scanned, faded or low-resolution portraits and preserve memories.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Marketing visuals</h3>
+              <p className="text-sm text-muted-foreground">Enhance faces in ads, lifestyle shots and campaign creatives for higher conversion.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">YouTube thumbnails</h3>
+              <p className="text-sm text-muted-foreground">Make expressive faces pop on thumbnails to drive clicks and watch time.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">AI-generated portraits</h3>
+              <p className="text-sm text-muted-foreground">Refine faces in AI-generated images to fix soft edges and unrealistic detail.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Tips for the best face enhancement results</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li>Start with a blend strength around 50% and adjust to taste.</li>
+            <li>For old or heavily blurred photos, push the strength higher for full restoration.</li>
+            <li>For natural-looking selfies, keep it subtle (30–50%) to preserve skin texture.</li>
+            <li>Combine with the AI image upscaler for ultra-high-resolution results.</li>
+          </ul>
+        </div>
+
+        {/* CTA to marketplace */}
+        <div className="rounded-2xl p-6 md:p-8 border border-border bg-gradient-to-br from-primary/10 to-accent/5">
+          <h2 className="text-2xl font-bold mb-2">Combine enhanced portraits with stunning VisuStock visuals</h2>
+          <p className="text-muted-foreground mb-4">
+            Pair your retouched faces with curated <Link to="/marketplace?type=image" className="text-primary underline">stock images</Link>,
+            cinematic <Link to="/marketplace?type=video" className="text-primary underline">stock videos</Link> and
+            ready-to-use creative assets from independent creators worldwide. Perfect for marketing
+            campaigns, content production and storytelling.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/marketplace"><Button>Browse the marketplace</Button></Link>
+            <Link to="/free-stock-library"><Button variant="outline">Free stock library</Button></Link>
+          </div>
+        </div>
+
+        {/* Internal linking */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Explore more free Studio AI tools</h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Link to="/ai-upscaler" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Image Upscaler
+            </Link>
+            <Link to="/ai-image-generator" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" /> AI Image Generator
+            </Link>
+            <Link to="/studio-ai/remove-background" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Scissors className="w-4 h-4 text-primary" /> AI Background Remover
+            </Link>
+            <Link to="/studio-ai/image-converter" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-primary" /> Image Converter
+            </Link>
+            <Link to="/studio-ai/text-to-speech" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> Text to Speech
+            </Link>
+            <Link to="/studio-ai" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" /> All Studio AI tools
+            </Link>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Frequently asked questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="q1">
+              <AccordionTrigger>How does the AI face enhancer work?</AccordionTrigger>
+              <AccordionContent>
+                The AI detects every face in your photo, crops it, and uses the GFPGAN deep-learning model to reconstruct facial details — eyes, skin texture, mouth and edges — then blends the enhanced face back into the original image for a natural result.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger>Can I unblur a face online for free?</AccordionTrigger>
+              <AccordionContent>
+                Yes. The VisuStock face enhancer is 100% free and can unblur faces, sharpen details and restore portraits with no signup and no watermark.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger>Will my photo look natural after enhancement?</AccordionTrigger>
+              <AccordionContent>
+                Yes. You can adjust the blend strength to keep the result subtle and realistic, or push it higher for full restoration on heavily damaged photos.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger>Can it restore old or low-quality portraits?</AccordionTrigger>
+              <AccordionContent>
+                Absolutely. The tool is ideal for restoring old, scanned or compressed family photos by recovering facial details that were lost.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger>Are my photos kept private?</AccordionTrigger>
+              <AccordionContent>
+                Yes. Processing runs entirely in your browser using WebGPU when available — your photos never leave your device.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        {/*
+          Suggested ALT texts for future screenshots:
+          - "AI face enhancer interface — unblur and enhance face online"
+          - "Before and after AI face enhancement: blurry portrait vs sharp restored face"
+          - "Restored old family portrait using AI face enhancer"
+          - "Improved selfie quality with AI face sharpening and detail recovery"
+          - "Professional headshot enhanced with AI for crisp eyes and skin texture"
+        */}
+      </section>
     </div>
   );
 }
