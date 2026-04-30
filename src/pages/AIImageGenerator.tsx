@@ -19,6 +19,26 @@ export default function AIImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
+
+  const ASPECT_RATIOS: { value: string; label: string; desc: string }[] = [
+    { value: '1:1', label: '1:1', desc: language === 'en' ? 'Square' : 'Carré' },
+    { value: '16:9', label: '16:9', desc: language === 'en' ? 'Landscape' : 'Paysage' },
+    { value: '9:16', label: '9:16', desc: language === 'en' ? 'Portrait / Story' : 'Portrait / Story' },
+    { value: '4:3', label: '4:3', desc: language === 'en' ? 'Classic' : 'Classique' },
+    { value: '3:4', label: '3:4', desc: language === 'en' ? 'Vertical' : 'Vertical' },
+    { value: '21:9', label: '21:9', desc: language === 'en' ? 'Cinematic' : 'Cinéma' },
+  ];
+
+  // Append the requested aspect ratio if the user hasn't already specified one
+  const buildFinalPrompt = (raw: string, ratio: string) => {
+    const hasRatio = /\b\d{1,2}\s*[:x]\s*\d{1,2}\b|aspect ratio|ratio d'aspect|format/i.test(raw);
+    if (hasRatio) return raw;
+    const suffix = language === 'en'
+      ? ` — aspect ratio ${ratio}, framed strictly in ${ratio} format.`
+      : ` — ratio d'aspect ${ratio}, cadré strictement au format ${ratio}.`;
+    return raw.trim() + suffix;
+  };
 
   useSEO({
     title: language === 'en'
@@ -131,7 +151,7 @@ export default function AIImageGenerator() {
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-ai-image', {
-        body: { prompt: prompt.trim() }
+        body: { prompt: buildFinalPrompt(prompt.trim(), aspectRatio) }
       });
 
       if (data?.error === 'insufficient_credits') {
@@ -241,6 +261,35 @@ export default function AIImageGenerator() {
                 color: 'hsl(var(--editor-text-bright))'
               }}
             />
+
+            {/* Aspect ratio selector */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                {language === 'en' ? 'Aspect ratio' : "Ratio d'aspect"}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {ASPECT_RATIOS.map((r) => {
+                  const active = aspectRatio === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setAspectRatio(r.value)}
+                      disabled={isGenerating}
+                      className="p-2 rounded-lg text-xs transition-all disabled:opacity-40"
+                      style={{
+                        background: active ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-bg))',
+                        color: active ? '#fff' : 'hsl(var(--editor-text))',
+                        border: `1px solid ${active ? 'hsl(var(--editor-accent))' : 'hsl(var(--editor-border))'}`,
+                      }}
+                    >
+                      <div className="font-semibold">{r.label}</div>
+                      <div className="opacity-70 text-[10px]">{r.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Error warnings */}
             {aiErrorCode && (
