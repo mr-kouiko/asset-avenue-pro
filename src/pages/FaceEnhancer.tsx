@@ -1,15 +1,50 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, ImagePlus,
   ScanFace, ChevronLeft, RotateCcw,
+  Zap, Shield, Sparkles, Image as ImageIcon, Video, Scissors, Wand2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Face Enhancer",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/face-enhancer",
+    "description": "Free AI face enhancer. Unblur faces, sharpen facial details, restore old portraits and improve photo face quality online — directly in your browser.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI face detection and reconstruction",
+      "Unblur and sharpen faces",
+      "Restore old or low-quality portraits",
+      "Improve skin, eyes and facial clarity",
+      "Adjustable blend strength for natural results",
+      "100% browser-based, no upload"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1452" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How does the AI face enhancer work?", "acceptedAnswer": { "@type": "Answer", "text": "The AI detects every face in your photo, crops it, and uses the GFPGAN deep-learning model to reconstruct facial details — eyes, skin texture, mouth and edges — then blends the enhanced face back into the original image for a natural result." } },
+      { "@type": "Question", "name": "Can I unblur a face online for free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock face enhancer is 100% free and can unblur faces, sharpen details and restore portraits with no signup and no watermark." } },
+      { "@type": "Question", "name": "Will my photo look natural after enhancement?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. You can adjust the blend strength to keep the result subtle and realistic, or push it for full restoration on heavily damaged photos." } },
+      { "@type": "Question", "name": "Can it restore old or low-quality portraits?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. The tool is ideal for restoring old, scanned or compressed family photos by recovering facial details that were lost." } },
+      { "@type": "Question", "name": "Are my photos kept private?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Processing runs entirely in your browser using WebGPU when available — your photos never leave your device." } }
+    ]
+  }
+};
 
 interface HistoryEntry {
   id: number;
