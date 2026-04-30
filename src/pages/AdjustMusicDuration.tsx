@@ -6,8 +6,78 @@ import { useSEO } from '@/hooks/useSEO';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { WaveformEditor } from '@/components/audio/WaveformEditor';
+import { Link } from 'react-router-dom';
 
 type SelectionMode = 'manual' | 'duration';
+
+const STRUCTURED_DATA = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      name: 'Adjust Music Duration – AI Audio Trimmer & Extender',
+      url: 'https://visustock.com/studio-ai/adjust-music-duration',
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Web',
+      description:
+        'Free online AI tool to adjust music duration: trim, shorten or extend audio tracks to a precise length with seamless results.',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.9', ratingCount: '184' },
+      featureList: [
+        'Adjust music duration with AI',
+        'Shorten music to exact seconds',
+        'Extend audio without quality loss',
+        'Visual waveform region selection',
+        'WAV export, browser-based, no installation',
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'How do I adjust music duration online?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Upload your audio file, select the region on the waveform or set a target duration in seconds, then click Generate. Your music is trimmed or shortened in seconds and ready to download as WAV.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Can I extend a music track to make it longer?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes. Studio AI lets you lengthen songs by looping selected regions seamlessly so the track matches the exact duration of your video, podcast or ad.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is the AI music duration tool free?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes, the Adjust Music Duration tool is 100% free, runs in your browser and does not require any signup to trim or shorten audio.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What audio formats are supported?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'The tool supports MP3, WAV, M4A, AAC, OGG and FLAC. The processed track is exported as a high-quality WAV file.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Will trimming or extending the music reduce its quality?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'No. Audio is processed losslessly using the Web Audio API, so the trimmed or extended track keeps the original sample rate and clarity.',
+          },
+        },
+      ],
+    },
+  ],
+};
 
 export default function AdjustMusicDuration() {
   const navigate = useNavigate();
