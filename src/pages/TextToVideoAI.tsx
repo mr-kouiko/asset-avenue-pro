@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, Video, Download, Loader2, Wallet, Check, ArrowRight, Volume2, VolumeX } from "lucide-react";
+import { Sparkles, Video, Download, Loader2, Wallet, Check, ArrowRight, Volume2, VolumeX, Image as ImageIcon, Wand2, Maximize, Eraser } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
