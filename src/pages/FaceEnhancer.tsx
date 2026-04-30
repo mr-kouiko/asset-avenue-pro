@@ -68,10 +68,28 @@ export default function FaceEnhancer() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useSEO({
-    title: 'AI Face & Skin Enhancer – GFPGAN | Studio AI',
-    description: 'Enhance facial details with GFPGAN AI. 100% client-side, no uploads.',
+    title: 'AI Face Enhancer – Unblur & Enhance Face Online Free',
+    description: 'Free AI face enhancer: unblur faces, sharpen details, restore old portraits and improve photo face quality online. No signup, no watermark.',
     type: 'website',
+    tags: ['AI face enhancer', 'enhance face online', 'unblur face', 'face enhancement tool', 'improve photo face quality', 'face restoration AI']
   });
+
+  useEffect(() => {
+    const ids = ['fe-schema-software', 'fe-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
