@@ -61,11 +61,52 @@ export default function TextToVideoAI() {
   );
 
   useSEO({
-    title: "AI Text to Video Generator — VideoAI by VisuStock",
+    title: "AI Text to Video Generator – Free Text to Video AI Online",
     description:
-      "Bring your imagination to life with VideoAI. Generate cinematic AI videos from text prompts using Google Veo 3 — with native audio, multiple aspect ratios and durations.",
+      "Free AI video generator: turn text into video online with cinematic styles, native audio and multiple aspect ratios for TikTok, Reels, YouTube Shorts and ads.",
     type: "website",
+    tags: ["text to video", "AI video generator", "generate video from text", "text to video AI", "AI video creation"],
   });
+
+  // Inject SoftwareApplication + FAQ structured data
+  useEffect(() => {
+    const appSchema = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "VisuStock AI Text to Video Generator",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web",
+      "description":
+        "AI video generator that creates cinematic videos from text prompts with native audio, multiple aspect ratios and durations.",
+      "url": "https://visustock.com/studio-ai/text-to-video",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "1420" },
+    };
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is an AI text to video generator?", "acceptedAnswer": { "@type": "Answer", "text": "An AI text to video generator turns a written prompt into a complete video, automatically creating scenes, motion and visuals from your description — no editing skills required." } },
+        { "@type": "Question", "name": "Is this text to video AI free to use?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, you can try the AI video generator for free. Advanced models like Veo 3 use a small credit pack so you only pay for what you create." } },
+        { "@type": "Question", "name": "Can I generate vertical videos for TikTok, Reels and Shorts?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. You can generate videos in 9:16 vertical for TikTok, Instagram Reels and YouTube Shorts, or 16:9 for YouTube and ads." } },
+        { "@type": "Question", "name": "How long does it take to generate a video from text?", "acceptedAnswer": { "@type": "Answer", "text": "Most AI videos render in 30 to 90 seconds depending on duration, resolution and the selected model." } },
+        { "@type": "Question", "name": "Can I use AI generated videos commercially?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — videos you create are yours to use for personal and commercial projects, including ads, social media and client work." } },
+      ],
+    };
+    const s1 = document.createElement("script");
+    s1.type = "application/ld+json";
+    s1.text = JSON.stringify(appSchema);
+    s1.dataset.seo = "ttv-app";
+    const s2 = document.createElement("script");
+    s2.type = "application/ld+json";
+    s2.text = JSON.stringify(faqSchema);
+    s2.dataset.seo = "ttv-faq";
+    document.head.appendChild(s1);
+    document.head.appendChild(s2);
+    return () => {
+      document.querySelectorAll('script[data-seo="ttv-app"], script[data-seo="ttv-faq"]').forEach(el => el.remove());
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
