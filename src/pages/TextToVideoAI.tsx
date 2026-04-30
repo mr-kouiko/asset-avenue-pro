@@ -399,6 +399,144 @@ export default function TextToVideoAI() {
           </div>
         </section>
       )}
+
+      {/* SEO content */}
+      <section className="container mx-auto px-4 py-16 border-t border-border">
+        <div className="max-w-4xl mx-auto prose prose-invert prose-headings:text-foreground prose-p:text-muted-foreground">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            AI Text to Video Generator — turn text into video online for free
+          </h2>
+          <p>
+            VisuStock's <strong>AI text to video generator</strong> turns a single sentence into a complete,
+            cinematic clip. Whether you need short-form content for TikTok, Reels and YouTube Shorts, an ad
+            for a product launch, or a quick storyboard for a client, you can <strong>generate video from text</strong> in
+            seconds — no camera, no editing skills, no stock to license.
+          </p>
+
+          <h3 className="text-2xl font-semibold mt-10 mb-3">How text to video AI works</h3>
+          <p>
+            <strong>Text to video AI</strong> takes your written prompt and runs it through a generative video
+            model. The system interprets your description as a script, plans the scenes, generates the visuals
+            frame by frame, adds motion and lighting, and — with models like Google Veo 3 — produces native
+            audio: dialogue, ambient sound and music. The result is a ready-to-use video file you can download
+            and post anywhere.
+          </p>
+          <p>
+            The flow is simple: <em>prompt → script → visuals → final video</em>. You describe what you want,
+            choose a style, aspect ratio and duration, and our <strong>AI video generator</strong> does the rest.
+          </p>
+
+          <h3 className="text-2xl font-semibold mt-10 mb-3">Why creators use AI video creation</h3>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>No editing skills required</strong> — describe the scene in plain English.</li>
+            <li><strong>Fast production</strong> — most clips render in 30 to 90 seconds.</li>
+            <li><strong>Scalable content</strong> — produce dozens of variations for A/B testing your ads.</li>
+            <li><strong>Multiple styles</strong> — realistic, cinematic, marketing, product, storytelling.</li>
+            <li><strong>Native audio</strong> — voices, ambient sound and music generated automatically.</li>
+            <li><strong>Any aspect ratio</strong> — 16:9 for YouTube, 9:16 for TikTok / Reels / Shorts.</li>
+          </ul>
+
+          <h3 className="text-2xl font-semibold mt-10 mb-3">Use cases for AI generated videos</h3>
+          <p>
+            Marketers use our <strong>AI video generator</strong> to launch product ads without a film crew.
+            Social media managers create daily content for TikTok, Instagram Reels and YouTube Shorts. Agencies
+            spin up storyboards and concept videos in minutes instead of days. Educators turn lesson scripts into
+            engaging visual stories, and indie creators bring imaginative ideas to life with cinematic motion.
+          </p>
+
+          <h3 className="text-2xl font-semibold mt-10 mb-3">Pair AI videos with premium stock from VisuStock</h3>
+          <p>
+            AI is amazing for generating short, original scenes — but real productions mix and match. Combine
+            your AI clips with handpicked footage and visuals from the VisuStock marketplace to add
+            authenticity, b-roll and brand-safe assets. <Link to="/marketplace?type=video" className="text-primary hover:underline">Browse premium stock videos</Link>,{" "}
+            <Link to="/marketplace?type=image" className="text-primary hover:underline">stock images</Link> and{" "}
+            <Link to="/free-stock-library" className="text-primary hover:underline">free stock content</Link> to
+            elevate every project.
+          </p>
+
+          <div className="not-prose mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center">
+            <h4 className="text-xl font-semibold mb-2">Enhance your AI videos with premium stock assets</h4>
+            <p className="text-muted-foreground mb-4">
+              Mix AI generation with curated footage, photos and graphics from the VisuStock marketplace.
+            </p>
+            <Link to="/marketplace">
+              <Button size="lg" className="gap-2">Explore the marketplace <ArrowRight className="w-4 h-4" /></Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Other Studio AI tools */}
+      <section className="container mx-auto px-4 py-16 border-t border-border">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">More free Studio AI tools</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { to: "/studio-ai/reframe-video", icon: Maximize, title: "Reframe Video", desc: "Resize & convert to vertical" },
+              { to: "/studio-ai/video-upscale", icon: Video, title: "Video Upscaler", desc: "Upscale video to 4K" },
+              { to: "/studio-ai/remove-background", icon: Eraser, title: "Background Remover", desc: "Remove background online" },
+              { to: "/ai-image-generator", icon: Wand2, title: "AI Image Generator", desc: "Text to image AI" },
+            ].map((t) => (
+              <Link key={t.to} to={t.to} className="group rounded-xl border border-border bg-card p-5 hover:border-primary transition-colors">
+                <t.icon className="w-6 h-6 text-primary mb-3" />
+                <div className="font-semibold mb-1 group-hover:text-primary">{t.title}</div>
+                <div className="text-sm text-muted-foreground">{t.desc}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="container mx-auto px-4 py-16 border-t border-border">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Frequently asked questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="q1">
+              <AccordionTrigger>What is an AI text to video generator?</AccordionTrigger>
+              <AccordionContent>
+                An AI text to video generator turns a written prompt into a complete video, automatically creating
+                scenes, motion and visuals from your description — no editing skills required.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger>Is this text to video AI free to use?</AccordionTrigger>
+              <AccordionContent>
+                Yes, you can try the AI video generator for free. Advanced models like Veo 3 use a small credit
+                pack so you only pay for what you create.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger>Can I generate vertical videos for TikTok, Reels and Shorts?</AccordionTrigger>
+              <AccordionContent>
+                Absolutely. You can generate videos in 9:16 vertical for TikTok, Instagram Reels and YouTube
+                Shorts, or 16:9 for YouTube and ads.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger>How long does it take to generate a video from text?</AccordionTrigger>
+              <AccordionContent>
+                Most AI videos render in 30 to 90 seconds depending on duration, resolution and the selected model.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger>Can I use AI generated videos commercially?</AccordionTrigger>
+              <AccordionContent>
+                Yes — videos you create are yours to use for personal and commercial projects, including ads,
+                social media and client work.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </section>
+
+      {/*
+        Suggested ALT texts for future hero / illustration assets:
+        - "AI text to video generator interface turning a prompt into a cinematic video"
+        - "Vertical AI generated video preview for TikTok and Instagram Reels"
+        - "Marketing team using AI video creation tool to produce social media ads"
+        - "Storyboard of scenes generated from a single text prompt with VisuStock VideoAI"
+      */}
     </div>
   );
 }
