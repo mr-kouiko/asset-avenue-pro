@@ -108,6 +108,18 @@ export default function AdjustMusicDuration() {
     ],
   });
 
+  // Inject SoftwareApplication + FAQ JSON-LD (separate from useSEO's website schema)
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'adjust-music-duration-jsonld';
+    script.text = JSON.stringify(STRUCTURED_DATA);
+    document.head.appendChild(script);
+    return () => {
+      document.getElementById('adjust-music-duration-jsonld')?.remove();
+    };
+  }, []);
+
   const handleFileSelect = useCallback((file: File) => {
     if (!file.type.startsWith('audio/')) {
       toast.error('Please upload an audio file');
