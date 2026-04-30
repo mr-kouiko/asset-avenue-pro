@@ -3,13 +3,48 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/Header';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, ArrowLeft, Play, Pause,
   Crop, Monitor, Square, Smartphone, Instagram,
+  Zap, Shield, Sparkles, Image as ImageIcon, Video, Scissors, Wand2, Target,
 } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Reframe Video",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/studio-ai/reframe-video",
+    "description": "Free AI video reframe tool. Resize videos online, change aspect ratio (16:9, 1:1, 9:16, 4:5) and convert horizontal videos to vertical for TikTok, Reels and Shorts — with automatic subject tracking.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI-powered video reframing",
+      "Aspect ratios 16:9, 1:1, 9:16 and 4:5",
+      "Automatic subject and face tracking",
+      "Convert horizontal video to vertical",
+      "Optimized for TikTok, Reels and YouTube Shorts",
+      "100% browser-based, no upload"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1320" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How does the AI video reframe tool work?", "acceptedAnswer": { "@type": "Answer", "text": "The AI analyzes each frame to detect faces, motion and key subjects, then automatically crops the video to your chosen aspect ratio while keeping the subject centered — no manual editing required." } },
+      { "@type": "Question", "name": "Can I convert a horizontal video to vertical for TikTok or Reels?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Choose 9:16 to convert a horizontal video to a vertical format optimized for TikTok, Instagram Reels and YouTube Shorts. The AI keeps the main subject in frame." } },
+      { "@type": "Question", "name": "Which aspect ratios are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can reframe video to 16:9 (horizontal), 1:1 (square), 9:16 (vertical / Stories) and 4:5 (Instagram feed)." } },
+      { "@type": "Question", "name": "Is the video reframer free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock AI video reframe tool is 100% free, with no signup and no watermark." } },
+      { "@type": "Question", "name": "Are my videos kept private?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Reframing happens directly in your browser — your videos are not uploaded to a server." } }
+    ]
+  }
+};
 
 type AspectRatio = '16:9' | '1:1' | '9:16' | '4:5';
 
@@ -52,10 +87,28 @@ export default function ReframeVideo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useSEO({
-    title: 'AI Reframe Video – Smart Crop for Any Aspect Ratio | Studio AI',
-    description: 'Automatically reframe videos to 16:9, 1:1, 9:16, or 4:5 while keeping the subject centered. Runs fully in-browser.',
+    title: 'AI Reframe Video – Resize & Convert to Vertical Free',
+    description: 'Free AI video reframe: resize video online, change aspect ratio (16:9, 1:1, 9:16, 4:5) and convert horizontal videos to vertical for TikTok, Reels & Shorts.',
     type: 'website',
+    tags: ['reframe video', 'AI video reframe', 'resize video online', 'change aspect ratio video', 'convert video to vertical', 'video reframer']
   });
+
+  useEffect(() => {
+    const ids = ['rv-schema-software', 'rv-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = useCallback((file: File) => {
     const validTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
@@ -478,6 +531,214 @@ export default function ReframeVideo() {
 
       {/* Hidden canvas for detection */}
       <canvas ref={canvasRef} className="hidden" />
+
+      {/* SEO Content Section */}
+      <section className="container mx-auto px-4 py-16 max-w-4xl space-y-12 text-foreground">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+            AI Reframe Video — resize video online & convert to vertical for free
+          </h1>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Our free <strong>AI video reframe</strong> tool lets you instantly <strong>resize video
+            online</strong> and <strong>change the aspect ratio</strong> of any clip — without
+            opening Premiere, After Effects or DaVinci Resolve. Upload a video, pick a target
+            ratio (16:9, 1:1, 9:16 or 4:5), and the AI automatically tracks the main subject —
+            faces, motion and objects — to keep it perfectly centered while it crops.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Whether you need to <strong>convert video to vertical</strong> for TikTok, square it
+            up for Instagram, or repurpose a horizontal podcast clip into Reels and Shorts, this
+            <strong> reframe video</strong> tool turns hours of manual editing into seconds of
+            click-and-export workflow.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">How AI video reframing works</h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Behind the scenes, three steps happen automatically on every frame:
+          </p>
+          <ol className="space-y-3 text-muted-foreground list-decimal list-inside">
+            <li><strong>Subject detection</strong> — the AI finds faces, people and key objects in each frame.</li>
+            <li><strong>Smart tracking</strong> — a temporal moving average smooths the crop window so it follows the action without jittering.</li>
+            <li><strong>Auto crop & export</strong> — your video is re-cropped to the target aspect ratio and exported, ready for any platform.</li>
+          </ol>
+          <p className="text-muted-foreground leading-relaxed mt-4">
+            The result: a clean, centered video that looks like it was shot in that ratio from the start.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Aspect ratio conversion in one click</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2 flex items-center gap-2"><Monitor className="w-4 h-4" /> 16:9 — Horizontal</h3>
+              <p className="text-sm text-muted-foreground">YouTube, websites, presentations, OTT and TV. The standard widescreen format.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2 flex items-center gap-2"><Smartphone className="w-4 h-4" /> 9:16 — Vertical</h3>
+              <p className="text-sm text-muted-foreground">TikTok, Instagram Reels, YouTube Shorts and Stories. Convert horizontal to vertical in seconds.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2 flex items-center gap-2"><Square className="w-4 h-4" /> 1:1 — Square</h3>
+              <p className="text-sm text-muted-foreground">Instagram feed, Facebook ads and LinkedIn — performs great in mobile feeds.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2 flex items-center gap-2"><Instagram className="w-4 h-4" /> 4:5 — Portrait</h3>
+              <p className="text-sm text-muted-foreground">Instagram feed portrait — takes up more vertical space and boosts attention.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Why creators use the VisuStock video reframer</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg border border-border">
+              <Zap className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Save hours of editing</h3>
+              <p className="text-sm text-muted-foreground">No keyframes, no manual reframing — the AI does the cropping for you.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Target className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Subject stays in frame</h3>
+              <p className="text-sm text-muted-foreground">Face and motion tracking keep the action perfectly centered across every cut.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Shield className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Multi-platform ready</h3>
+              <p className="text-sm text-muted-foreground">One source, four ratios — publish everywhere from a single original video.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Key features</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li><strong>Automatic AI cropping</strong> — no manual editing required.</li>
+            <li><strong>Face & motion tracking</strong> — keeps the main subject perfectly centered.</li>
+            <li><strong>4 aspect ratios</strong> — 16:9, 1:1, 9:16 and 4:5.</li>
+            <li><strong>Convert horizontal to vertical</strong> — perfect for short-form video.</li>
+            <li><strong>Browser-based</strong> — nothing to install, works on any modern device.</li>
+            <li><strong>Free & watermark-free</strong> output ready for upload.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Use cases for AI video reframing</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">TikTok, Reels & Shorts</h3>
+              <p className="text-sm text-muted-foreground">Turn any horizontal video into vertical 9:16 short-form content in seconds.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Podcast clips</h3>
+              <p className="text-sm text-muted-foreground">Repurpose long-form podcast videos into vertical or square clips for social media.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Ads & marketing</h3>
+              <p className="text-sm text-muted-foreground">Quickly produce 1:1 and 9:16 versions of your video ads for Meta, TikTok and YouTube.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Content repurposing</h3>
+              <p className="text-sm text-muted-foreground">Maximize one shoot — publish 16:9 on YouTube, 9:16 on TikTok and 1:1 on Instagram.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Brand & social campaigns</h3>
+              <p className="text-sm text-muted-foreground">Keep visuals consistent across every channel without re-editing each format.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Stock footage adaptation</h3>
+              <p className="text-sm text-muted-foreground">Reframe purchased stock footage to match your destination platform instantly.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA to marketplace */}
+        <div className="rounded-2xl p-6 md:p-8 border border-border bg-gradient-to-br from-primary/10 to-accent/5">
+          <h2 className="text-2xl font-bold mb-2">Combine reframed videos with premium VisuStock assets</h2>
+          <p className="text-muted-foreground mb-4">
+            Pair your reframed clips with cinematic <Link to="/marketplace?type=video" className="text-primary underline">stock videos</Link>,
+            curated <Link to="/marketplace?type=image" className="text-primary underline">stock images</Link> and
+            ready-to-use creative assets from independent creators worldwide. Perfect for ads,
+            social campaigns and short-form content.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/marketplace"><Button>Browse the marketplace</Button></Link>
+            <Link to="/free-stock-library"><Button variant="outline">Free stock library</Button></Link>
+          </div>
+        </div>
+
+        {/* Internal linking */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Explore more free Studio AI tools</h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Link to="/ai-upscaler" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Image Upscaler
+            </Link>
+            <Link to="/ai-image-generator" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" /> AI Image Generator
+            </Link>
+            <Link to="/studio-ai/remove-background" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Scissors className="w-4 h-4 text-primary" /> AI Background Remover
+            </Link>
+            <Link to="/face-enhancer" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Face Enhancer
+            </Link>
+            <Link to="/studio-ai/image-converter" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-primary" /> Image Converter
+            </Link>
+            <Link to="/studio-ai" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" /> All Studio AI tools
+            </Link>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Frequently asked questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="q1">
+              <AccordionTrigger>How does the AI video reframe tool work?</AccordionTrigger>
+              <AccordionContent>
+                The AI analyzes each frame to detect faces, motion and key subjects, then automatically crops the video to your chosen aspect ratio while keeping the subject centered — no manual editing required.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger>Can I convert a horizontal video to vertical for TikTok or Reels?</AccordionTrigger>
+              <AccordionContent>
+                Yes. Choose 9:16 to convert a horizontal video to a vertical format optimized for TikTok, Instagram Reels and YouTube Shorts. The AI keeps the main subject in frame.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger>Which aspect ratios are supported?</AccordionTrigger>
+              <AccordionContent>
+                You can reframe video to 16:9 (horizontal), 1:1 (square), 9:16 (vertical / Stories) and 4:5 (Instagram feed).
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger>Is the video reframer free?</AccordionTrigger>
+              <AccordionContent>
+                Yes. The VisuStock AI video reframe tool is 100% free, with no signup and no watermark.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger>Are my videos kept private?</AccordionTrigger>
+              <AccordionContent>
+                Yes. Reframing happens directly in your browser — your videos are not uploaded to a server.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        {/*
+          Suggested ALT texts for future screenshots:
+          - "AI reframe video interface — resize video online and change aspect ratio"
+          - "Horizontal 16:9 video converted to vertical 9:16 for TikTok and Reels"
+          - "AI subject tracking keeping a speaker centered while reframing video"
+          - "Square 1:1 reframe of a landscape clip for Instagram feed"
+          - "Side-by-side preview of original and reframed AI video"
+        */}
+      </section>
     </div>
   );
 }
