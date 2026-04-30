@@ -1,0 +1,362 @@
+import { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Sparkles, Video, Download, Loader2, Wallet, Check, ArrowRight, Volume2, VolumeX } from "lucide-react";
+import { Header } from "@/components/Header";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
+
+type AspectRatio = "16:9" | "9:16";
+type Resolution = 720 | 1080;
+type Duration = 4 | 6 | 8;
+type Model = "automatic" | "veo-3" | "veo-3-fast";
+
+const BASE_COST = 100;
+const MODEL_MULT: Record<string, number> = { "veo-3": 1.0, "veo-3-fast": 0.4 };
+const DURATION_MULT: Record<number, number> = { 4: 0.5, 6: 0.75, 8: 1.0 };
+const RES_MULT: Record<number, number> = { 720: 0.8, 1080: 1.0 };
+
+function computeCost(model: Model, duration: Duration, resolution: Resolution, audio: boolean): number {
+  const m = model === "automatic" ? "veo-3-fast" : model;
+  const c =
+    BASE_COST *
+    (MODEL_MULT[m] ?? 1) *
+    (DURATION_MULT[duration] ?? 1) *
+    (RES_MULT[resolution] ?? 1) *
+    (audio ? 1 : 0.9);
+  return Math.max(1, Math.ceil(c));
+}
+
+interface RecentGen {
+  id: string;
+  prompt: string;
+  video_url: string | null;
+  created_at: string;
+}
+
+export default function TextToVideoAI() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const [prompt, setPrompt] = useState("");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9");
+  const [resolution, setResolution] = useState<Resolution>(720);
+  const [duration, setDuration] = useState<Duration>(8);
+  const [audio, setAudio] = useState(true);
+  const [model, setModel] = useState<Model>("automatic");
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [recent, setRecent] = useState<RecentGen[]>([]);
+
+  const cost = useMemo(
+    () => computeCost(model, duration, resolution, audio),
+    [model, duration, resolution, audio],
+  );
+
+  useSEO({
+    title: "AI Text to Video Generator — VideoAI by VisuStock",
+    description:
+      "Bring your imagination to life with VideoAI. Generate cinematic AI videos from text prompts using Google Veo 3 — with native audio, multiple aspect ratios and durations.",
+    type: "website",
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    fetchBalance();
+    fetchRecent();
+  }, [user]);
+
+  const fetchBalance = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("videoai_credits")
+      .select("credits_balance")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    setBalance(data?.credits_balance ?? 0);
+  };
+
+  const fetchRecent = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("ai_video_generations")
+      .select("id, prompt, video_url, created_at")
+      .eq("user_id", user.id)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(6);
+    setRecent((data as RecentGen[]) || []);
+  };
+
+  const handleGenerate = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to generate videos." });
+      navigate("/auth");
+      return;
+    }
+    if (!prompt.trim()) {
+      toast({ title: "Prompt required", description: "Describe the video you want to generate.", variant: "destructive" });
+      return;
+    }
+    if ((balance ?? 0) < cost) {
+      toast({
+        title: "Not enough VideoAI credits",
+        description: `You need ${cost} credits. Buy a pack to continue.`,
+        variant: "destructive",
+      });
+      navigate("/buy-credits?tab=videoai");
+      return;
+    }
+
+    setIsGenerating(true);
+    setVideoUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-veo-video", {
+        body: { prompt: prompt.trim(), model, duration, resolution, aspectRatio, audio },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).message || (data as any).error);
+      setVideoUrl((data as any).videoUrl);
+      setBalance((data as any).creditsRemaining ?? balance);
+      fetchRecent();
+      toast({ title: "Video ready!", description: `Used ${cost} credits.` });
+    } catch (e: any) {
+      const msg = e?.message || "Failed to generate video";
+      toast({ title: "Generation failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownload = async (url: string) => {
+    try {
+      const r = await fetch(url);
+      const b = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = `videoai-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    }
+  };
+
+  const Pill = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted/50 text-muted-foreground hover:bg-muted"
+      }`}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-border">
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background:
+              "radial-gradient(800px 300px at 50% 0%, hsl(var(--primary) / 0.35), transparent 70%)",
+          }}
+        />
+        <div className="relative container mx-auto px-4 py-16 md:py-20 text-center">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
+            Bring your imagination to life with <span className="bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">VideoAI</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Generate cinematic, professional-quality AI videos from a single text prompt. Powered by Google Veo 3.
+          </p>
+
+          {/* Balance pill */}
+          {user && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full bg-primary/10 border border-primary/20 text-sm">
+              <Wallet className="w-4 h-4 text-primary" />
+              <span>VideoAI balance:</span>
+              <span className="font-semibold">{balance ?? "…"} credits</span>
+              <Link to="/buy-credits?tab=videoai" className="ml-2 text-primary hover:underline inline-flex items-center gap-1">
+                Buy credits <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          )}
+
+          {/* Prompt bar */}
+          <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur p-4 shadow-xl">
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe the video you want to generate…"
+              maxLength={500}
+              className="min-h-[80px] resize-none border-0 bg-transparent focus-visible:ring-0 text-base"
+            />
+
+            {/* Options row */}
+            <div className="flex flex-wrap gap-x-6 gap-y-3 items-center justify-between border-t border-border pt-3 mt-2">
+              <div className="flex flex-wrap gap-x-5 gap-y-2 items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Aspect</span>
+                  <Pill active={aspectRatio === "16:9"} onClick={() => setAspectRatio("16:9")}>16:9</Pill>
+                  <Pill active={aspectRatio === "9:16"} onClick={() => setAspectRatio("9:16")}>9:16</Pill>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Resolution</span>
+                  <Pill active={resolution === 720} onClick={() => setResolution(720)}>720p</Pill>
+                  <Pill active={resolution === 1080} onClick={() => setResolution(1080)}>1080p</Pill>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Duration</span>
+                  <Pill active={duration === 4} onClick={() => setDuration(4)}>4s</Pill>
+                  <Pill active={duration === 6} onClick={() => setDuration(6)}>6s</Pill>
+                  <Pill active={duration === 8} onClick={() => setDuration(8)}>8s</Pill>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Audio</span>
+                  <Pill active={!audio} onClick={() => setAudio(false)}><VolumeX className="w-3 h-3 inline" /> Off</Pill>
+                  <Pill active={audio} onClick={() => setAudio(true)}><Volume2 className="w-3 h-3 inline" /> On</Pill>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Model</span>
+                  <Pill active={model === "automatic"} onClick={() => setModel("automatic")}>Automatic</Pill>
+                  <Pill active={model === "veo-3"} onClick={() => setModel("veo-3")}>Veo 3</Pill>
+                  <Pill active={model === "veo-3-fast"} onClick={() => setModel("veo-3-fast")}>Veo 3 Fast</Pill>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-3">
+              <div className="text-xs text-muted-foreground">
+                Cost: <span className="font-semibold text-foreground">{cost} credits</span> · {prompt.length}/500
+              </div>
+              <Button onClick={handleGenerate} disabled={isGenerating} className="gap-2">
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generating…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" /> Generate
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {isGenerating && (
+            <p className="text-sm text-muted-foreground mt-4">
+              Veo is rendering your video — this usually takes 30–90 seconds.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Result */}
+      {videoUrl && (
+        <section className="container mx-auto px-4 py-10">
+          <div className="max-w-3xl mx-auto space-y-4">
+            <video src={videoUrl} controls autoPlay loop className="w-full rounded-xl border border-border" />
+            <div className="flex justify-center">
+              <Button onClick={() => handleDownload(videoUrl)} className="gap-2">
+                <Download className="w-4 h-4" /> Download
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Marketing #1 */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-2 gap-10 items-center max-w-5xl mx-auto">
+          <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary/30 via-purple-500/20 to-background border border-border" />
+          <div>
+            <h2 className="text-3xl font-bold mb-4">Generate professional-quality AI videos in seconds</h2>
+            <p className="text-muted-foreground mb-4">
+              Powered by Google Veo, our VideoAI generator creates cinematic, realistic videos with smooth motion,
+              true-to-life lighting and rich detail. Veo 3 and Veo 3 Fast both include native audio generation —
+              dialogues, ambient sounds and background music — so your clips are complete from the start.
+            </p>
+            <Link to="/buy-credits?tab=videoai">
+              <Button variant="outline" className="gap-2">Try it now <ArrowRight className="w-4 h-4" /></Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Marketing #2: pricing */}
+      <section className="container mx-auto px-4 py-16 border-t border-border">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <h2 className="text-3xl font-bold mb-3">Pay only for what you create</h2>
+          <p className="text-muted-foreground">
+            No subscription. No commitment. Buy credits when you need them and use them whenever you want.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {[
+            { id: "starter", credits: 500, price: 20, gens: 5, save: null },
+            { id: "popular", credits: 2000, price: 75, gens: 20, save: "6% off", popular: true },
+            { id: "pro", credits: 6000, price: 220, gens: 60, save: "8% off" },
+          ].map((p) => (
+            <div
+              key={p.id}
+              className={`rounded-2xl border p-6 ${p.popular ? "border-primary shadow-lg" : "border-border"}`}
+            >
+              <div className="flex items-baseline justify-between mb-1">
+                <div className="text-lg font-semibold">{p.credits} VideoAI Credits</div>
+                <div className="text-2xl font-bold">${p.price}</div>
+              </div>
+              <div className="text-sm text-muted-foreground mb-4">≈ {p.gens} video generations {p.save && <span className="text-primary">· {p.save}</span>}</div>
+              <ul className="space-y-2 text-sm mb-6">
+                <li className="flex gap-2"><Check className="w-4 h-4 text-primary mt-0.5" /> Text-to-video generation</li>
+                <li className="flex gap-2"><Check className="w-4 h-4 text-primary mt-0.5" /> Native audio generation</li>
+                <li className="flex gap-2"><Check className="w-4 h-4 text-primary mt-0.5" /> Credits valid for 1 year</li>
+              </ul>
+              <Link to={`/buy-credits?tab=videoai&pack=${p.id}`}>
+                <Button className="w-full" variant={p.popular ? "default" : "outline"}>Buy</Button>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Recent generations */}
+      {user && recent.length > 0 && (
+        <section className="container mx-auto px-4 py-12 border-t border-border">
+          <h3 className="text-xl font-semibold mb-6">Your recent generations</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {recent.map((r) => (
+              <div key={r.id} className="rounded-xl border border-border overflow-hidden bg-card">
+                {r.video_url && (
+                  <video src={r.video_url} className="w-full aspect-video object-cover bg-black" muted loop onMouseEnter={(e) => e.currentTarget.play()} onMouseLeave={(e) => e.currentTarget.pause()} />
+                )}
+                <div className="p-3">
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{r.prompt}</p>
+                  {r.video_url && (
+                    <Button variant="ghost" size="sm" className="w-full gap-1" onClick={() => handleDownload(r.video_url!)}>
+                      <Download className="w-3 h-3" /> Download
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
