@@ -107,6 +107,33 @@ export default function TextToSpeech() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
+  useSEO({
+    title: "AI Text to Speech Online – Realistic AI Voice Generator",
+    description:
+      "Free AI text to speech online: 16 realistic neural voices in 5 languages. Perfect voice over generator for YouTube, TikTok, ads & podcasts. No signup.",
+    type: "website",
+    tags: [
+      "text to speech",
+      "AI voice generator",
+      "text to speech online",
+      "realistic AI voice",
+      "voice over generator",
+      "free TTS",
+      "AI voiceover for YouTube",
+    ],
+  });
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "text-to-speech-jsonld";
+    script.text = JSON.stringify(STRUCTURED_DATA);
+    document.head.appendChild(script);
+    return () => {
+      document.getElementById("text-to-speech-jsonld")?.remove();
+    };
+  }, []);
+
   const formatRate = (v: number) => (v >= 0 ? `+${v}%` : `${v}%`);
   const formatPitch = (v: number) => (v >= 0 ? `+${v}Hz` : `${v}Hz`);
 
