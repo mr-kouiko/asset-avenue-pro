@@ -87,10 +87,28 @@ export default function ReframeVideo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useSEO({
-    title: 'AI Reframe Video – Smart Crop for Any Aspect Ratio | Studio AI',
-    description: 'Automatically reframe videos to 16:9, 1:1, 9:16, or 4:5 while keeping the subject centered. Runs fully in-browser.',
+    title: 'AI Reframe Video – Resize & Convert to Vertical Free',
+    description: 'Free AI video reframe: resize video online, change aspect ratio (16:9, 1:1, 9:16, 4:5) and convert horizontal videos to vertical for TikTok, Reels & Shorts.',
     type: 'website',
+    tags: ['reframe video', 'AI video reframe', 'resize video online', 'change aspect ratio video', 'convert video to vertical', 'video reframer']
   });
+
+  useEffect(() => {
+    const ids = ['rv-schema-software', 'rv-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = useCallback((file: File) => {
     const validTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
