@@ -3,7 +3,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Upload, Clock, Play, Pause, Download, Loader2, Music, Scissors, Move } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { WaveformEditor } from '@/components/audio/WaveformEditor';
 import { Link } from 'react-router-dom';
