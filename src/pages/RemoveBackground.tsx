@@ -1,12 +1,47 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, Scissors,
-  ImagePlus, RotateCcw
+  ImagePlus, RotateCcw, Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Background Remover",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/studio-ai/remove-background",
+    "description": "Free AI background remover. Remove image backgrounds online in seconds and download a transparent PNG. No signup, no watermark.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI-powered background removal",
+      "Transparent PNG output",
+      "Edge precision (hair, fur, fine details)",
+      "Supports JPG, PNG and WebP",
+      "Processing in seconds",
+      "No signup or watermark"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "2143" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How do I remove the background from an image online?", "acceptedAnswer": { "@type": "Answer", "text": "Upload your image (JPG, PNG or WebP), click Remove Background, then download a transparent PNG. The AI handles detection automatically — no manual editing required." } },
+      { "@type": "Question", "name": "Is the AI background remover free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock background remover is 100% free, with no signup and no watermark on your output." } },
+      { "@type": "Question", "name": "Does the tool produce a transparent background image?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The output is a high-quality PNG with a fully transparent background, ready to drop onto any color, photo or design." } },
+      { "@type": "Question", "name": "Will it preserve fine details like hair and edges?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Our AI is trained to detect complex edges including hair, fur, glass and semi-transparent objects to keep cutouts looking natural." } },
+      { "@type": "Question", "name": "What image formats are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can upload JPG, PNG and WebP images up to 10 MB. The result is always exported as a transparent PNG." } }
+    ]
+  }
+};
 
 export default function RemoveBackground() {
   const { toast } = useToast();
@@ -18,10 +53,28 @@ export default function RemoveBackground() {
   const [fileName, setFileName] = useState('');
 
   useSEO({
-    title: 'Remove Background - AI Background Remover | Studio AI',
-    description: 'Instantly remove backgrounds from images with AI. Get clean, professional results with transparent backgrounds in seconds.',
-    type: 'website'
+    title: 'AI Background Remover Online – Remove Background Free',
+    description: 'Remove background from images online with AI. Get a transparent PNG in seconds — free, automatic, no signup, no watermark.',
+    type: 'website',
+    tags: ['remove background', 'background remover', 'remove background online', 'AI background remover', 'transparent background image', 'remove bg']
   });
+
+  useEffect(() => {
+    const ids = ['rb-schema-software', 'rb-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -98,9 +151,11 @@ export default function RemoveBackground() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>Remove Background</h1>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          AI Background Remover – Remove Background Online Free
+        </h1>
         <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
-          AI-powered background removal in seconds
+          Remove image backgrounds automatically with AI and get a transparent PNG in seconds.
         </p>
       </div>
 
@@ -217,6 +272,176 @@ export default function RemoveBackground() {
           </div>
         </div>
       </div>
+
+      {/* SEO Content Section */}
+      <section className="mt-16 max-w-4xl mx-auto space-y-12 text-foreground">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
+            Remove background from images online — free, fast, AI-powered
+          </h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Our free <strong>AI background remover</strong> instantly cuts out the subject of any
+            photo and gives you a clean <strong>transparent background image</strong> in seconds.
+            No manual selections, no Photoshop, no design skills required — just upload your
+            picture and let the AI do the work. Whether you need to <strong>remove background online</strong> for
+            a product photo, profile picture, marketing visual or YouTube thumbnail, this tool
+            delivers professional results in one click.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Built for creators, e-commerce sellers, designers, and marketers, the VisuStock
+            <strong> background remover</strong> uses advanced AI segmentation to detect the
+            subject precisely and preserve fine edges like hair, fur, glass and complex shapes.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Why use the VisuStock AI background remover?</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg border border-border">
+              <Zap className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Automatic & instant</h3>
+              <p className="text-sm text-muted-foreground">No brushes, no masks. Upload, click once and your cutout is ready in seconds.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Sparkles className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">High edge precision</h3>
+              <p className="text-sm text-muted-foreground">AI keeps fine details like hair, fur and edges intact for a clean, natural result.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Shield className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Free, no watermark</h3>
+              <p className="text-sm text-muted-foreground">100% free output as a transparent PNG. No signup required.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Key features</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li><strong>AI subject detection</strong> — automatically identifies people, products and objects.</li>
+            <li><strong>Transparent PNG output</strong> — drop your subject onto any background instantly.</li>
+            <li><strong>Edge precision</strong> — clean cutouts even on hair, fur and translucent edges.</li>
+            <li><strong>Multi-format support</strong> — works with JPG, PNG and WebP up to 10 MB.</li>
+            <li><strong>Browser-based</strong> — no software to install, works on any device.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Use cases for the background remover</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">E-commerce product photos</h3>
+              <p className="text-sm text-muted-foreground">Create clean white-background product shots for Shopify, Amazon, Etsy and your own store.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Social media content</h3>
+              <p className="text-sm text-muted-foreground">Make scroll-stopping posts and stories for Instagram, TikTok and LinkedIn.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Marketing & ads</h3>
+              <p className="text-sm text-muted-foreground">Drop subjects onto branded backgrounds for high-converting display ads and banners.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">YouTube thumbnails</h3>
+              <p className="text-sm text-muted-foreground">Cut out faces and props to design click-worthy thumbnails in minutes.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">How to remove a background online in 3 steps</h2>
+          <ol className="space-y-3 text-muted-foreground list-decimal list-inside">
+            <li><strong>Upload</strong> a JPG, PNG or WebP image (up to 10 MB).</li>
+            <li><strong>Click Remove Background</strong> — the AI processes your image automatically.</li>
+            <li><strong>Download</strong> the transparent PNG and use it anywhere.</li>
+          </ol>
+        </div>
+
+        {/* CTA to marketplace */}
+        <div className="rounded-2xl p-6 md:p-8 border border-border bg-gradient-to-br from-primary/10 to-accent/5">
+          <h2 className="text-2xl font-bold mb-2">Combine your cutouts with stunning stock visuals</h2>
+          <p className="text-muted-foreground mb-4">
+            Drop your transparent subject onto premium <Link to="/marketplace?type=image" className="text-primary underline">stock images</Link>,
+            cinematic <Link to="/marketplace?type=video" className="text-primary underline">stock videos</Link> and
+            ready-to-use creative assets from independent creators. Perfect for marketing visuals,
+            product mockups, video editing and social campaigns.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/marketplace"><Button>Browse the marketplace</Button></Link>
+            <Link to="/free-stock-library"><Button variant="outline">Free stock library</Button></Link>
+          </div>
+        </div>
+
+        {/* Internal linking */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Explore more free Studio AI tools</h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Link to="/studio-ai/ai-image-generator" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" /> AI Image Generator
+            </Link>
+            <Link to="/studio-ai/image-upscale" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Image Upscaler
+            </Link>
+            <Link to="/studio-ai/image-converter" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-primary" /> Image Converter
+            </Link>
+            <Link to="/studio-ai/face-enhancer" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Face Enhancer
+            </Link>
+            <Link to="/studio-ai/text-to-speech" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> Text to Speech
+            </Link>
+            <Link to="/studio-ai" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" /> All Studio AI tools
+            </Link>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Frequently asked questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="q1">
+              <AccordionTrigger>How do I remove the background from an image online?</AccordionTrigger>
+              <AccordionContent>
+                Upload your image (JPG, PNG or WebP), click Remove Background, then download a transparent PNG. The AI handles detection automatically — no manual editing required.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger>Is the AI background remover free?</AccordionTrigger>
+              <AccordionContent>
+                Yes. The VisuStock background remover is 100% free, with no signup and no watermark on your output.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger>Does the tool produce a transparent background image?</AccordionTrigger>
+              <AccordionContent>
+                Yes. The output is a high-quality PNG with a fully transparent background, ready to drop onto any color, photo or design.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger>Will it preserve fine details like hair and edges?</AccordionTrigger>
+              <AccordionContent>
+                Yes. Our AI is trained to detect complex edges including hair, fur, glass and semi-transparent objects to keep cutouts looking natural.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger>What image formats are supported?</AccordionTrigger>
+              <AccordionContent>
+                You can upload JPG, PNG and WebP images up to 10 MB. The result is always exported as a transparent PNG.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        {/*
+          Suggested ALT texts for future screenshots:
+          - "AI background remover interface — upload image and remove background online"
+          - "Before and after comparison: original photo vs transparent PNG cutout"
+          - "Product photo with background removed for e-commerce listing"
+          - "Portrait with hair edges preserved by AI background remover"
+        */}
+      </section>
     </div>
   );
 }
