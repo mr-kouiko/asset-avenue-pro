@@ -151,9 +151,11 @@ export default function RemoveBackground() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>Remove Background</h1>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          AI Background Remover – Remove Background Online Free
+        </h1>
         <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
-          AI-powered background removal in seconds
+          Remove image backgrounds automatically with AI and get a transparent PNG in seconds.
         </p>
       </div>
 
