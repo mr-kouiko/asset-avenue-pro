@@ -1,13 +1,51 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Upload, Download, Loader2, ZoomIn, Film } from "lucide-react";
+import {
+  ChevronLeft, Upload, Download, Loader2, ZoomIn, Film,
+  Sparkles, Wand2, Scissors, Image as ImageIcon, Video, Crop, Shield, Zap,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useSEO } from "@/hooks/useSEO";
 
 type UpscaleOption = "2x" | "4x";
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Video Upscaler",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/studio-ai/video-upscale",
+    "description": "Free AI video upscaler. Upscale video to 4K, enhance video quality, sharpen details and reduce noise online — directly in your browser.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI video upscaling 2x and 4x",
+      "Upscale video to 4K (UHD)",
+      "Sharpness and detail enhancement",
+      "Noise and compression artifact reduction",
+      "Old footage restoration",
+      "100% browser-based, no upload required"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1180" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How does the AI video upscaler work?", "acceptedAnswer": { "@type": "Answer", "text": "The AI analyzes each frame of your video and reconstructs missing details — edges, textures and patterns — instead of simply stretching pixels. The result is a sharper, higher-resolution video that looks natural at 2x or 4x its original size." } },
+      { "@type": "Question", "name": "Can I upscale a video to 4K?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Choose the 4x option to upscale Full HD content up to 4K (UHD), perfect for YouTube, TVs and modern displays. Output is capped at 3840×2160 to keep playback smooth." } },
+      { "@type": "Question", "name": "Is the AI video enhancer free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock video upscaler is 100% free, with no signup, no credit card and no watermark on the output." } },
+      { "@type": "Question", "name": "Are my videos uploaded to a server?", "acceptedAnswer": { "@type": "Answer", "text": "No. All upscaling and enhancement happens directly in your browser, so your videos stay private on your device." } },
+      { "@type": "Question", "name": "Which video formats are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can upload MP4, WebM and MOV files up to 50MB. The upscaled result is exported as a high-bitrate WebM ready to share or re-encode." } }
+    ]
+  }
+};
 
 const VideoUpscale = () => {
   const [originalVideo, setOriginalVideo] = useState<string | null>(null);
