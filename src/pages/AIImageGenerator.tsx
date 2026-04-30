@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Wand2, Download, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, Download, AlertTriangle, ImagePlus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
@@ -20,6 +20,24 @@ export default function AIImageGenerator() {
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: language === 'en' ? 'Invalid file' : 'Fichier invalide', description: language === 'en' ? 'Please upload an image.' : 'Veuillez uploader une image.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: language === 'en' ? 'File too large' : 'Fichier trop volumineux', description: language === 'en' ? 'Max 8 MB.' : 'Max 8 Mo.', variant: 'destructive' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setReferenceImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const ASPECT_RATIOS: { value: string; label: string; desc: string }[] = [
     { value: '1:1', label: '1:1', desc: language === 'en' ? 'Square' : 'Carré' },
@@ -151,7 +169,7 @@ export default function AIImageGenerator() {
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-ai-image', {
-        body: { prompt: buildFinalPrompt(prompt.trim(), aspectRatio) }
+        body: { prompt: buildFinalPrompt(prompt.trim(), aspectRatio), referenceImage }
       });
 
       if (data?.error === 'insufficient_credits') {
@@ -261,6 +279,54 @@ export default function AIImageGenerator() {
                 color: 'hsl(var(--editor-text-bright))'
               }}
             />
+
+            {/* Reference image (optional) */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                {language === 'en' ? 'Reference image (optional)' : "Image de référence (optionnel)"}
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleReferenceUpload}
+                className="hidden"
+              />
+              {referenceImage ? (
+                <div className="relative inline-block">
+                  <img
+                    src={referenceImage}
+                    alt="Reference"
+                    className="w-full h-32 object-cover rounded-lg"
+                    style={{ border: '1px solid hsl(var(--editor-border))' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setReferenceImage(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    disabled={isGenerating}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 hover:bg-black/80 text-white disabled:opacity-40"
+                    aria-label="Remove reference image"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating}
+                  className="w-full p-3 rounded-lg text-xs flex items-center justify-center gap-2 transition-colors hover:opacity-80 disabled:opacity-40"
+                  style={{
+                    background: 'hsl(var(--editor-bg))',
+                    color: 'hsl(var(--editor-text))',
+                    border: '1px dashed hsl(var(--editor-border))',
+                  }}
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  {language === 'en' ? 'Upload an image' : 'Uploader une image'}
+                </button>
+              )}
+            </div>
 
             {/* Aspect ratio selector */}
             <div className="mb-3">
