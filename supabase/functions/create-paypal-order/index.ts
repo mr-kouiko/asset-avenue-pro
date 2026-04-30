@@ -92,10 +92,25 @@ serve(async (req) => {
     let currency = 'EUR';
 
     if (order_type === 'credits') {
-      // Credit pack purchase
+      // AI Image credit pack purchase
       const { pack, amount, credits } = body;
       totalAmount = amount;
       orderDescription = `${credits} AI Credits - ${pack} Pack`;
+    } else if (order_type === 'videoai_credits') {
+      // VideoAI credit pack purchase (Pond5-style)
+      const { pack, amount, credits } = body;
+      const allowed: Record<string, { credits: number; amount: number }> = {
+        starter: { credits: 500, amount: 20 },
+        popular: { credits: 2000, amount: 75 },
+        pro: { credits: 6000, amount: 220 },
+      };
+      const ref = allowed[String(pack)];
+      if (!ref || Number(credits) !== ref.credits || Number(amount) !== ref.amount) {
+        throw new Error('Invalid VideoAI pack');
+      }
+      currency = 'USD';
+      totalAmount = ref.amount;
+      orderDescription = `${ref.credits} VideoAI Credits - ${pack} Pack`;
     } else if (order_type === 'infinity') {
       // Infinity subscription via Orders API (hybrid approach)
       const { is_yearly } = body;
@@ -133,6 +148,9 @@ serve(async (req) => {
     };
 
     if (order_type === 'credits') {
+      customId.credits = body.credits;
+      customId.pack = body.pack;
+    } else if (order_type === 'videoai_credits') {
       customId.credits = body.credits;
       customId.pack = body.pack;
     } else if (order_type === 'infinity') {
