@@ -106,13 +106,31 @@ export default function AIImageGenerator() {
 
   useSEO({
     title: language === 'en'
-      ? "AI Image Generator - Create Stunning Visuals"
-      : "Générateur d'Images IA - Créez des Visuels Époustouflants",
+      ? 'AI Image Generator – Free Text to Image Online'
+      : "Générateur d'Images IA – Texte vers Image Gratuit",
     description: language === 'en'
-      ? "Transform your ideas into stunning visuals instantly with our AI-powered image generator."
-      : "Transformez vos idées en visuels époustouflants instantanément avec notre générateur d'images IA.",
-    type: 'website'
+      ? 'Free AI image generator: turn text into stunning images in seconds. Choose styles & ratios. Use them for ads, social media and creative projects.'
+      : "Générateur d'images IA gratuit : transformez du texte en visuels époustouflants en quelques secondes. Idéal pour les pubs, réseaux et projets créatifs.",
+    type: 'website',
+    tags: ['AI image generator', 'text to image', 'generate images with AI', 'AI art generator', 'create images online', 'AI image creator']
   });
+
+  useEffect(() => {
+    const ids = ['aig-schema-software', 'aig-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const t = language === 'en' ? {
     title: 'AI Image Generator',
