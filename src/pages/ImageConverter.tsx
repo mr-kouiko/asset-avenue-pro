@@ -91,10 +91,28 @@ export default function ImageConverter() {
   const [result, setResult] = useState<ConversionResult | null>(null);
 
   useSEO({
-    title: 'Image Converter - Free Online Format Converter | Studio AI',
-    description: 'Convert images between PNG, JPEG, WebP and PDF for free. No upload needed — everything runs in your browser.',
-    type: 'website'
+    title: 'Image Converter Online – JPG to PNG, PNG to WebP & PDF',
+    description: 'Free online image converter: convert JPG to PNG, PNG to WebP, or images to PDF in seconds. No signup, no watermark, runs in your browser.',
+    type: 'website',
+    tags: ['image converter', 'convert image online', 'jpg to png', 'png to webp', 'image format converter', 'image to pdf', 'webp converter']
   });
+
+  useEffect(() => {
+    const ids = ['ic-schema-software', 'ic-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const loadImage = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) {
