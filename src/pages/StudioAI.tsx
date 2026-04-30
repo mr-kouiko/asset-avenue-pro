@@ -49,11 +49,11 @@ const videoTools: AITool[] = [
   {
     id: 'text-to-video',
     title: 'Text to Video',
-    description: 'Generate cinematic videos directly from text prompts, ready for ads, social media or presentations.',
+    description: 'Generate cinematic videos from text prompts with native audio. Powered by Google Veo 3.',
     icon: <Video className="w-6 h-6" />,
     href: '/studio-ai/text-to-video',
-    available: false,
-    badge: 'Coming Soon'
+    available: true,
+    badge: 'New'
   },
   {
     id: 'video-upscale',
