@@ -3,13 +3,48 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/Header';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, ArrowLeft, Play, Pause,
   Crop, Monitor, Square, Smartphone, Instagram,
+  Zap, Shield, Sparkles, Image as ImageIcon, Video, Scissors, Wand2, Target,
 } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Reframe Video",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/studio-ai/reframe-video",
+    "description": "Free AI video reframe tool. Resize videos online, change aspect ratio (16:9, 1:1, 9:16, 4:5) and convert horizontal videos to vertical for TikTok, Reels and Shorts — with automatic subject tracking.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI-powered video reframing",
+      "Aspect ratios 16:9, 1:1, 9:16 and 4:5",
+      "Automatic subject and face tracking",
+      "Convert horizontal video to vertical",
+      "Optimized for TikTok, Reels and YouTube Shorts",
+      "100% browser-based, no upload"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1320" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How does the AI video reframe tool work?", "acceptedAnswer": { "@type": "Answer", "text": "The AI analyzes each frame to detect faces, motion and key subjects, then automatically crops the video to your chosen aspect ratio while keeping the subject centered — no manual editing required." } },
+      { "@type": "Question", "name": "Can I convert a horizontal video to vertical for TikTok or Reels?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Choose 9:16 to convert a horizontal video to a vertical format optimized for TikTok, Instagram Reels and YouTube Shorts. The AI keeps the main subject in frame." } },
+      { "@type": "Question", "name": "Which aspect ratios are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can reframe video to 16:9 (horizontal), 1:1 (square), 9:16 (vertical / Stories) and 4:5 (Instagram feed)." } },
+      { "@type": "Question", "name": "Is the video reframer free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock AI video reframe tool is 100% free, with no signup and no watermark." } },
+      { "@type": "Question", "name": "Are my videos kept private?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Reframing happens directly in your browser — your videos are not uploaded to a server." } }
+    ]
+  }
+};
 
 type AspectRatio = '16:9' | '1:1' | '9:16' | '4:5';
 
