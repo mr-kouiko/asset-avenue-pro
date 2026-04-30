@@ -553,6 +553,291 @@ export default function AdjustMusicDuration() {
           )}
         </main>
       </div>
+
+      {/* SEO content section (visible, crawlable) */}
+      <section
+        className="px-6 py-16 border-t"
+        style={{
+          background: 'hsl(var(--editor-bg))',
+          borderColor: 'hsl(var(--editor-border))',
+          color: 'hsl(var(--editor-text))',
+        }}
+        aria-label="About the Adjust Music Duration tool"
+      >
+        <div className="max-w-4xl mx-auto flex flex-col gap-8">
+          <header className="flex flex-col gap-3">
+            <h2
+              className="text-3xl md:text-4xl font-bold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Adjust Music Duration Online with AI
+            </h2>
+            <p className="text-base leading-relaxed">
+              Need a soundtrack that fits your video to the second? The Studio AI{' '}
+              <strong>Adjust Music Duration</strong> tool lets you{' '}
+              <strong>shorten music with AI</strong>, <strong>extend audio</strong> tracks and trim
+              songs to a precise length — directly in your browser, with no installation and no
+              watermark. Whether you produce YouTube videos, TikTok shorts, podcasts, ads or
+              presentations, you can finally make any song match the exact duration you need.
+            </p>
+          </header>
+
+          <div className="flex flex-col gap-4">
+            <h3
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              The fastest way to trim or extend an audio track
+            </h3>
+            <p className="leading-relaxed">
+              Traditional audio editors are powerful but overkill when all you want is to{' '}
+              <strong>cut a song to 30 seconds</strong> or <strong>loop a track to 2 minutes</strong>.
+              Our AI-assisted waveform editor gives you a clear visual of your music, lets you drag
+              region handles to pick the perfect segment, or simply type the target duration in
+              seconds. The result is exported as a high-quality WAV file in one click.
+            </p>
+            <ul className="list-disc pl-6 flex flex-col gap-2">
+              <li>Trim MP3, WAV, M4A, OGG, AAC and FLAC files online.</li>
+              <li>Set an exact target duration — perfect for ad spots, reels and intros.</li>
+              <li>Lossless processing using the Web Audio API — no quality drop.</li>
+              <li>Free, private and browser-based — files never leave your device.</li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h3
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Use cases: who needs to adjust music duration?
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <article
+                className="rounded-lg p-4 border"
+                style={{
+                  background: 'hsl(var(--editor-panel))',
+                  borderColor: 'hsl(var(--editor-border))',
+                }}
+              >
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Video creators & editors
+                </h4>
+                <p className="text-sm">
+                  Sync background music to a 15s reel, a 60s short or a 3-minute YouTube edit
+                  without losing a beat.
+                </p>
+              </article>
+              <article
+                className="rounded-lg p-4 border"
+                style={{
+                  background: 'hsl(var(--editor-panel))',
+                  borderColor: 'hsl(var(--editor-border))',
+                }}
+              >
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Marketers & ad makers
+                </h4>
+                <p className="text-sm">
+                  Cut licensed tracks to 6s, 15s or 30s spots to meet broadcast and social ad
+                  specs.
+                </p>
+              </article>
+              <article
+                className="rounded-lg p-4 border"
+                style={{
+                  background: 'hsl(var(--editor-panel))',
+                  borderColor: 'hsl(var(--editor-border))',
+                }}
+              >
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Podcasters & streamers
+                </h4>
+                <p className="text-sm">
+                  Lengthen intros, shorten outros and create perfectly timed jingles for every
+                  episode.
+                </p>
+              </article>
+              <article
+                className="rounded-lg p-4 border"
+                style={{
+                  background: 'hsl(var(--editor-panel))',
+                  borderColor: 'hsl(var(--editor-border))',
+                }}
+              >
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Teachers & presenters
+                </h4>
+                <p className="text-sm">
+                  Adjust background music to match slide timings or e-learning chapters with
+                  accuracy.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h3
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              How to adjust music duration in 3 steps
+            </h3>
+            <ol className="list-decimal pl-6 flex flex-col gap-2">
+              <li>
+                <strong>Upload your audio file</strong> by dropping it into the editor or clicking
+                to browse.
+              </li>
+              <li>
+                <strong>Select the region</strong> on the waveform, or switch to Duration mode and
+                type the exact length in seconds.
+              </li>
+              <li>
+                Click <strong>Generate</strong> and download your trimmed or extended track as a
+                WAV file.
+              </li>
+            </ol>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h3
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Frequently asked questions
+            </h3>
+            <div className="flex flex-col gap-4">
+              <div>
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  How do I adjust music duration online?
+                </h4>
+                <p className="text-sm">
+                  Upload your file, drag the region handles or type a target length in seconds,
+                  then click Generate. Your audio is trimmed instantly and ready to download.
+                </p>
+              </div>
+              <div>
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Can I extend a music track to make it longer?
+                </h4>
+                <p className="text-sm">
+                  Yes. Studio AI can lengthen songs by looping selected regions seamlessly so the
+                  track matches any duration you need.
+                </p>
+              </div>
+              <div>
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Is the AI music duration tool free?
+                </h4>
+                <p className="text-sm">
+                  Yes. The tool is 100% free, runs in your browser and requires no signup.
+                </p>
+              </div>
+              <div>
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  What audio formats are supported?
+                </h4>
+                <p className="text-sm">
+                  MP3, WAV, M4A, AAC, OGG and FLAC are supported. Output is a high-quality WAV
+                  file.
+                </p>
+              </div>
+              <div>
+                <h4
+                  className="font-semibold mb-1"
+                  style={{ color: 'hsl(var(--editor-text-bright))' }}
+                >
+                  Will trimming or extending the music reduce quality?
+                </h4>
+                <p className="text-sm">
+                  No. Audio is processed losslessly using the Web Audio API, keeping the original
+                  sample rate and clarity.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <h3
+              className="text-2xl font-semibold"
+              style={{ color: 'hsl(var(--editor-text-bright))' }}
+            >
+              Discover more Studio AI tools
+            </h3>
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <li>
+                <Link
+                  to="/studio-ai"
+                  className="underline hover:text-[hsl(var(--editor-accent))]"
+                >
+                  Studio AI – all creative tools
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/text-to-speech"
+                  className="underline hover:text-[hsl(var(--editor-accent))]"
+                >
+                  AI Text to Speech generator
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/ai-image-generator"
+                  className="underline hover:text-[hsl(var(--editor-accent))]"
+                >
+                  AI Image Generator
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/marketplace?category=audio"
+                  className="underline hover:text-[hsl(var(--editor-accent))]"
+                >
+                  Royalty-free music marketplace
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/free-stock-library"
+                  className="underline hover:text-[hsl(var(--editor-accent))]"
+                >
+                  Free stock library
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <p className="text-xs italic opacity-70">
+            Suggested image alt texts for this page: “AI waveform editor showing music duration
+            adjustment”, “Trim and extend audio track in seconds with Studio AI”, “Shorten music to
+            an exact duration online”.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
