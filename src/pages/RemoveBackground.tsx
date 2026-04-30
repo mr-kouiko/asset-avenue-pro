@@ -1,12 +1,47 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, Scissors,
-  ImagePlus, RotateCcw
+  ImagePlus, RotateCcw, Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Background Remover",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/studio-ai/remove-background",
+    "description": "Free AI background remover. Remove image backgrounds online in seconds and download a transparent PNG. No signup, no watermark.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI-powered background removal",
+      "Transparent PNG output",
+      "Edge precision (hair, fur, fine details)",
+      "Supports JPG, PNG and WebP",
+      "Processing in seconds",
+      "No signup or watermark"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "2143" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How do I remove the background from an image online?", "acceptedAnswer": { "@type": "Answer", "text": "Upload your image (JPG, PNG or WebP), click Remove Background, then download a transparent PNG. The AI handles detection automatically — no manual editing required." } },
+      { "@type": "Question", "name": "Is the AI background remover free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock background remover is 100% free, with no signup and no watermark on your output." } },
+      { "@type": "Question", "name": "Does the tool produce a transparent background image?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The output is a high-quality PNG with a fully transparent background, ready to drop onto any color, photo or design." } },
+      { "@type": "Question", "name": "Will it preserve fine details like hair and edges?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Our AI is trained to detect complex edges including hair, fur, glass and semi-transparent objects to keep cutouts looking natural." } },
+      { "@type": "Question", "name": "What image formats are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can upload JPG, PNG and WebP images up to 10 MB. The result is always exported as a transparent PNG." } }
+    ]
+  }
+};
 
 export default function RemoveBackground() {
   const { toast } = useToast();
