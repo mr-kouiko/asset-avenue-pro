@@ -468,6 +468,187 @@ export default function AIUpscaler() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* SEO Content Section */}
+      <section className="container mx-auto px-4 py-16 max-w-4xl space-y-12 text-foreground">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
+            Upscale image online — increase resolution with AI, no quality loss
+          </h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Our free <strong>AI image upscaler</strong> turns small, blurry or low-resolution
+            images into sharp, high-resolution visuals you can use anywhere. Powered by the
+            Real-ESRGAN deep-learning model, it does much more than a simple resize: the AI
+            actually <strong>reconstructs missing details</strong>, sharpens edges, removes noise
+            and recovers textures so your images look natural at 2× or 4× their original size.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Whether you need to <strong>upscale image online</strong> for an e-commerce listing,
+            a print campaign, a social post or a YouTube thumbnail, this <strong>image enhancer AI</strong> delivers
+            crisp results in seconds — directly in your browser, with no signup and no watermark.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">How AI upscaling works</h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            Traditional resizing stretches existing pixels, which makes images look soft or
+            pixelated. AI upscaling is different: a neural network has been trained on millions
+            of high- and low-resolution image pairs, so it knows how realistic textures, edges
+            and patterns should look. When you <strong>increase image resolution</strong> with
+            AI, the model predicts what each new pixel should be — adding plausible detail
+            instead of just enlarging old data.
+          </p>
+          <ol className="space-y-3 text-muted-foreground list-decimal list-inside">
+            <li><strong>Upload</strong> a JPG, PNG or WebP image (up to 25 MB).</li>
+            <li><strong>Choose</strong> a 2× or 4× upscale multiplier.</li>
+            <li><strong>Pick a mode</strong>: Fast for quick enlargements or AI (HD) for maximum detail.</li>
+            <li><strong>(Optional) Enable face enhancement</strong> to restore portraits and faces.</li>
+            <li><strong>Download</strong> your high-resolution image as a clean PNG.</li>
+          </ol>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Why creators choose this AI upscaler</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg border border-border">
+              <Zap className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Fast & free</h3>
+              <p className="text-sm text-muted-foreground">No queues, no signup. Upscale as many images as you want in seconds.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Sparkles className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Sharper, denoised results</h3>
+              <p className="text-sm text-muted-foreground">Real-ESRGAN removes blur, recovers textures and produces crisp edges.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Shield className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">100% private</h3>
+              <p className="text-sm text-muted-foreground">Processing runs locally with WebGPU — your images never leave your device.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Key features</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li><strong>2× and 4× upscaling</strong> — turn 720p shots into 4K-ready visuals.</li>
+            <li><strong>Real-ESRGAN AI engine</strong> — state-of-the-art super-resolution.</li>
+            <li><strong>Detail boost</strong> — fine-tune sharpness for ultra-crisp results.</li>
+            <li><strong>Automatic denoise & deblur</strong> — clean compression artifacts and motion blur.</li>
+            <li><strong>Face restoration (GFPGAN)</strong> — enhance portraits and recover facial details.</li>
+            <li><strong>JPG, PNG, WebP support</strong> — works with the formats you already use.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Use cases for the AI image enhancer</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">E-commerce product photos</h3>
+              <p className="text-sm text-muted-foreground">Turn small supplier photos into high-resolution product shots for Shopify, Amazon and Etsy.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Social media & thumbnails</h3>
+              <p className="text-sm text-muted-foreground">Sharpen profile pictures, banners and YouTube thumbnails for crisp display on every screen.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Print & marketing</h3>
+              <p className="text-sm text-muted-foreground">Upscale visuals for posters, flyers and brochures without losing quality.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Photography & restoration</h3>
+              <p className="text-sm text-muted-foreground">Recover detail from old, scanned or compressed photos and bring them back to life.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA to marketplace */}
+        <div className="rounded-2xl p-6 md:p-8 border border-border bg-gradient-to-br from-primary/10 to-accent/5">
+          <h2 className="text-2xl font-bold mb-2">Pair your high-res images with premium VisuStock assets</h2>
+          <p className="text-muted-foreground mb-4">
+            Combine your upscaled visuals with curated <Link to="/marketplace?type=image" className="text-primary underline">stock images</Link>,
+            cinematic <Link to="/marketplace?type=video" className="text-primary underline">stock videos</Link> and
+            ready-to-use creative assets from independent creators worldwide. Perfect for marketing,
+            content production and storytelling.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/marketplace"><Button>Browse the marketplace</Button></Link>
+            <Link to="/free-stock-library"><Button variant="outline">Free stock library</Button></Link>
+          </div>
+        </div>
+
+        {/* Internal linking */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Explore more free Studio AI tools</h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Link to="/ai-image-generator" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" /> AI Image Generator
+            </Link>
+            <Link to="/studio-ai/remove-background" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Scissors className="w-4 h-4 text-primary" /> AI Background Remover
+            </Link>
+            <Link to="/studio-ai/image-converter" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-primary" /> Image Converter
+            </Link>
+            <Link to="/studio-ai/face-enhancer" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Face Enhancer
+            </Link>
+            <Link to="/studio-ai/text-to-speech" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> Text to Speech
+            </Link>
+            <Link to="/studio-ai" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" /> All Studio AI tools
+            </Link>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Frequently asked questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="q1">
+              <AccordionTrigger>How does the AI image upscaler work?</AccordionTrigger>
+              <AccordionContent>
+                Instead of just resizing pixels, our AI image upscaler uses a deep-learning model (Real-ESRGAN) to reconstruct missing details, sharpen edges and remove noise — producing a high-resolution result that looks natural.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger>Can I upscale an image 2× or 4× for free?</AccordionTrigger>
+              <AccordionContent>
+                Yes. The VisuStock AI upscaler is 100% free and supports 2× and 4× upscaling directly in your browser, with no signup and no watermark.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger>Will upscaling reduce image quality?</AccordionTrigger>
+              <AccordionContent>
+                No. AI upscaling is the opposite of basic resizing — it adds plausible detail, sharpens edges and removes noise, so your output looks crisper than the original at higher resolution.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger>What image formats are supported?</AccordionTrigger>
+              <AccordionContent>
+                You can upload JPG, PNG and WebP images up to 25 MB. The upscaled output is exported as a high-quality PNG.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger>Is my image data private?</AccordionTrigger>
+              <AccordionContent>
+                Yes. The AI runs entirely in your browser using WebGPU when available — your images never leave your device.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        {/*
+          Suggested ALT texts for future screenshots:
+          - "AI image upscaler interface — upscale image online 2× and 4×"
+          - "Before and after AI upscaling: low-res input vs sharp 4× high-resolution output"
+          - "Increase image resolution with AI for e-commerce product photos"
+          - "AI image enhancer recovering detail in a portrait photo"
+        */}
+      </section>
     </div>
   );
 }
