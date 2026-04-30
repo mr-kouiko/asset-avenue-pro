@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -7,6 +7,76 @@ import { ChevronLeft, Volume2, Download, Loader2, Play, Pause, Gauge, Music2 } f
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSEO } from "@/hooks/useSEO";
+
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "Text to Speech – AI Voice Generator",
+      url: "https://visustock.com/studio-ai/text-to-speech",
+      applicationCategory: "MultimediaApplication",
+      operatingSystem: "Web",
+      description:
+        "Free online AI text to speech generator with realistic neural voices in English, French, Spanish, German and Arabic. Perfect for YouTube voiceovers, ads, TikTok, e-learning and podcasts.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", ratingCount: "247" },
+      featureList: [
+        "16 realistic AI voices",
+        "Multilingual text to speech (EN, FR, ES, DE, AR)",
+        "Adjustable speed and pitch",
+        "MP3 download, no signup",
+        "Free voice over generator for videos",
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "Is this AI text to speech generator free?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes, the VisuStock Studio AI text to speech tool is 100% free. Type your script, pick a realistic AI voice and download the MP3 — no credit card or watermark.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Which languages and voices are supported?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "The AI voice generator supports English (US, UK, AU), French, Spanish, German and Arabic with 16 natural neural voices, both male and female.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I use the AI voice for YouTube videos and ads?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. The generated MP3 can be used for YouTube voiceovers, TikTok videos, Instagram Reels, ads, podcasts and e-learning courses, both personal and commercial.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How realistic are the AI voices?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "We use Microsoft Neural TTS, one of the most realistic AI voice generators available, with natural intonation, breathing and emotion that sound close to a human voiceover artist.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I combine the AI voice with stock videos and images?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Absolutely. Pair your AI voiceover with VisuStock royalty-free stock videos and images to produce complete, professional content in minutes.",
+          },
+        },
+      ],
+    },
+  ],
+};
 
 const VOICES = [
   { id: "en-US-JennyNeural", name: "Jenny", description: "Warm female (US)", lang: "English" },
