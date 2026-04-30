@@ -280,6 +280,54 @@ export default function AIImageGenerator() {
               }}
             />
 
+            {/* Reference image (optional) */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+                {language === 'en' ? 'Reference image (optional)' : "Image de référence (optionnel)"}
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleReferenceUpload}
+                className="hidden"
+              />
+              {referenceImage ? (
+                <div className="relative inline-block">
+                  <img
+                    src={referenceImage}
+                    alt="Reference"
+                    className="w-full h-32 object-cover rounded-lg"
+                    style={{ border: '1px solid hsl(var(--editor-border))' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setReferenceImage(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    disabled={isGenerating}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 hover:bg-black/80 text-white disabled:opacity-40"
+                    aria-label="Remove reference image"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating}
+                  className="w-full p-3 rounded-lg text-xs flex items-center justify-center gap-2 transition-colors hover:opacity-80 disabled:opacity-40"
+                  style={{
+                    background: 'hsl(var(--editor-bg))',
+                    color: 'hsl(var(--editor-text))',
+                    border: '1px dashed hsl(var(--editor-border))',
+                  }}
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  {language === 'en' ? 'Upload an image' : 'Uploader une image'}
+                </button>
+              )}
+            </div>
+
             {/* Aspect ratio selector */}
             <div className="mb-3">
               <label className="block text-xs font-medium mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
