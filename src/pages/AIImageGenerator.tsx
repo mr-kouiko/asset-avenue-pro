@@ -151,7 +151,7 @@ export default function AIImageGenerator() {
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-ai-image', {
-        body: { prompt: prompt.trim() }
+        body: { prompt: buildFinalPrompt(prompt.trim(), aspectRatio) }
       });
 
       if (data?.error === 'insufficient_credits') {
