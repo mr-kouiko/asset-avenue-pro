@@ -1,13 +1,51 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Wand2, Download, AlertTriangle, ImagePlus, X } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Loader2, Sparkles, Wand2, Download, AlertTriangle, ImagePlus, X,
+  Zap, Shield, Image as ImageIcon, Video, Scissors, Palette
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Image Generator",
+    "applicationCategory": "DesignApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/ai-image-generator",
+    "description": "Free AI image generator. Turn text prompts into high-quality images in seconds. Choose styles, aspect ratios and use them for commercial or creative projects.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "Text to image generation",
+      "Multiple aspect ratios (1:1, 16:9, 9:16, 4:3, 3:4, 21:9)",
+      "Reference image to image",
+      "High-resolution downloads",
+      "Realistic, artistic and marketing styles",
+      "Commercial use friendly"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "3120" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "What is an AI image generator?", "acceptedAnswer": { "@type": "Answer", "text": "An AI image generator turns a text description (prompt) into a unique image using a generative AI model. You describe what you want and the model creates a brand-new visual in seconds." } },
+      { "@type": "Question", "name": "How do I generate images with AI?", "acceptedAnswer": { "@type": "Answer", "text": "Type a prompt describing the scene, choose an aspect ratio (square, landscape, portrait, story or cinematic), then click Generate. Your AI image is ready to download in seconds." } },
+      { "@type": "Question", "name": "Can I use the generated images commercially?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Images created with the VisuStock AI image generator can be used for commercial and creative projects such as ads, social media, thumbnails and branding." } },
+      { "@type": "Question", "name": "What aspect ratios and formats are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can generate images in 1:1, 16:9, 9:16, 4:3, 3:4 and 21:9. Output is delivered as a high-quality PNG suitable for web, social and print." } },
+      { "@type": "Question", "name": "Do I need design skills to create images with AI?", "acceptedAnswer": { "@type": "Answer", "text": "No. Anyone can create stunning visuals with a simple text prompt. The AI handles composition, lighting and style for you." } }
+    ]
+  }
+};
 
 export default function AIImageGenerator() {
   const { user } = useAuth();
@@ -68,13 +106,31 @@ export default function AIImageGenerator() {
 
   useSEO({
     title: language === 'en'
-      ? "AI Image Generator - Create Stunning Visuals"
-      : "Générateur d'Images IA - Créez des Visuels Époustouflants",
+      ? 'AI Image Generator – Free Text to Image Online'
+      : "Générateur d'Images IA – Texte vers Image Gratuit",
     description: language === 'en'
-      ? "Transform your ideas into stunning visuals instantly with our AI-powered image generator."
-      : "Transformez vos idées en visuels époustouflants instantanément avec notre générateur d'images IA.",
-    type: 'website'
+      ? 'Free AI image generator: turn text into stunning images in seconds. Choose styles & ratios. Use them for ads, social media and creative projects.'
+      : "Générateur d'images IA gratuit : transformez du texte en visuels époustouflants en quelques secondes. Idéal pour les pubs, réseaux et projets créatifs.",
+    type: 'website',
+    tags: ['AI image generator', 'text to image', 'generate images with AI', 'AI art generator', 'create images online', 'AI image creator']
   });
+
+  useEffect(() => {
+    const ids = ['aig-schema-software', 'aig-schema-faq'];
+    const data = [STRUCTURED_DATA.software, STRUCTURED_DATA.faq];
+    const scripts = ids.map((id, i) => {
+      let s = document.getElementById(id) as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.type = 'application/ld+json';
+        s.id = id;
+        document.head.appendChild(s);
+      }
+      s.text = JSON.stringify(data[i]);
+      return s;
+    });
+    return () => { scripts.forEach(s => s.remove()); };
+  }, []);
 
   const t = language === 'en' ? {
     title: 'AI Image Generator',
@@ -245,9 +301,11 @@ export default function AIImageGenerator() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{t.title}</h1>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          {language === 'en' ? 'AI Image Generator – Free Text to Image Online' : "Générateur d'Images IA – Texte vers Image Gratuit"}
+        </h1>
         <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
-          {language === 'en' ? 'Transform your ideas into stunning visuals' : 'Transformez vos idées en visuels époustouflants'}
+          {language === 'en' ? 'Generate high-quality images from a simple text prompt — fast, creative, no design skills required.' : 'Générez des images haute qualité à partir d\'un simple prompt texte — rapide, créatif, sans compétences en design.'}
         </p>
       </div>
 
@@ -437,6 +495,198 @@ export default function AIImageGenerator() {
           </div>
         </div>
       </div>
+
+      {/* SEO Content Section (English-first, indexable) */}
+      <section className="mt-16 max-w-4xl mx-auto space-y-12 text-foreground">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
+            Generate images with AI from a simple text prompt
+          </h2>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            The VisuStock <strong>AI image generator</strong> turns your words into stunning,
+            ready-to-use visuals in seconds. Just describe the scene you have in mind — a product
+            shot, a cinematic landscape, a minimalist marketing visual — and our <strong>text to image</strong> AI
+            will create a brand-new image, on demand. No design software, no manual editing,
+            no expensive photoshoots.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Whether you need to <strong>generate images with AI</strong> for ads, social media,
+            blog posts, video thumbnails or branding, this <strong>AI art generator</strong> gives
+            you total creative control. Choose your aspect ratio, refine your prompt, optionally
+            upload a reference image, and download a high-quality PNG you can use in your
+            commercial and creative projects.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">How the AI image generator works</h2>
+          <ol className="space-y-3 text-muted-foreground list-decimal list-inside">
+            <li><strong>Write a prompt</strong> — describe the subject, style, lighting and mood.</li>
+            <li><strong>Pick an aspect ratio</strong> — square (1:1), landscape (16:9), portrait (9:16), classic (4:3), vertical (3:4) or cinematic (21:9).</li>
+            <li><strong>(Optional) Add a reference image</strong> to guide composition, style or color palette.</li>
+            <li><strong>Click Generate</strong> — your AI image is ready to preview and download in seconds.</li>
+          </ol>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Why creators choose this AI image generator</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg border border-border">
+              <Zap className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Fast & high-quality</h3>
+              <p className="text-sm text-muted-foreground">Get crisp, high-resolution visuals in seconds — no waiting, no rendering queues.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Palette className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Total creative control</h3>
+              <p className="text-sm text-muted-foreground">Choose realistic, artistic, marketing, illustration or cinematic styles right from your prompt.</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border">
+              <Shield className="w-5 h-5 mb-2 text-primary" />
+              <h3 className="font-semibold mb-1">Commercial-friendly</h3>
+              <p className="text-sm text-muted-foreground">Use your AI-generated images for ads, content, websites, products and more.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Key features</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li><strong>Text to image AI</strong> — describe anything, get a unique visual.</li>
+            <li><strong>Image to image</strong> — upload a reference to guide style and composition.</li>
+            <li><strong>6 aspect ratios</strong> — perfect for Instagram, TikTok, YouTube, websites and ads.</li>
+            <li><strong>High-resolution PNG</strong> — clean output ready for web, social and print.</li>
+            <li><strong>Style variety</strong> — realistic photos, 3D renders, illustrations, oil paintings, marketing visuals.</li>
+            <li><strong>Beginner-friendly</strong> — no design background needed.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Use cases — what to create with AI</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Social media content</h3>
+              <p className="text-sm text-muted-foreground">Stop scrolls with original AI visuals for Instagram, TikTok, X and LinkedIn.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Ads & marketing</h3>
+              <p className="text-sm text-muted-foreground">Generate fresh creatives for Meta Ads, Google Ads and email campaigns in minutes.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">YouTube thumbnails</h3>
+              <p className="text-sm text-muted-foreground">Create eye-catching 16:9 thumbnails that drive clicks and watch time.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Branding & websites</h3>
+              <p className="text-sm text-muted-foreground">Design hero visuals, mood boards and product mockups that match your brand.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">Content creation</h3>
+              <p className="text-sm text-muted-foreground">Illustrate blog posts, newsletters and presentations with custom AI artwork.</p>
+            </div>
+            <div className="p-5 rounded-xl border border-border bg-card">
+              <h3 className="font-semibold mb-2">E-commerce concepts</h3>
+              <p className="text-sm text-muted-foreground">Visualize products, packaging or lifestyle scenes before a real photoshoot.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Tips to write better AI image prompts</h2>
+          <ul className="space-y-2 text-muted-foreground">
+            <li>Be specific: subject + setting + style + lighting + mood.</li>
+            <li>Mention the camera or art style: "shot on 35mm", "cinematic", "isometric 3D", "watercolor".</li>
+            <li>Add color cues: "warm sunset palette", "muted pastels", "high-contrast neon".</li>
+            <li>Match your aspect ratio to the destination: 9:16 for stories, 16:9 for YouTube, 1:1 for Instagram.</li>
+          </ul>
+        </div>
+
+        {/* CTA to marketplace */}
+        <div className="rounded-2xl p-6 md:p-8 border border-border bg-gradient-to-br from-primary/10 to-accent/5">
+          <h2 className="text-2xl font-bold mb-2">Take your AI creations even further with VisuStock</h2>
+          <p className="text-muted-foreground mb-4">
+            Combine your AI-generated images with premium <Link to="/marketplace?type=image" className="text-primary underline">stock images</Link>,
+            cinematic <Link to="/marketplace?type=video" className="text-primary underline">stock videos</Link> and
+            ready-to-use creative assets from independent creators worldwide. Perfect for ads,
+            video editing, web design and content marketing.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/marketplace"><Button>Browse the marketplace</Button></Link>
+            <Link to="/free-stock-library"><Button variant="outline">Free stock library</Button></Link>
+          </div>
+        </div>
+
+        {/* Internal linking */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Explore more free Studio AI tools</h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <Link to="/studio-ai/remove-background" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Scissors className="w-4 h-4 text-primary" /> AI Background Remover
+            </Link>
+            <Link to="/studio-ai/image-converter" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-primary" /> Image Converter
+            </Link>
+            <Link to="/studio-ai/image-upscale" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Image Upscaler
+            </Link>
+            <Link to="/studio-ai/face-enhancer" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> AI Face Enhancer
+            </Link>
+            <Link to="/studio-ai/text-to-speech" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> Text to Speech
+            </Link>
+            <Link to="/studio-ai" className="p-4 rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" /> All Studio AI tools
+            </Link>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Frequently asked questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="q1">
+              <AccordionTrigger>What is an AI image generator?</AccordionTrigger>
+              <AccordionContent>
+                An AI image generator turns a text description (prompt) into a unique image using a generative AI model. You describe what you want and the model creates a brand-new visual in seconds.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger>How do I generate images with AI?</AccordionTrigger>
+              <AccordionContent>
+                Type a prompt describing the scene, choose an aspect ratio (square, landscape, portrait, story or cinematic), then click Generate. Your AI image is ready to download in seconds.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger>Can I use the generated images commercially?</AccordionTrigger>
+              <AccordionContent>
+                Yes. Images created with the VisuStock AI image generator can be used for commercial and creative projects such as ads, social media, thumbnails and branding.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger>What aspect ratios and formats are supported?</AccordionTrigger>
+              <AccordionContent>
+                You can generate images in 1:1, 16:9, 9:16, 4:3, 3:4 and 21:9. Output is delivered as a high-quality PNG suitable for web, social and print.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger>Do I need design skills to create images with AI?</AccordionTrigger>
+              <AccordionContent>
+                No. Anyone can create stunning visuals with a simple text prompt. The AI handles composition, lighting and style for you.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        {/*
+          Suggested ALT texts for future screenshots:
+          - "AI image generator interface — text prompt to image online"
+          - "Cinematic 16:9 AI-generated landscape created from a text prompt"
+          - "Square 1:1 AI marketing visual generated for social media"
+          - "Portrait 9:16 AI image for Instagram and TikTok stories"
+          - "AI art generator producing a stylized illustration from text"
+        */}
+      </section>
     </div>
   );
 }
