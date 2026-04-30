@@ -301,9 +301,11 @@ export default function AIImageGenerator() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>{t.title}</h1>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          {language === 'en' ? 'AI Image Generator – Free Text to Image Online' : "Générateur d'Images IA – Texte vers Image Gratuit"}
+        </h1>
         <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
-          {language === 'en' ? 'Transform your ideas into stunning visuals' : 'Transformez vos idées en visuels époustouflants'}
+          {language === 'en' ? 'Generate high-quality images from a simple text prompt — fast, creative, no design skills required.' : 'Générez des images haute qualité à partir d\'un simple prompt texte — rapide, créatif, sans compétences en design.'}
         </p>
       </div>
 
