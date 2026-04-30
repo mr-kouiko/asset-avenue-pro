@@ -48,14 +48,22 @@ export default function AIImageGenerator() {
     { value: '21:9', label: '21:9', desc: language === 'en' ? 'Cinematic' : 'Cinéma' },
   ];
 
-  // Append the requested aspect ratio if the user hasn't already specified one
+  // Forcefully prepend explicit aspect ratio + dimensions to steer the model
+  const RATIO_DIMENSIONS: Record<string, { w: number; h: number; orientation: string }> = {
+    '1:1':  { w: 1024, h: 1024, orientation: 'perfectly square' },
+    '16:9': { w: 1536, h: 864,  orientation: 'wide horizontal landscape' },
+    '9:16': { w: 864,  h: 1536, orientation: 'tall vertical portrait (mobile / story)' },
+    '4:3':  { w: 1280, h: 960,  orientation: 'horizontal landscape' },
+    '3:4':  { w: 960,  h: 1280, orientation: 'vertical portrait' },
+    '21:9': { w: 1680, h: 720,  orientation: 'ultra-wide cinematic letterbox' },
+  };
+
   const buildFinalPrompt = (raw: string, ratio: string) => {
-    const hasRatio = /\b\d{1,2}\s*[:x]\s*\d{1,2}\b|aspect ratio|ratio d'aspect|format/i.test(raw);
-    if (hasRatio) return raw;
-    const suffix = language === 'en'
-      ? ` — aspect ratio ${ratio}, framed strictly in ${ratio} format.`
-      : ` — ratio d'aspect ${ratio}, cadré strictement au format ${ratio}.`;
-    return raw.trim() + suffix;
+    const dims = RATIO_DIMENSIONS[ratio] ?? RATIO_DIMENSIONS['1:1'];
+    const directive = language === 'en'
+      ? `IMPORTANT: Generate the image with an exact aspect ratio of ${ratio} (${dims.w}x${dims.h} pixels), in a ${dims.orientation} orientation. The full canvas MUST be filled — do NOT add black bars, padding, borders, or letterboxing. Compose the scene specifically for a ${ratio} frame.\n\nSubject: `
+      : `IMPORTANT : Génère l'image avec un ratio d'aspect strictement ${ratio} (${dims.w}x${dims.h} pixels), en orientation ${dims.orientation}. Tout le canvas DOIT être rempli — n'ajoute AUCUNE barre noire, marge, bordure ni letterbox. Compose la scène spécifiquement pour un cadre ${ratio}.\n\nSujet : `;
+    return directive + raw.trim();
   };
 
   useSEO({
