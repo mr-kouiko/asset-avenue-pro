@@ -64,6 +64,7 @@ const RemoveBackground = lazy(() => import("./pages/RemoveBackground"));
 const VideoUpscale = lazy(() => import("./pages/VideoUpscale"));
 const TextToSpeech = lazy(() => import("./pages/TextToSpeech"));
 const ImageToVideo = lazy(() => import("./pages/ImageToVideo"));
+const TextToVideoAI = lazy(() => import("./pages/TextToVideoAI"));
 const ImageConverter = lazy(() => import("./pages/ImageConverter"));
 const AdjustMusicDuration = lazy(() => import("./pages/AdjustMusicDuration"));
 const ImageUpscale = lazy(() => import("./pages/ImageUpscale"));
@@ -157,6 +158,7 @@ const App = () => (
                         <Route path="/studio-ai/video-upscale" element={<VideoUpscale />} />
                         <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
                         <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
+                        <Route path="/studio-ai/text-to-video" element={<TextToVideoAI />} />
                         <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
                         <Route path="/studio-ai/adjust-music-duration" element={<AdjustMusicDuration />} />
                         <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />

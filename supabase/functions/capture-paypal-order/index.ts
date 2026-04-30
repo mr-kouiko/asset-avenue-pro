@@ -193,7 +193,7 @@ serve(async (req) => {
         amount: orderAmount,
         currency: currency,
         status: 'processing',
-        credits_amount: orderType === 'credits' ? parseInt(customData.credits) : null,
+        credits_amount: (orderType === 'credits' || orderType === 'videoai_credits') ? parseInt(customData.credits) : null,
         pack_type: customData.pack || (orderType === 'infinity' ? (customData.is_yearly ? 'infinity_yearly' : 'infinity_monthly') : null),
         cart_items: customData.cart_items || null,
       }, { 
@@ -325,6 +325,57 @@ serve(async (req) => {
           order_id: order_id,
           status: captureData.status,
           order_type: 'credits',
+          credits: creditsAmount,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } else if (orderType === 'videoai_credits') {
+      // ============ VIDEOAI CREDITS PURCHASE (Pond5-style) ============
+      const creditsAmount = parseInt(customData.credits);
+      const { error } = await supabaseAdmin.rpc('add_videoai_credits', {
+        p_user_id: user.id,
+        p_amount: creditsAmount,
+        p_type: 'purchase',
+        p_reason: `paypal_${customData.pack}`,
+        p_paypal_order_id: order_id,
+        p_pack_id: customData.pack,
+      });
+
+      if (error) {
+        console.error('Error adding VideoAI credits:', error);
+        throw new Error('Failed to add VideoAI credits');
+      }
+
+      await supabaseAdmin
+        .from('paypal_orders')
+        .update({
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          pack_type: `videoai_${customData.pack}`,
+        })
+        .eq('paypal_order_id', order_id);
+
+      await supabaseAdmin.from('security_audit_log').insert({
+        event_type: 'videoai_credits_purchased_paypal',
+        user_id: user.id,
+        target_table: 'videoai_credits',
+        details: {
+          credits_amount: creditsAmount,
+          pack_type: customData.pack,
+          paypal_order_id: order_id,
+          amount_paid: orderAmount,
+          currency: currency,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: order_id,
+          status: captureData.status,
+          order_type: 'videoai_credits',
           credits: creditsAmount,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
