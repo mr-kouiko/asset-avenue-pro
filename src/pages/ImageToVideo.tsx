@@ -18,6 +18,46 @@ const ImageToVideo = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
 
+  useSEO({
+    title: "AI Image to Video – Animate Image Online Free | Photo to Video",
+    description:
+      "Free AI image to video: animate any image online, turn photos into cinematic videos with motion, zoom and pan. Perfect for TikTok, Reels & Shorts. No signup.",
+    type: "website",
+    tags: ["image to video", "AI image to video", "animate image online", "photo to video AI", "image animation AI"],
+  });
+
+  useEffect(() => {
+    const appSchema = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "VisuStock AI Image to Video",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web",
+      "description":
+        "AI image to video tool that animates static images into dynamic short videos with cinematic motion, camera moves and natural transitions.",
+      "url": "https://visustock.com/studio-ai/image-to-video",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "1180" },
+    };
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is AI image to video?", "acceptedAnswer": { "@type": "Answer", "text": "AI image to video turns a static image into a short animated video by generating new frames with motion, camera movement and natural transitions — no editing required." } },
+        { "@type": "Question", "name": "Is the photo to video AI free to use?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, you can animate images online for free. Generations use a small credit pack so you only pay for what you create." } },
+        { "@type": "Question", "name": "Can I animate any photo?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — portraits, products, landscapes, illustrations and AI-generated images all work. Higher-quality images with a clear subject give the best results." } },
+        { "@type": "Question", "name": "How long are the generated videos?", "acceptedAnswer": { "@type": "Answer", "text": "Generated clips are around 5 seconds, ideal for TikTok, Instagram Reels, YouTube Shorts and ads." } },
+        { "@type": "Question", "name": "Can I use the videos commercially?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — videos you create with the AI image to video tool are yours to use for personal and commercial projects." } },
+      ],
+    };
+    const s1 = document.createElement("script");
+    s1.type = "application/ld+json"; s1.dataset.seo = "i2v-app"; s1.text = JSON.stringify(appSchema);
+    const s2 = document.createElement("script");
+    s2.type = "application/ld+json"; s2.dataset.seo = "i2v-faq"; s2.text = JSON.stringify(faqSchema);
+    document.head.appendChild(s1); document.head.appendChild(s2);
+    return () => { document.querySelectorAll('script[data-seo="i2v-app"], script[data-seo="i2v-faq"]').forEach(el => el.remove()); };
+  }, []);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
