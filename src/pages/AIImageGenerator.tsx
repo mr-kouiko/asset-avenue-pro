@@ -19,6 +19,26 @@ export default function AIImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
+
+  const ASPECT_RATIOS: { value: string; label: string; desc: string }[] = [
+    { value: '1:1', label: '1:1', desc: language === 'en' ? 'Square' : 'Carré' },
+    { value: '16:9', label: '16:9', desc: language === 'en' ? 'Landscape' : 'Paysage' },
+    { value: '9:16', label: '9:16', desc: language === 'en' ? 'Portrait / Story' : 'Portrait / Story' },
+    { value: '4:3', label: '4:3', desc: language === 'en' ? 'Classic' : 'Classique' },
+    { value: '3:4', label: '3:4', desc: language === 'en' ? 'Vertical' : 'Vertical' },
+    { value: '21:9', label: '21:9', desc: language === 'en' ? 'Cinematic' : 'Cinéma' },
+  ];
+
+  // Append the requested aspect ratio if the user hasn't already specified one
+  const buildFinalPrompt = (raw: string, ratio: string) => {
+    const hasRatio = /\b\d{1,2}\s*[:x]\s*\d{1,2}\b|aspect ratio|ratio d'aspect|format/i.test(raw);
+    if (hasRatio) return raw;
+    const suffix = language === 'en'
+      ? ` — aspect ratio ${ratio}, framed strictly in ${ratio} format.`
+      : ` — ratio d'aspect ${ratio}, cadré strictement au format ${ratio}.`;
+    return raw.trim() + suffix;
+  };
 
   useSEO({
     title: language === 'en'
