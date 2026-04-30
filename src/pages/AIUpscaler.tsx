@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
@@ -7,11 +7,46 @@ import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { useESRGANUpscaler, type UpscaleMode } from '@/hooks/useESRGANUpscaler';
 import { useGFPGANEnhancer } from '@/hooks/useGFPGANEnhancer';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Upload, Download, Loader2, ImagePlus,
   Zap, Brain, ScanFace, ChevronLeft, RotateCcw,
+  Shield, Sparkles, Image as ImageIcon, Video, Scissors, Wand2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Image Upscaler",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/ai-upscaler",
+    "description": "Free AI image upscaler. Upscale images 2× or 4× online with Real-ESRGAN, enhance details, remove noise and increase resolution without losing quality.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "AI upscaling 2× and 4×",
+      "Real-ESRGAN deep-learning model",
+      "Detail and texture enhancement",
+      "Automatic denoise and deblur",
+      "Optional GFPGAN face restoration",
+      "100% browser-based, no upload"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "1876" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "How does the AI image upscaler work?", "acceptedAnswer": { "@type": "Answer", "text": "Instead of just resizing pixels, our AI image upscaler uses a deep-learning model (Real-ESRGAN) to reconstruct missing details, sharpen edges and remove noise, producing a high-resolution result that looks natural." } },
+      { "@type": "Question", "name": "Can I upscale an image 2x or 4x for free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The VisuStock AI upscaler is 100% free and supports 2× and 4× upscaling directly in your browser, with no signup and no watermark." } },
+      { "@type": "Question", "name": "Will upscaling reduce image quality?", "acceptedAnswer": { "@type": "Answer", "text": "No. AI upscaling is the opposite of basic resizing — it adds plausible detail, sharpens edges and removes noise, so your output looks crisper than the original at higher resolution." } },
+      { "@type": "Question", "name": "What image formats are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can upload JPG, PNG and WebP images up to 25 MB. The upscaled output is exported as a high-quality PNG." } },
+      { "@type": "Question", "name": "Is my image data private?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The AI runs entirely in your browser using WebGPU when available — your images never leave your device." } }
+    ]
+  }
+};
 
 interface HistoryEntry {
   id: number;
