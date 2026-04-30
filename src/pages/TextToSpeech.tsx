@@ -231,9 +231,9 @@ export default function TextToSpeech() {
           <Link to="/studio-ai" className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--editor-text))' }}>
             <ChevronLeft className="w-4 h-4" />
           </Link>
-          <h1 className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          <span className="text-sm font-semibold" style={{ color: 'hsl(var(--editor-text-bright))' }}>
             Text to Speech
-          </h1>
+          </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'hsl(var(--editor-accent) / 0.2)', color: 'hsl(var(--editor-accent))' }}>FREE</span>
         </div>
         <div className="flex items-center gap-2">
