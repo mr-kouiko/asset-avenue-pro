@@ -6,7 +6,7 @@ import { useSEO } from '@/hooks/useSEO';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { WaveformEditor } from '@/components/audio/WaveformEditor';
-import { Link } from 'react-router-dom';
+// Link imported above
 
 type SelectionMode = 'manual' | 'duration';
 
