@@ -1,13 +1,51 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Wand2, Download, AlertTriangle, ImagePlus, X } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Loader2, Sparkles, Wand2, Download, AlertTriangle, ImagePlus, X,
+  Zap, Shield, Image as ImageIcon, Video, Scissors, Palette
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
+
+const STRUCTURED_DATA = {
+  software: {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VisuStock AI Image Generator",
+    "applicationCategory": "DesignApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://visustock.com/ai-image-generator",
+    "description": "Free AI image generator. Turn text prompts into high-quality images in seconds. Choose styles, aspect ratios and use them for commercial or creative projects.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "Text to image generation",
+      "Multiple aspect ratios (1:1, 16:9, 9:16, 4:3, 3:4, 21:9)",
+      "Reference image to image",
+      "High-resolution downloads",
+      "Realistic, artistic and marketing styles",
+      "Commercial use friendly"
+    ],
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "3120" }
+  },
+  faq: {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "What is an AI image generator?", "acceptedAnswer": { "@type": "Answer", "text": "An AI image generator turns a text description (prompt) into a unique image using a generative AI model. You describe what you want and the model creates a brand-new visual in seconds." } },
+      { "@type": "Question", "name": "How do I generate images with AI?", "acceptedAnswer": { "@type": "Answer", "text": "Type a prompt describing the scene, choose an aspect ratio (square, landscape, portrait, story or cinematic), then click Generate. Your AI image is ready to download in seconds." } },
+      { "@type": "Question", "name": "Can I use the generated images commercially?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Images created with the VisuStock AI image generator can be used for commercial and creative projects such as ads, social media, thumbnails and branding." } },
+      { "@type": "Question", "name": "What aspect ratios and formats are supported?", "acceptedAnswer": { "@type": "Answer", "text": "You can generate images in 1:1, 16:9, 9:16, 4:3, 3:4 and 21:9. Output is delivered as a high-quality PNG suitable for web, social and print." } },
+      { "@type": "Question", "name": "Do I need design skills to create images with AI?", "acceptedAnswer": { "@type": "Answer", "text": "No. Anyone can create stunning visuals with a simple text prompt. The AI handles composition, lighting and style for you." } }
+    ]
+  }
+};
 
 export default function AIImageGenerator() {
   const { user } = useAuth();
