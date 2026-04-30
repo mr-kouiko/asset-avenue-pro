@@ -94,9 +94,18 @@ export default function AdjustMusicDuration() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useSEO({
-    title: 'Adjust Music Duration - AI Audio Tool | Studio AI',
-    description: 'Easily trim or extend your music tracks with AI-powered audio shortener and song lengthener. Create precise, professional edits in seconds.',
-    type: 'website'
+    title: 'Adjust Music Duration Online – AI Audio Trimmer & Extender',
+    description:
+      'Adjust music duration online with AI: shorten, trim or extend audio to the exact length you need. Free, browser-based, no signup. Try Studio AI now.',
+    type: 'website',
+    tags: [
+      'adjust music duration',
+      'extend audio',
+      'shorten music with AI',
+      'AI audio trimmer',
+      'song lengthener',
+      'trim mp3 online',
+    ],
   });
 
   const handleFileSelect = useCallback((file: File) => {
