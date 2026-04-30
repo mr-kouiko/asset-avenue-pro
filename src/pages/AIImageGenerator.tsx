@@ -20,6 +20,24 @@ export default function AIImageGenerator() {
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [aiErrorCode, setAiErrorCode] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: language === 'en' ? 'Invalid file' : 'Fichier invalide', description: language === 'en' ? 'Please upload an image.' : 'Veuillez uploader une image.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: language === 'en' ? 'File too large' : 'Fichier trop volumineux', description: language === 'en' ? 'Max 8 MB.' : 'Max 8 Mo.', variant: 'destructive' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setReferenceImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const ASPECT_RATIOS: { value: string; label: string; desc: string }[] = [
     { value: '1:1', label: '1:1', desc: language === 'en' ? 'Square' : 'Carré' },
