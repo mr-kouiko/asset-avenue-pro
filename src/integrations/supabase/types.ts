@@ -38,6 +38,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_video_generations: {
+        Row: {
+          aspect_ratio: string
+          audio: boolean
+          created_at: string
+          credits_spent: number
+          duration: number
+          error_message: string | null
+          id: string
+          model: string
+          prompt: string
+          resolution: number
+          status: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          aspect_ratio: string
+          audio?: boolean
+          created_at?: string
+          credits_spent: number
+          duration: number
+          error_message?: string | null
+          id?: string
+          model: string
+          prompt: string
+          resolution: number
+          status?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          aspect_ratio?: string
+          audio?: boolean
+          created_at?: string
+          credits_spent?: number
+          duration?: number
+          error_message?: string | null
+          id?: string
+          model?: string
+          prompt?: string
+          resolution?: number
+          status?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       album_photos: {
         Row: {
           album_id: string
@@ -1763,6 +1811,60 @@ export type Database = {
         }
         Relationships: []
       }
+      videoai_credits: {
+        Row: {
+          credits_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          credits_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          credits_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      videoai_transactions: {
+        Row: {
+          created_at: string
+          credits_delta: number
+          generation_id: string | null
+          id: string
+          pack_id: string | null
+          paypal_order_id: string | null
+          reason: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_delta: number
+          generation_id?: string | null
+          id?: string
+          pack_id?: string | null
+          paypal_order_id?: string | null
+          reason?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_delta?: number
+          generation_id?: string | null
+          id?: string
+          pack_id?: string | null
+          paypal_order_id?: string | null
+          reason?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       watermark_exports: {
         Row: {
           admin_id: string
@@ -1830,6 +1932,18 @@ export type Database = {
       add_user_credits: {
         Args: { amount_param: number; user_id_param: string }
         Returns: boolean
+      }
+      add_videoai_credits: {
+        Args: {
+          p_amount: number
+          p_generation_id?: string
+          p_pack_id?: string
+          p_paypal_order_id?: string
+          p_reason?: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: number
       }
       admin_access_profile_secure: {
         Args: {
@@ -2234,6 +2348,15 @@ export type Database = {
           title: string
           total_count: number
         }[]
+      }
+      spend_videoai_credits: {
+        Args: {
+          p_amount: number
+          p_generation_id?: string
+          p_reason?: string
+          p_user_id: string
+        }
+        Returns: number
       }
       unaccent: { Args: { "": string }; Returns: string }
       user_can_access_profile: {
