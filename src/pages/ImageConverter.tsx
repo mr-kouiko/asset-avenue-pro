@@ -235,9 +235,11 @@ export default function ImageConverter() {
       <canvas ref={canvasRef} className="hidden" />
       
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>Image Converter</h1>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
+          Image Converter Online – JPG to PNG, PNG to WebP & PDF
+        </h1>
         <p className="text-lg" style={{ color: 'hsl(var(--editor-text))' }}>
-          Convert images between PNG, JPEG, WebP and PDF for free
+          Free image format converter — convert images between PNG, JPEG, WebP and PDF in your browser.
         </p>
       </div>
 
