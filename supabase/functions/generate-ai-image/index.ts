@@ -87,7 +87,13 @@ serve(async (req) => {
     }
 
     // Call Lovable AI Gateway for image generation
-    console.log('Calling Lovable AI (google/gemini-2.5-flash-image) with prompt:', prompt.substring(0, 50) + '...');
+    console.log('Calling Lovable AI (google/gemini-2.5-flash-image)', hasReference ? 'with reference image' : 'text-only', 'prompt:', prompt.substring(0, 50) + '...');
+
+    const userContent: any[] = [{ type: 'text', text: prompt }];
+    if (hasReference) {
+      userContent.push({ type: 'image_url', image_url: { url: referenceImage } });
+    }
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -97,7 +103,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash-image',
         messages: [
-          { role: 'user', content: prompt }
+          { role: 'user', content: userContent }
         ],
         modalities: ['image', 'text']
       }),
