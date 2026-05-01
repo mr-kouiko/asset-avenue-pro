@@ -278,14 +278,70 @@ const FreeStockLibrary = () => {
     }
   };
 
-  const handleDownloadPexelsPhoto = (photo: PexelsPhoto) => {
+  const triggerPhotoDownload = useCallback((photo: PexelsPhoto) => {
+    // Fire-and-forget tracking — never block the download
+    supabase
+      .from('pexels_downloads')
+      .insert({
+        user_id: user!.id,
+        pexels_id: photo.id,
+        media_type: 'photo',
+        author: photo.photographer,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('[pexels_downloads] tracking failed:', error.message);
+      });
     window.open(photo.src.original, '_blank');
+  }, [user]);
+
+  const triggerVideoDownload = useCallback((video: PexelsVideo) => {
+    const best = video.video_files.reduce((a, b) => (a.width > b.width ? a : b));
+    supabase
+      .from('pexels_downloads')
+      .insert({
+        user_id: user!.id,
+        pexels_id: video.id,
+        media_type: 'video',
+        author: video.user.name,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('[pexels_downloads] tracking failed:', error.message);
+      });
+    window.open(best.link, '_blank');
+  }, [user]);
+
+  const handleDownloadPexelsPhoto = (photo: PexelsPhoto) => {
+    if (!user) {
+      setPendingDownload({ kind: 'photo', photo });
+      setShowAuthModal(true);
+      toast.info('Create a free account to download');
+      return;
+    }
+    triggerPhotoDownload(photo);
   };
 
   const handleDownloadPexelsVideo = (video: PexelsVideo) => {
-    const best = video.video_files.reduce((a, b) => (a.width > b.width ? a : b));
-    window.open(best.link, '_blank');
+    if (!user) {
+      setPendingDownload({ kind: 'video', video });
+      setShowAuthModal(true);
+      toast.info('Create a free account to download');
+      return;
+    }
+    triggerVideoDownload(video);
   };
+
+  // Resume pending download after the user signs in
+  useEffect(() => {
+    if (user && pendingDownload) {
+      if (pendingDownload.kind === 'photo') {
+        triggerPhotoDownload(pendingDownload.photo);
+      } else {
+        triggerVideoDownload(pendingDownload.video);
+      }
+      setPendingDownload(null);
+      setShowAuthModal(false);
+    }
+  }, [user, pendingDownload, triggerPhotoDownload, triggerVideoDownload]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
