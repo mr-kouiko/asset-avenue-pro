@@ -36,6 +36,7 @@ import { BuyerProfileCard } from "@/components/BuyerProfileCard";
 import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { ContentCard } from "@/components/ContentCard";
 import { BuyerOrderHistory } from "@/components/buyer/BuyerOrderHistory";
+import { BuyerInvoices } from "@/components/buyer/BuyerInvoices";
 
 interface Purchase {
   id: string;
@@ -505,6 +506,7 @@ const BuyerDashboard = () => {
 
             {/* Orders Tab */}
             <TabsContent value="orders" className="space-y-6">
+              <BuyerInvoices />
               <BuyerOrderHistory />
             </TabsContent>
 

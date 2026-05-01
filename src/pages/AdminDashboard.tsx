@@ -28,6 +28,8 @@ import {
 import { Bot } from "lucide-react";
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
+import { AdminPayoutsPanel } from "@/components/admin/AdminPayoutsPanel";
+import { Wallet } from "lucide-react";
 import { AdminUsersManagement } from "@/components/admin/AdminUsersManagement";
 import { AdminSecurityLogs } from "@/components/admin/AdminSecurityLogs";
 import { AdminVendorManagement } from "@/components/admin/AdminVendorManagement";
@@ -248,6 +250,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="transactions" className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Transactions</span>
+            </TabsTrigger>
+            <TabsTrigger value="payouts" className="flex items-center gap-1">
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Payouts</span>
             </TabsTrigger>
             <TabsTrigger value="support" className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
@@ -482,6 +488,10 @@ const AdminDashboard = () => {
           </TabsContent>
 
           {/* Transactions Tab */}
+          <TabsContent value="payouts">
+            <AdminPayoutsPanel />
+          </TabsContent>
+
           <TabsContent value="transactions">
             <AdminTransactionsDashboard />
           </TabsContent>
