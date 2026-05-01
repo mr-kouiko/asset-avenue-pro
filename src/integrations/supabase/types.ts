@@ -1074,6 +1074,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pexels_downloads: {
+        Row: {
+          author: string | null
+          downloaded_at: string
+          id: string
+          media_type: string
+          pexels_id: number
+          user_id: string
+        }
+        Insert: {
+          author?: string | null
+          downloaded_at?: string
+          id?: string
+          media_type: string
+          pexels_id: number
+          user_id: string
+        }
+        Update: {
+          author?: string | null
+          downloaded_at?: string
+          id?: string
+          media_type?: string
+          pexels_id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       pexels_seo_content: {
         Row: {
           about_section: Json | null

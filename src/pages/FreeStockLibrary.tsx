@@ -11,6 +11,10 @@ import { LazyImage } from '@/components/LazyImage';
 import { useSEO } from '@/hooks/useSEO';
 import { useFreeContent, FreeItem } from '@/hooks/useFreeContent';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthModal } from '@/components/AuthModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PexelsPhoto {
   id: number;
@@ -77,6 +81,14 @@ const FreeStockLibrary = () => {
   const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState<
+    | { kind: 'photo'; photo: PexelsPhoto }
+    | { kind: 'video'; video: PexelsVideo }
+    | null
+  >(null);
 
   // Fetch VisuStock free content
   const { content: visustockContent, loading: visustockLoading } = useFreeContent(50);
@@ -266,14 +278,70 @@ const FreeStockLibrary = () => {
     }
   };
 
-  const handleDownloadPexelsPhoto = (photo: PexelsPhoto) => {
+  const triggerPhotoDownload = useCallback((photo: PexelsPhoto) => {
+    // Fire-and-forget tracking — never block the download
+    supabase
+      .from('pexels_downloads')
+      .insert({
+        user_id: user!.id,
+        pexels_id: photo.id,
+        media_type: 'photo',
+        author: photo.photographer,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('[pexels_downloads] tracking failed:', error.message);
+      });
     window.open(photo.src.original, '_blank');
+  }, [user]);
+
+  const triggerVideoDownload = useCallback((video: PexelsVideo) => {
+    const best = video.video_files.reduce((a, b) => (a.width > b.width ? a : b));
+    supabase
+      .from('pexels_downloads')
+      .insert({
+        user_id: user!.id,
+        pexels_id: video.id,
+        media_type: 'video',
+        author: video.user.name,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('[pexels_downloads] tracking failed:', error.message);
+      });
+    window.open(best.link, '_blank');
+  }, [user]);
+
+  const handleDownloadPexelsPhoto = (photo: PexelsPhoto) => {
+    if (!user) {
+      setPendingDownload({ kind: 'photo', photo });
+      setShowAuthModal(true);
+      toast.info('Create a free account to download');
+      return;
+    }
+    triggerPhotoDownload(photo);
   };
 
   const handleDownloadPexelsVideo = (video: PexelsVideo) => {
-    const best = video.video_files.reduce((a, b) => (a.width > b.width ? a : b));
-    window.open(best.link, '_blank');
+    if (!user) {
+      setPendingDownload({ kind: 'video', video });
+      setShowAuthModal(true);
+      toast.info('Create a free account to download');
+      return;
+    }
+    triggerVideoDownload(video);
   };
+
+  // Resume pending download after the user signs in
+  useEffect(() => {
+    if (user && pendingDownload) {
+      if (pendingDownload.kind === 'photo') {
+        triggerPhotoDownload(pendingDownload.photo);
+      } else {
+        triggerVideoDownload(pendingDownload.video);
+      }
+      setPendingDownload(null);
+      setShowAuthModal(false);
+    }
+  }, [user, pendingDownload, triggerPhotoDownload, triggerVideoDownload]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -454,10 +522,15 @@ const FreeStockLibrary = () => {
                       View on Pexels
                     </a>
                   </Button>
-                  <Button size="sm" onClick={() => handleDownloadPexelsPhoto(selectedItem.pexelsPhoto!)} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button size="sm" onClick={() => handleDownloadPexelsPhoto(selectedItem.pexelsPhoto!)} className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Download
+                    </Button>
+                    {!user && (
+                      <span className="text-xs text-muted-foreground">Free account required</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -497,10 +570,15 @@ const FreeStockLibrary = () => {
                       View on Pexels
                     </a>
                   </Button>
-                  <Button size="sm" onClick={() => handleDownloadPexelsVideo(selectedItem.pexelsVideo!)} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button size="sm" onClick={() => handleDownloadPexelsVideo(selectedItem.pexelsVideo!)} className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Download
+                    </Button>
+                    {!user && (
+                      <span className="text-xs text-muted-foreground">Free account required</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -509,6 +587,15 @@ const FreeStockLibrary = () => {
       </Dialog>
 
       <Footer />
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          if (!user) setPendingDownload(null);
+        }}
+      />
+
     </div>
   );
 };
