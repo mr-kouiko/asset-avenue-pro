@@ -447,6 +447,9 @@ const Dashboard = () => {
               </Card>
             </div>
 
+            {/* Earnings ledger */}
+            <SellerEarningsCard />
+
             {/* Recent Activity */}
             <Card>
               <CardHeader>
