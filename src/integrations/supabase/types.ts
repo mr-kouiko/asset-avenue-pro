@@ -1344,6 +1344,63 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_earnings: {
+        Row: {
+          available_at: string | null
+          buyer_id: string | null
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          currency: string
+          gross_amount: number
+          id: string
+          net_amount: number
+          payout_id: string | null
+          paypal_order_id: string | null
+          seller_id: string
+          source: string
+          status: string
+          submission_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          available_at?: string | null
+          buyer_id?: string | null
+          commission_amount: number
+          commission_rate: number
+          created_at?: string
+          currency?: string
+          gross_amount: number
+          id?: string
+          net_amount: number
+          payout_id?: string | null
+          paypal_order_id?: string | null
+          seller_id: string
+          source?: string
+          status?: string
+          submission_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available_at?: string | null
+          buyer_id?: string | null
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          currency?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          payout_id?: string | null
+          paypal_order_id?: string | null
+          seller_id?: string
+          source?: string
+          status?: string
+          submission_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seo_audit_log: {
         Row: {
           action_type: string
@@ -2110,6 +2167,7 @@ export type Database = {
         }[]
       }
       clean_for_slug: { Args: { text_input: string }; Returns: string }
+      cleanup_old_webhook_events: { Args: never; Returns: undefined }
       create_secure_download_token: {
         Args: { content_file_id_param: string; user_id_param?: string }
         Returns: {
@@ -2279,6 +2337,18 @@ export type Database = {
           last_occurrence: string
           target_table: string
           unique_users: number
+        }[]
+      }
+      get_seller_earnings_summary: {
+        Args: { p_seller_id: string }
+        Returns: {
+          available_amount: number
+          currency: string
+          lifetime_gross: number
+          paid_amount: number
+          pending_amount: number
+          refunded_amount: number
+          total_orders: number
         }[]
       }
       get_seo_metadata: {

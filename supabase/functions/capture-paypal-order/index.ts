@@ -426,7 +426,15 @@ serve(async (req) => {
         }
       });
 
-      // Send seller notifications
+      // Fetch current commission rate (default 40% to platform if missing)
+      const { data: settings } = await supabaseAdmin
+        .from('platform_settings')
+        .select('commission_rate')
+        .limit(1)
+        .maybeSingle();
+      const commissionRate = Number(settings?.commission_rate ?? 0.40);
+
+      // Send seller notifications + record per-item earnings ledger
       const sellerItems = new Map<string, { items: typeof cartItems, total: number }>();
       
       for (const item of cartItems) {
@@ -438,7 +446,7 @@ serve(async (req) => {
         
         if (submission?.creator_id) {
           const sellerId = submission.creator_id;
-          const itemPrice = item.price || submission.price || 0;
+          const itemPrice = Number(item.price ?? submission.price ?? 0);
           
           if (!sellerItems.has(sellerId)) {
             sellerItems.set(sellerId, { items: [], total: 0 });
@@ -447,6 +455,23 @@ serve(async (req) => {
           const sellerData = sellerItems.get(sellerId)!;
           sellerData.items.push({ ...item, price: itemPrice });
           sellerData.total += itemPrice;
+
+          // Record earnings ledger row (idempotent via unique index on order+submission)
+          const commissionAmount = +(itemPrice * commissionRate).toFixed(2);
+          const netAmount = +(itemPrice - commissionAmount).toFixed(2);
+          await supabaseAdmin.from('seller_earnings').upsert({
+            seller_id: sellerId,
+            buyer_id: user.id,
+            submission_id: item.submission_id,
+            paypal_order_id: order_id,
+            source: 'marketplace',
+            gross_amount: itemPrice,
+            commission_rate: commissionRate,
+            commission_amount: commissionAmount,
+            net_amount: netAmount,
+            currency: currency,
+            status: 'pending',
+          }, { onConflict: 'paypal_order_id,submission_id', ignoreDuplicates: true });
         }
       }
 
