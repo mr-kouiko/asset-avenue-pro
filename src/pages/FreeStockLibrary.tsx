@@ -82,6 +82,14 @@ const FreeStockLibrary = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState<
+    | { kind: 'photo'; photo: PexelsPhoto }
+    | { kind: 'video'; video: PexelsVideo }
+    | null
+  >(null);
+
   // Fetch VisuStock free content
   const { content: visustockContent, loading: visustockLoading } = useFreeContent(50);
 
