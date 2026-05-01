@@ -44,6 +44,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StoreSettingsCard } from '@/components/StoreSettingsCard';
 import { AvatarSettingsCard } from '@/components/AvatarSettingsCard';
 import { PayPalSettingsCard } from '@/components/PayPalSettingsCard';
+import { SellerEarningsCard } from '@/components/seller/SellerEarningsCard';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -399,7 +400,7 @@ const Dashboard = () => {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalRevenue?.toFixed(2) || '0.00'}€</div>
+                  <div className="text-2xl font-bold">${stats.totalRevenue?.toFixed(2) || '0.00'}</div>
                   <p className="text-xs text-muted-foreground">
                     Earnings from completed sales
                   </p>
