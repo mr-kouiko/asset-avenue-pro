@@ -888,6 +888,60 @@ export type Database = {
           },
         ]
       }
+      payout_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          currency: string
+          earnings_count: number
+          id: string
+          paid_at: string | null
+          paypal_email: string
+          paypal_payout_batch_id: string | null
+          processed_at: string | null
+          processed_by: string | null
+          rejection_reason: string | null
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          earnings_count?: number
+          id?: string
+          paid_at?: string | null
+          paypal_email: string
+          paypal_payout_batch_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          rejection_reason?: string | null
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          earnings_count?: number
+          id?: string
+          paid_at?: string | null
+          paypal_email?: string
+          paypal_payout_batch_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          rejection_reason?: string | null
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           amount: number
@@ -1356,6 +1410,7 @@ export type Database = {
           id: string
           net_amount: number
           payout_id: string | null
+          payout_request_id: string | null
           paypal_order_id: string | null
           seller_id: string
           source: string
@@ -1374,6 +1429,7 @@ export type Database = {
           id?: string
           net_amount: number
           payout_id?: string | null
+          payout_request_id?: string | null
           paypal_order_id?: string | null
           seller_id: string
           source?: string
@@ -1392,6 +1448,7 @@ export type Database = {
           id?: string
           net_amount?: number
           payout_id?: string | null
+          payout_request_id?: string | null
           paypal_order_id?: string | null
           seller_id?: string
           source?: string
@@ -1399,7 +1456,15 @@ export type Database = {
           submission_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "seller_earnings_payout_request_id_fkey"
+            columns: ["payout_request_id"]
+            isOneToOne: false
+            referencedRelation: "payout_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seo_audit_log: {
         Row: {
@@ -2121,6 +2186,18 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_mark_payout_paid: {
+        Args: {
+          p_admin_notes?: string
+          p_paypal_batch_id?: string
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      admin_reject_payout: {
+        Args: { p_reason: string; p_request_id: string }
+        Returns: undefined
+      }
       admin_update_platform_settings: {
         Args: {
           new_commission_rate?: number
@@ -2343,12 +2420,13 @@ export type Database = {
         Args: { p_seller_id: string }
         Returns: {
           available_amount: number
-          currency: string
+          lifetime_commission: number
           lifetime_gross: number
           paid_amount: number
           pending_amount: number
           refunded_amount: number
-          total_orders: number
+          requested_amount: number
+          total_sales: number
         }[]
       }
       get_seo_metadata: {
@@ -2417,12 +2495,17 @@ export type Database = {
         Args: { token_param: string }
         Returns: boolean
       }
+      mature_seller_earnings: { Args: never; Returns: number }
       process_scan_result: {
         Args: {
           p_ai_declaration: string
           p_detection_score: number
           p_submission_id: string
         }
+        Returns: string
+      }
+      request_seller_payout: {
+        Args: { p_min_amount?: number; p_paypal_email: string }
         Returns: string
       }
       search_marketplace: {
