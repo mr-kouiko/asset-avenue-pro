@@ -577,6 +577,15 @@ const FreeStockLibrary = () => {
       </Dialog>
 
       <Footer />
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          if (!user) setPendingDownload(null);
+        }}
+      />
+
     </div>
   );
 };
