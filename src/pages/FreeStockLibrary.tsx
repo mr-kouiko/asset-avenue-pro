@@ -522,10 +522,15 @@ const FreeStockLibrary = () => {
                       View on Pexels
                     </a>
                   </Button>
-                  <Button size="sm" onClick={() => handleDownloadPexelsPhoto(selectedItem.pexelsPhoto!)} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button size="sm" onClick={() => handleDownloadPexelsPhoto(selectedItem.pexelsPhoto!)} className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Download
+                    </Button>
+                    {!user && (
+                      <span className="text-xs text-muted-foreground">Free account required</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
