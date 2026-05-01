@@ -77,85 +77,9 @@ serve(async (req) => {
     const accessToken = await getPayPalAccessToken();
 
     switch (action) {
-      case 'activate': {
-        // Activate subscription after PayPal approval
-        console.log('Activating subscription:', paypal_subscription_id);
-        
-        // Get subscription details from PayPal
-        const subResponse = await fetch(`${PAYPAL_API_URL}/v1/billing/subscriptions/${paypal_subscription_id}`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!subResponse.ok) {
-          throw new Error('Failed to get subscription details from PayPal');
-        }
-
-        const subData = await subResponse.json();
-        console.log('PayPal subscription status:', subData.status);
-
-        // Parse custom data
-        let customData = { user_id: user.id, plan_type: 'monthly_30', is_yearly: false, credits_per_month: 30 };
-        try {
-          if (subData.custom_id) {
-            customData = JSON.parse(subData.custom_id);
-          }
-        } catch (e) {
-          console.warn('Could not parse custom_id:', e);
-        }
-
-        // Calculate period dates
-        const now = new Date();
-        const periodEnd = new Date(now);
-        if (customData.is_yearly) {
-          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-        } else {
-          periodEnd.setMonth(periodEnd.getMonth() + 1);
-        }
-
-        // Store subscription in database
-        const { data: subscription, error: insertError } = await supabaseAdmin
-          .from('user_subscriptions')
-          .upsert({
-            user_id: user.id,
-            paypal_subscription_id: paypal_subscription_id,
-            plan_type: customData.plan_type,
-            credits_per_month: customData.credits_per_month,
-            status: subData.status === 'ACTIVE' ? 'active' : 'pending',
-            current_period_start: now.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-            next_billing_date: periodEnd.toISOString(),
-            is_yearly: customData.is_yearly,
-            monthly_price: 0, // Will be set from plan config
-          }, { onConflict: 'paypal_subscription_id' })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Error storing subscription:', insertError);
-          throw new Error('Failed to store subscription');
-        }
-
-        // Add initial credits to user
-        if (subData.status === 'ACTIVE') {
-          await supabaseAdmin.rpc('add_user_credits', {
-            user_id_param: user.id,
-            amount_param: customData.credits_per_month,
-          });
-          console.log('Added initial credits:', customData.credits_per_month);
-        }
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            subscription,
-            credits_added: customData.credits_per_month,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      // NOTE: 'activate' branch removed — Infinity now uses the Orders API
+      // (one-time payment) and is activated server-side inside
+      // capture-paypal-order. PayPal Subscriptions API is no longer used.
 
       case 'check': {
         // Check subscription status
