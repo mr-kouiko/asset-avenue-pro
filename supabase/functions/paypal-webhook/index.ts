@@ -199,6 +199,12 @@ serve(async (req) => {
           .update({ status: 'refunded', processed_at: new Date().toISOString() })
           .eq('paypal_order_id', orderId);
 
+        // Reverse seller earnings tied to this order
+        await supabaseAdmin
+          .from('seller_earnings')
+          .update({ status: 'refunded' })
+          .eq('paypal_order_id', orderId);
+
         const { data: order } = await supabaseAdmin
           .from('paypal_orders')
           .select('user_id, order_type')
