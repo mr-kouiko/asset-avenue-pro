@@ -87,9 +87,10 @@ serve(async (req) => {
     const { cart_items, success_url, cancel_url, order_type = 'marketplace' } = body;
 
     // Calculate total amount based on order type
+    // VisuStock is strictly USD across all order types
     let totalAmount = 0;
     let orderDescription = '';
-    let currency = 'EUR';
+    let currency = 'USD';
 
     if (order_type === 'credits') {
       // AI Image credit pack purchase
@@ -108,13 +109,11 @@ serve(async (req) => {
       if (!ref || Number(credits) !== ref.credits || Number(amount) !== ref.amount) {
         throw new Error('Invalid VideoAI pack');
       }
-      currency = 'USD';
       totalAmount = ref.amount;
       orderDescription = `${ref.credits} VideoAI Credits - ${pack} Pack`;
     } else if (order_type === 'infinity') {
       // Infinity subscription via Orders API (hybrid approach)
       const { is_yearly } = body;
-      currency = 'USD';
       totalAmount = is_yearly ? INFINITY_PRICING.yearly : INFINITY_PRICING.monthly;
       orderDescription = is_yearly 
         ? 'VisuStock Infinity - Annual Subscription (12 months)'
@@ -173,7 +172,7 @@ serve(async (req) => {
       }],
       application_context: {
         brand_name: 'VisuStock',
-        locale: order_type === 'infinity' ? 'en-US' : 'fr-FR',
+        locale: 'en-US',
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
         return_url: success_url || `${req.headers.get('origin')}/payment-success`,

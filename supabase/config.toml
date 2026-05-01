@@ -185,3 +185,7 @@ verify_jwt = true
 
 [functions.generate-veo-video]
 verify_jwt = true
+
+[functions.paypal-webhook]
+verify_jwt = false
+
