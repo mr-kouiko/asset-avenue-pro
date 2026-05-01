@@ -11,6 +11,10 @@ import { LazyImage } from '@/components/LazyImage';
 import { useSEO } from '@/hooks/useSEO';
 import { useFreeContent, FreeItem } from '@/hooks/useFreeContent';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthModal } from '@/components/AuthModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PexelsPhoto {
   id: number;
