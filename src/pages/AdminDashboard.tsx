@@ -488,6 +488,10 @@ const AdminDashboard = () => {
           </TabsContent>
 
           {/* Transactions Tab */}
+          <TabsContent value="payouts">
+            <AdminPayoutsPanel />
+          </TabsContent>
+
           <TabsContent value="transactions">
             <AdminTransactionsDashboard />
           </TabsContent>
