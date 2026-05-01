@@ -506,6 +506,7 @@ const BuyerDashboard = () => {
 
             {/* Orders Tab */}
             <TabsContent value="orders" className="space-y-6">
+              <BuyerInvoices />
               <BuyerOrderHistory />
             </TabsContent>
 
