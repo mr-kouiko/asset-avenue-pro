@@ -251,6 +251,10 @@ const AdminDashboard = () => {
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Transactions</span>
             </TabsTrigger>
+            <TabsTrigger value="payouts" className="flex items-center gap-1">
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Payouts</span>
+            </TabsTrigger>
             <TabsTrigger value="support" className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
               <span className="hidden sm:inline">Support</span>
