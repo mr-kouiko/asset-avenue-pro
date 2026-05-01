@@ -981,6 +981,45 @@ export type Database = {
         }
         Relationships: []
       }
+      paypal_webhook_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          paypal_event_id: string
+          processed_at: string | null
+          resource_id: string | null
+          resource_type: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          paypal_event_id: string
+          processed_at?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          paypal_event_id?: string
+          processed_at?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       pexels_seo_content: {
         Row: {
           about_section: Json | null
@@ -2082,6 +2121,7 @@ export type Database = {
         Args: { cost_param?: number; user_id_param: string }
         Returns: boolean
       }
+      expire_ended_subscriptions: { Args: never; Returns: number }
       generate_product_slug: {
         Args: { tags_input: string[]; title_input: string }
         Returns: string
