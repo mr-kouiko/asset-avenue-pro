@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { slugifyStoreName } from '@/utils/slugGenerator';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ProductDetailData {
   id: string;
@@ -42,6 +43,7 @@ interface ProductDetailData {
 }
 
 export const useProductDetail = (productId: string) => {
+  const { language } = useLanguage();
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -236,6 +238,17 @@ export const useProductDetail = (productId: string) => {
           setLoading(false);
           return;
         }
+
+        const { data: translation } = language === 'en'
+          ? { data: null }
+          : await supabase
+              .from('product_translations')
+              .select('title, description, tags')
+              .eq('product_id', actualProductUuid)
+              .eq('language', language)
+              .maybeSingle();
+
+        const localized = translation as { title?: string | null; description?: string | null; tags?: string[] | null } | null;
 
         // Fetch content files for the product using the actual UUID (not the slug!)
         console.log('📁 [PRODUCT-DETAIL] Fetching files for product UUID:', actualProductUuid);
@@ -434,8 +447,8 @@ export const useProductDetail = (productId: string) => {
 
         const productData: ProductDetailData = {
           id: productInfo.id,
-          title: productInfo.title,
-          description: productInfo.description,
+          title: localized?.title || productInfo.title,
+          description: localized?.description || productInfo.description,
           author: productInfo.creator_store_name || 'Anonymous Store',
           authorId: 'anonymous',
           authorAvatar: productInfo.creator_avatar || undefined,
@@ -444,7 +457,7 @@ export const useProductDetail = (productId: string) => {
           thumbnail,
           previewUrl,
           hasWatermarkedPreview,
-          tags: productInfo.tags || [],
+          tags: localized?.tags || productInfo.tags || [],
           uploadDate: productInfo.created_at,
           likes: 0, // Would need to implement likes system
           downloads: 0, // Would need to fetch from downloads table
@@ -470,7 +483,6 @@ export const useProductDetail = (productId: string) => {
           } : undefined
         };
 
-        // Site is 100% English now - no translation needed
         console.log('📦 Final productData', productData);
         setProduct(productData);
       } catch (err) {
@@ -484,7 +496,7 @@ export const useProductDetail = (productId: string) => {
 
     fetchProductDetail();
     return () => { isMounted = false; };
-  }, [productId]);
+  }, [productId, language]);
 
   return {
     product,
