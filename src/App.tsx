@@ -114,6 +114,10 @@ const App = () => (
                     <RouteTitleFallback />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
+                        {/* Localized homepages: /fr, /es, /de, /pt */}
+                        <Route path="/:lang(fr|es|de|pt)" element={<IndexEN />} />
+                        {/* Localized prefix wrapper: re-runs the same routes under /:lang/* */}
+                        <Route path="/:lang(fr|es|de|pt)/*" element={<LocalizedRoutes />} />
                         {/* Homepage - loaded eagerly for fast initial render */}
                         <Route path="/" element={<IndexEN />} />
                         
