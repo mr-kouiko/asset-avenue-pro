@@ -5,20 +5,38 @@ const corsHeaders = {
 
 const SITE_URL = "https://visustock.com";
 const STATIC_PREFIX = "/s";
+const LANGS = ["en", "fr", "es", "de", "pt"] as const;
+const langPath = (lang: string, path: string) => (lang === "en" ? path : `/${lang}${path}`);
 
-// Collection slugs (synced with static-collection)
 const collectionSlugs = [
-  'business',
-  'technology',
-  'nature',
-  'travel',
-  'food',
-  'health-wellness',
-  'education',
-  'lifestyle',
-  'music-audio',
-  'abstract-backgrounds'
+  "business",
+  "technology",
+  "nature",
+  "travel",
+  "food",
+  "health-wellness",
+  "education",
+  "lifestyle",
+  "music-audio",
+  "abstract-backgrounds",
 ];
+
+function emitLocalized(path: string, priority: string, lastmod: string): string {
+  let out = "";
+  for (const lang of LANGS) {
+    out += `  <url>
+    <loc>${SITE_URL}${langPath(lang, path)}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>${priority}</priority>
+`;
+    for (const alt of LANGS) {
+      out += `    <xhtml:link rel="alternate" hreflang="${alt}" href="${SITE_URL}${langPath(alt, path)}" />\n`;
+    }
+    out += `    <xhtml:link rel="alternate" hreflang="x-default" href="${SITE_URL}${path}" />\n  </url>\n`;
+  }
+  return out;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,26 +44,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const now = new Date().toISOString().split('T')[0];
-    
+    const now = new Date().toISOString().split("T")[0];
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${SITE_URL}${STATIC_PREFIX}/collections</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 `;
 
+    xml += emitLocalized(`${STATIC_PREFIX}/collections`, "0.9", now);
+
     for (const slug of collectionSlugs) {
-      xml += `  <url>
-    <loc>${SITE_URL}${STATIC_PREFIX}/collections/${slug}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-`;
+      xml += emitLocalized(`${STATIC_PREFIX}/collections/${slug}`, "0.8", now);
     }
 
     xml += `</urlset>`;

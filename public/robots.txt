@@ -19,6 +19,10 @@ Allow: /packages-pricing
 Allow: /ai-image-generator
 Allow: /buy-credits
 Allow: /en/
+Allow: /fr/
+Allow: /es/
+Allow: /de/
+Allow: /pt/
 Allow: /blog
 Allow: /blog/
 
