@@ -18,11 +18,14 @@ import { MobileMenu } from "@/components/MobileMenu";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { NotificationBell } from "@/components/NotificationBell";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLocalizedPath } from "@/hooks/useLocalizedPath";
 
 export const Header = () => {
   const { user, signOut, loading, role } = useAuth();
   const { getItemCount } = useCart();
   const { language, setLanguage, t } = useLanguage();
+  const lp = useLocalizedPath();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const navigate = useNavigate();
   const { content: marketplaceContent } = useMarketplace();
