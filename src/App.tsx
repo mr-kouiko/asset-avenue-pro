@@ -175,14 +175,7 @@ const AppRoutes = () => (
   </Routes>
 );
 
-// Wrapper for /:lang/* — validates lang param, then renders the same route table
-const LocalizedAppRoutes = () => {
-  const { lang } = useParams<{ lang: string }>();
-  if (!isLanguage(lang) || lang === 'en') {
-    return <Navigate to="/" replace />;
-  }
-  return <AppRoutes />;
-};
+
 
 const App = () => (
   <ErrorBoundary>
