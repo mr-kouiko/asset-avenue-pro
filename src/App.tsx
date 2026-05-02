@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
@@ -12,6 +12,7 @@ import { LanguageRedirect } from "@/components/LanguageRedirect";
 import { RouteTitleFallback } from "@/components/RouteTitleFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { lazy, Suspense } from "react";
+import { isLanguage } from "@/i18n";
 
 
 // Critical above-the-fold components loaded eagerly
@@ -90,13 +91,98 @@ const CollectionDetail = lazy(() => import("./pages/CollectionDetail"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
     },
   },
 });
+
+// Shared route table — rendered both at root (English) and under /:lang/*
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<IndexEN />} />
+    <Route path="/marketplace" element={<Marketplace />} />
+    <Route path="/videos/:searchQuery" element={<Marketplace />} />
+    <Route path="/photos/:searchQuery" element={<Marketplace />} />
+    <Route path="/audio/:searchQuery" element={<Marketplace />} />
+    <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
+    <Route path="/products/:slug" element={<ProductDetail />} />
+    <Route path="/product/:id" element={<ProductDetail />} />
+    <Route path="/auth" element={<Auth />} />
+    <Route path="/auth/seller" element={<Auth />} />
+    <Route path="/auth/callback" element={<AuthCallback />} />
+    <Route path="/dashboard" element={<DashboardRouter />} />
+    <Route path="/seller-dashboard" element={<SellerDashboard />} />
+    <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+    <Route path="/portfolio" element={<Portfolio />} />
+    <Route path="/seller/:storeSlug" element={<SellerPortfolio />} />
+    <Route path="/cart" element={<Cart />} />
+    <Route path="/checkout" element={<Checkout />} />
+    <Route path="/payment-success" element={<PaymentSuccess />} />
+    <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+    <Route path="/file-upload" element={<FileUpload />} />
+    <Route path="/product-management" element={<ProductManagement />} />
+    <Route path="/become-seller" element={<BecomeSeller />} />
+    <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
+    <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
+    <Route path="/ai-image-generator" element={<AIImageGenerator />} />
+    <Route path="/studio-ai" element={<StudioAI />} />
+    <Route path="/studio-ai/remove-background" element={<RemoveBackground />} />
+    <Route path="/studio-ai/video-upscale" element={<VideoUpscale />} />
+    <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
+    <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
+    <Route path="/studio-ai/text-to-video" element={<TextToVideoAI />} />
+    <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
+    <Route path="/studio-ai/adjust-music-duration" element={<AdjustMusicDuration />} />
+    <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
+    <Route path="/ai-upscaler" element={<AIUpscaler />} />
+    <Route path="/face-enhancer" element={<FaceEnhancer />} />
+    <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
+    <Route path="/free-stock-library" element={<FreeStockLibrary />} />
+    <Route path="/pexels/:slug" element={<PexelsAssetDetail />} />
+    <Route path="/free-photo/:pexelsId" element={<PexelsAssetDetail />} />
+    <Route path="/free-video/:pexelsId" element={<PexelsAssetDetail />} />
+    <Route path="/support" element={<Support />} />
+    <Route path="/contact" element={<ContactEN />} />
+    <Route path="/licenses" element={<Licenses />} />
+    <Route path="/terms" element={<TermsEN />} />
+    <Route path="/cookie-policy" element={<CookiePolicyEN />} />
+    <Route path="/privacy-policy" element={<PrivacyPolicyEN />} />
+    <Route path="/license-agreement" element={<LicenseAgreementEN />} />
+    <Route path="/infinity" element={<InfinityEN />} />
+    <Route path="/packages-pricing" element={<PackagesPricing />} />
+    <Route path="/about" element={<AboutEN />} />
+    <Route path="/blog" element={<BlogEN />} />
+    <Route path="/blog/:slug" element={<BlogArticleEN />} />
+    <Route path="/collections" element={<Collections />} />
+    <Route path="/collections/:slug" element={<CollectionDetail />} />
+    <Route path="/buy-credits" element={<BuyCredits />} />
+    <Route path="/test-accounts" element={<TestAccounts />} />
+    <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+    <Route path="/admin" element={
+      <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
+        <AdminDashboard />
+      </ProtectedRoute>
+    } />
+    <Route path="/create-test-accounts" element={
+      <ProtectedRoute allowedRoles={['admin']}>
+        <CreateTestAccounts />
+      </ProtectedRoute>
+    } />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
+// Wrapper for /:lang/* — validates lang param, then renders the same route table
+const LocalizedAppRoutes = () => {
+  const { lang } = useParams<{ lang: string }>();
+  if (!isLanguage(lang) || lang === 'en') {
+    return <Navigate to="/" replace />;
+  }
+  return <AppRoutes />;
+};
 
 const App = () => (
   <ErrorBoundary>
@@ -105,114 +191,24 @@ const App = () => (
         <CartProvider>
           <AudioPlayerProvider>
             <TooltipProvider>
-              <LanguageProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
+              <BrowserRouter>
+                <LanguageProvider>
+                  <Toaster />
+                  <Sonner />
                   <SearchProvider>
                     <LanguageRedirect />
                     <RouteTitleFallback />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
-                        {/* Localized homepages: /fr, /es, /de, /pt */}
-                        <Route path="/:lang(fr|es|de|pt)" element={<IndexEN />} />
-                        {/* Localized prefix wrapper: re-runs the same routes under /:lang/* */}
-                        <Route path="/:lang(fr|es|de|pt)/*" element={<LocalizedRoutes />} />
-                        {/* Homepage - loaded eagerly for fast initial render */}
-                        <Route path="/" element={<IndexEN />} />
-                        
-                        {/* Marketplace routes */}
-                        <Route path="/marketplace" element={<Marketplace />} />
-                        <Route path="/videos/:searchQuery" element={<Marketplace />} />
-                        <Route path="/photos/:searchQuery" element={<Marketplace />} />
-                        <Route path="/audio/:searchQuery" element={<Marketplace />} />
-                        <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
-                        <Route path="/products/:slug" element={<ProductDetail />} />
-                        <Route path="/product/:id" element={<ProductDetail />} />
-                        
-                        {/* Auth routes */}
-                        <Route path="/auth" element={<Auth />} />
-                        <Route path="/auth/seller" element={<Auth />} />
-                        <Route path="/auth/callback" element={<AuthCallback />} />
-                        
-                        {/* Dashboard routes */}
-                        <Route path="/dashboard" element={<DashboardRouter />} />
-                        <Route path="/seller-dashboard" element={<SellerDashboard />} />
-                        <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
-                        <Route path="/portfolio" element={<Portfolio />} />
-                        <Route path="/seller/:storeSlug" element={<SellerPortfolio />} />
-                        
-                        {/* E-commerce routes */}
-                        <Route path="/cart" element={<Cart />} />
-                        <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/payment-success" element={<PaymentSuccess />} />
-                        <Route path="/payment-cancelled" element={<PaymentCancelled />} />
-                        
-                        {/* Creator routes */}
-                        <Route path="/file-upload" element={<FileUpload />} />
-                        <Route path="/product-management" element={<ProductManagement />} />
-                        <Route path="/become-seller" element={<BecomeSeller />} />
-                        <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
-                        <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
-                        
-                        {/* AI/Studio routes (heavy) */}
-                        <Route path="/ai-image-generator" element={<AIImageGenerator />} />
-                        <Route path="/studio-ai" element={<StudioAI />} />
-                        <Route path="/studio-ai/remove-background" element={<RemoveBackground />} />
-                        <Route path="/studio-ai/video-upscale" element={<VideoUpscale />} />
-                        <Route path="/studio-ai/text-to-speech" element={<TextToSpeech />} />
-                        <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
-                        <Route path="/studio-ai/text-to-video" element={<TextToVideoAI />} />
-                        <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
-                        <Route path="/studio-ai/adjust-music-duration" element={<AdjustMusicDuration />} />
-                        <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
-                        <Route path="/ai-upscaler" element={<AIUpscaler />} />
-                        <Route path="/face-enhancer" element={<FaceEnhancer />} />
-                        <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
-                        <Route path="/free-stock-library" element={<FreeStockLibrary />} />
-                        {/* Legacy Pexels routes — redirect to /products/free-{type}-...-pexels-{id} */}
-                        <Route path="/pexels/:slug" element={<PexelsAssetDetail />} />
-                        <Route path="/free-photo/:pexelsId" element={<PexelsAssetDetail />} />
-                        <Route path="/free-video/:pexelsId" element={<PexelsAssetDetail />} />
-                        
-                        {/* Content pages */}
-                        <Route path="/support" element={<Support />} />
-                        <Route path="/contact" element={<ContactEN />} />
-                        <Route path="/licenses" element={<Licenses />} />
-                        <Route path="/terms" element={<TermsEN />} />
-                        <Route path="/cookie-policy" element={<CookiePolicyEN />} />
-                        <Route path="/privacy-policy" element={<PrivacyPolicyEN />} />
-                        <Route path="/license-agreement" element={<LicenseAgreementEN />} />
-                        <Route path="/infinity" element={<InfinityEN />} />
-                        <Route path="/packages-pricing" element={<PackagesPricing />} />
-                        <Route path="/about" element={<AboutEN />} />
-                        <Route path="/blog" element={<BlogEN />} />
-                        <Route path="/blog/:slug" element={<BlogArticleEN />} />
-                        <Route path="/collections" element={<Collections />} />
-                        <Route path="/collections/:slug" element={<CollectionDetail />} />
-                        <Route path="/buy-credits" element={<BuyCredits />} />
-                        <Route path="/test-accounts" element={<TestAccounts />} />
-                        <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-                        
-                        {/* Admin routes */}
-                        <Route path="/admin" element={
-                          <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
-                            <AdminDashboard />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/create-test-accounts" element={
-                          <ProtectedRoute allowedRoles={['admin']}>
-                            <CreateTestAccounts />
-                          </ProtectedRoute>
-                        } />
-                        
-                        {/* 404 Route */}
-                        <Route path="*" element={<NotFound />} />
+                        {/* Localized routes — must come before catch-all */}
+                        <Route path="/:lang/*" element={<LocalizedAppRoutes />} />
+                        {/* Default English routes */}
+                        <Route path="/*" element={<AppRoutes />} />
                       </Routes>
                     </Suspense>
                   </SearchProvider>
-                </BrowserRouter>
-              </LanguageProvider>
+                </LanguageProvider>
+              </BrowserRouter>
             </TooltipProvider>
           </AudioPlayerProvider>
         </CartProvider>
