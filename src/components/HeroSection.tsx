@@ -41,7 +41,7 @@ export const HeroSection = () => {
     }
   };
 
-  const t = content[language];
+  const t = content[language as 'en' | 'fr'] ?? content.en;
 
   return (
     <section className="relative py-6 sm:py-12 md:py-20 overflow-hidden min-h-[40vh] sm:min-h-[55vh] md:min-h-[70vh] flex items-center">

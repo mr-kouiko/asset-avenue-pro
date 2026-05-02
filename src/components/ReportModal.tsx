@@ -81,7 +81,7 @@ export const ReportModal = ({ submissionId, contentTitle, children }: ReportModa
     }
   };
 
-  const t = labels[language];
+  const t = labels[language as 'en' | 'fr'] ?? labels.en;
 
   const reasons: { value: ReportReason; label: string; description: string }[] = [
     { value: 'copyright', label: t.copyright, description: t.copyrightDesc },

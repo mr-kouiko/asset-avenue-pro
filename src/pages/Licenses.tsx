@@ -201,7 +201,7 @@ const Licenses = () => {
     }
   };
   
-  const t = content[language];
+  const t = content[language as 'en' | 'fr'] ?? content.en;
 
   return (
     <div className="min-h-screen bg-background">
