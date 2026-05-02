@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface MarketplaceContent {
   id: string;
@@ -88,11 +89,13 @@ function processMarketplaceData(
   filesBySubmission: Map<string, any[]>,
   creatorMap: Map<string, string>,
   likesMap: Map<string, number>,
-  downloadsMap: Map<string, number>
+  downloadsMap: Map<string, number>,
+  translationsMap: Map<string, { title?: string | null; tags?: string[] | null }>
 ): MarketplaceContent[] {
   return marketplaceData
     .map((item: any) => {
       const files = filesBySubmission.get(item.id) || [];
+      const localized = translationsMap.get(item.id);
       if (!files.length) return null;
 
       const originalFile = files.find((f: any) => f.is_original);
@@ -193,7 +196,7 @@ function processMarketplaceData(
       return {
         id: item.id,
         slug: item.slug,
-        title: item.title || 'Untitled',
+        title: localized?.title || item.title || 'Untitled',
         author: creatorMap.get(item.creator_id) || 'Anonymous Store',
         price: item.price ?? 0,
         isFree: item.price === 0,
@@ -205,7 +208,7 @@ function processMarketplaceData(
         likes: likesMap.get(item.id) || 0,
         downloads: downloadsMap.get(item.id) || 0,
         category_id: item.category_id,
-        tags: item.tags || [],
+        tags: localized?.tags || item.tags || [],
         created_at: item.created_at,
         duration: originalFile?.metadata && typeof originalFile.metadata === 'object' && 'duration' in originalFile.metadata
           ? originalFile.metadata.duration as string : undefined,
@@ -223,6 +226,7 @@ function processMarketplaceData(
 // ============================================================================
 
 export const useMarketplace = (filters: MarketplaceFilters = {}) => {
+  const { language } = useLanguage();
   const [content, setContent] = useState<MarketplaceContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -283,7 +287,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
       const submissionIds = rpcData.map((item: any) => item.id);
       const creatorIds = [...new Set(rpcData.map((item: any) => item.creator_id))];
 
-      const [creatorsResult, filesResult, likesResult, downloadsResult] = await Promise.all([
+      const [creatorsResult, filesResult, likesResult, downloadsResult, translationsResult] = await Promise.all([
         supabase.rpc('get_creator_public_info', { creator_ids: creatorIds as string[] }),
         supabase
           .from('content_files')
@@ -291,6 +295,13 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
           .in('submission_id', submissionIds),
         supabase.from('content_likes').select('submission_id').in('submission_id', submissionIds),
         supabase.from('downloads').select('submission_id').in('submission_id', submissionIds),
+        language === 'en'
+          ? Promise.resolve({ data: [] })
+          : supabase
+              .from('product_translations')
+              .select('product_id, title, tags')
+              .eq('language', language)
+              .in('product_id', submissionIds),
       ]);
 
       if (fetchId !== abortRef.current) return;
@@ -313,7 +324,15 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
         downloadsMap.set(row.submission_id, (downloadsMap.get(row.submission_id) || 0) + 1);
       });
 
-      const processed = processMarketplaceData(rpcData, filesBySubmission, creatorMap, likesMap, downloadsMap);
+      const translationsMap = new Map<string, { title?: string | null; tags?: string[] | null }>();
+      (translationsResult.data || []).forEach((row: any) => {
+        translationsMap.set(row.product_id, {
+          title: row.title,
+          tags: Array.isArray(row.tags) ? row.tags : [],
+        });
+      });
+
+      const processed = processMarketplaceData(rpcData, filesBySubmission, creatorMap, likesMap, downloadsMap, translationsMap);
       setContent(processed);
     } catch (err) {
       console.error('Error fetching marketplace:', err);
@@ -326,7 +345,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
         setLoading(false);
       }
     }
-  }, []);
+  }, [language]);
 
   // Refetch when filters change
   const filtersKey = JSON.stringify(filters);
