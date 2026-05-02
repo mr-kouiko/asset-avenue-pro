@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { generateSuggestions } from '@/utils/fuzzySearch';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLocalizedPath } from '@/hooks/useLocalizedPath';
 import { cn } from '@/lib/utils';
 
 interface SearchableItem {
@@ -47,7 +48,16 @@ export function SearchWithSuggestions({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
+  const lp = useLocalizedPath();
   const navigate = useNavigate();
+
+  const labels = {
+    en: { search: 'Search', recent: 'Recent searches', clear: 'Clear', suggestions: 'Suggestions' },
+    fr: { search: 'Rechercher', recent: 'Recherches récentes', clear: 'Effacer', suggestions: 'Suggestions' },
+    es: { search: 'Buscar', recent: 'Búsquedas recientes', clear: 'Borrar', suggestions: 'Sugerencias' },
+    de: { search: 'Suchen', recent: 'Letzte Suchanfragen', clear: 'Löschen', suggestions: 'Vorschläge' },
+    pt: { search: 'Pesquisar', recent: 'Pesquisas recentes', clear: 'Limpar', suggestions: 'Sugestões' },
+  }[language];
 
   // Load recent searches on mount
   useEffect(() => {
@@ -122,12 +132,12 @@ export function SearchWithSuggestions({
         'ebook': 'ebooks'
       };
       const categoryPath = categoryPaths[categoryFilter] || categoryFilter;
-      navigate(`/${categoryPath}/${slugifiedQuery}`);
+      navigate(lp(`/${categoryPath}/${slugifiedQuery}`));
     } else {
       // Global search uses query params
-      navigate(`/marketplace?search=${encodeURIComponent(trimmed)}`);
+      navigate(`${lp('/marketplace')}?search=${encodeURIComponent(trimmed)}`);
     }
-  }, [saveRecentSearch, onSearch, navigate, categoryFilter]);
+  }, [saveRecentSearch, onSearch, navigate, categoryFilter, lp]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const allOptions = [...(query.length < 2 ? recentSearches : []), ...suggestions];
@@ -212,7 +222,7 @@ export function SearchWithSuggestions({
             className="px-6 sm:px-8 h-12"
             onClick={() => handleSubmit(query)}
           >
-            {language === 'fr' ? 'Rechercher' : 'Search'}
+            {labels.search}
           </Button>
         )}
       </div>
@@ -226,13 +236,13 @@ export function SearchWithSuggestions({
               <div className="flex items-center justify-between px-3 py-2 bg-muted/50">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {language === 'fr' ? 'Recherches récentes' : 'Recent searches'}
+                  {labels.recent}
                 </span>
                 <button
                   onClick={clearRecentSearches}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
-                  {language === 'fr' ? 'Effacer' : 'Clear'}
+                  {labels.clear}
                 </button>
               </div>
               {recentSearches.map((search, index) => (
@@ -257,7 +267,7 @@ export function SearchWithSuggestions({
               <div className="px-3 py-2 bg-muted/50">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
-                  {language === 'fr' ? 'Suggestions' : 'Suggestions'}
+                  {labels.suggestions}
                 </span>
               </div>
               {suggestions.map((suggestion, index) => (
