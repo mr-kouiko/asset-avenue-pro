@@ -61,7 +61,7 @@ export const ReviewForm = ({
     }
   };
 
-  const t = labels[language];
+  const t = labels[language as 'en' | 'fr'] ?? labels.en;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

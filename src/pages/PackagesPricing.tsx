@@ -158,7 +158,7 @@ const PackagesPricing = () => {
     }
   };
 
-  const t = content[language];
+  const t = content[language as 'en' | 'fr'] ?? content.en;
 
   const handleBuyCredits = async (credits: number, price: number, packIndex: number) => {
     if (!user) {

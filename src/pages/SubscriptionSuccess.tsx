@@ -47,7 +47,7 @@ const SubscriptionSuccess = () => {
     },
   };
 
-  const t = content[language];
+  const t = content[language as 'en' | 'fr'] ?? content.en;
 
   useEffect(() => {
     // Prevent double activation

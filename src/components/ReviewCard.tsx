@@ -55,7 +55,7 @@ export const ReviewCard = ({
     }
   };
   
-  const t = labels[language];
+  const t = labels[language as 'en' | 'fr'] ?? labels.en;
 
   return (
     <div className="border-b border-border py-4 last:border-0">

@@ -32,7 +32,7 @@ export const NotificationBell = () => {
     }
   };
 
-  const t = labels[language];
+  const t = labels[language as 'en' | 'fr'] ?? labels.en;
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -81,7 +81,7 @@ const Support = () => {
     }
   };
   
-  const t = content[language];
+  const t = content[language as 'en' | 'fr'] ?? content.en;
 
   const filteredFaqs = t.faqs.filter(faq => 
     searchQuery === '' ||
