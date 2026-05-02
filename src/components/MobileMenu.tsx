@@ -204,6 +204,12 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
             <MenuItem to={lp("/marketplace?sort=trending")} icon={TrendingUp} label={labels.trending} onClick={close} />
           </div>
 
+          {/* Language */}
+          <SectionLabel>{t('lang.switch')}</SectionLabel>
+          <div className="px-3">
+            <LanguageSwitcher variant="default" />
+          </div>
+
           {/* Section 2 – Creator Tools (if creator) */}
           {user && isCreator && (
             <>
