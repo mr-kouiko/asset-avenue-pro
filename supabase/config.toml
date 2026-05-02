@@ -189,3 +189,6 @@ verify_jwt = true
 [functions.paypal-webhook]
 verify_jwt = false
 
+[functions.batch-translate-products]
+verify_jwt = true
+
