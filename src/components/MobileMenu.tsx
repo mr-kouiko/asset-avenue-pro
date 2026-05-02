@@ -12,6 +12,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocalizedPath } from "@/hooks/useLocalizedPath";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 
 interface MobileMenuProps {
@@ -64,6 +66,7 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut } = useAuth();
   const { language, t } = useLanguage();
+  const lp = useLocalizedPath();
   const { getItemCount } = useCart();
   const navigate = useNavigate();
 
@@ -88,7 +91,7 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(lp("/marketplace?search=${encodeURIComponent(searchQuery.trim())}"));
+      navigate(`${lp('/marketplace')}?search=${encodeURIComponent(searchQuery.trim())}`);
       setIsOpen(false);
       setSearchQuery('');
     }
