@@ -1,33 +1,15 @@
 import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
+/**
+ * Legacy redirect handler — currently a no-op.
+ * Language detection is fully handled by LanguageProvider via URL prefix
+ * and route definitions in App.tsx.
+ */
 export const LanguageRedirect = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-
   useEffect(() => {
-    const { pathname, search, hash } = location;
-
-    // If user is on root path, no redirect needed - English is default
-    if (pathname === '/') {
-      return;
-    }
-
-    // Redirect old French routes to English
-    if (pathname.startsWith('/fr/') || pathname === '/fr') {
-      const newPath = pathname.replace('/fr', '') || '/';
-      navigate(`${newPath}${search}${hash}`, { replace: true });
-      return;
-    }
-
-    // Redirect old /en/ routes to root
-    // IMPORTANT: preserve query params (e.g. ?theme=..., ?price=free)
-    if (pathname.startsWith('/en/') || pathname === '/en') {
-      const newPath = pathname.replace('/en', '') || '/';
-      navigate(`${newPath}${search}${hash}`, { replace: true });
-      return;
-    }
-  }, [location.pathname, location.search, location.hash, navigate]);
-
+    // Reserved for future legacy URL migrations.
+  }, [location.pathname]);
   return null;
 };
