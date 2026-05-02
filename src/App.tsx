@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
@@ -12,7 +12,7 @@ import { LanguageRedirect } from "@/components/LanguageRedirect";
 import { RouteTitleFallback } from "@/components/RouteTitleFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { lazy, Suspense } from "react";
-import { isLanguage } from "@/i18n";
+
 
 
 // Critical above-the-fold components loaded eagerly
