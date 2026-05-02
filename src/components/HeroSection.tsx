@@ -27,6 +27,27 @@ export const HeroSection = () => {
         ebooks: "Ebooks"
       }
     },
+    es: {
+      title: "El marketplace digital premium para",
+      titleHighlight: "creadores y profesionales",
+      subtitle: "Fotos, vídeos, música, ebooks y recursos generados con IA — descargas instantáneas, licencias comerciales claras y herramientas creativas IA integradas. Vende tus creaciones o encuentra el recurso perfecto para tu proyecto.",
+      searchPlaceholder: "Buscar fotos, vídeos, audio, ebooks...",
+      statsLabels: { photos: "Fotos", videos: "Vídeos", audio: "Audio", ebooks: "Ebooks" }
+    },
+    de: {
+      title: "Der Premium-Marktplatz für",
+      titleHighlight: "Kreative und Profis",
+      subtitle: "Stockfotos, Videos, Musik, Ebooks und KI-generierte Assets — sofortige Downloads, klare kommerzielle Lizenzen und integrierte KI-Kreativtools. Verkaufe deine Werke oder finde das perfekte Asset für dein Projekt.",
+      searchPlaceholder: "Fotos, Videos, Audio, Ebooks suchen...",
+      statsLabels: { photos: "Fotos", videos: "Videos", audio: "Audio", ebooks: "Ebooks" }
+    },
+    pt: {
+      title: "O marketplace digital premium para",
+      titleHighlight: "criadores e profissionais",
+      subtitle: "Fotos, vídeos, músicas, ebooks e recursos gerados por IA — downloads instantâneos, licenças comerciais claras e ferramentas criativas de IA integradas. Venda suas criações ou encontre o recurso perfeito para seu projeto.",
+      searchPlaceholder: "Pesquisar fotos, vídeos, áudio, ebooks...",
+      statsLabels: { photos: "Fotos", videos: "Vídeos", audio: "Áudio", ebooks: "Ebooks" }
+    },
     en: {
       title: "The premium digital marketplace for",
       titleHighlight: "creators and professionals",
@@ -41,7 +62,7 @@ export const HeroSection = () => {
     }
   };
 
-  const t = content[language as 'en' | 'fr'] ?? content.en;
+  const t = content[language] ?? content.en;
 
   return (
     <section className="relative py-6 sm:py-12 md:py-20 overflow-hidden min-h-[40vh] sm:min-h-[55vh] md:min-h-[70vh] flex items-center">
