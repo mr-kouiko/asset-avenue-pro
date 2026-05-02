@@ -200,9 +200,12 @@ const App = () => (
                     <RouteTitleFallback />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
-                        {/* Localized routes — must come before catch-all */}
-                        <Route path="/:lang/*" element={<LocalizedAppRoutes />} />
-                        {/* Default English routes */}
+                        {/* Explicit non-English language prefixes */}
+                        <Route path="/fr/*" element={<AppRoutes />} />
+                        <Route path="/es/*" element={<AppRoutes />} />
+                        <Route path="/de/*" element={<AppRoutes />} />
+                        <Route path="/pt/*" element={<AppRoutes />} />
+                        {/* Default English routes (root) */}
                         <Route path="/*" element={<AppRoutes />} />
                       </Routes>
                     </Suspense>
