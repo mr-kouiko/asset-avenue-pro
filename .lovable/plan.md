@@ -1,65 +1,77 @@
-## Soft-gate Pexels downloads behind authentication
+# Multi-Language Support Plan (No AI Credits)
 
-Force visitors to create a free account (or log in) before downloading any Pexels file from `/free-stock-library`. Browsing, previewing and search remain fully open (good for SEO). Only the **Download** action triggers the auth wall.
+Add support for **5 languages**: English (default), French, Spanish, German, Portuguese — using free LibreTranslate, with **path-prefix URLs** (`/fr/marketplace`, `/es/products/...`) for proper SEO.
 
-### User flow
+## What changes
 
-```text
-Visitor browses /free-stock-library  → OK, no login needed
-Visitor clicks "Download" on a Pexels item:
-   ├─ Logged in?  → download starts immediately + tracked in DB
-   └─ Not logged → AuthModal opens with message
-                   "Create a free account to download"
-                   ↓
-                   After signup/login → pending download auto-resumes
-```
+### 1. URL routing (`/xx/` prefix)
+- English stays at root (`/marketplace`) — keeps existing SEO intact
+- Other languages get prefix: `/fr/marketplace`, `/es/marketplace`, `/de/marketplace`, `/pt/marketplace`
+- Update `LanguageRedirect.tsx` to detect prefix and set language; remove forced English-only redirect
+- Update `BrowserRouter` config in `App.tsx` to handle prefixed routes (wrap in `:lang?` param or duplicate route tree)
+- Add `<link rel="alternate" hreflang="...">` tags in `SEOHead.tsx` for each language variant
 
-### Changes
+### 2. UI translations (manual, free)
+Restructure `LanguageContext.tsx`:
+- Split dictionaries into separate files: `src/i18n/en.ts`, `fr.ts`, `es.ts`, `de.ts`, `pt.ts`
+- Move existing `en` keys + add equivalents in 4 other languages (initially via DeepL Free / Google Translate web — done by you or me, not via API)
+- Re-enable real `setLanguage()` (currently locked to `en`)
+- Persist choice in `localStorage` + sync with URL prefix
+- Audit ~15 main pages and wrap visible strings with `t()` (Header, Navigation, Marketplace, ProductDetail, Footer, Auth, Cart, Checkout, Dashboard, etc.)
 
-**1. `src/pages/FreeStockLibrary.tsx`**
-- Import `useAuth` and the existing `AuthModal` component.
-- Add state: `showAuthModal`, `pendingDownload` (stores the photo/video the user wanted).
-- Replace `handleDownloadPexelsPhoto` / `handleDownloadPexelsVideo`:
-  - If `!user` → store the item in `pendingDownload`, open `AuthModal`.
-  - If `user` → call new `triggerPexelsDownload()` which:
-    1. Logs the download via Edge Function `track-pexels-download` (fire-and-forget).
-    2. Opens the file URL (existing behaviour).
-- `useEffect` on `user`: if `pendingDownload` exists and user just logged in, auto-resume the download and clear state.
-- Add a subtle hint under the Download button when logged out: *"Free account required"*.
+### 3. Language switcher UI
+- Add dropdown in `Header.tsx` (flag + language name)
+- Also add to `MobileMenu.tsx` drawer
+- Switching language rewrites URL to add/remove prefix and reloads route
 
-**2. New table `pexels_downloads`** (light tracking, real stats — no fake engagement)
+### 4. Product translations (LibreTranslate batch)
+Your `product_translations` table + `scripts/batch-translate-products.js` already exist. We will:
+- Extend the script to loop over all 4 target languages (`fr`, `es`, `de`, `pt`)
+- Translate `title`, `description`, and each `tag`
+- Store results in `product_translations` (one row per product × language)
+- Add a **trigger Edge Function** (`auto-translate-product`) called when a new submission is approved → translates it into all 4 languages automatically, so new uploads stay multilingual without manual reruns
 
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK auth.users | cascade delete |
-| pexels_id | bigint | photo or video id |
-| media_type | text | 'photo' or 'video' |
-| author | text | Pexels photographer/creator name |
-| downloaded_at | timestamptz | default now() |
+### 5. Frontend product display
+- Update `useProductDetail.tsx`, `useMarketplace.tsx`, `ContentCard.tsx` to fetch `product_translations` joined by current language
+- Fallback to original English if no translation row exists
+- Update SEO meta (title/description) to use translated values per language
 
-- RLS: users can `INSERT` and `SELECT` their own rows only. Admins can `SELECT` all (via `has_role`).
-- Index on `user_id, downloaded_at desc` for the future "my downloads" view.
+### 6. SEO
+- Generate per-language sitemaps (`/sitemap-fr.xml`, etc.) — extend the existing prerender Edge Function
+- Update `robots.txt` to reference all sitemaps
+- `hreflang` cross-links between language versions of each product page
 
-**3. New Edge Function `track-pexels-download`** (verify_jwt = true)
-- Validates the JWT, parses `{ pexelsId, mediaType, author }`, inserts into `pexels_downloads`.
-- Returns 204 quickly so the actual file open is never delayed.
-- Wrapped in try/catch — a logging failure must never block the download.
+## Memories to update
+- Replace core rule "Strictly USD ($). No EUR or localization." → keep USD, drop the "no localization" part
+- Update "Legal Contact & Policies" memory: legal pages will also be translated (or note that they remain English-only — your call)
+- Add new memory `i18n/multi-language-system` documenting the architecture
 
-**4. `AuthModal` reuse**
-- No code change needed. The existing modal already handles signup + Google OAuth. We just open it with the right title/subtitle if those props exist; otherwise we leave the default copy.
+## What stays in English only
+- Pexels SEO programmatic content (already AI-generated, retranslating would balloon DB)
+- Admin dashboards (internal use)
+- Email templates (per existing memory)
+- Legal pages (recommended — translated legal text creates liability unless professionally reviewed)
 
-### Out of scope (for a follow-up if you want)
+## Cost
+- **AI credits used: 0**
+- LibreTranslate free public instance (`libretranslate.de`) — rate-limited but sufficient for batch overnight runs
+- If their public instance is flaky, fallback to **MyMemory API** (free, 1000 words/day anonymous, ~50k with email)
+- Manual UI dictionary work: ~200-300 strings × 4 languages, one-time
 
-- Per-IP anonymous quota (option 3).
-- "My downloads" page listing everything from `pexels_downloads` + internal `downloads`.
-- Email drip campaign for new signups coming from this funnel.
-- Conversion analytics dashboard (signups attributed to free library).
+## Technical notes
+- Router pattern: use `useParams()` with `/:lang?/...` wrapper, validate `lang` against `['fr','es','de','pt']`
+- `LanguageProvider` reads URL first, then `localStorage`, then browser `navigator.language`
+- Translation fetching: single query `SELECT * FROM product_translations WHERE product_id IN (...) AND language = $1` joined client-side
+- Auto-translate Edge Function triggered by DB webhook on `content_submissions` status → 'approved'
 
-### Why this design
+## Rollout order
+1. Schema/backend: extend batch script + create auto-translate Edge Function
+2. Routing: add `/:lang?/` prefix support + `LanguageRedirect` rewrite
+3. i18n files: create `en/fr/es/de/pt.ts` dictionaries (start with current `en` keys)
+4. Wire `t()` into Header/Navigation/Footer/Marketplace/ProductDetail
+5. Add language switcher UI
+6. Run batch translation on existing products
+7. Add hreflang + per-language sitemaps
+8. Update memories
 
-- **SEO preserved**: pages stay public, no login wall on browsing.
-- **Real stats**: every Pexels download is tied to a real `user_id` — fits the "no fake engagement stats" rule.
-- **Zero PayPal involvement**: it's free, no order needed.
-- **Resumable flow**: the user doesn't lose the file they wanted after signing up — big UX win for conversion.
-- **Failure-tolerant**: tracking is best-effort; a DB hiccup never blocks the download.
+Confirm and I'll start implementing.
