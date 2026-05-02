@@ -88,7 +88,7 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/${language}/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(lp("/marketplace?search=${encodeURIComponent(searchQuery.trim())}"));
       setIsOpen(false);
       setSearchQuery('');
     }
@@ -194,11 +194,11 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
           {/* Section 1 – Explore */}
           <SectionLabel>{labels.explore}</SectionLabel>
           <div className="space-y-0.5">
-            <MenuItem to={`/${language}`} icon={Home} label={labels.home} onClick={close} />
+            <MenuItem to={lp("/")} icon={Home} label={labels.home} onClick={close} />
             
             <MenuItem to="/studio-ai" icon={Wand2} label={labels.studioAi} onClick={close} badge="AI" />
             <MenuItem to="/collections" icon={Layers} label={labels.collections} onClick={close} />
-            <MenuItem to={`/${language}/marketplace?sort=trending`} icon={TrendingUp} label={labels.trending} onClick={close} />
+            <MenuItem to={lp("/marketplace?sort=trending")} icon={TrendingUp} label={labels.trending} onClick={close} />
           </div>
 
           {/* Section 2 – Creator Tools (if creator) */}
@@ -207,14 +207,14 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
               <SectionLabel>{labels.creatorTools}</SectionLabel>
               <div className="space-y-0.5">
                 <MenuItem 
-                  to={`/${language}/file-upload`} 
+                  to={lp("/file-upload")} 
                   icon={Upload} 
                   label={labels.upload} 
                   onClick={close} 
                   accent 
                 />
                 <MenuItem 
-                  to={`/${language}/seller-dashboard`} 
+                  to={lp("/seller-dashboard")} 
                   icon={LayoutDashboard} 
                   label={labels.sellerDashboard} 
                   onClick={close} 
@@ -238,14 +238,14 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
               <SectionLabel>{labels.account}</SectionLabel>
               <div className="space-y-0.5">
                 <MenuItem 
-                  to={`/${language}/cart`} 
+                  to={lp("/cart")} 
                   icon={ShoppingCart} 
                   label={labels.cart} 
                   onClick={close}
                   badge={cartCount > 0 ? String(cartCount) : undefined}
                 />
                 <MenuItem 
-                  to={`/${language}/infinity`} 
+                  to={lp("/infinity")} 
                   label={labels.infinity}
                   onClick={close}
                   iconElement={<Crown className="h-5 w-5" />}
@@ -253,8 +253,8 @@ export const MobileMenu = ({ userRole, onAuthClick }: MobileMenuProps) => {
                 />
                 {!isCreator && (
                   <>
-                    <MenuItem to={`/${language}/dashboard`} icon={LayoutDashboard} label={labels.dashboard} onClick={close} />
-                    <MenuItem to={`/${language}/buyer-dashboard`} icon={Package} label={labels.purchases} onClick={close} />
+                    <MenuItem to={lp("/dashboard")} icon={LayoutDashboard} label={labels.dashboard} onClick={close} />
+                    <MenuItem to={lp("/buyer-dashboard")} icon={Package} label={labels.purchases} onClick={close} />
                   </>
                 )}
               </div>
