@@ -317,18 +317,23 @@ serve(async (req) => {
       return json(500, { error: "upload_failed" });
     }
 
-    const { data: pub } = supabaseAdmin.storage.from("ai-videos").getPublicUrl(
-      path,
-    );
-    const publicUrl = pub.publicUrl;
+    // Store the storage path (bucket is private). Generate a signed URL for immediate playback.
+    const { data: signed, error: signedErr } = await supabaseAdmin.storage
+      .from("ai-videos")
+      .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
+    if (signedErr || !signed) {
+      console.error(`[gen ${genRow.id}] failed to sign url`, signedErr);
+    }
+    const playbackUrl = signed?.signedUrl ?? "";
 
     await supabaseAdmin.from("ai_video_generations").update({
       status: "completed",
-      video_url: publicUrl,
+      video_url: path, // store storage path; resolve to signed URL on read
     }).eq("id", genRow.id);
 
     return json(200, {
-      videoUrl: publicUrl,
+      videoUrl: playbackUrl,
+      videoPath: path,
       creditsRemaining: newBalance,
       generationId: genRow.id,
       cost,
