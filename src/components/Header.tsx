@@ -48,7 +48,7 @@ export const Header = () => {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
-        <Link to={`/${language}`} className="flex items-center space-x-2">
+        <Link to={lp("/")} className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png"
             alt="VisuStock" 
@@ -65,7 +65,7 @@ export const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link to={`/${language}`} className="flex items-center shrink-0">
+        <Link to={lp("/")} className="flex items-center shrink-0">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
             alt="VisuStock" 
@@ -95,7 +95,7 @@ export const Header = () => {
 
           {/* Infinity Link - Desktop only */}
           <Button variant="default" size="sm" asChild className="hidden lg:flex">
-            <Link to={`/${language}/infinity`}>
+            <Link to={lp("/infinity")}>
               Infinity
             </Link>
           </Button>
@@ -110,7 +110,7 @@ export const Header = () => {
           {/* Cart - Show on tablet+ for logged in users */}
           {user && (
             <Button variant="ghost" size="sm" className="relative hidden sm:flex h-10 w-10 p-0" asChild>
-              <Link to={`/${language}/cart`}>
+              <Link to={lp("/cart")}>
                 <ShoppingCart className="h-5 w-5" />
                 {getItemCount() > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
@@ -143,19 +143,19 @@ export const Header = () => {
                   {userRole === 'creator' || userRole === 'admin' ? (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link to={`/${language}/seller-dashboard`}>{t('header.seller.dashboard')}</Link>
+                        <Link to={lp("/seller-dashboard")}>{t('header.seller.dashboard')}</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to={`/${language}/file-upload`}>{t('header.upload')}</Link>
+                        <Link to={lp("/file-upload")}>{t('header.upload')}</Link>
                       </DropdownMenuItem>
                     </>
                   ) : (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link to={`/${language}/dashboard`}>{t('header.dashboard')}</Link>
+                        <Link to={lp("/dashboard")}>{t('header.dashboard')}</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to={`/${language}/buyer-dashboard`}>{t('header.purchases')}</Link>
+                        <Link to={lp("/buyer-dashboard")}>{t('header.purchases')}</Link>
                       </DropdownMenuItem>
                     </>
                   )}
