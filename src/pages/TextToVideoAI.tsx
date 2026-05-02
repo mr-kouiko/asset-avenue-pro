@@ -133,7 +133,22 @@ export default function TextToVideoAI() {
       .eq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(6);
-    setRecent((data as RecentGen[]) || []);
+
+    const rows = (data as RecentGen[]) || [];
+    // ai-videos bucket is private — resolve to signed URLs (handles legacy public URLs too).
+    const resolved = await Promise.all(
+      rows.map(async (r) => {
+        if (!r.video_url) return r;
+        let path = r.video_url;
+        const match = path.match(/\/ai-videos\/(.+)$/);
+        if (match) path = match[1];
+        const { data: signed } = await supabase.storage
+          .from("ai-videos")
+          .createSignedUrl(path, 60 * 60);
+        return { ...r, video_url: signed?.signedUrl ?? null };
+      })
+    );
+    setRecent(resolved);
   };
 
   const handleGenerate = async () => {
