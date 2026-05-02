@@ -100,6 +100,11 @@ export const Header = () => {
             </Link>
           </Button>
 
+          {/* Language switcher */}
+          <div className="hidden sm:flex">
+            <LanguageSwitcher />
+          </div>
+
           {/* Notifications - Show for logged in users */}
           {user && (
             <div className="hidden sm:flex">
