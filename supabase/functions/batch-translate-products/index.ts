@@ -9,35 +9,40 @@ const corsHeaders = {
 const ALL_LANGS = ["fr", "es", "de", "pt"] as const;
 type Lang = typeof ALL_LANGS[number];
 
-// Try multiple free translation endpoints. Returns original on failure.
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return await Promise.race([
+    p,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+// Fast path: only working endpoints. Disroot LibreTranslate first, MyMemory fallback.
 async function translateOne(text: string, target: Lang): Promise<string> {
   if (!text || !text.trim()) return text;
+  // Truncate very long text to keep API happy
+  const input = text.length > 1500 ? text.slice(0, 1500) : text;
 
-  // 1) LibreTranslate public mirrors
-  const ltEndpoints = [
-    "https://translate.disroot.org/translate",
-    "https://libretranslate.de/translate",
-    "https://lt.vern.cc/translate",
-  ];
-  for (const url of ltEndpoints) {
-    try {
-      const res = await fetch(url, {
+  // 1) Disroot LibreTranslate (verified working)
+  try {
+    const res = await withTimeout(
+      fetch("https://translate.disroot.org/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q: text, source: "en", target, format: "text" }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.translatedText) return data.translatedText as string;
-      }
-    } catch (_) { /* try next */ }
-  }
+        body: JSON.stringify({ q: input, source: "en", target, format: "text" }),
+      }),
+      6000,
+    );
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) return data.translatedText as string;
+    }
+  } catch (_) { /* fall through */ }
 
   // 2) MyMemory fallback
   try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${target}`;
-    const res = await fetch(url);
-    if (res.ok) {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(input)}&langpair=en|${target}`;
+    const res = await withTimeout(fetch(url), 6000);
+    if (res && res.ok) {
       const data = await res.json();
       const t = data?.responseData?.translatedText;
       if (t) return t as string;
@@ -47,14 +52,15 @@ async function translateOne(text: string, target: Lang): Promise<string> {
   return text;
 }
 
-async function translateTags(tags: string[] | null | undefined, lang: Lang): Promise<string[]> {
-  if (!Array.isArray(tags) || tags.length === 0) return [];
-  const out: string[] = [];
-  for (const t of tags) {
-    out.push(await translateOne(t, lang));
-    await new Promise((r) => setTimeout(r, 100));
-  }
-  return out;
+async function translateProduct(p: { title: string | null; description: string | null; tags: string[] | null }, lang: Lang) {
+  const tags = Array.isArray(p.tags) ? p.tags : [];
+  // Translate everything in parallel for this product
+  const [title, description, ...translatedTags] = await Promise.all([
+    translateOne(p.title ?? "", lang),
+    p.description ? translateOne(p.description, lang) : Promise.resolve(""),
+    ...tags.map((t) => translateOne(t, lang)),
+  ]);
+  return { title, description, tags: translatedTags };
 }
 
 serve(async (req) => {
@@ -64,10 +70,9 @@ serve(async (req) => {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
+      { auth: { persistSession: false } },
     );
 
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Auth required" }), {
@@ -77,7 +82,7 @@ serve(async (req) => {
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) {
@@ -94,8 +99,9 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const requested: string[] = Array.isArray(body.languages) ? body.languages : [];
-    const limit: number = Math.min(Math.max(Number(body.limit) || 25, 1), 100);
-    const targets: Lang[] = (requested.filter((l) => (ALL_LANGS as readonly string[]).includes(l)) as Lang[]);
+    // Cap at 15 per call so we stay safely within edge function CPU/wall time
+    const limit: number = Math.min(Math.max(Number(body.limit) || 15, 1), 25);
+    const targets = requested.filter((l) => (ALL_LANGS as readonly string[]).includes(l)) as Lang[];
     const langs: Lang[] = targets.length ? targets : [...ALL_LANGS];
 
     const summary: Record<string, { translated: number; skipped: number; failed: number }> = {};
@@ -103,11 +109,11 @@ serve(async (req) => {
     for (const language of langs) {
       summary[language] = { translated: 0, skipped: 0, failed: 0 };
 
-      // Find approved products that don't yet have a translation in this language
       const { data: products, error } = await supabase
         .from("content_submissions")
         .select("id, title, description, tags")
         .eq("status", "approved")
+        .order("created_at", { ascending: false })
         .limit(500);
       if (error) {
         console.error(`Fetch products error (${language}):`, error);
@@ -125,21 +131,29 @@ serve(async (req) => {
       const todo = (products ?? []).filter((p) => !have.has(p.id)).slice(0, limit);
       console.log(`[${language}] processing ${todo.length} of ${products?.length ?? 0} approved`);
 
-      for (const p of todo) {
+      // Process products in parallel (small batch keeps latency low)
+      const results = await Promise.all(todo.map(async (p) => {
         try {
-          const title = await translateOne(p.title ?? "", language);
-          const description = p.description ? await translateOne(p.description, language) : "";
-          const tags = await translateTags(p.tags as string[] | null, language);
-
-          const { error: insErr } = await supabase.from("product_translations").insert({
-            product_id: p.id, language, title, description, tags,
-          });
-          if (insErr) { summary[language].failed++; console.error("insert", insErr.message); }
-          else summary[language].translated++;
-          await new Promise((r) => setTimeout(r, 200));
+          const t = await translateProduct(p as any, language);
+          return { ok: true, row: { product_id: p.id, language, ...t } };
         } catch (e) {
-          summary[language].failed++;
           console.error("translate err", (e as Error).message);
+          return { ok: false };
+        }
+      }));
+
+      const rows = results.filter((r) => r.ok).map((r: any) => r.row);
+      summary[language].failed = results.length - rows.length;
+
+      if (rows.length > 0) {
+        const { error: insErr } = await supabase
+          .from("product_translations")
+          .upsert(rows, { onConflict: "product_id,language", ignoreDuplicates: true });
+        if (insErr) {
+          console.error("bulk insert error", insErr.message);
+          summary[language].failed += rows.length;
+        } else {
+          summary[language].translated = rows.length;
         }
       }
       summary[language].skipped = (products?.length ?? 0) - todo.length;
