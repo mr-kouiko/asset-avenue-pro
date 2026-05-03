@@ -48,10 +48,10 @@ export const AdminProductTranslations = () => {
     try {
       let totalTranslated = 0;
       let totalFailed = 0;
-      // Loop until nothing left to translate (max 20 iterations of 100 = 2000 products)
-      for (let i = 0; i < 20; i++) {
+      // Loop in small chunks to stay within edge function time limits
+      for (let i = 0; i < 200; i++) {
         const { data, error } = await supabase.functions.invoke('batch-translate-products', {
-          body: { languages: [lang], limit: 100 },
+          body: { languages: [lang], limit: 15 },
         });
         if (error) throw error;
         const s = (data as any)?.summary?.[lang];
