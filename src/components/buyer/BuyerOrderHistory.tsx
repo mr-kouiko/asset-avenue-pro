@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,13 +28,32 @@ interface OrderItem {
   file_name?: string;
 }
 
+interface ContentFileRow {
+  id: string;
+  file_name: string;
+  is_original: boolean | null;
+}
+
+interface DownloadRow {
+  id: string;
+  submission_id: string | null;
+  created_at: string;
+  downloaded_at: string | null;
+  expires_at: string | null;
+  content_submissions: {
+    title: string | null;
+    price: number | null;
+    content_files: ContentFileRow[] | null;
+  } | null;
+}
+
 export const BuyerOrderHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
@@ -58,9 +77,9 @@ export const BuyerOrderHistory = () => {
 
       if (error) throw error;
 
-      const ordersWithContent = (data || []).map((order: any) => {
+      const ordersWithContent = ((data || []) as DownloadRow[]).map((order) => {
         const files = order.content_submissions?.content_files || [];
-        const originalFile = files.find((file: any) => file.is_original) || files[0];
+        const originalFile = files.find((file) => file.is_original) || files[0];
 
         return {
           id: order.id,
@@ -81,11 +100,11 @@ export const BuyerOrderHistory = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchOrders();
-  }, [user]);
+  }, [fetchOrders]);
 
   const getOrderStatus = (order: OrderItem) => {
     if (order.downloaded_at) return 'downloaded';
