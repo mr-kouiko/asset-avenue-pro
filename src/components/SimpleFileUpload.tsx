@@ -25,7 +25,8 @@ interface UploadFile {
   aiConfidence?: number;
   estimatedTimeRemaining?: number; // in seconds
   fileHash?: string;
-  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | 'vector' | 'other';
+  detectedTags?: string[];
 }
 
 interface SimpleFileUploadProps {
@@ -39,7 +40,8 @@ interface SimpleFileUploadProps {
     thumbnailUrl?: string;
     previewUrl?: string;
     isAiGenerated?: boolean;
-    detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
+    detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | 'vector' | 'other';
+    detectedTags?: string[];
     fileHash?: string;
   }[]) => void;
   maxFiles?: number;
