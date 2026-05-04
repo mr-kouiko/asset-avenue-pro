@@ -36,7 +36,8 @@ interface UploadedFileData {
   thumbnailUrl?: string;
   previewUrl?: string;
   isAiGenerated?: boolean;
-  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx';
+  detectedCategory?: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | 'vector' | 'other';
+  detectedTags?: string[];
   submissionId?: string; // Track which draft/submission this file belongs to
 }
 
