@@ -130,7 +130,7 @@ function processMarketplaceData(
         else if (fileType === 'document' || fileFormat === 'application/pdf') contentType = 'ebook';
       }
 
-      // Media URL — SECURITY: Only use preview_path, NEVER expose original file_path
+      // Media URL — prefer watermarked preview_path, fall back to original file_path for legacy items.
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
         const fileWithPreview = files.find((f: any) => f.preview_path);
@@ -138,8 +138,14 @@ function processMarketplaceData(
           mediaUrl = fileWithPreview.preview_path.startsWith('http')
             ? fileWithPreview.preview_path
             : buildPublicUrlCached('previews', fileWithPreview.preview_path);
+        } else {
+          const originalVideo = files.find((f: any) => f.is_original && f.file_path) || files.find((f: any) => f.file_path);
+          if (originalVideo?.file_path) {
+            mediaUrl = originalVideo.file_path.startsWith('http')
+              ? originalVideo.file_path
+              : buildPublicUrlCached('uploads', originalVideo.file_path);
+          }
         }
-        // No fallback to original file_path — if no preview exists, video is "processing"
       } else if (contentType === 'audio') {
         // Audio uses preview_path if available, otherwise no URL exposed
         const audioPreview = files.find((f: any) => f.preview_path);
