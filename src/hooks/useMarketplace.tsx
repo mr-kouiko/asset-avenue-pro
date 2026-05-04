@@ -147,12 +147,19 @@ function processMarketplaceData(
           }
         }
       } else if (contentType === 'audio') {
-        // Audio uses preview_path if available, otherwise no URL exposed
+        // Prefer watermarked preview_path; fall back to original file_path for legacy items.
         const audioPreview = files.find((f: any) => f.preview_path);
         if (audioPreview?.preview_path) {
           mediaUrl = audioPreview.preview_path.startsWith('http')
             ? audioPreview.preview_path
             : buildPublicUrlCached('previews', audioPreview.preview_path);
+        } else {
+          const originalAudio = files.find((f: any) => f.is_original && f.file_path) || files.find((f: any) => f.file_path);
+          if (originalAudio?.file_path) {
+            mediaUrl = originalAudio.file_path.startsWith('http')
+              ? originalAudio.file_path
+              : buildPublicUrlCached('uploads', originalAudio.file_path);
+          }
         }
       }
 
