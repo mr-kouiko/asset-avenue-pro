@@ -506,20 +506,33 @@ export const SimpleFileUpload = ({
         }
       }
 
-      // AUTOMATIC CATEGORY DETECTION - Based on file type
-      let detectedCategory: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | undefined;
-      const isRar = detectedMimeType.includes('rar') || uploadFileData.file.name.toLowerCase().endsWith('.rar');
-      
-      if (isVideo) {
-        detectedCategory = 'video';
-      } else if (isAudio) {
-        detectedCategory = 'audio';
-      } else if (isPDF) {
-        detectedCategory = 'ebook';
-      } else if (isRar) {
-        detectedCategory = 'vfx';
-      } else if (isImage) {
-        detectedCategory = 'photo';
+      // AUTOMATIC CATEGORY DETECTION — centralized detector (extension + MIME + zip inspection)
+      let detectedCategory: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | 'vector' | 'other' | undefined;
+      let detectedTags: string[] = [];
+      try {
+        const detection = await detectProductType(uploadFileData.file);
+        // Map detector type → existing UI category names
+        const map: Record<DetectedProductType, typeof detectedCategory> = {
+          image: 'photo',
+          video: 'video',
+          audio: 'audio',
+          ebook: 'ebook',
+          vector: 'vector',
+          vfx: 'vfx',
+          other: 'other',
+        };
+        detectedCategory = map[detection.type];
+        detectedTags = detection.tags;
+        console.log(`🎯 [TYPE-DETECT] ${uploadFileData.file.name} → ${detection.type} (${detection.confidence}) — ${detection.reason}`);
+        if (detection.type === 'other') {
+          toast.info(`⚠️ Could not auto-detect type for ${uploadFileData.file.name}. Please pick a category manually.`);
+        }
+      } catch (e) {
+        console.warn('🎯 [TYPE-DETECT] failed, falling back to MIME:', e);
+        if (isVideo) detectedCategory = 'video';
+        else if (isAudio) detectedCategory = 'audio';
+        else if (isPDF) detectedCategory = 'ebook';
+        else if (isImage) detectedCategory = 'photo';
       }
 
       // Reuse the file hash calculated at the beginning (line 244) for storage
