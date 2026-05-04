@@ -616,7 +616,8 @@ export const SimpleFileUpload = ({
           thumbnailUrl: (isVideo || isPDF) ? processedFile.thumbnailUrl : processedFile.previewUrl,
           previewUrl: processedFile.previewUrl,
           isAiGenerated, // AUTOMATIC - no user choice
-          detectedCategory, // AUTOMATIC - based on image analysis
+          detectedCategory, // AUTOMATIC - based on extension/MIME/zip inspection
+          detectedTags, // AUTOMATIC - keyword-based tag suggestions
           fileHash: fileHashForStorage // CRITICAL: Pass hash for duplicate detection
         }]);
       }
