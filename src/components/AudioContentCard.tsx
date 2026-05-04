@@ -167,95 +167,71 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   };
 
   return (
-    <div 
-      className="relative overflow-hidden flex flex-col rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md bg-white border border-stock-border/50 hover:border-stock-blue/20"
+    <div
+      className="group relative flex items-center gap-3 md:gap-4 rounded-lg cursor-pointer transition-all duration-200 bg-white border border-stock-border/50 hover:border-stock-blue/30 hover:shadow-md p-2 md:p-3"
       style={{ boxShadow: 'var(--card-shadow)' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
-      {/* Thumbnail area - maintains consistent aspect ratio with other cards */}
-      <div className="relative bg-stock-gray overflow-hidden" style={{ aspectRatio: 'var(--thumbnail-aspect)' }}>
-        {/* Album art / thumbnail background */}
-        <div 
-          className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"
+      {/* Compact album art with play button */}
+      <div className="relative shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handlePlayPause}
+          className="h-10 w-10 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm transition-transform group-hover:scale-105"
+          aria-label={playing ? 'Pause' : 'Play'}
         >
-          {/* Large centered play button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handlePlayPause}
-            className="h-16 w-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-transform hover:scale-110"
-          >
-            {playing ? (
-              <Pause className="h-8 w-8 text-white" fill="white" />
-            ) : (
-              <Play className="h-8 w-8 text-white ml-1" fill="white" />
-            )}
-          </Button>
-        </div>
-
-        {/* Waveform overlay at bottom of thumbnail area */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/50 to-transparent">
-          <div 
-            ref={waveformRef} 
-            className="absolute bottom-1 left-2 right-2 h-10"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-
-        {/* Type Badge */}
-        <div className="absolute top-2 left-2">
-          <span className="bg-white/95 text-stock-dark text-[10px] px-2 py-0.5 font-medium rounded shadow-sm">
-            AUDIO
-          </span>
-        </div>
-
-        {/* Duration badge */}
-        {audioDuration && (
-          <div className="absolute top-2 right-2">
-            <span className="bg-black/60 text-white text-[10px] px-2 py-0.5 font-medium rounded">
-              {audioDuration}
-            </span>
-          </div>
-        )}
-
-        {/* Quick actions - visible on hover */}
-        <div className={`absolute bottom-2 right-2 transition-all duration-300 ${isHovered ? 'opacity-100' : 'opacity-100 md:opacity-0'}`}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleAddToCart}
-            className="h-8 w-8 md:h-7 md:w-7 p-0 bg-white/95 hover:bg-white border-0 shadow-sm"
-          >
-            <Download className="h-4 w-4 md:h-3.5 md:w-3.5 text-stock-dark" />
-          </Button>
-        </div>
+          {playing ? (
+            <Pause className="h-4 w-4 text-white" fill="white" />
+          ) : (
+            <Play className="h-4 w-4 text-white ml-0.5" fill="white" />
+          )}
+        </Button>
       </div>
 
-      {/* Metadata - matches ContentCard style */}
-      <div className="p-2.5 md:p-3 space-y-1.5 md:space-y-2">
-        <div>
-          <h3 className="font-medium text-sm text-stock-dark leading-tight line-clamp-2 min-h-[2.5rem]">
-            {title}
-          </h3>
-          <p className="text-xs text-stock-dark/60 mt-1 font-medium truncate">{author}</p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-3 text-xs text-stock-dark/50">
+      {/* Title + author + waveform */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-medium text-sm md:text-[15px] text-stock-dark leading-tight truncate">
+              {title}
+            </h3>
+            <p className="text-xs text-stock-dark/60 mt-0.5 truncate">{author}</p>
+          </div>
+          <div className="hidden md:flex items-center gap-3 shrink-0 text-xs text-stock-dark/50">
+            {bpm && <span>{bpm} BPM</span>}
+            {audioDuration && <span className="tabular-nums">{audioDuration}</span>}
             <span className="flex items-center gap-1">
               <Heart className="h-3 w-3" />
               {likes}
             </span>
-            {bpm && (
-              <span>{bpm} BPM</span>
-            )}
-          </div>
-          <div className="font-bold text-sm text-stock-dark">
-            {price === null || price === 0 ? 'Free' : `${price}€`}
           </div>
         </div>
+
+        {/* Full-width waveform */}
+        <div
+          ref={waveformRef}
+          className="w-full h-10"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+
+      {/* Right: price + cart */}
+      <div className="shrink-0 flex flex-col items-end gap-2">
+        <div className="font-bold text-sm md:text-base text-stock-dark whitespace-nowrap">
+          {price === null || price === 0 ? 'Free' : `$${price}`}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddToCart}
+          className="h-8 px-2.5"
+          aria-label="Add to cart"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </div>
   );
