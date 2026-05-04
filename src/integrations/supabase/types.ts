@@ -2105,6 +2105,21 @@ export type Database = {
       }
     }
     Views: {
+      content_like_counts: {
+        Row: {
+          like_count: number | null
+          submission_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_likes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creator_profiles_public: {
         Row: {
           avatar_url: string | null

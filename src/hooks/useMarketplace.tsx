@@ -293,7 +293,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
           .from('content_files')
           .select('id, submission_id, file_name, file_path, file_type, file_format, is_original, is_preview, preview_path, thumbnail_path, metadata')
           .in('submission_id', submissionIds),
-        supabase.from('content_likes').select('submission_id').in('submission_id', submissionIds),
+        (supabase as any).from('content_like_counts').select('submission_id, like_count').in('submission_id', submissionIds),
         supabase.from('downloads').select('submission_id').in('submission_id', submissionIds),
         language === 'en'
           ? Promise.resolve({ data: [] })
@@ -316,7 +316,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
 
       const likesMap = new Map<string, number>();
       (likesResult.data || []).forEach((row: any) => {
-        likesMap.set(row.submission_id, (likesMap.get(row.submission_id) || 0) + 1);
+        likesMap.set(row.submission_id, Number(row.like_count) || 0);
       });
 
       const downloadsMap = new Map<string, number>();
