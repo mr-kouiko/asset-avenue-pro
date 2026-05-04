@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { SecureDownloadButton } from '@/components/SecureDownloadButton';
 
 interface OrderItem {
   id: string;
@@ -23,6 +24,8 @@ interface OrderItem {
   expires_at: string | null;
   content_title?: string;
   content_price?: number;
+  content_file_id?: string;
+  file_name?: string;
 }
 
 export const BuyerOrderHistory = () => {
@@ -40,22 +43,37 @@ export const BuyerOrderHistory = () => {
         .from('downloads')
         .select(`
           *,
-          content_submissions(title, price)
+          content_submissions(
+            title,
+            price,
+            content_files(
+              id,
+              file_name,
+              is_original
+            )
+          )
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const ordersWithContent = (data || []).map((order: any) => ({
-        id: order.id,
-        submission_id: order.submission_id,
-        created_at: order.created_at,
-        downloaded_at: order.downloaded_at,
-        expires_at: order.expires_at,
-        content_title: order.content_submissions?.title || 'Deleted content',
-        content_price: order.content_submissions?.price || 0
-      }));
+      const ordersWithContent = (data || []).map((order: any) => {
+        const files = order.content_submissions?.content_files || [];
+        const originalFile = files.find((file: any) => file.is_original) || files[0];
+
+        return {
+          id: order.id,
+          submission_id: order.submission_id,
+          created_at: order.created_at,
+          downloaded_at: order.downloaded_at,
+          expires_at: order.expires_at,
+          content_title: order.content_submissions?.title || 'Deleted content',
+          content_price: order.content_submissions?.price || 0,
+          content_file_id: originalFile?.id,
+          file_name: originalFile?.file_name
+        };
+      });
 
       setOrders(ordersWithContent);
     } catch (error) {
@@ -174,15 +192,22 @@ export const BuyerOrderHistory = () => {
                       View
                     </Button>
                   )}
-                  {getOrderStatus(order) === 'pending' && order.submission_id && (
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/product/${order.submission_id}`)}
-                      className="gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download
-                    </Button>
+                  {getOrderStatus(order) !== 'expired' && (
+                    order.content_file_id ? (
+                      <SecureDownloadButton
+                        contentFileId={order.content_file_id}
+                        fileName={order.file_name}
+                        size="sm"
+                        className="gap-2"
+                      >
+                        Download
+                      </SecureDownloadButton>
+                    ) : (
+                      <Button size="sm" disabled className="gap-2">
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                    )
                   )}
                 </div>
               </div>
