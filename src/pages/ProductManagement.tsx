@@ -287,6 +287,12 @@ const ProductManagement = () => {
               );
               autoCategory = vfxCat?.id || '';
               break;
+            case 'vector':
+              const vectorCat = categories.find(cat =>
+                cat.name.toLowerCase().includes('vector')
+              );
+              autoCategory = vectorCat?.id || '';
+              break;
           }
         }
         
@@ -338,7 +344,7 @@ const ProductManagement = () => {
           title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
           description: '',
           category: autoCategory, // Auto-detected category
-          tags: [],
+          tags: file.detectedTags || [], // Auto-suggested tags from detector
           currentTag: '',
           status: 'draft',
           isAiGenerated: file.isAiGenerated || false,
