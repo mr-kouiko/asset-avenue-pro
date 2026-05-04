@@ -591,6 +591,7 @@ export const SimpleFileUpload = ({
           isAiGenerated,
           aiConfidence,
           detectedCategory,
+          detectedTags,
           fileHash: fileHashForStorage
         } : f
       ));
