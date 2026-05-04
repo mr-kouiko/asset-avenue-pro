@@ -192,3 +192,6 @@ verify_jwt = false
 [functions.batch-translate-products]
 verify_jwt = true
 
+
+[functions.auto-translate-product]
+verify_jwt = false
