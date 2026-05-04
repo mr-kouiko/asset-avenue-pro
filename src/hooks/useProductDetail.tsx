@@ -392,7 +392,7 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For audio files — SECURITY: Only use preview_path, never expose original file_path
+        // For audio files — prefer watermarked preview_path; fall back to original file_path for legacy items.
         if (contentType === 'audio' && filesList.length > 0) {
           const audioPreview = filesList.find((f: any) => f.preview_path);
           if (audioPreview?.preview_path) {
@@ -407,8 +407,25 @@ export const useProductDetail = (productId: string) => {
             }
             console.log('🔊 Audio preview URL:', previewUrl);
           } else {
-            console.warn('⚠️ No audio preview available — playback unavailable until processed');
-            previewUrl = undefined;
+            // Fallback: stream original file_path so legacy audio stays playable
+            const originalAudio = filesList.find((f: any) => f.is_original && f.file_path) || filesList.find((f: any) => f.file_path);
+            if (originalAudio?.file_path) {
+              const fp: string = originalAudio.file_path;
+              if (fp.startsWith('http')) {
+                previewUrl = fp;
+              } else {
+                try {
+                  const { data: signed } = await supabase.storage.from('uploads').createSignedUrl(fp, 60 * 60);
+                  previewUrl = signed?.signedUrl;
+                } catch (e) {
+                  console.warn('Could not sign original audio URL:', e);
+                  previewUrl = undefined;
+                }
+              }
+              console.log('🎧 Fallback to original audio file_path:', previewUrl);
+            } else {
+              previewUrl = undefined;
+            }
           }
         }
 
