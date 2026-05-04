@@ -316,7 +316,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
 
       const likesMap = new Map<string, number>();
       (likesResult.data || []).forEach((row: any) => {
-        likesMap.set(row.submission_id, (likesMap.get(row.submission_id) || 0) + 1);
+        likesMap.set(row.submission_id, Number(row.like_count) || 0);
       });
 
       const downloadsMap = new Map<string, number>();
