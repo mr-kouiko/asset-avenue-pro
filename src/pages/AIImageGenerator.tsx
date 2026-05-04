@@ -290,12 +290,34 @@ export default function AIImageGenerator() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!generatedImage) return;
-    const link = document.createElement('a');
-    link.href = generatedImage;
-    link.download = `ai-generated-${Date.now()}.png`;
-    link.click();
+    try {
+      // Data URLs and same-origin work directly; cross-origin must be fetched as a blob
+      // so the browser actually downloads instead of navigating.
+      const isDataUrl = generatedImage.startsWith('data:');
+      let href = generatedImage;
+      let revoke: string | null = null;
+      if (!isDataUrl) {
+        const res = await fetch(generatedImage, { mode: 'cors' });
+        if (!res.ok) throw new Error('fetch failed');
+        const blob = await res.blob();
+        href = URL.createObjectURL(blob);
+        revoke = href;
+      }
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = `ai-generated-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      if (revoke) setTimeout(() => URL.revokeObjectURL(revoke!), 1000);
+    } catch (e) {
+      console.error('Image download failed:', e);
+      // Fallback: open in a new tab so the user can save it manually
+      window.open(generatedImage, '_blank');
+      toast({ title: 'Download failed', description: 'Image opened in a new tab — right-click to save.', variant: 'destructive' });
+    }
   };
 
   return (

@@ -193,16 +193,21 @@ export default function TextToVideoAI() {
 
   const handleDownload = async (url: string) => {
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, { mode: "cors" });
+      if (!r.ok) throw new Error("fetch failed");
       const b = await r.blob();
+      const blobUrl = URL.createObjectURL(b);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(b);
+      a.href = blobUrl;
       a.download = `videoai-${Date.now()}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch {
-      toast({ title: "Download failed", variant: "destructive" });
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (e) {
+      console.error("Video download failed:", e);
+      window.open(url, "_blank");
+      toast({ title: "Download failed", description: "Video opened in a new tab — right-click to save.", variant: "destructive" });
     }
   };
 
