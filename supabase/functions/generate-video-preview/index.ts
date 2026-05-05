@@ -213,20 +213,22 @@ serve(async (req) => {
       }
     } else {
       // No FFmpeg API configured — cannot generate a valid preview server-side.
-      // Return an error so the client falls back to browser-based preview generation.
-      console.warn(`[generate-video-preview] No FFMPEG_API_URL configured. Cannot generate server-side preview.`);
+      console.error(`[generate-video-preview] [FAILURE:no_ffmpeg_api] FFMPEG_API_URL/KEY not configured | path=${videoPath} | elapsedMs=${Date.now() - startTime}`);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Server-side preview generation requires an FFmpeg processing API. Configure FFMPEG_API_URL and FFMPEG_API_KEY secrets, or use client-side preview generation instead.' 
+        JSON.stringify({
+          success: false,
+          error: 'Server-side preview generation requires FFMPEG_API_URL and FFMPEG_API_KEY secrets.',
+          failureReason: 'no_ffmpeg_api',
+          processingTimeMs: Date.now() - startTime,
         } as PreviewResponse),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 501 }
       );
     }
 
     // Upload the preview
-    console.log(`[generate-video-preview] Uploading preview to: ${previewPath}`);
-    
+    const upStart = Date.now();
+    console.log(`[generate-video-preview] [STAGE:upload] path=${previewPath} bytes=${previewBlob.size}`);
+
     const { error: uploadError } = await supabase.storage
       .from('uploads')
       .upload(previewPath, previewBlob, {
@@ -235,15 +237,20 @@ serve(async (req) => {
       });
 
     if (uploadError) {
-      console.error(`[generate-video-preview] Failed to upload preview:`, uploadError);
+      const upMs = Date.now() - upStart;
+      console.error(`[generate-video-preview] [FAILURE:upload_error] upMs=${upMs} path=${previewPath} err=${uploadError.message}`);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Failed to upload preview: ${uploadError.message}` 
+        JSON.stringify({
+          success: false,
+          error: `Failed to upload preview: ${uploadError.message}`,
+          failureReason: 'upload_error',
+          processingTimeMs: Date.now() - startTime,
         } as PreviewResponse),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
+    const upMs = Date.now() - upStart;
+    console.log(`[generate-video-preview] [STAGE:upload-done] upMs=${upMs}`);
 
     // Get the public URL
     const { data: { publicUrl } } = supabase.storage
