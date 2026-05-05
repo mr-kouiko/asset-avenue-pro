@@ -11,6 +11,23 @@ interface BackfillResult {
   fileName: string;
   status: 'success' | 'error';
   error?: string;
+  failureReason?: 'timeout' | 'file_too_large' | 'ffmpeg_error' | 'network_error' | 'signed_url_error' | 'upload_error' | 'db_update_error' | 'invalid_output' | 'unknown';
+  processingTimeMs?: number;
+  ffmpegTimeMs?: number;
+  outputSizeBytes?: number;
+}
+
+function classifyError(msg: string): BackfillResult['failureReason'] {
+  const m = msg.toLowerCase();
+  if (m.includes('timeout') || m.includes('timed out') || m.includes('aborted')) return 'timeout';
+  if (m.includes('too large') || m.includes('413')) return 'file_too_large';
+  if (m.includes('signed url') || m.includes('cannot create signed')) return 'signed_url_error';
+  if (m.includes('upload failed')) return 'upload_error';
+  if (m.includes('db update')) return 'db_update_error';
+  if (m.includes('output too small') || m.includes('invalid output')) return 'invalid_output';
+  if (m.includes('ffmpeg api')) return 'ffmpeg_error';
+  if (m.includes('fetch') || m.includes('network')) return 'network_error';
+  return 'unknown';
 }
 
 serve(async (req) => {
