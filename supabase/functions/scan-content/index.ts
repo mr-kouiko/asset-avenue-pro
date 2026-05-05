@@ -71,7 +71,14 @@ const imageUrlToBase64 = async (imageUrl: string): Promise<{ base64: string; mim
       return null;
     }
     
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Chunked base64 encoding to avoid stack overflow on large images
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)));
+    }
+    const base64 = btoa(binary);
     return { base64, mimeType: contentType };
   } catch (error) {
     console.error('[SCAN] Failed to fetch image:', error);
