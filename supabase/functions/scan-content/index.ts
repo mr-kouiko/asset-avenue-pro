@@ -115,17 +115,19 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    const token = authHeader.replace('Bearer ', '');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const token = authHeader.replace('Bearer ', '');
     const isServiceRole = token === serviceRoleKey;
+
+    // Use service-role client for internal calls (bypass RLS), anon+JWT otherwise
+    const supabase = isServiceRole
+      ? createClient(supabaseUrl, serviceRoleKey)
+      : createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } }
+        });
 
     let userId: string;
     if (isServiceRole) {
-      // Internal call (cron retry, etc.) — use submission's creator as effective user
       userId = 'service_role';
     } else {
       const { data: userData, error: userError } = await supabase.auth.getUser(token);
