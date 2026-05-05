@@ -429,7 +429,7 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For video files, resolve playback URL — prefer watermarked preview_path, fall back to original file_path.
+        // For video files: STRICT — only the watermarked preview_path is served. No fallback to original file_path.
         if (contentType === 'video' && filesList.length > 0) {
           const videoFileWithPreview = filesList.find((f: any) => f.preview_path);
           if (videoFileWithPreview?.preview_path) {
@@ -443,26 +443,8 @@ export const useProductDetail = (productId: string) => {
               previewUrl = publicData.publicUrl;
             }
           } else {
-            // Fallback: stream the original file_path so the marketplace stays playable
-            const originalVideo = filesList.find((f: any) => f.is_original && f.file_path) || filesList.find((f: any) => f.file_path);
-            if (originalVideo?.file_path) {
-              const fp: string = originalVideo.file_path;
-              if (fp.startsWith('http')) {
-                previewUrl = fp;
-              } else {
-                // Try signed URL from the 'uploads' bucket (private) so playback still works
-                try {
-                  const { data: signed } = await supabase.storage.from('uploads').createSignedUrl(fp, 60 * 60);
-                  previewUrl = signed?.signedUrl;
-                } catch (e) {
-                  console.warn('Could not sign original video URL:', e);
-                  previewUrl = undefined;
-                }
-              }
-              console.log('📺 Fallback to original video file_path:', previewUrl);
-            } else {
-              previewUrl = undefined;
-            }
+            console.warn('⛔ Video has no preview_path — playback blocked (no fallback to original).');
+            previewUrl = undefined;
           }
         }
 
