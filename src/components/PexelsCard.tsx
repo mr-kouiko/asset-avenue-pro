@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Download, ExternalLink, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LazyImage } from "./LazyImage";
+import { VideoWatermark } from "./VideoWatermark";
 import { useNavigate } from "react-router-dom";
 import type { PexelsItem } from "@/hooks/usePexelsSearch";
 import { generatePexelsProductSlug } from "@/utils/pexelsSlug";
@@ -99,6 +100,9 @@ export const PexelsCard = memo(({ item }: PexelsCardProps) => {
             isVideo && isHovered && isVideoReady ? 'opacity-0' : 'opacity-100'
           }`}
         />
+
+        {/* Watermark overlay */}
+        <VideoWatermark size="thumbnail" />
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex gap-1 z-20">

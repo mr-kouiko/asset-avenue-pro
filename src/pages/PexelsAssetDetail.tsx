@@ -15,6 +15,7 @@ import { PexelsSchemaOrg } from "@/components/pexels/PexelsSchemaOrg";
 import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
 import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
 import { PexelsSEOSections } from "@/components/pexels/PexelsSEOSections";
+import { VideoWatermark } from "@/components/VideoWatermark";
 
 const PexelsAssetDetail = () => {
   const { slug, pexelsId } = useParams<{ slug?: string; pexelsId?: string }>();
@@ -115,11 +116,17 @@ const PexelsAssetDetail = () => {
 
             <div className="relative rounded-xl overflow-hidden bg-muted">
               {isVideo && item.videoUrl ? (
-                <video className="w-full aspect-video object-contain bg-black" controls muted playsInline poster={item.thumbnail} preload="metadata">
-                  <source src={item.videoUrl} type="video/mp4" />
-                </video>
+                <>
+                  <video className="w-full aspect-video object-contain bg-black" controls muted playsInline poster={item.thumbnail} preload="metadata">
+                    <source src={item.videoUrl} type="video/mp4" />
+                  </video>
+                  <VideoWatermark size="large" />
+                </>
               ) : (
-                <LazyImage src={item.largeThumbnail || item.thumbnail} alt={item.alt || item.title} className="w-full object-contain" />
+                <div className="relative">
+                  <LazyImage src={item.largeThumbnail || item.thumbnail} alt={item.alt || item.title} className="w-full object-contain" />
+                  <VideoWatermark size="large" />
+                </div>
               )}
             </div>
 
