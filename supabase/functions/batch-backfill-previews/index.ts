@@ -101,9 +101,10 @@ serve(async (req) => {
     // Query videos missing previews
     const { data: videosByType, error: queryError1 } = await adminClient
       .from('content_files')
-      .select('id, submission_id, file_name, file_path, file_type')
+      .select('id, submission_id, file_name, file_path, file_type, preview_attempts, preview_status')
       .is('preview_path', null)
       .eq('is_original', true)
+      .or('preview_status.is.null,preview_status.neq.preview_failed')
       .in('file_type', ['video', 'video/mp4', 'video/quicktime', 'video/webm', 'video/mov'])
       .limit(maxVideos);
 
@@ -118,9 +119,10 @@ serve(async (req) => {
     // Also check by extension
     const { data: videosByExt } = await adminClient
       .from('content_files')
-      .select('id, submission_id, file_name, file_path, file_type')
+      .select('id, submission_id, file_name, file_path, file_type, preview_attempts, preview_status')
       .is('preview_path', null)
       .eq('is_original', true)
+      .neq('preview_status', 'preview_failed')
       .or('file_name.ilike.%.mp4,file_name.ilike.%.mov,file_name.ilike.%.webm')
       .limit(maxVideos);
 
@@ -274,6 +276,21 @@ serve(async (req) => {
             const reason = classifyError(msg);
             const totalMs = Date.now() - fileStart;
             console.error(`[backfill] [FAILURE:${reason}] file=${file.file_name} totalMs=${totalMs} ffmpegMs=${ffmpegTimeMs} err=${msg}`);
+            // Persist failure on the file row so admins can see & retry
+            try {
+              await adminClient
+                .from('content_files')
+                .update({
+                  preview_status: 'preview_failed',
+                  preview_failure_reason: reason,
+                  preview_last_error: msg.substring(0, 500),
+                  preview_last_attempt_at: new Date().toISOString(),
+                  preview_attempts: ((file.preview_attempts ?? 0) as number) + 1,
+                })
+                .eq('id', file.id);
+            } catch (persistErr) {
+              console.error(`[backfill] failed to persist failure for ${file.id}:`, persistErr);
+            }
             return {
               fileId: file.id,
               fileName: file.file_name,

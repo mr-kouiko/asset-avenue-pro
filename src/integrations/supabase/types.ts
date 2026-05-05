@@ -191,7 +191,12 @@ export type Database = {
           is_original: boolean | null
           is_preview: boolean | null
           metadata: Json | null
+          preview_attempts: number
+          preview_failure_reason: string | null
+          preview_last_attempt_at: string | null
+          preview_last_error: string | null
           preview_path: string | null
+          preview_status: string | null
           submission_id: string | null
           thumbnail_path: string | null
         }
@@ -207,7 +212,12 @@ export type Database = {
           is_original?: boolean | null
           is_preview?: boolean | null
           metadata?: Json | null
+          preview_attempts?: number
+          preview_failure_reason?: string | null
+          preview_last_attempt_at?: string | null
+          preview_last_error?: string | null
           preview_path?: string | null
+          preview_status?: string | null
           submission_id?: string | null
           thumbnail_path?: string | null
         }
@@ -223,7 +233,12 @@ export type Database = {
           is_original?: boolean | null
           is_preview?: boolean | null
           metadata?: Json | null
+          preview_attempts?: number
+          preview_failure_reason?: string | null
+          preview_last_attempt_at?: string | null
+          preview_last_error?: string | null
           preview_path?: string | null
+          preview_status?: string | null
           submission_id?: string | null
           thumbnail_path?: string | null
         }
@@ -2550,6 +2565,7 @@ export type Database = {
         Args: { p_min_amount?: number; p_paypal_email: string }
         Returns: string
       }
+      retry_failed_preview: { Args: { _file_id: string }; Returns: undefined }
       search_marketplace: {
         Args: {
           p_ai_generated?: boolean
