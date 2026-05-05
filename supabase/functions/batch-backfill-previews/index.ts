@@ -101,9 +101,10 @@ serve(async (req) => {
     // Query videos missing previews
     const { data: videosByType, error: queryError1 } = await adminClient
       .from('content_files')
-      .select('id, submission_id, file_name, file_path, file_type')
+      .select('id, submission_id, file_name, file_path, file_type, preview_attempts, preview_status')
       .is('preview_path', null)
       .eq('is_original', true)
+      .or('preview_status.is.null,preview_status.neq.preview_failed')
       .in('file_type', ['video', 'video/mp4', 'video/quicktime', 'video/webm', 'video/mov'])
       .limit(maxVideos);
 
