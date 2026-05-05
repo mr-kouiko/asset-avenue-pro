@@ -31,8 +31,10 @@ interface PreviewResponse {
   previewUrl?: string;
   previewPath?: string;
   error?: string;
+  failureReason?: 'timeout' | 'file_too_large' | 'ffmpeg_error' | 'network_error' | 'download_error' | 'upload_error' | 'no_ffmpeg_api' | 'missing_param' | 'internal_error';
   cached?: boolean;
   processingTimeMs?: number;
+  ffmpegTimeMs?: number;
 }
 
 serve(async (req) => {
