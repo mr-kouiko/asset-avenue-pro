@@ -176,7 +176,7 @@ serve(async (req) => {
     }
 
     // Only creator or admin can trigger scan
-    const isAdmin = claimsData.claims.role === 'service_role';
+    const isAdmin = isServiceRole;
     if (submission.creator_id !== userId && !isAdmin) {
       // Check admin role in DB
       const { data: roleData } = await supabase
