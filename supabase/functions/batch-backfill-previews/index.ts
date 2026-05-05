@@ -315,8 +315,10 @@ serve(async (req) => {
         processed: results.length,
         succeeded,
         failed,
+        avgFfmpegMs,
+        failureReasonCounts: reasonCounts,
         errors: results.filter(r => r.status === 'error'),
-        successes: results.filter(r => r.status === 'success').map(r => r.fileName),
+        successes: results.filter(r => r.status === 'success'),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
