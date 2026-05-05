@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Download, ExternalLink, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LazyImage } from "./LazyImage";
+import { VideoWatermark } from "./VideoWatermark";
 import { useNavigate } from "react-router-dom";
 import type { PexelsItem } from "@/hooks/usePexelsSearch";
 import { generatePexelsProductSlug } from "@/utils/pexelsSlug";
