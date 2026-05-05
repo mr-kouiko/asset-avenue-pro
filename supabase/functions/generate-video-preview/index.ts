@@ -132,11 +132,23 @@ serve(async (req) => {
     
     if (ffmpegApiUrl && ffmpegApiKey) {
       // Use external FFmpeg API for processing
-      console.log(`[generate-video-preview] Using external FFmpeg API...`);
-      
+      const sizeMB = videoData.size / 1024 / 1024;
+      console.log(`[generate-video-preview] [STAGE:ffmpeg-call] Using external FFmpeg API (input=${sizeMB.toFixed(1)}MB)`);
+
+      // Reject early if file is over a hard limit (FFmpeg API has memory/time limits)
+      const MAX_INPUT_MB = 500;
+      if (sizeMB > MAX_INPUT_MB) {
+        const reason = `FILE_TOO_LARGE: input ${sizeMB.toFixed(1)}MB exceeds limit ${MAX_INPUT_MB}MB`;
+        console.error(`[generate-video-preview] [FAILURE:file_too_large] ${reason} | path=${videoPath} | elapsedMs=${Date.now() - startTime}`);
+        return new Response(
+          JSON.stringify({ success: false, error: reason, failureReason: 'file_too_large', processingTimeMs: Date.now() - startTime } as PreviewResponse),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
+        );
+      }
+
       const videoArrayBuffer = await videoData.arrayBuffer();
       const videoBytes = new Uint8Array(videoArrayBuffer);
-      
+
       const formData = new FormData();
       formData.append('video', new Blob([videoBytes], { type: 'video/mp4' }), 'input.mp4');
       if (duration) formData.append('duration', duration.toString());
@@ -144,20 +156,54 @@ serve(async (req) => {
       if (logoData) {
         formData.append('watermark', logoData, 'watermark.png');
       }
-      
-      const ffmpegResponse = await fetch(ffmpegApiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ffmpegApiKey}`,
-        },
-        body: formData,
-      });
-      
-      if (!ffmpegResponse.ok) {
-        throw new Error(`FFmpeg API error: ${ffmpegResponse.status}`);
+
+      const ffmpegStart = Date.now();
+      // Apply a generous timeout (5 min) to detect hangs vs slow processing
+      const TIMEOUT_MS = 5 * 60 * 1000;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      let ffmpegResponse: Response;
+      try {
+        ffmpegResponse = await fetch(ffmpegApiUrl, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${ffmpegApiKey}` },
+          body: formData,
+          signal: controller.signal,
+        });
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError';
+        const reason = isAbort ? 'timeout' : 'network_error';
+        const ffmpegMs = Date.now() - ffmpegStart;
+        console.error(`[generate-video-preview] [FAILURE:${reason}] FFmpeg fetch failed after ${ffmpegMs}ms | path=${videoPath} | size=${sizeMB.toFixed(1)}MB | err=${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+        return new Response(
+          JSON.stringify({ success: false, error: isAbort ? `FFmpeg API timed out after ${TIMEOUT_MS}ms` : 'FFmpeg API network error', failureReason: reason, processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs } as PreviewResponse),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 504 }
+        );
       }
-      
+      clearTimeout(timeoutId);
+      const ffmpegMs = Date.now() - ffmpegStart;
+
+      if (!ffmpegResponse.ok) {
+        const errBody = await ffmpegResponse.text().catch(() => '');
+        console.error(`[generate-video-preview] [FAILURE:ffmpeg_error] status=${ffmpegResponse.status} ffmpegMs=${ffmpegMs} path=${videoPath} size=${sizeMB.toFixed(1)}MB body=${errBody.substring(0, 300)}`);
+        return new Response(
+          JSON.stringify({ success: false, error: `FFmpeg API error ${ffmpegResponse.status}: ${errBody.substring(0, 200)}`, failureReason: 'ffmpeg_error', processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs } as PreviewResponse),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
+
       previewBlob = await ffmpegResponse.blob();
+      console.log(`[generate-video-preview] [STAGE:ffmpeg-done] ffmpegMs=${ffmpegMs} outputBytes=${previewBlob.size} (${(previewBlob.size / 1024 / 1024).toFixed(1)}MB)`);
+
+      if (previewBlob.size < 1000) {
+        console.error(`[generate-video-preview] [FAILURE:ffmpeg_error] Output too small (${previewBlob.size} bytes) | path=${videoPath}`);
+        return new Response(
+          JSON.stringify({ success: false, error: `FFmpeg returned invalid output (${previewBlob.size} bytes)`, failureReason: 'ffmpeg_error', processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs } as PreviewResponse),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
     } else {
       // No FFmpeg API configured — cannot generate a valid preview server-side.
       // Return an error so the client falls back to browser-based preview generation.
