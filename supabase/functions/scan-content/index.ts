@@ -139,8 +139,8 @@ serve(async (req) => {
       userId = userData.user.id;
     }
 
-    // ── Rate limit ──
-    if (!checkRateLimit(userId)) {
+    // ── Rate limit (skip for service role) ──
+    if (!isServiceRole && !checkRateLimit(userId)) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in a minute.' }), {
         status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
