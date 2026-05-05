@@ -119,9 +119,10 @@ serve(async (req) => {
     // Also check by extension
     const { data: videosByExt } = await adminClient
       .from('content_files')
-      .select('id, submission_id, file_name, file_path, file_type')
+      .select('id, submission_id, file_name, file_path, file_type, preview_attempts, preview_status')
       .is('preview_path', null)
       .eq('is_original', true)
+      .or('preview_status.is.null,preview_status.neq.preview_failed')
       .or('file_name.ilike.%.mp4,file_name.ilike.%.mov,file_name.ilike.%.webm')
       .limit(maxVideos);
 
