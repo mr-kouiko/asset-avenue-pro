@@ -274,6 +274,21 @@ serve(async (req) => {
             const reason = classifyError(msg);
             const totalMs = Date.now() - fileStart;
             console.error(`[backfill] [FAILURE:${reason}] file=${file.file_name} totalMs=${totalMs} ffmpegMs=${ffmpegTimeMs} err=${msg}`);
+            // Persist failure on the file row so admins can see & retry
+            try {
+              await adminClient
+                .from('content_files')
+                .update({
+                  preview_status: 'preview_failed',
+                  preview_failure_reason: reason,
+                  preview_last_error: msg.substring(0, 500),
+                  preview_last_attempt_at: new Date().toISOString(),
+                  preview_attempts: ((file.preview_attempts ?? 0) as number) + 1,
+                })
+                .eq('id', file.id);
+            } catch (persistErr) {
+              console.error(`[backfill] failed to persist failure for ${file.id}:`, persistErr);
+            }
             return {
               fileId: file.id,
               fileName: file.file_name,
