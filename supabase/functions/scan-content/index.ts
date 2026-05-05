@@ -115,22 +115,32 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    const isServiceRole = token === serviceRoleKey;
+
+    // Use service-role client for internal calls (bypass RLS), anon+JWT otherwise
+    const supabase = isServiceRole
+      ? createClient(supabaseUrl, serviceRoleKey)
+      : createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+    let userId: string;
+    if (isServiceRole) {
+      userId = 'service_role';
+    } else {
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      userId = userData.user.id;
     }
 
-    const userId = claimsData.claims.sub as string;
-
-    // ── Rate limit ──
-    if (!checkRateLimit(userId)) {
+    // ── Rate limit (skip for service role) ──
+    if (!isServiceRole && !checkRateLimit(userId)) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in a minute.' }), {
         status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -168,7 +178,7 @@ serve(async (req) => {
     }
 
     // Only creator or admin can trigger scan
-    const isAdmin = claimsData.claims.role === 'service_role';
+    const isAdmin = isServiceRole;
     if (submission.creator_id !== userId && !isAdmin) {
       // Check admin role in DB
       const { data: roleData } = await supabase
