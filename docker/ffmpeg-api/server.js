@@ -63,11 +63,16 @@ app.get('/health', (_req, res) => {
 // Main processing endpoint
 app.post('/process', authenticate, async (req, res) => {
   const { videoUrl, watermarkUrl } = req.body;
-  // Hard preview limits — these caps are enforced server-side regardless of caller input
-  const MAX_DURATION = 10;       // seconds
-  const MAX_RESOLUTION = 720;    // px (height)
+  // Hard preview limits — enforced server-side regardless of caller input
+  const MIN_DURATION = 8;        // seconds (target lower bound)
+  const MAX_DURATION = 10;       // seconds (hard cap)
+  const MAX_RESOLUTION = 720;    // px (height), aspect ratio preserved
+  const MAX_FPS = 30;            // fps cap (24-30)
+  const MUTE_AUDIO = req.body.muted !== false; // default: muted previews
   const requestedRes = Number(req.body.resolution) || MAX_RESOLUTION;
   const resolution = Math.min(requestedRes, MAX_RESOLUTION);
+  const requestedDur = Number(req.body.duration) || MAX_DURATION;
+  const duration = Math.min(Math.max(requestedDur, MIN_DURATION), MAX_DURATION);
 
   if (!videoUrl) {
     return res.status(400).json({ error: 'videoUrl is required' });
