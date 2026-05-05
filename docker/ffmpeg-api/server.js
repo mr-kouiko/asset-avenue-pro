@@ -83,7 +83,7 @@ app.post('/process', authenticate, async (req, res) => {
   const watermarkPath = path.join(TMP_DIR, `${jobId}_watermark.png`);
   const outputPath = path.join(TMP_DIR, `${jobId}_output.mp4`);
 
-  console.log(`[${jobId}] Starting job: resolution=${resolution} maxDuration=${MAX_DURATION}s`);
+  console.log(`[${jobId}] Starting job: resolution=${resolution} duration=${duration}s muted=${MUTE_AUDIO} fpsCap=${MAX_FPS}`);
 
   try {
     // Download source video
@@ -92,13 +92,31 @@ app.post('/process', authenticate, async (req, res) => {
     const inputSize = fs.statSync(inputPath).size;
     console.log(`[${jobId}] Video downloaded: ${(inputSize / 1024 / 1024).toFixed(1)}MB`);
 
-    // Build FFmpeg filter and args
-    let filterComplex;
-    // Cap input duration BEFORE decode for speed: -t after -i, plus -ss 0
-    const ffmpegArgs = ['-t', String(MAX_DURATION), '-i', inputPath];
+    // Probe input duration to pick most relevant segment (middle of clip)
+    let startOffset = 0;
+    try {
+      const probed = await new Promise((resolve, reject) => {
+        execFile('ffprobe', [
+          '-v', 'error', '-show_entries', 'format=duration',
+          '-of', 'default=noprint_wrappers=1:nokey=1', inputPath
+        ], (err, stdout) => err ? reject(err) : resolve(parseFloat(stdout.trim())));
+      });
+      if (Number.isFinite(probed) && probed > duration + 1) {
+        startOffset = Math.max(0, Math.min(probed - duration, probed / 2 - duration / 2));
+      }
+      console.log(`[${jobId}] Probed duration=${probed}s, startOffset=${startOffset.toFixed(2)}s`);
+    } catch (e) {
+      console.warn(`[${jobId}] ffprobe failed, defaulting to start: ${e.message}`);
+    }
 
-    // Scale: cap height at MAX_RESOLUTION, never upscale (min(ih,720))
-    const scaleExpr = `scale=-2:'min(${resolution},ih)'`;
+    // Build FFmpeg filter and args.
+    // -ss BEFORE -i = fast seek; -t after -i = exact duration cap.
+    let filterComplex;
+    const ffmpegArgs = ['-ss', String(startOffset), '-i', inputPath];
+
+    // Scale: cap height at MAX_RESOLUTION, never upscale, preserve aspect ratio.
+    // fps filter caps at MAX_FPS (downsamples only).
+    const scaleExpr = `scale=-2:'min(${resolution},ih)':flags=lanczos,fps=fps='min(${MAX_FPS},source_fps)'`;
 
     if (watermarkUrl) {
       console.log(`[${jobId}] Downloading watermark...`);
@@ -117,24 +135,26 @@ app.post('/process', authenticate, async (req, res) => {
 
     ffmpegArgs.push(
       '-filter_complex', filterComplex,
-      '-t', String(MAX_DURATION),                 // hard cap output duration
+      '-t', String(duration),                     // exact duration cap (8-10s)
       '-c:v', 'libx264',
-      '-preset', 'veryfast',                      // aggressive: fast encode
-      '-crf', '30',                               // aggressive compression (was 23)
-      '-maxrate', '1200k',
-      '-bufsize', '2400k',
-      '-pix_fmt', 'yuv420p',
-      '-profile:v', 'main',
+      '-preset', 'medium',                        // better clarity/size tradeoff
+      '-crf', '26',                               // visual clarity priority
+      '-maxrate', '1500k',                        // smooth bitrate, ~1-3MB target
+      '-bufsize', '3000k',
+      '-pix_fmt', 'yuv420p',                      // universal browser compat
+      '-profile:v', 'main',                       // broad compat incl. older Safari/Android
       '-level', '4.0',
-      '-g', '48',                                 // small GOP for fast seek
-      '-c:a', 'aac',
-      '-b:a', '96k',                              // aggressive audio bitrate
-      '-ac', '2',
-      '-ar', '44100',
-      '-movflags', '+faststart',                  // moov atom at front for fast start
-      '-y',
-      outputPath
+      '-g', String(MAX_FPS * 2),                  // 2s GOP for fast seek
+      '-movflags', '+faststart',                  // moov atom at front
     );
+
+    if (MUTE_AUDIO) {
+      ffmpegArgs.push('-an');                     // remove audio for muted previews
+    } else {
+      ffmpegArgs.push('-c:a', 'aac', '-b:a', '96k', '-ac', '2', '-ar', '44100');
+    }
+
+    ffmpegArgs.push('-y', outputPath);
 
     console.log(`[${jobId}] Running FFmpeg...`);
 
