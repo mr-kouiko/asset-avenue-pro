@@ -95,23 +95,28 @@ serve(async (req) => {
     }
 
     // Download the source video
-    console.log(`[generate-video-preview] Downloading source video...`);
+    const dlStart = Date.now();
+    console.log(`[generate-video-preview] [STAGE:download] path=${videoPath}`);
     const { data: videoData, error: downloadError } = await supabase.storage
       .from('uploads')
       .download(videoPath);
 
     if (downloadError || !videoData) {
-      console.error(`[generate-video-preview] Failed to download video:`, downloadError);
+      const dlMs = Date.now() - dlStart;
+      console.error(`[generate-video-preview] [FAILURE:download_error] dlMs=${dlMs} path=${videoPath} err=${downloadError?.message || 'no data'}`);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Failed to download source video: ${downloadError?.message || 'Unknown error'}` 
+        JSON.stringify({
+          success: false,
+          error: `Failed to download source video: ${downloadError?.message || 'Unknown error'}`,
+          failureReason: 'download_error',
+          processingTimeMs: Date.now() - startTime,
         } as PreviewResponse),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    console.log(`[generate-video-preview] Video downloaded: ${videoData.size} bytes`);
+    const dlMs = Date.now() - dlStart;
+    console.log(`[generate-video-preview] [STAGE:download-done] dlMs=${dlMs} bytes=${videoData.size} (${(videoData.size / 1024 / 1024).toFixed(1)}MB)`);
 
     // Download the watermark logo
     const { data: logoData, error: logoError } = await supabase.storage
