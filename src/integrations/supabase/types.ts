@@ -196,6 +196,7 @@ export type Database = {
           preview_last_attempt_at: string | null
           preview_last_error: string | null
           preview_path: string | null
+          preview_quality: string | null
           preview_status: string | null
           submission_id: string | null
           thumbnail_path: string | null
@@ -217,6 +218,7 @@ export type Database = {
           preview_last_attempt_at?: string | null
           preview_last_error?: string | null
           preview_path?: string | null
+          preview_quality?: string | null
           preview_status?: string | null
           submission_id?: string | null
           thumbnail_path?: string | null
@@ -238,6 +240,7 @@ export type Database = {
           preview_last_attempt_at?: string | null
           preview_last_error?: string | null
           preview_path?: string | null
+          preview_quality?: string | null
           preview_status?: string | null
           submission_id?: string | null
           thumbnail_path?: string | null
