@@ -120,14 +120,22 @@ serve(async (req) => {
     });
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const isServiceRole = token === serviceRoleKey;
 
-    const userId = claimsData.claims.sub as string;
+    let userId: string;
+    if (isServiceRole) {
+      // Internal call (cron retry, etc.) — use submission's creator as effective user
+      userId = 'service_role';
+    } else {
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      userId = userData.user.id;
+    }
 
     // ── Rate limit ──
     if (!checkRateLimit(userId)) {
