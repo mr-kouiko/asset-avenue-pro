@@ -62,7 +62,12 @@ app.get('/health', (_req, res) => {
 
 // Main processing endpoint
 app.post('/process', authenticate, async (req, res) => {
-  const { videoUrl, watermarkUrl, resolution = 720 } = req.body;
+  const { videoUrl, watermarkUrl } = req.body;
+  // Hard preview limits — these caps are enforced server-side regardless of caller input
+  const MAX_DURATION = 10;       // seconds
+  const MAX_RESOLUTION = 720;    // px (height)
+  const requestedRes = Number(req.body.resolution) || MAX_RESOLUTION;
+  const resolution = Math.min(requestedRes, MAX_RESOLUTION);
 
   if (!videoUrl) {
     return res.status(400).json({ error: 'videoUrl is required' });
@@ -73,7 +78,7 @@ app.post('/process', authenticate, async (req, res) => {
   const watermarkPath = path.join(TMP_DIR, `${jobId}_watermark.png`);
   const outputPath = path.join(TMP_DIR, `${jobId}_output.mp4`);
 
-  console.log(`[${jobId}] Starting job: resolution=${resolution}`);
+  console.log(`[${jobId}] Starting job: resolution=${resolution} maxDuration=${MAX_DURATION}s`);
 
   try {
     // Download source video
@@ -84,7 +89,11 @@ app.post('/process', authenticate, async (req, res) => {
 
     // Build FFmpeg filter and args
     let filterComplex;
-    const ffmpegArgs = ['-i', inputPath];
+    // Cap input duration BEFORE decode for speed: -t after -i, plus -ss 0
+    const ffmpegArgs = ['-t', String(MAX_DURATION), '-i', inputPath];
+
+    // Scale: cap height at MAX_RESOLUTION, never upscale (min(ih,720))
+    const scaleExpr = `scale=-2:'min(${resolution},ih)'`;
 
     if (watermarkUrl) {
       console.log(`[${jobId}] Downloading watermark...`);
@@ -94,21 +103,30 @@ app.post('/process', authenticate, async (req, res) => {
       ffmpegArgs.push('-i', watermarkPath);
       filterComplex = [
         `[1:v]scale=iw/5:-1,format=rgba,colorchannelmixer=aa=0.5[logo]`,
-        `[0:v]scale=-2:${resolution}[vid]`,
+        `[0:v]${scaleExpr}[vid]`,
         `[vid][logo]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2`
       ].join(';');
     } else {
-      filterComplex = `[0:v]scale=-2:${resolution}`;
+      filterComplex = `[0:v]${scaleExpr}`;
     }
 
     ffmpegArgs.push(
       '-filter_complex', filterComplex,
+      '-t', String(MAX_DURATION),                 // hard cap output duration
       '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '23',
+      '-preset', 'veryfast',                      // aggressive: fast encode
+      '-crf', '30',                               // aggressive compression (was 23)
+      '-maxrate', '1200k',
+      '-bufsize', '2400k',
+      '-pix_fmt', 'yuv420p',
+      '-profile:v', 'main',
+      '-level', '4.0',
+      '-g', '48',                                 // small GOP for fast seek
       '-c:a', 'aac',
-      '-b:a', '128k',
-      '-movflags', '+faststart',
+      '-b:a', '96k',                              // aggressive audio bitrate
+      '-ac', '2',
+      '-ar', '44100',
+      '-movflags', '+faststart',                  // moov atom at front for fast start
       '-y',
       outputPath
     );
