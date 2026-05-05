@@ -11,6 +11,23 @@ interface BackfillResult {
   fileName: string;
   status: 'success' | 'error';
   error?: string;
+  failureReason?: 'timeout' | 'file_too_large' | 'ffmpeg_error' | 'network_error' | 'signed_url_error' | 'upload_error' | 'db_update_error' | 'invalid_output' | 'unknown';
+  processingTimeMs?: number;
+  ffmpegTimeMs?: number;
+  outputSizeBytes?: number;
+}
+
+function classifyError(msg: string): BackfillResult['failureReason'] {
+  const m = msg.toLowerCase();
+  if (m.includes('timeout') || m.includes('timed out') || m.includes('aborted')) return 'timeout';
+  if (m.includes('too large') || m.includes('413')) return 'file_too_large';
+  if (m.includes('signed url') || m.includes('cannot create signed')) return 'signed_url_error';
+  if (m.includes('upload failed')) return 'upload_error';
+  if (m.includes('db update')) return 'db_update_error';
+  if (m.includes('output too small') || m.includes('invalid output')) return 'invalid_output';
+  if (m.includes('ffmpeg api')) return 'ffmpeg_error';
+  if (m.includes('fetch') || m.includes('network')) return 'network_error';
+  return 'unknown';
 }
 
 serve(async (req) => {
@@ -160,23 +177,23 @@ serve(async (req) => {
 
       const batchResults = await Promise.allSettled(
         batch.map(async (file: any) => {
+          const fileStart = Date.now();
+          let ffmpegTimeMs = 0;
           try {
-            console.log(`[backfill] Processing: ${file.file_name} (${file.id})`);
+            console.log(`[backfill] [START] file=${file.file_name} id=${file.id}`);
 
             // Generate signed URL for source video
             const storagePath = file.file_path.includes('/object/')
               ? file.file_path.split('/object/public/').pop() || file.file_path.split('/object/sign/').pop() || file.file_path
               : file.file_path;
 
-            // Determine bucket — try content-uploads first
             const bucket = 'content-uploads';
             const { data: signedData, error: signError } = await adminClient.storage
               .from(bucket)
-              .createSignedUrl(storagePath, 900); // 15 min
+              .createSignedUrl(storagePath, 900);
 
             let videoUrl: string;
             if (signError || !signedData) {
-              // Fallback: try the file_path as-is (might be a full public URL)
               if (file.file_path.startsWith('http')) {
                 videoUrl = file.file_path;
               } else {
@@ -186,73 +203,86 @@ serve(async (req) => {
               videoUrl = signedData.signedUrl;
             }
 
-            // Call FFmpeg API
-            const ffmpegHeaders: Record<string, string> = {
-              'Content-Type': 'application/json',
-            };
-            if (ffmpegApiKey) {
-              ffmpegHeaders['Authorization'] = `Bearer ${ffmpegApiKey}`;
-            }
+            const ffmpegHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (ffmpegApiKey) ffmpegHeaders['Authorization'] = `Bearer ${ffmpegApiKey}`;
 
-            const ffmpegResponse = await fetch(ffmpegApiUrl, {
-              method: 'POST',
-              headers: ffmpegHeaders,
-              body: JSON.stringify({
-                videoUrl,
-                watermarkUrl,
-                resolution: 720,
-              }),
-            });
+            // 5-min timeout per video
+            const TIMEOUT_MS = 5 * 60 * 1000;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+            const ffmpegStart = Date.now();
+
+            let ffmpegResponse: Response;
+            try {
+              ffmpegResponse = await fetch(ffmpegApiUrl, {
+                method: 'POST',
+                headers: ffmpegHeaders,
+                body: JSON.stringify({ videoUrl, watermarkUrl, resolution: 720 }),
+                signal: controller.signal,
+              });
+            } catch (fetchErr: any) {
+              clearTimeout(timeoutId);
+              ffmpegTimeMs = Date.now() - ffmpegStart;
+              const isAbort = fetchErr?.name === 'AbortError';
+              throw new Error(isAbort ? `FFmpeg API timeout after ${TIMEOUT_MS}ms (ffmpegMs=${ffmpegTimeMs})` : `FFmpeg API network error: ${fetchErr?.message || fetchErr}`);
+            }
+            clearTimeout(timeoutId);
+            ffmpegTimeMs = Date.now() - ffmpegStart;
 
             if (!ffmpegResponse.ok) {
               const errText = await ffmpegResponse.text();
-              throw new Error(`FFmpeg API returned ${ffmpegResponse.status}: ${errText.substring(0, 200)}`);
+              throw new Error(`FFmpeg API returned ${ffmpegResponse.status} (ffmpegMs=${ffmpegTimeMs}): ${errText.substring(0, 200)}`);
             }
 
-            // Get the processed video as blob
             const videoBlob = await ffmpegResponse.arrayBuffer();
             const videoBytes = new Uint8Array(videoBlob);
 
             if (videoBytes.length < 1000) {
-              throw new Error(`Output too small (${videoBytes.length} bytes), likely failed`);
+              throw new Error(`Output too small / invalid output (${videoBytes.length} bytes)`);
             }
 
-            console.log(`[backfill] FFmpeg output for ${file.file_name}: ${(videoBytes.length / 1024 / 1024).toFixed(1)}MB`);
+            console.log(`[backfill] [STAGE:ffmpeg-done] file=${file.file_name} ffmpegMs=${ffmpegTimeMs} outputMB=${(videoBytes.length / 1024 / 1024).toFixed(1)}`);
 
-            // Upload to previews bucket
             const previewPath = `${file.submission_id}/${file.id}_preview.mp4`;
             const { error: uploadError } = await adminClient.storage
               .from('previews')
-              .upload(previewPath, videoBytes, {
-                contentType: 'video/mp4',
-                upsert: true,
-              });
+              .upload(previewPath, videoBytes, { contentType: 'video/mp4', upsert: true });
 
-            if (uploadError) {
-              throw new Error(`Upload failed: ${uploadError.message}`);
-            }
+            if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
-            // Get public URL
-            const { data: urlData } = adminClient.storage
-              .from('previews')
-              .getPublicUrl(previewPath);
+            const { data: urlData } = adminClient.storage.from('previews').getPublicUrl(previewPath);
 
-            // Update content_files record
             const { error: updateError } = await adminClient
               .from('content_files')
               .update({ preview_path: urlData.publicUrl })
               .eq('id', file.id);
 
-            if (updateError) {
-              throw new Error(`DB update failed: ${updateError.message}`);
-            }
+            if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
 
-            console.log(`[backfill] ✅ Done: ${file.file_name}`);
-            return { fileId: file.id, fileName: file.file_name, status: 'success' as const };
+            const totalMs = Date.now() - fileStart;
+            console.log(`[backfill] [SUCCESS] file=${file.file_name} totalMs=${totalMs} ffmpegMs=${ffmpegTimeMs} outputBytes=${videoBytes.length}`);
+            return {
+              fileId: file.id,
+              fileName: file.file_name,
+              status: 'success' as const,
+              processingTimeMs: totalMs,
+              ffmpegTimeMs,
+              outputSizeBytes: videoBytes.length,
+            };
           } catch (err) {
             const msg = err instanceof Error ? err.message : 'Unknown error';
-            console.error(`[backfill] ❌ Failed: ${file.file_name} — ${msg}`);
-            return { fileId: file.id, fileName: file.file_name, status: 'error' as const, error: msg };
+            const reason = classifyError(msg);
+            const totalMs = Date.now() - fileStart;
+            console.error(`[backfill] [FAILURE:${reason}] file=${file.file_name} totalMs=${totalMs} ffmpegMs=${ffmpegTimeMs} err=${msg}`);
+            return {
+              fileId: file.id,
+              fileName: file.file_name,
+              status: 'error' as const,
+              error: msg,
+              failureReason: reason,
+              processingTimeMs: totalMs,
+              ffmpegTimeMs,
+            };
           }
         })
       );
@@ -261,23 +291,34 @@ serve(async (req) => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
         } else {
-          results.push({ fileId: 'unknown', fileName: 'unknown', status: 'error', error: result.reason?.message || 'Promise rejected' });
+          results.push({ fileId: 'unknown', fileName: 'unknown', status: 'error', error: result.reason?.message || 'Promise rejected', failureReason: 'unknown' });
         }
       }
     }
 
     const succeeded = results.filter(r => r.status === 'success').length;
     const failed = results.filter(r => r.status === 'error').length;
+    const totalFfmpegMs = results.reduce((sum, r) => sum + (r.ffmpegTimeMs || 0), 0);
+    const avgFfmpegMs = results.length ? Math.round(totalFfmpegMs / results.length) : 0;
 
-    console.log(`[backfill] Complete. Processed: ${results.length}, Succeeded: ${succeeded}, Failed: ${failed}`);
+    // Aggregate failure reasons
+    const reasonCounts: Record<string, number> = {};
+    for (const r of results.filter(r => r.status === 'error')) {
+      const k = r.failureReason || 'unknown';
+      reasonCounts[k] = (reasonCounts[k] || 0) + 1;
+    }
+
+    console.log(`[backfill] [COMPLETE] processed=${results.length} succeeded=${succeeded} failed=${failed} avgFfmpegMs=${avgFfmpegMs} reasons=${JSON.stringify(reasonCounts)}`);
 
     return new Response(
       JSON.stringify({
         processed: results.length,
         succeeded,
         failed,
+        avgFfmpegMs,
+        failureReasonCounts: reasonCounts,
         errors: results.filter(r => r.status === 'error'),
-        successes: results.filter(r => r.status === 'success').map(r => r.fileName),
+        successes: results.filter(r => r.status === 'success'),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
