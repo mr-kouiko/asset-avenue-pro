@@ -101,6 +101,9 @@ export const PexelsCard = memo(({ item }: PexelsCardProps) => {
           }`}
         />
 
+        {/* Watermark overlay */}
+        <VideoWatermark size="thumbnail" />
+
         {/* Badges */}
         <div className="absolute top-2 left-2 flex gap-1 z-20">
           <Badge className="bg-emerald-500 text-white text-[10px] px-2 py-0.5 font-bold border-0 shadow-sm">
