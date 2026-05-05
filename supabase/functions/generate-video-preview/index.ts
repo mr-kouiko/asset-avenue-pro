@@ -299,7 +299,7 @@ serve(async (req) => {
     }
 
     const processingTimeMs = Date.now() - startTime;
-    console.log(`[generate-video-preview] Preview generated successfully in ${processingTimeMs}ms`);
+    console.log(`[generate-video-preview] [SUCCESS] path=${videoPath} previewPath=${previewPath} totalMs=${processingTimeMs} sizeOut=${previewBlob.size}`);
 
     return new Response(
       JSON.stringify({
@@ -313,11 +313,15 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[generate-video-preview] Error:', error);
+    const elapsedMs = Date.now() - startTime;
+    const msg = error instanceof Error ? error.message : 'Internal server error';
+    console.error(`[generate-video-preview] [FAILURE:internal_error] elapsedMs=${elapsedMs} err=${msg}`, error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+      JSON.stringify({
+        success: false,
+        error: msg,
+        failureReason: 'internal_error',
+        processingTimeMs: elapsedMs,
       } as PreviewResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
