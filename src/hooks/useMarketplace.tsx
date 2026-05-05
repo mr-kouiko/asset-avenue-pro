@@ -131,15 +131,32 @@ function processMarketplaceData(
       }
 
       // Media URL — STRICT: video playback requires a watermarked preview_path. No fallback to original.
+      // Priority: 1) MP4 preview, 2) animated WebP loop, 3) nothing (GIFs are NEVER used as primary).
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
-        const fileWithPreview = files.find((f: any) => f.preview_path);
-        if (fileWithPreview?.preview_path) {
-          mediaUrl = fileWithPreview.preview_path.startsWith('http')
-            ? fileWithPreview.preview_path
-            : buildPublicUrlCached('previews', fileWithPreview.preview_path);
+        const isMp4 = (p?: string) => !!p && /\.mp4($|\?)/i.test(p);
+        const isWebp = (p?: string) => !!p && /\.webp($|\?)/i.test(p);
+        const isGif = (p?: string) => !!p && /\.gif($|\?)/i.test(p);
+
+        const mp4File = files.find((f: any) => isMp4(f.preview_path));
+        const webpFile = !mp4File ? files.find((f: any) => isWebp(f.preview_path)) : null;
+        // Skip GIF-only previews on listings — they are degraded fallbacks.
+        const chosen = mp4File || webpFile;
+
+        if (chosen?.preview_path) {
+          mediaUrl = chosen.preview_path.startsWith('http')
+            ? chosen.preview_path
+            : buildPublicUrlCached('previews', chosen.preview_path);
+        } else {
+          // Fallback: any preview_path that isn't a GIF (e.g. legacy untyped path)
+          const fallback = files.find((f: any) => f.preview_path && !isGif(f.preview_path));
+          if (fallback?.preview_path) {
+            mediaUrl = fallback.preview_path.startsWith('http')
+              ? fallback.preview_path
+              : buildPublicUrlCached('previews', fallback.preview_path);
+          }
         }
-        // No fallback: original videos must never be served publicly.
+        // No fallback to original: originals must never be served publicly.
       } else if (contentType === 'audio') {
         // Prefer watermarked preview_path; fall back to original file_path for legacy items.
         const audioPreview = files.find((f: any) => f.preview_path);
