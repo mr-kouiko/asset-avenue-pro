@@ -535,6 +535,9 @@ const AdminDashboard = () => {
               <AdminVideoBackfill />
             </div>
             <div className="mt-6">
+              <AdminFailedPreviews />
+            </div>
+            <div className="mt-6">
               <AdminProductTranslations />
             </div>
           </TabsContent>
