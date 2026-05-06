@@ -187,6 +187,46 @@ const ProductDetailInner = () => {
     isAiGenerated: product?.isAiGenerated || false
   });
 
+  // Probe the actual preview video duration so the UI matches the playable length exactly
+  const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
+  const isVideoLikeProduct =
+    product?.type === 'video' ||
+    (product?.type === 'vfx' && !!product?.previewUrl?.toLowerCase().includes('.mp4'));
+
+  useEffect(() => {
+    setVideoDurationSec(null);
+    if (!isVideoLikeProduct || !product?.previewUrl) return;
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.crossOrigin = 'anonymous';
+    v.muted = true;
+    const cleanup = () => {
+      v.removeAttribute('src');
+      try { v.load(); } catch (_) {}
+    };
+    const onMeta = () => {
+      const d = v.duration;
+      if (Number.isFinite(d) && d > 0) setVideoDurationSec(d);
+      cleanup();
+    };
+    const onErr = () => { cleanup(); };
+    v.addEventListener('loadedmetadata', onMeta);
+    v.addEventListener('error', onErr);
+    v.src = product.previewUrl.split('#')[0];
+    return () => {
+      v.removeEventListener('loadedmetadata', onMeta);
+      v.removeEventListener('error', onErr);
+      cleanup();
+    };
+  }, [isVideoLikeProduct, product?.previewUrl]);
+
+  const formatDuration = (sec: number) => {
+    const s = Math.max(0, Math.round(sec));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${r.toString().padStart(2, '0')}`;
+  };
+
   // SEO Configuration - Must be called before any conditional returns
   const activeProduct = product || fallbackProduct;
   const productImage = activeProduct?.thumbnail || activeProduct?.previewUrl || '';
@@ -508,7 +548,7 @@ const ProductDetailInner = () => {
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
               <MediaPlayer 
-                src={`${product.previewUrl}${product.previewUrl.includes('#') ? '' : '#t=2'}`}
+                src={product.previewUrl}
                 type="video"
                 title={product.title}
                 poster={product.thumbnail?.includes('.mp4') || product.thumbnail?.includes('placeholder') ? undefined : product.thumbnail}
@@ -597,6 +637,21 @@ const ProductDetailInner = () => {
         
       </div>
 
+            {/* Preview label — clarifies what the player shows */}
+            {isVideoLikeProduct && product.previewUrl && (
+              <div className="flex items-center justify-between text-xs text-stock-dark/70 px-1">
+                <span className="inline-flex items-center gap-1.5">
+                  <FileVideo className="h-3.5 w-3.5" />
+                  Full video preview (watermarked)
+                </span>
+                {videoDurationSec !== null && (
+                  <span className="font-mono font-medium text-stock-dark">
+                    {formatDuration(videoDurationSec)}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Download Preview Button - Prominent for video/audio */}
             {(product.type === 'video' || product.type === 'vfx' || isAudioByExtension) && product.previewUrl && product.hasWatermarkedPreview && (
               <DownloadPreviewButton 
@@ -646,6 +701,19 @@ const ProductDetailInner = () => {
                   </Badge>
                 )}
               </div>
+
+              {/* Video duration — visible above the fold for video products */}
+              {isVideoLikeProduct && videoDurationSec !== null && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge
+                    variant="secondary"
+                    className="bg-stock-blue/10 text-stock-blue border-stock-blue/20 inline-flex items-center gap-1.5"
+                  >
+                    <FileVideo className="h-3.5 w-3.5" />
+                    Duration: {formatDuration(videoDurationSec)} ({Math.round(videoDurationSec)}s)
+                  </Badge>
+                </div>
+              )}
               
               {/* Author Info - Clickable Avatar */}
               <div className="flex items-center gap-3 mb-4">

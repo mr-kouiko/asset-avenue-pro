@@ -182,19 +182,18 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', ffmpeg: true }));
 app.post('/process', authenticate, async (req, res) => {
   const { videoUrl, watermarkUrl } = req.body;
 
-  // Hard limits
-  const MIN_DURATION = 8;
-  const MAX_DURATION = 10;
+  // Hard limits — preview encodes the FULL source video (uploads capped at 60s elsewhere)
+  const MAX_DURATION = 60;       // absolute upper bound for preview length
   const MAX_RESOLUTION = 720;
   const MAX_FPS = 30;
-  const MAX_RETRIES = 3; // pick different segments on validation failure
-  const MAX_TOTAL_MS = 60_000; // overall safeguard
+  const MAX_RETRIES = 1;         // full-length encode: no segment retries
+  const MAX_TOTAL_MS = 120_000;  // overall safeguard for full-length encode
 
   const MUTE_AUDIO = req.body.muted !== false;
   const requestedRes = Number(req.body.resolution) || MAX_RESOLUTION;
   const resolution = Math.min(requestedRes, MAX_RESOLUTION);
-  const requestedDur = Number(req.body.duration) || MAX_DURATION;
-  const duration = Math.min(Math.max(requestedDur, MIN_DURATION), MAX_DURATION);
+  // Duration is determined from the probed source below; placeholder until then.
+  let duration = MAX_DURATION;
 
   if (!videoUrl) return res.status(400).json({ error: 'videoUrl is required' });
 
@@ -238,11 +237,13 @@ app.post('/process', authenticate, async (req, res) => {
     }
     console.log(`[${jobId}] probed dur=${probedDuration}s height=${inputHeight}`);
 
-    // Scene detection (best-effort, capped)
-    let sceneTimes = [];
-    if (probedDuration > duration + 1) {
-      sceneTimes = await detectSceneChanges(inputPath, jobId);
+    // Encode the FULL video (capped at MAX_DURATION as a safety net)
+    if (probedDuration > 0) {
+      duration = Math.min(probedDuration, MAX_DURATION);
     }
+
+    // Scene detection no longer needed (full-length encode)
+    const sceneTimes = [];
 
     // Optional watermark
     if (watermarkUrl) {
@@ -267,18 +268,8 @@ app.post('/process', authenticate, async (req, res) => {
         break;
       }
 
-      const startOffset = pickSegmentStart(probedDuration || duration, sceneTimes, duration, attempt);
+      const startOffset = 0;       // always start at the beginning — full-length preview
       chosenStart = startOffset;
-
-      // Pre-screen segment quality (skip first attempt prescreen for speed)
-      if (attempt > 0 && probedDuration > duration + 1) {
-        const q = await probeSegmentQuality(inputPath, startOffset, Math.min(duration, 4), jobId);
-        if (q.avgLuma > 0 && q.avgLuma < 14) {
-          console.log(`[${jobId}] attempt=${attempt} skip dark segment start=${startOffset.toFixed(2)} avgLuma=${q.avgLuma.toFixed(1)}`);
-          attemptLogs.push({ attempt, startOffset, skipped: 'dark_segment', avgLuma: q.avgLuma });
-          continue;
-        }
-      }
 
       // Encode
       const ffmpegArgs = ['-ss', String(startOffset), '-i', inputPath];
@@ -326,7 +317,7 @@ app.post('/process', authenticate, async (req, res) => {
         await new Promise((resolve, reject) => {
           execFile('ffmpeg', ffmpegArgs, {
             maxBuffer: 20 * 1024 * 1024,
-            timeout: 45_000, // per-attempt cap
+            timeout: 110_000, // per-attempt cap (full-length encode up to 60s)
           }, (error, _stdout, stderr) => {
             ffmpegStderr = (stderr || '').toString();
             if (error) reject(new Error(`ffmpeg attempt failed: ${error.message}`));
