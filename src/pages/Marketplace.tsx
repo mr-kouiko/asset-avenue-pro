@@ -92,7 +92,7 @@ const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("recent");
-  const [optimalOnly, setOptimalOnly] = useState(false);
+  
   const [page, setPage] = useState(1);
   const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
 
