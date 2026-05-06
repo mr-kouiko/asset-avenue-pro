@@ -80,7 +80,7 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
                 </div>
                 <div className="text-center">
                   <Button variant="outline" asChild>
-                    <Link to="/en/marketplace" className="inline-flex items-center gap-2">
+                    <Link to="/marketplace" className="inline-flex items-center gap-2">
                       View All Content
                       <ArrowRight className="h-4 w-4" />
                     </Link>
