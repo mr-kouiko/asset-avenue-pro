@@ -618,15 +618,23 @@ const Marketplace = () => {
               )}
             </div>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="popular">Most popular</SelectItem>
-                <SelectItem value="recent">Most recent</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch id="optimal-only" checked={optimalOnly} onCheckedChange={setOptimalOnly} />
+                <label htmlFor="optimal-only" className="text-sm text-muted-foreground cursor-pointer whitespace-nowrap">
+                  Optimal previews only
+                </label>
+              </div>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="popular">Most popular</SelectItem>
+                  <SelectItem value="recent">Most recent</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Mobile Filter Panels */}
