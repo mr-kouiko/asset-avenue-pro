@@ -177,7 +177,6 @@ const Marketplace = () => {
       searchQuery: debouncedSearch || undefined,
       sortBy,
       page,
-      optimalOnly,
     };
 
     if (isPhotoSection) {
