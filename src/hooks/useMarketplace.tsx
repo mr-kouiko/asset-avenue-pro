@@ -44,7 +44,7 @@ export interface MarketplaceFilters {
   withPeople?: boolean | null;
   sortBy?: string;
   page?: number;
-  optimalOnly?: boolean;
+  
 }
 
 export const PAGE_SIZE = 40;
