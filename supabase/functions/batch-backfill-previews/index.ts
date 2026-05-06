@@ -95,18 +95,20 @@ serve(async (req) => {
     const batchSize = Math.min(body.batchSize || 5, 20);
     const maxVideos = Math.min(body.maxVideos || 50, 100);
     const dryRun = body.dryRun === true;
+    const force = body.force === true; // regenerate even if preview_path already set
 
-    console.log(`[backfill] Admin ${user.id} started. batchSize=${batchSize}, maxVideos=${maxVideos}, dryRun=${dryRun}`);
+    console.log(`[backfill] Admin ${user.id} started. batchSize=${batchSize}, maxVideos=${maxVideos}, dryRun=${dryRun}, force=${force}`);
 
-    // Query videos missing previews
-    const { data: videosByType, error: queryError1 } = await adminClient
+    // Query videos. When force=true, include those that already have a preview.
+    let q1 = adminClient
       .from('content_files')
       .select('id, submission_id, file_name, file_path, file_type, preview_attempts, preview_status')
-      .is('preview_path', null)
       .eq('is_original', true)
       .or('preview_status.is.null,preview_status.neq.preview_failed')
       .in('file_type', ['video', 'video/mp4', 'video/quicktime', 'video/webm', 'video/mov'])
       .limit(maxVideos);
+    if (!force) q1 = q1.is('preview_path', null);
+    const { data: videosByType, error: queryError1 } = await q1;
 
     if (queryError1) {
       console.error('[backfill] Query error:', queryError1);
@@ -117,14 +119,15 @@ serve(async (req) => {
     }
 
     // Also check by extension
-    const { data: videosByExt } = await adminClient
+    let q2 = adminClient
       .from('content_files')
       .select('id, submission_id, file_name, file_path, file_type, preview_attempts, preview_status')
-      .is('preview_path', null)
       .eq('is_original', true)
       .neq('preview_status', 'preview_failed')
       .or('file_name.ilike.%.mp4,file_name.ilike.%.mov,file_name.ilike.%.webm')
       .limit(maxVideos);
+    if (!force) q2 = q2.is('preview_path', null);
+    const { data: videosByExt } = await q2;
 
     // Merge and deduplicate
     const allFiles = [...(videosByType || []), ...(videosByExt || [])];
