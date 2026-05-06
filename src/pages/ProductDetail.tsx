@@ -187,6 +187,46 @@ const ProductDetailInner = () => {
     isAiGenerated: product?.isAiGenerated || false
   });
 
+  // Probe the actual preview video duration so the UI matches the playable length exactly
+  const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
+  const isVideoLikeProduct =
+    product?.type === 'video' ||
+    (product?.type === 'vfx' && !!product?.previewUrl?.toLowerCase().includes('.mp4'));
+
+  useEffect(() => {
+    setVideoDurationSec(null);
+    if (!isVideoLikeProduct || !product?.previewUrl) return;
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.crossOrigin = 'anonymous';
+    v.muted = true;
+    const cleanup = () => {
+      v.removeAttribute('src');
+      try { v.load(); } catch (_) {}
+    };
+    const onMeta = () => {
+      const d = v.duration;
+      if (Number.isFinite(d) && d > 0) setVideoDurationSec(d);
+      cleanup();
+    };
+    const onErr = () => { cleanup(); };
+    v.addEventListener('loadedmetadata', onMeta);
+    v.addEventListener('error', onErr);
+    v.src = product.previewUrl.split('#')[0];
+    return () => {
+      v.removeEventListener('loadedmetadata', onMeta);
+      v.removeEventListener('error', onErr);
+      cleanup();
+    };
+  }, [isVideoLikeProduct, product?.previewUrl]);
+
+  const formatDuration = (sec: number) => {
+    const s = Math.max(0, Math.round(sec));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${r.toString().padStart(2, '0')}`;
+  };
+
   // SEO Configuration - Must be called before any conditional returns
   const activeProduct = product || fallbackProduct;
   const productImage = activeProduct?.thumbnail || activeProduct?.previewUrl || '';
