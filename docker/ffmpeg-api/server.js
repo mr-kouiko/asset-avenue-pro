@@ -202,7 +202,7 @@ app.post('/process', authenticate, async (req, res) => {
   const inputPath = path.join(TMP_DIR, `${jobId}_input`);
   const watermarkPath = path.join(TMP_DIR, `${jobId}_watermark.png`);
   const outputPath = path.join(TMP_DIR, `${jobId}_output.mp4`);
-  const gifPath = path.join(TMP_DIR, `${jobId}_loop.webp`);
+  
 
   const jobStart = Date.now();
   console.log(`[${jobId}] START res=${resolution} dur=${duration}s muted=${MUTE_AUDIO}`);
@@ -360,31 +360,6 @@ app.post('/process', authenticate, async (req, res) => {
       throw new Error(`preview validation failed after ${MAX_RETRIES} attempts: ${lastReason} | log=${JSON.stringify(attemptLogs)}`);
     }
 
-    // OPTIONAL: ultra-light animated WebP loop (2-3s), best-effort, non-fatal
-    let webpBuffer = null;
-    try {
-      const loopDur = Math.min(3, validation.durationSec || 3);
-      await new Promise((resolve, reject) => {
-        execFile('ffmpeg', [
-          '-ss', String(chosenStart), '-t', String(loopDur),
-          '-i', inputPath,
-          '-vf', `scale=320:-2:flags=lanczos,fps=12`,
-          '-vcodec', 'libwebp', '-lossless', '0', '-q:v', '60',
-          '-loop', '0', '-preset', 'picture', '-an',
-          '-y', gifPath,
-        ], { timeout: 15_000, maxBuffer: 10 * 1024 * 1024 }, (err, _o, stderr) => {
-          if (err) reject(new Error(stderr?.toString().slice(-200) || err.message));
-          else resolve();
-        });
-      });
-      if (fs.existsSync(gifPath) && fs.statSync(gifPath).size > 1000) {
-        webpBuffer = fs.readFileSync(gifPath).toString('base64');
-        console.log(`[${jobId}] loop webp generated ${fs.statSync(gifPath).size}B`);
-      }
-    } catch (e) {
-      console.warn(`[${jobId}] webp loop generation failed (non-fatal): ${e.message}`);
-    }
-
     const outputSize = fs.statSync(outputPath).size;
     const totalMs = Date.now() - jobStart;
     console.log(`[${jobId}] DONE totalMs=${totalMs} outputBytes=${outputSize} attempts=${attemptLogs.length}`);
@@ -397,20 +372,19 @@ app.post('/process', authenticate, async (req, res) => {
     res.setHeader('X-Preview-Avg-Luma', String(validation.avgLuma?.toFixed?.(1) || ''));
     res.setHeader('X-Preview-Attempts', String(attemptLogs.length));
     res.setHeader('X-Preview-Total-Ms', String(totalMs));
-    if (webpBuffer) res.setHeader('X-Preview-Loop-Webp-Base64', webpBuffer);
 
     const readStream = fs.createReadStream(outputPath);
     readStream.pipe(res);
-    readStream.on('end', () => cleanup(inputPath, watermarkPath, outputPath, gifPath));
+    readStream.on('end', () => cleanup(inputPath, watermarkPath, outputPath));
     readStream.on('error', (err) => {
       console.error(`[${jobId}] stream error:`, err);
-      cleanup(inputPath, watermarkPath, outputPath, gifPath);
+      cleanup(inputPath, watermarkPath, outputPath);
     });
 
   } catch (err) {
     const totalMs = Date.now() - jobStart;
     console.error(`[${jobId}] FAILED totalMs=${totalMs}:`, err.message);
-    cleanup(inputPath, watermarkPath, outputPath, gifPath);
+    cleanup(inputPath, watermarkPath, outputPath);
     res.status(500).json({
       error: err.message,
       jobId,
