@@ -52,7 +52,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { videoPath, contentId, duration, resolution = 720 }: PreviewRequest = await req.json();
+    const { videoPath, contentId, duration, resolution = 720, force = false }: PreviewRequest = await req.json();
 
     if (!videoPath) {
       return new Response(
@@ -62,7 +62,7 @@ serve(async (req) => {
     }
 
     console.log(`[generate-video-preview] Starting preview generation for: ${videoPath}`);
-    console.log(`[generate-video-preview] Settings: duration=${duration}s, resolution=${resolution}p`);
+    console.log(`[generate-video-preview] Settings: duration=${duration ?? 'full'}s, resolution=${resolution}p, force=${force}`);
 
     // Generate preview path
     const pathParts = videoPath.split('/');
@@ -71,12 +71,13 @@ serve(async (req) => {
     const previewFileName = `${fileNameWithoutExt}_preview_${resolution}p.mp4`;
     const previewPath = `previews/${pathParts.join('/')}/${previewFileName}`;
 
-    // Check if preview already exists (caching)
-    const { data: existingPreview } = await supabase.storage
-      .from('uploads')
-      .download(previewPath);
+    // Check if preview already exists (caching) — skip when force=true
+    if (!force) {
+      const { data: existingPreview } = await supabase.storage
+        .from('uploads')
+        .download(previewPath);
 
-    if (existingPreview && existingPreview.size > 0) {
+      if (existingPreview && existingPreview.size > 0) {
       console.log(`[generate-video-preview] Preview already exists, returning cached version`);
       
       const { data: { publicUrl } } = supabase.storage
