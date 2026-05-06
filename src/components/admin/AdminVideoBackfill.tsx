@@ -92,6 +92,11 @@ export const AdminVideoBackfill = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Switch id="force" checked={force} onCheckedChange={setForce} />
+            <Label htmlFor="force">Force regenerate (replace existing previews)</Label>
+          </div>
+
+          <div className="flex items-center gap-2">
             <Label htmlFor="max-videos">Max videos:</Label>
             <select
               id="max-videos"
