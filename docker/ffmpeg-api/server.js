@@ -182,19 +182,18 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', ffmpeg: true }));
 app.post('/process', authenticate, async (req, res) => {
   const { videoUrl, watermarkUrl } = req.body;
 
-  // Hard limits
-  const MIN_DURATION = 8;
-  const MAX_DURATION = 10;
+  // Hard limits — preview encodes the FULL source video (uploads capped at 60s elsewhere)
+  const MAX_DURATION = 60;       // absolute upper bound for preview length
   const MAX_RESOLUTION = 720;
   const MAX_FPS = 30;
-  const MAX_RETRIES = 3; // pick different segments on validation failure
-  const MAX_TOTAL_MS = 60_000; // overall safeguard
+  const MAX_RETRIES = 1;         // full-length encode: no segment retries
+  const MAX_TOTAL_MS = 120_000;  // overall safeguard for full-length encode
 
   const MUTE_AUDIO = req.body.muted !== false;
   const requestedRes = Number(req.body.resolution) || MAX_RESOLUTION;
   const resolution = Math.min(requestedRes, MAX_RESOLUTION);
-  const requestedDur = Number(req.body.duration) || MAX_DURATION;
-  const duration = Math.min(Math.max(requestedDur, MIN_DURATION), MAX_DURATION);
+  // Duration is determined from the probed source below; placeholder until then.
+  let duration = MAX_DURATION;
 
   if (!videoUrl) return res.status(400).json({ error: 'videoUrl is required' });
 
