@@ -24,6 +24,7 @@ import {
   Flag
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
+import { supabase } from "@/integrations/supabase/client";
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { AudioHeroPlayer } from "@/components/AudioHeroPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
@@ -195,39 +196,49 @@ const ProductDetailInner = () => {
 
   useEffect(() => {
     setVideoDurationSec(null);
-    if (!isVideoLikeProduct) return;
+    if (!isVideoLikeProduct || !product?.id) return;
 
-    // Prefer the ORIGINAL video file_path so we report the true full length,
-    // not the (potentially capped) preview length.
-    const originalVideo = product?.files?.find(
-      (f: any) => f.is_original && (f.file_type?.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(f.file_path || ''))
-    );
-    const sourceUrl = originalVideo?.file_path || product?.previewUrl;
-    if (!sourceUrl) return;
+    let cancelled = false;
+    const probe = (sourceUrl: string) => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.crossOrigin = 'anonymous';
+      v.muted = true;
+      const cleanup = () => {
+        v.removeEventListener('loadedmetadata', onMeta);
+        v.removeEventListener('error', onErr);
+        v.removeAttribute('src');
+        try { v.load(); } catch (_) {}
+      };
+      const onMeta = () => {
+        const d = v.duration;
+        if (!cancelled && Number.isFinite(d) && d > 0) setVideoDurationSec(d);
+        cleanup();
+      };
+      const onErr = () => { cleanup(); };
+      v.addEventListener('loadedmetadata', onMeta);
+      v.addEventListener('error', onErr);
+      v.src = sourceUrl.split('#')[0];
+    };
 
-    const v = document.createElement('video');
-    v.preload = 'metadata';
-    v.crossOrigin = 'anonymous';
-    v.muted = true;
-    const cleanup = () => {
-      v.removeAttribute('src');
-      try { v.load(); } catch (_) {}
-    };
-    const onMeta = () => {
-      const d = v.duration;
-      if (Number.isFinite(d) && d > 0) setVideoDurationSec(d);
-      cleanup();
-    };
-    const onErr = () => { cleanup(); };
-    v.addEventListener('loadedmetadata', onMeta);
-    v.addEventListener('error', onErr);
-    v.src = sourceUrl.split('#')[0];
-    return () => {
-      v.removeEventListener('loadedmetadata', onMeta);
-      v.removeEventListener('error', onErr);
-      cleanup();
-    };
-  }, [isVideoLikeProduct, product?.previewUrl, product?.files]);
+    // Try to fetch the ORIGINAL (unmasked) video URL via dedicated RPC so
+    // duration reflects true full length, not the (capped) preview length.
+    (async () => {
+      try {
+        const { data: originalUrl } = await supabase
+          .rpc('get_product_original_video_url', { content_id: product.id });
+        if (cancelled) return;
+        if (typeof originalUrl === 'string' && originalUrl.length > 0) {
+          probe(originalUrl);
+          return;
+        }
+      } catch (_) {}
+      // Fallback to preview URL (may report shorter length)
+      if (!cancelled && product?.previewUrl) probe(product.previewUrl);
+    })();
+
+    return () => { cancelled = true; };
+  }, [isVideoLikeProduct, product?.id, product?.previewUrl]);
 
 
   const formatDuration = (sec: number) => {

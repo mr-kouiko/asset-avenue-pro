@@ -2430,6 +2430,10 @@ export type Database = {
           thumbnail_path: string
         }[]
       }
+      get_product_original_video_url: {
+        Args: { content_id: string }
+        Returns: string
+      }
       get_public_file_access: {
         Args: never
         Returns: {
