@@ -317,7 +317,7 @@ app.post('/process', authenticate, async (req, res) => {
         await new Promise((resolve, reject) => {
           execFile('ffmpeg', ffmpegArgs, {
             maxBuffer: 20 * 1024 * 1024,
-            timeout: 45_000, // per-attempt cap
+            timeout: 110_000, // per-attempt cap (full-length encode up to 60s)
           }, (error, _stdout, stderr) => {
             ffmpegStderr = (stderr || '').toString();
             if (error) reject(new Error(`ffmpeg attempt failed: ${error.message}`));
