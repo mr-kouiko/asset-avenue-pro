@@ -123,14 +123,29 @@ async function processVideo(
     const fileId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
     const thumbnailPath = `${userId}/thumbnails/${fileId}_thumb.jpg`;
 
-    // Call thumbnail generator
+    // Prefer preview URL when available — faster + cheaper for FFmpeg API
+    const useUrl = video.preview_path && /^https?:\/\//i.test(video.preview_path)
+      ? video.preview_path
+      : undefined;
+
+    // Call thumbnail generator (HTTP -> Docker FFmpeg API)
     const { data, error } = await supabaseClient.functions.invoke(
       'generate-video-thumbnail',
-      { body: { videoPath: storagePath, outputPath: thumbnailPath, smartDetection: true } }
+      {
+        body: {
+          videoUrl: useUrl,
+          videoPath: useUrl ? undefined : storagePath,
+          bucket: 'uploads',
+          outputPath: thumbnailPath,
+          videoId: video.id,
+          position: 0.2,
+          width: 480,
+        },
+      }
     );
 
     if (error || !data?.thumbnailUrl) {
-      throw new Error(error?.message || 'No thumbnail URL returned');
+      throw new Error(error?.message || data?.error || 'No thumbnail URL returned');
     }
 
     // Update database
