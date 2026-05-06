@@ -677,6 +677,12 @@ const ProductDetailInner = () => {
                     {product.type}
                   </Badge>
                 </div>
+                {isVideoLikeProduct && videoDurationSec !== null && (
+                  <div>
+                    <div className="text-stock-dark/60 text-xs font-medium mb-1">DURATION</div>
+                    <div className="font-medium text-stock-dark">{formatDuration(videoDurationSec)}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
