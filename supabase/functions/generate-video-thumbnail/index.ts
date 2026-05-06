@@ -6,189 +6,76 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-// FAST PATH: Only 3 positions (much faster than 7)
-const FAST_POSITIONS = [0.15, 0.30, 0.50];
-// Extended positions only if fast path fails completely
-const EXTENDED_POSITIONS = [0.05, 0.20, 0.40, 0.60, 0.75];
+/**
+ * Generate Video Thumbnail (Edge Function)
+ *
+ * NO local ffmpeg/ffprobe — Edge Runtime forbids subprocesses.
+ * Instead, this function calls the external Dockerized FFmpeg API at
+ * `${FFMPEG_API_URL%/process}/thumbnail` to extract a single JPG frame.
+ *
+ * Input (any one source must resolve to a downloadable URL):
+ *   - videoUrl: string         (preferred — direct HTTP(S) URL, e.g. preview URL)
+ *   - videoPath: string        (Supabase storage path — bucket selectable via `bucket`)
+ *   - bucket: string           (defaults to 'uploads')
+ *   - outputPath: string       (target path in `thumbnails` bucket)
+ *   - position?: number        (0-1, default 0.2)
+ *   - width?: number           (default 480)
+ *   - videoId?: string         (for log traceability)
+ *   - usePreviewIfAvailable?: boolean  (currently advisory — caller should pass preview URL)
+ */
 
-// Thresholds for detecting invalid frames
-const BRIGHTNESS_THRESHOLD_HIGH = 220; // Near-white (tightened from 235)
-const BRIGHTNESS_THRESHOLD_LOW = 20;   // Near-black (tightened from 15)
-const MIN_VARIANCE = 8;                // Minimum luminance std-dev to ensure frame has content
-
-interface FrameAnalysis {
-  isValid: boolean;
-  brightness: number;
-  reason?: string;
+interface ThumbReq {
+  videoUrl?: string
+  videoPath?: string
+  bucket?: string
+  outputPath: string
+  position?: number
+  width?: number
+  videoId?: string
 }
 
-/**
- * FAST frame analysis - single FFmpeg call, minimal processing
- */
-async function analyzeFrameFast(framePath: string): Promise<FrameAnalysis> {
-  try {
-    // First check file size - blank/uniform frames produce very small JPEGs
+async function resolveSourceUrl(
+  supabase: ReturnType<typeof createClient>,
+  body: ThumbReq,
+): Promise<{ url: string; source: string } | { error: string }> {
+  if (body.videoUrl && /^https?:\/\//i.test(body.videoUrl)) {
+    return { url: body.videoUrl, source: 'videoUrl' }
+  }
+  if (!body.videoPath) {
+    return { error: 'Must provide videoUrl or videoPath' }
+  }
+
+  // Strip URL prefix if a full URL was passed in videoPath
+  let storagePath = body.videoPath
+  let bucket = body.bucket || 'uploads'
+
+  if (/^https?:\/\//i.test(storagePath)) {
     try {
-      const stat = await Deno.stat(framePath);
-      if (stat.size < 3000) {
-        return { isValid: false, brightness: 0, reason: 'file too small (likely blank)' };
+      const u = new URL(storagePath)
+      const m = u.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/)
+      if (m) {
+        bucket = m[1]
+        storagePath = decodeURIComponent(m[2].split('?')[0])
+      } else {
+        // External URL (e.g. R2/CDN) — use as-is
+        return { url: body.videoPath, source: 'externalUrl' }
       }
-    } catch { /* continue with analysis */ }
-
-    // Single FFmpeg call to get basic stats
-    const command = new Deno.Command("ffmpeg", {
-      args: [
-        "-i", framePath,
-        "-vf", "signalstats",
-        "-f", "null",
-        "-"
-      ],
-      stdout: "piped",
-      stderr: "piped",
-    });
-
-    const { stderr } = await command.output();
-    const output = new TextDecoder().decode(stderr);
-    
-    // Parse YAVG (average luminance) and YLOW/YHIGH for variance estimation
-    const yavgMatch = output.match(/YAVG:(\d+\.?\d*)/);
-    const ylowMatch = output.match(/YLOW:(\d+\.?\d*)/);
-    const yhighMatch = output.match(/YHIGH:(\d+\.?\d*)/);
-    const brightness = yavgMatch ? parseFloat(yavgMatch[1]) : 128;
-    const ylow = ylowMatch ? parseFloat(ylowMatch[1]) : 0;
-    const yhigh = yhighMatch ? parseFloat(yhighMatch[1]) : 255;
-    
-    // Check brightness range
-    if (brightness > BRIGHTNESS_THRESHOLD_HIGH) {
-      return { isValid: false, brightness, reason: 'too bright' };
-    }
-    if (brightness < BRIGHTNESS_THRESHOLD_LOW) {
-      return { isValid: false, brightness, reason: 'too dark' };
-    }
-    
-    // Check variance - uniform color frames have very low range between YLOW and YHIGH
-    const luminanceRange = yhigh - ylow;
-    if (luminanceRange < MIN_VARIANCE) {
-      return { isValid: false, brightness, reason: `uniform color (range=${luminanceRange})` };
-    }
-    
-    return { isValid: true, brightness };
-  } catch {
-    // If analysis fails, check file size as fallback
-    try {
-      const stat = await Deno.stat(framePath);
-      // Require at least 8KB for a valid video thumbnail
-      return { isValid: stat.size > 8000, brightness: 128 };
     } catch {
-      return { isValid: true, brightness: 128 };
+      return { error: 'Invalid videoPath URL' }
     }
+  } else if (storagePath.startsWith(`${bucket}/`)) {
+    storagePath = storagePath.substring(bucket.length + 1)
   }
-}
 
-/**
- * Get video duration (with caching-friendly fast probe)
- */
-async function getVideoDuration(videoPath: string): Promise<number> {
-  const command = new Deno.Command("ffprobe", {
-    args: [
-      "-v", "error",
-      "-show_entries", "format=duration",
-      "-of", "default=noprint_wrappers=1:nokey=1",
-      videoPath
-    ],
-    stdout: "piped",
-    stderr: "piped",
-  });
-  
-  const { stdout } = await command.output();
-  const duration = parseFloat(new TextDecoder().decode(stdout).trim());
-  return isNaN(duration) || duration <= 0 ? 10 : duration;
-}
+  // Create a signed URL the FFmpeg API can fetch
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(storagePath, 60 * 10) // 10 min
 
-/**
- * Extract frame with optimized FFmpeg settings
- */
-async function extractFrame(videoPath: string, timestamp: number, outputPath: string): Promise<boolean> {
-  const command = new Deno.Command("ffmpeg", {
-    args: [
-      "-ss", timestamp.toFixed(2),
-      "-i", videoPath,
-      "-vframes", "1",
-      "-q:v", "2", // Higher quality to ensure valid content
-      "-vf", "scale=1280:-1", // Larger = better detection of blank frames
-      "-y",
-      outputPath
-    ],
-    stdout: "piped",
-    stderr: "piped",
-  });
-  
-  const { code } = await command.output();
-  return code === 0;
-}
-
-/**
- * Find valid frame using fast-path strategy
- */
-async function findValidFrameFast(
-  videoPath: string, 
-  tempDir: string
-): Promise<{ framePath: string; timestamp: number } | null> {
-  const duration = await getVideoDuration(videoPath);
-  
-  // FAST PATH: Try 3 strategic positions
-  for (const pos of FAST_POSITIONS) {
-    const timestamp = Math.max(0.1, duration * pos);
-    const framePath = `${tempDir}/frame_${Math.round(pos * 100)}.jpg`;
-    
-    if (!await extractFrame(videoPath, timestamp, framePath)) continue;
-    
-    // Check file exists and has content
-    try {
-      const stat = await Deno.stat(framePath);
-      if (stat.size < 2000) continue;
-    } catch { continue; }
-    
-    const analysis = await analyzeFrameFast(framePath);
-    if (analysis.isValid) {
-      console.log(`[Thumbnail] ✓ Valid frame at ${(pos * 100)}%`);
-      return { framePath, timestamp };
-    }
-    
-    try { await Deno.remove(framePath); } catch {}
+  if (error || !data?.signedUrl) {
+    return { error: `Could not sign storage URL (bucket=${bucket}, path=${storagePath}): ${error?.message || 'unknown'}` }
   }
-  
-  // EXTENDED PATH: Only if fast path completely fails
-  console.log('[Thumbnail] Fast path failed, trying extended positions...');
-  for (const pos of EXTENDED_POSITIONS) {
-    const timestamp = Math.max(0.1, duration * pos);
-    const framePath = `${tempDir}/frame_ext_${Math.round(pos * 100)}.jpg`;
-    
-    if (!await extractFrame(videoPath, timestamp, framePath)) continue;
-    
-    try {
-      const stat = await Deno.stat(framePath);
-      if (stat.size < 2000) continue;
-    } catch { continue; }
-    
-    const analysis = await analyzeFrameFast(framePath);
-    if (analysis.isValid) {
-      console.log(`[Thumbnail] ✓ Valid frame at ${(pos * 100)}% (extended)`);
-      return { framePath, timestamp };
-    }
-    
-    try { await Deno.remove(framePath); } catch {}
-  }
-  
-  // FALLBACK: Just use 25% regardless of analysis
-  const fallbackTs = duration * 0.25;
-  const fallbackPath = `${tempDir}/frame_fallback.jpg`;
-  if (await extractFrame(videoPath, fallbackTs, fallbackPath)) {
-    console.log(`[Thumbnail] ⚠ Using fallback at 25%`);
-    return { framePath: fallbackPath, timestamp: fallbackTs };
-  }
-  
-  return null;
+  return { url: data.signedUrl, source: `signed:${bucket}` }
 }
 
 serve(async (req) => {
@@ -196,96 +83,122 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  const tempDir = `/tmp/thumb_${Date.now()}`;
-  
   try {
-    const { videoPath, outputPath, smartDetection = true } = await req.json()
-    
-    if (!videoPath || !outputPath) {
+    const body = (await req.json()) as ThumbReq
+    const { outputPath, position, width, videoId } = body
+
+    if (!outputPath) {
       return new Response(
-        JSON.stringify({ error: 'Missing videoPath or outputPath' }),
+        JSON.stringify({ error: 'Missing outputPath' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
-    console.log(`[Thumbnail] Processing: ${videoPath}`)
-
-    // Download video
-    const { data: videoData, error: downloadError } = await supabaseClient
-      .storage
-      .from('uploads')
-      .download(videoPath)
-
-    if (downloadError) {
-      console.error('[Thumbnail] Download error:', downloadError)
+    const FFMPEG_API_URL = Deno.env.get('FFMPEG_API_URL')
+    const FFMPEG_API_KEY = Deno.env.get('FFMPEG_API_KEY') || ''
+    if (!FFMPEG_API_URL) {
+      console.error(`[Thumbnail] FFMPEG_API_URL not configured | videoId=${videoId}`)
       return new Response(
-        JSON.stringify({ error: `Download failed: ${downloadError.message}` }),
+        JSON.stringify({ error: 'FFMPEG_API_URL not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Save to temp
-    await Deno.mkdir(tempDir, { recursive: true })
-    const tempVideoPath = `${tempDir}/video.mov`
-    await Deno.writeFile(tempVideoPath, new Uint8Array(await videoData.arrayBuffer()))
+    // Build /thumbnail endpoint URL (FFMPEG_API_URL typically points at /process)
+    const baseUrl = FFMPEG_API_URL.replace(/\/process\/?$/, '').replace(/\/$/, '')
+    const thumbnailEndpoint = `${baseUrl}/thumbnail`
 
-    // Find valid frame (fast path)
-    const result = smartDetection 
-      ? await findValidFrameFast(tempVideoPath, tempDir)
-      : null;
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    let finalFramePath: string;
-    
-    if (result) {
-      finalFramePath = result.framePath;
-    } else {
-      // Direct extraction at 1s as absolute fallback
-      finalFramePath = `${tempDir}/thumb_direct.jpg`;
-      await extractFrame(tempVideoPath, 1, finalFramePath);
+    // Resolve a fetchable URL for the FFmpeg API
+    const resolved = await resolveSourceUrl(supabase, body)
+    if ('error' in resolved) {
+      console.error(`[Thumbnail] resolve_error videoId=${videoId} reason=${resolved.error}`)
+      return new Response(
+        JSON.stringify({ error: resolved.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    console.log(`[Thumbnail] videoId=${videoId} source=${resolved.source} -> calling ${thumbnailEndpoint}`)
+
+    // Call FFmpeg API
+    const ffStart = Date.now()
+    let ffResp: Response
+    try {
+      ffResp = await fetch(thumbnailEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(FFMPEG_API_KEY ? { Authorization: `Bearer ${FFMPEG_API_KEY}` } : {}),
+        },
+        body: JSON.stringify({
+          videoUrl: resolved.url,
+          position: position ?? 0.2,
+          width: width ?? 480,
+          videoId,
+        }),
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error(`[Thumbnail] network_error videoId=${videoId} err=${msg}`)
+      return new Response(
+        JSON.stringify({ error: `network_error: ${msg}` }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const ffMs = Date.now() - ffStart
+
+    if (!ffResp.ok) {
+      const text = await ffResp.text().catch(() => '')
+      console.error(`[Thumbnail] ffmpeg_api_error videoId=${videoId} status=${ffResp.status} ms=${ffMs} body=${text.slice(0, 400)}`)
+      return new Response(
+        JSON.stringify({ error: `FFmpeg API ${ffResp.status}: ${text.slice(0, 300)}` }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Read and upload
-    const thumbnailBytes = await Deno.readFile(finalFramePath);
-    
-    const { error: uploadError } = await supabaseClient
+    const thumbBytes = new Uint8Array(await ffResp.arrayBuffer())
+    console.log(`[Thumbnail] videoId=${videoId} got ${thumbBytes.byteLength}B in ${ffMs}ms`)
+
+    if (thumbBytes.byteLength < 2000) {
+      console.error(`[Thumbnail] invalid_output videoId=${videoId} size=${thumbBytes.byteLength}`)
+      return new Response(
+        JSON.stringify({ error: `Invalid thumbnail output: ${thumbBytes.byteLength}B` }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Upload to thumbnails bucket
+    const { error: uploadError } = await supabase
       .storage
       .from('thumbnails')
-      .upload(outputPath, thumbnailBytes, {
-        contentType: 'image/jpeg',
-        upsert: true
-      })
+      .upload(outputPath, thumbBytes, { contentType: 'image/jpeg', upsert: true })
 
     if (uploadError) {
+      console.error(`[Thumbnail] upload_error videoId=${videoId} path=${outputPath} err=${uploadError.message}`)
       return new Response(
         JSON.stringify({ error: `Upload failed: ${uploadError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const { data: { publicUrl } } = supabaseClient
-      .storage
-      .from('thumbnails')
-      .getPublicUrl(outputPath)
+    const { data: { publicUrl } } = supabase.storage.from('thumbnails').getPublicUrl(outputPath)
 
-    console.log(`[Thumbnail] ✅ Done: ${publicUrl}`)
+    console.log(`[Thumbnail] ✅ videoId=${videoId} -> ${publicUrl}`)
 
     return new Response(
-      JSON.stringify({ success: true, thumbnailUrl: publicUrl }),
+      JSON.stringify({ success: true, thumbnailUrl: publicUrl, source: resolved.source, ffmpegMs: ffMs }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
   } catch (error) {
-    console.error('[Thumbnail] Error:', error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error(`[Thumbnail] internal_error err=${msg}`)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } finally {
-    try { await Deno.remove(tempDir, { recursive: true }); } catch {}
   }
 })
