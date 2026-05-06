@@ -618,12 +618,6 @@ const Marketplace = () => {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch id="optimal-only" checked={optimalOnly} onCheckedChange={setOptimalOnly} />
-                <label htmlFor="optimal-only" className="text-sm text-muted-foreground cursor-pointer whitespace-nowrap">
-                  Optimal previews only
-                </label>
-              </div>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                 <SelectContent>
