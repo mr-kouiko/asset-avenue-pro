@@ -639,16 +639,11 @@ const ProductDetailInner = () => {
 
             {/* Preview label — clarifies what the player shows */}
             {isVideoLikeProduct && product.previewUrl && (
-              <div className="flex items-center justify-between text-xs text-stock-dark/70 px-1">
+              <div className="flex items-center text-xs text-stock-dark/70 px-1">
                 <span className="inline-flex items-center gap-1.5">
                   <FileVideo className="h-3.5 w-3.5" />
                   Full video preview (watermarked)
                 </span>
-                {videoDurationSec !== null && (
-                  <span className="font-mono font-medium text-stock-dark">
-                    {formatDuration(videoDurationSec)}
-                  </span>
-                )}
               </div>
             )}
 
@@ -682,6 +677,12 @@ const ProductDetailInner = () => {
                     {product.type}
                   </Badge>
                 </div>
+                {isVideoLikeProduct && videoDurationSec !== null && (
+                  <div>
+                    <div className="text-stock-dark/60 text-xs font-medium mb-1">DURATION</div>
+                    <div className="font-medium text-stock-dark">{formatDuration(videoDurationSec)}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -702,18 +703,8 @@ const ProductDetailInner = () => {
                 )}
               </div>
 
-              {/* Video duration — visible above the fold for video products */}
-              {isVideoLikeProduct && videoDurationSec !== null && (
-                <div className="flex items-center gap-2 mb-3">
-                  <Badge
-                    variant="secondary"
-                    className="bg-stock-blue/10 text-stock-blue border-stock-blue/20 inline-flex items-center gap-1.5"
-                  >
-                    <FileVideo className="h-3.5 w-3.5" />
-                    Duration: {formatDuration(videoDurationSec)} ({Math.round(videoDurationSec)}s)
-                  </Badge>
-                </div>
-              )}
+              
+
               
               {/* Author Info - Clickable Avatar */}
               <div className="flex items-center gap-3 mb-4">
