@@ -548,7 +548,7 @@ const ProductDetailInner = () => {
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
               <MediaPlayer 
-                src={`${product.previewUrl}${product.previewUrl.includes('#') ? '' : '#t=2'}`}
+                src={product.previewUrl}
                 type="video"
                 title={product.title}
                 poster={product.thumbnail?.includes('.mp4') || product.thumbnail?.includes('placeholder') ? undefined : product.thumbnail}
