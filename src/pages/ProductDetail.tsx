@@ -195,7 +195,16 @@ const ProductDetailInner = () => {
 
   useEffect(() => {
     setVideoDurationSec(null);
-    if (!isVideoLikeProduct || !product?.previewUrl) return;
+    if (!isVideoLikeProduct) return;
+
+    // Prefer the ORIGINAL video file_path so we report the true full length,
+    // not the (potentially capped) preview length.
+    const originalVideo = product?.files?.find(
+      (f: any) => f.is_original && (f.file_type?.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(f.file_path || ''))
+    );
+    const sourceUrl = originalVideo?.file_path || product?.previewUrl;
+    if (!sourceUrl) return;
+
     const v = document.createElement('video');
     v.preload = 'metadata';
     v.crossOrigin = 'anonymous';
@@ -212,13 +221,14 @@ const ProductDetailInner = () => {
     const onErr = () => { cleanup(); };
     v.addEventListener('loadedmetadata', onMeta);
     v.addEventListener('error', onErr);
-    v.src = product.previewUrl.split('#')[0];
+    v.src = sourceUrl.split('#')[0];
     return () => {
       v.removeEventListener('loadedmetadata', onMeta);
       v.removeEventListener('error', onErr);
       cleanup();
     };
-  }, [isVideoLikeProduct, product?.previewUrl]);
+  }, [isVideoLikeProduct, product?.previewUrl, product?.files]);
+
 
   const formatDuration = (sec: number) => {
     const s = Math.max(0, Math.round(sec));
