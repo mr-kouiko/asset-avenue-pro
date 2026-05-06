@@ -268,18 +268,8 @@ app.post('/process', authenticate, async (req, res) => {
         break;
       }
 
-      const startOffset = pickSegmentStart(probedDuration || duration, sceneTimes, duration, attempt);
+      const startOffset = 0;       // always start at the beginning — full-length preview
       chosenStart = startOffset;
-
-      // Pre-screen segment quality (skip first attempt prescreen for speed)
-      if (attempt > 0 && probedDuration > duration + 1) {
-        const q = await probeSegmentQuality(inputPath, startOffset, Math.min(duration, 4), jobId);
-        if (q.avgLuma > 0 && q.avgLuma < 14) {
-          console.log(`[${jobId}] attempt=${attempt} skip dark segment start=${startOffset.toFixed(2)} avgLuma=${q.avgLuma.toFixed(1)}`);
-          attemptLogs.push({ attempt, startOffset, skipped: 'dark_segment', avgLuma: q.avgLuma });
-          continue;
-        }
-      }
 
       // Encode
       const ffmpegArgs = ['-ss', String(startOffset), '-i', inputPath];
