@@ -24,6 +24,7 @@ import {
   Flag
 } from "lucide-react";
 import { useProductDetail } from "@/hooks/useProductDetail";
+import { supabase } from "@/integrations/supabase/client";
 import { MediaPlayer } from "@/components/media/MediaPlayer";
 import { AudioHeroPlayer } from "@/components/AudioHeroPlayer";
 import { useMarketplace } from "@/hooks/useMarketplace";
