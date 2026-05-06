@@ -202,7 +202,7 @@ app.post('/process', authenticate, async (req, res) => {
   const inputPath = path.join(TMP_DIR, `${jobId}_input`);
   const watermarkPath = path.join(TMP_DIR, `${jobId}_watermark.png`);
   const outputPath = path.join(TMP_DIR, `${jobId}_output.mp4`);
-  const gifPath = path.join(TMP_DIR, `${jobId}_loop.webp`);
+  
 
   const jobStart = Date.now();
   console.log(`[${jobId}] START res=${resolution} dur=${duration}s muted=${MUTE_AUDIO}`);
