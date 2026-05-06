@@ -15,6 +15,7 @@ interface VideoFile {
   id: string;
   file_name: string;
   file_path: string;
+  preview_path?: string | null;
   thumbnail_path: string | null;
   metadata: Record<string, unknown> | null;
 }
