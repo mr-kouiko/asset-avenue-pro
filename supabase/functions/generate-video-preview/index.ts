@@ -94,6 +94,7 @@ serve(async (req) => {
         } as PreviewResponse),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+      }
     }
 
     // Download the source video
