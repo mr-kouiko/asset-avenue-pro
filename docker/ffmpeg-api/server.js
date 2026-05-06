@@ -237,11 +237,13 @@ app.post('/process', authenticate, async (req, res) => {
     }
     console.log(`[${jobId}] probed dur=${probedDuration}s height=${inputHeight}`);
 
-    // Scene detection (best-effort, capped)
-    let sceneTimes = [];
-    if (probedDuration > duration + 1) {
-      sceneTimes = await detectSceneChanges(inputPath, jobId);
+    // Encode the FULL video (capped at MAX_DURATION as a safety net)
+    if (probedDuration > 0) {
+      duration = Math.min(probedDuration, MAX_DURATION);
     }
+
+    // Scene detection no longer needed (full-length encode)
+    const sceneTimes = [];
 
     // Optional watermark
     if (watermarkUrl) {
