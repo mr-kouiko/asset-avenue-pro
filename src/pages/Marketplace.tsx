@@ -208,7 +208,7 @@ const Marketplace = () => {
     }
 
     return f;
-  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection, optimalOnly]);
+  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection]);
 
   // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
