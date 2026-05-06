@@ -179,6 +179,104 @@ function pickSegmentStart(probedDuration, sceneTimes, duration, attempt) {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', ffmpeg: true }));
 
+// =============================================================================
+// /thumbnail — Extract a single JPG frame from a video URL.
+// Body: { videoUrl: string, position?: number (0-1, default 0.2), width?: number (default 480), videoId?: string }
+// Response: image/jpeg bytes
+// =============================================================================
+app.post('/thumbnail', authenticate, async (req, res) => {
+  const { videoUrl, position, width, videoId } = req.body || {};
+  const jobId = randomUUID();
+  const tag = videoId ? `${jobId}|video=${videoId}` : jobId;
+
+  if (!videoUrl) {
+    console.error(`[${tag}] /thumbnail: missing videoUrl`);
+    return res.status(400).json({ error: 'videoUrl is required' });
+  }
+
+  const pos = Math.min(Math.max(Number(position) || 0.2, 0.01), 0.95);
+  const targetWidth = Math.min(Math.max(Number(width) || 480, 120), 1920);
+
+  const inputPath = path.join(TMP_DIR, `${jobId}_thumb_input`);
+  const outputPath = path.join(TMP_DIR, `${jobId}_thumb.jpg`);
+  const t0 = Date.now();
+
+  try {
+    console.log(`[${tag}] /thumbnail START url=${videoUrl.slice(0, 120)} pos=${pos} w=${targetWidth}`);
+
+    // Download
+    try {
+      await downloadFile(videoUrl, inputPath);
+    } catch (e) {
+      console.error(`[${tag}] /thumbnail download_error: ${e.message}`);
+      return res.status(502).json({ error: `download_error: ${e.message}`, jobId, videoId });
+    }
+    const inputSize = fs.statSync(inputPath).size;
+    console.log(`[${tag}] /thumbnail downloaded ${(inputSize / 1024 / 1024).toFixed(1)}MB`);
+
+    // Probe duration
+    let probedDuration = 0;
+    try {
+      const out = await runFfprobe([
+        '-v', 'error', '-print_format', 'json',
+        '-show_entries', 'format=duration', inputPath
+      ]);
+      probedDuration = parseFloat(JSON.parse(out).format?.duration || '0') || 0;
+    } catch (e) {
+      console.warn(`[${tag}] /thumbnail probe failed: ${e.message}`);
+    }
+    const seekSec = probedDuration > 0 ? probedDuration * pos : 1;
+    console.log(`[${tag}] /thumbnail dur=${probedDuration}s seek=${seekSec.toFixed(2)}s`);
+
+    // Extract frame
+    let ffmpegStderr = '';
+    try {
+      await new Promise((resolve, reject) => {
+        execFile('ffmpeg', [
+          '-ss', seekSec.toFixed(2),
+          '-i', inputPath,
+          '-frames:v', '1',
+          '-vf', `scale=${targetWidth}:-2:flags=lanczos`,
+          '-q:v', '3',
+          '-y', outputPath,
+        ], { maxBuffer: 20 * 1024 * 1024, timeout: 30_000 }, (err, _stdout, stderr) => {
+          ffmpegStderr = (stderr || '').toString();
+          if (err) reject(new Error(`ffmpeg_error: ${err.message}`));
+          else resolve();
+        });
+      });
+    } catch (e) {
+      console.error(`[${tag}] /thumbnail ffmpeg failed: ${e.message} | ${ffmpegStderr.slice(-300)}`);
+      cleanup(inputPath, outputPath);
+      return res.status(500).json({ error: e.message, jobId, videoId, stderr: ffmpegStderr.slice(-300) });
+    }
+
+    const outSize = fs.statSync(outputPath).size;
+    if (outSize < 2000) {
+      console.error(`[${tag}] /thumbnail output too small: ${outSize}B`);
+      cleanup(inputPath, outputPath);
+      return res.status(500).json({ error: `invalid output: ${outSize}B`, jobId, videoId });
+    }
+
+    const totalMs = Date.now() - t0;
+    console.log(`[${tag}] /thumbnail DONE bytes=${outSize} totalMs=${totalMs}`);
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Length', outSize);
+    res.setHeader('X-Job-Id', jobId);
+    res.setHeader('X-Total-Ms', String(totalMs));
+
+    const stream = fs.createReadStream(outputPath);
+    stream.pipe(res);
+    stream.on('end', () => cleanup(inputPath, outputPath));
+    stream.on('error', () => cleanup(inputPath, outputPath));
+  } catch (err) {
+    console.error(`[${tag}] /thumbnail FAILED: ${err.message}`);
+    cleanup(inputPath, outputPath);
+    res.status(500).json({ error: err.message, jobId, videoId });
+  }
+});
+
 app.post('/process', authenticate, async (req, res) => {
   const { videoUrl, watermarkUrl } = req.body;
 
