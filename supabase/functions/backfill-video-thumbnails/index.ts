@@ -200,7 +200,7 @@ serve(async (req) => {
     // Fetch video files
     let query = supabaseClient
       .from('content_files')
-      .select('id, file_name, file_path, thumbnail_path, metadata')
+      .select('id, file_name, file_path, preview_path, thumbnail_path, metadata')
       .ilike('file_type', 'video%')
       .order('created_at', { ascending: false })
       .range(safeOffset, safeOffset + safeLimit - 1);
