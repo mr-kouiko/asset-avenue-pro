@@ -92,7 +92,7 @@ const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("recent");
-  const [optimalOnly, setOptimalOnly] = useState(false);
+  
   const [page, setPage] = useState(1);
   const { searchQuery: routeSearchQuery } = useParams<{ searchQuery?: string }>();
 
@@ -146,7 +146,7 @@ const Marketplace = () => {
   }, [searchQuery]);
 
   // ── Reset page on filter changes ───────────────────────────
-  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, videoFilters, optimalOnly]);
+  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, videoFilters]);
 
   // ── URL sync ────────────────────────────────────────────────
   useEffect(() => {
@@ -177,7 +177,6 @@ const Marketplace = () => {
       searchQuery: debouncedSearch || undefined,
       sortBy,
       page,
-      optimalOnly,
     };
 
     if (isPhotoSection) {
@@ -209,7 +208,7 @@ const Marketplace = () => {
     }
 
     return f;
-  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection, optimalOnly]);
+  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection]);
 
   // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
@@ -619,12 +618,6 @@ const Marketplace = () => {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch id="optimal-only" checked={optimalOnly} onCheckedChange={setOptimalOnly} />
-                <label htmlFor="optimal-only" className="text-sm text-muted-foreground cursor-pointer whitespace-nowrap">
-                  Optimal previews only
-                </label>
-              </div>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                 <SelectContent>

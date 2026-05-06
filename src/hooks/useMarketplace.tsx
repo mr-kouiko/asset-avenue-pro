@@ -44,7 +44,7 @@ export interface MarketplaceFilters {
   withPeople?: boolean | null;
   sortBy?: string;
   page?: number;
-  optimalOnly?: boolean;
+  
 }
 
 export const PAGE_SIZE = 40;
@@ -272,7 +272,7 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
         p_sort: currentFilters.sortBy || 'recent',
         p_offset: offset,
         p_limit: PAGE_SIZE,
-        p_optimal_only: currentFilters.optimalOnly || false,
+        
       });
 
       // Abort if a newer fetch started
