@@ -526,7 +526,6 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
                 const { data, error } = await supabase.functions.invoke('generate-video-preview', {
                   body: {
                     videoPath: filePath,
-                    duration: 6,
                     resolution: 720
                   }
                 });

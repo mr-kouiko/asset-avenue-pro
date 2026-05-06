@@ -26,6 +26,7 @@ type JobStatus = 'idle' | 'running' | 'done' | 'error';
 export const AdminVideoBackfill = () => {
   const [status, setStatus] = useState<JobStatus>('idle');
   const [dryRun, setDryRun] = useState(true);
+  const [force, setForce] = useState(false);
   const [maxVideos, setMaxVideos] = useState(50);
   const [result, setResult] = useState<BackfillResponse | null>(null);
 
@@ -42,7 +43,7 @@ export const AdminVideoBackfill = () => {
       }
 
       const response = await supabase.functions.invoke('batch-backfill-previews', {
-        body: { dryRun, maxVideos, batchSize: 5 },
+        body: { dryRun, maxVideos, batchSize: 5, force },
       });
 
       if (response.error) {
@@ -88,6 +89,11 @@ export const AdminVideoBackfill = () => {
           <div className="flex items-center gap-2">
             <Switch id="dry-run" checked={dryRun} onCheckedChange={setDryRun} />
             <Label htmlFor="dry-run">Dry Run (preview only)</Label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch id="force" checked={force} onCheckedChange={setForce} />
+            <Label htmlFor="force">Force regenerate (replace existing previews)</Label>
           </div>
 
           <div className="flex items-center gap-2">
