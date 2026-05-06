@@ -146,7 +146,7 @@ const Marketplace = () => {
   }, [searchQuery]);
 
   // ── Reset page on filter changes ───────────────────────────
-  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, videoFilters, optimalOnly]);
+  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, videoFilters]);
 
   // ── URL sync ────────────────────────────────────────────────
   useEffect(() => {
