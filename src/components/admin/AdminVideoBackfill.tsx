@@ -26,6 +26,7 @@ type JobStatus = 'idle' | 'running' | 'done' | 'error';
 export const AdminVideoBackfill = () => {
   const [status, setStatus] = useState<JobStatus>('idle');
   const [dryRun, setDryRun] = useState(true);
+  const [force, setForce] = useState(false);
   const [maxVideos, setMaxVideos] = useState(50);
   const [result, setResult] = useState<BackfillResponse | null>(null);
 
