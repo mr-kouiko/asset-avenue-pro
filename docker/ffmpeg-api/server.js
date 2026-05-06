@@ -384,7 +384,7 @@ app.post('/process', authenticate, async (req, res) => {
   } catch (err) {
     const totalMs = Date.now() - jobStart;
     console.error(`[${jobId}] FAILED totalMs=${totalMs}:`, err.message);
-    cleanup(inputPath, watermarkPath, outputPath, gifPath);
+    cleanup(inputPath, watermarkPath, outputPath);
     res.status(500).json({
       error: err.message,
       jobId,
