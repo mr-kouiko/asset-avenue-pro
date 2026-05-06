@@ -639,16 +639,11 @@ const ProductDetailInner = () => {
 
             {/* Preview label — clarifies what the player shows */}
             {isVideoLikeProduct && product.previewUrl && (
-              <div className="flex items-center justify-between text-xs text-stock-dark/70 px-1">
+              <div className="flex items-center text-xs text-stock-dark/70 px-1">
                 <span className="inline-flex items-center gap-1.5">
                   <FileVideo className="h-3.5 w-3.5" />
                   Full video preview (watermarked)
                 </span>
-                {videoDurationSec !== null && (
-                  <span className="font-mono font-medium text-stock-dark">
-                    {formatDuration(videoDurationSec)}
-                  </span>
-                )}
               </div>
             )}
 
