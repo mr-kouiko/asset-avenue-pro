@@ -10,7 +10,6 @@ import { SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Video, Camer
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useSearchParams, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useMarketplace, PAGE_SIZE, type MarketplaceFilters } from "@/hooks/useMarketplace";
 import { usePexelsSearch } from "@/hooks/usePexelsSearch";
