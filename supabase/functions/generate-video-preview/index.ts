@@ -22,8 +22,9 @@ const corsHeaders = {
 interface PreviewRequest {
   videoPath: string;      // Path in Supabase storage (e.g., "user-id/video.mp4")
   contentId?: string;     // Content ID to update preview_path
-  duration?: number;      // Preview duration in seconds (default: 6)
+  duration?: number;      // Optional preview duration in seconds. Omit = full length.
   resolution?: number;    // Target height (default: 720)
+  force?: boolean;        // Skip cache and regenerate
 }
 
 interface PreviewResponse {
