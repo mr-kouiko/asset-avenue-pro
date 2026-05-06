@@ -43,7 +43,7 @@ export const AdminVideoBackfill = () => {
       }
 
       const response = await supabase.functions.invoke('batch-backfill-previews', {
-        body: { dryRun, maxVideos, batchSize: 5 },
+        body: { dryRun, maxVideos, batchSize: 5, force },
       });
 
       if (response.error) {
