@@ -6,6 +6,7 @@ interface PreviewOptions {
   contentId?: string;
   duration?: number;
   resolution?: number;
+  force?: boolean;
 }
 
 interface PreviewState {
