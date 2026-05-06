@@ -131,10 +131,10 @@ const IndexEN = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button size="lg" variant="secondary" asChild>
-                    <Link to="/en/marketplace">Browse Content</Link>
+                    <Link to="/marketplace">Browse Content</Link>
                   </Button>
                   <Button size="lg" variant="outline" className="bg-transparent text-primary-foreground border-primary-foreground hover:bg-primary-foreground hover:text-primary" asChild>
-                    <Link to="/en/auth/seller">Become a Seller</Link>
+                    <Link to="/auth/seller">Become a Seller</Link>
                   </Button>
                 </div>
               </CardContent>
