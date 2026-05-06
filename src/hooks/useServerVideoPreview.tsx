@@ -37,7 +37,7 @@ export function useServerVideoPreview() {
   });
 
   const generate = useCallback(async (options: PreviewOptions): Promise<PreviewResult> => {
-    const { videoPath, contentId, duration = 6, resolution = 720 } = options;
+    const { videoPath, contentId, duration, resolution = 720, force = false } = options;
 
     setState({ isGenerating: true, progress: 10, stage: 'requesting' });
 
@@ -46,7 +46,7 @@ export function useServerVideoPreview() {
       setState(prev => ({ ...prev, progress: 30, stage: 'processing' }));
       
       const { data, error } = await supabase.functions.invoke('generate-video-preview', {
-        body: { videoPath, contentId, duration, resolution },
+        body: { videoPath, contentId, duration, resolution, force },
       });
 
       if (error) {
