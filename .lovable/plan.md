@@ -1,38 +1,40 @@
-## Goal
-Make video previews play the **full length** of the original video (still 720p + watermarked), instead of being trimmed to 6 seconds.
+## Objectif
 
-## Root cause
-Previews are hardcoded to 6 seconds in two places:
-- `src/hooks/useServerVideoPreview.tsx` — defaults `duration = 6` and passes it to the edge function.
-- `supabase/functions/generate-video-preview/index.ts` — forwards `duration` to the FFmpeg API, which trims output to that length.
+Reconnecter le service Render `ffmpeg-api-mjba` au repo GitHub Lovable (au lieu de `mr-kouiko/ffmpeg-api`) pour que toute modification du code FFmpeg dans Lovable se déploie automatiquement.
 
-Plus, the existing cached previews in the `public-previews` bucket are already 6s files, so even after the fix they'd stay short until regenerated.
+## Étapes côté Render (à faire par toi)
 
-## Changes
+1. Va sur https://dashboard.render.com → ouvre le service **ffmpeg-api-mjba**.
+2. Onglet **Settings** → section **Build & Deploy** → **Repository** → clique **Disconnect**.
+3. Clique **Connect a repository** → choisis le compte GitHub où Lovable a poussé le projet → sélectionne le repo Lovable (probablement `mr-kouiko/visustock` ou nom similaire — le repo principal Lovable, pas `mr-kouiko/ffmpeg-api`).
+4. Configure :
+   - **Branch** : `main`
+   - **Root Directory** : `docker/ffmpeg-api`
+   - **Dockerfile Path** : `Dockerfile` (relatif au root directory)
+   - **Auto-Deploy** : `Yes`
+5. Vérifie l'onglet **Environment** → la variable `FFMPEG_API_KEY` doit toujours être présente (sinon, regénère-la avec `openssl rand -hex 32` et ajoute-la aussi dans les secrets Supabase Lovable).
+6. Clique **Save Changes** → Render lance automatiquement un nouveau déploiement à partir du code Lovable.
 
-### 1. Stop trimming new previews
-- `src/hooks/useServerVideoPreview.tsx`: remove the `duration = 6` default; do not send `duration` unless explicitly provided.
-- `supabase/functions/generate-video-preview/index.ts`: when `duration` is missing, do NOT pass a trim flag to the FFmpeg API → full-length output.
-- `docker/ffmpeg-api/server.js`: confirm the `-t` flag is only applied when `duration` is provided (skip it otherwise).
+## Vérification après déploiement
 
-### 2. Other call sites
-- `useVideoPreviewGenerator.ts` and any client-side EBML/MediaRecorder paths: audit for hardcoded 6s caps and remove them so re-generated previews are full length.
+Une fois Render passé en "Live", je testerai (depuis le sandbox) :
 
-### 3. Regenerate existing 6s previews
-- Use the existing `AdminVideoBackfill` flow / `generate-video-preview` function to overwrite cached previews. Add a "force regenerate" flag (skip the cache check) so previously trimmed files get replaced.
-- Optionally run a one-time backfill across all approved video products.
+- `GET https://ffmpeg-api-mjba.onrender.com/health` → doit retourner `{"status":"ok","ffmpeg":true}`
+- `POST /thumbnail` sans body → doit retourner `"videoUrl is required"` (et non `"No URL provided"`)
+- `POST /process` sans header Bearer → doit retourner `401 Unauthorized`
 
-### 4. Keep duration label correct
-- Already wired to `get_product_original_video_url` RPC → no change needed; full-length label will now match the playable preview.
+Si les 3 réponses sont correctes, le code Lovable est bien déployé.
 
-## Heads up
-- Watermarked full-length previews give buyers most of the value of the original (just at 720p with a watermark). If piracy becomes an issue later, we can re-add a cap (e.g. 30s or 50% of length).
-- Storage + bandwidth costs will go up significantly (previews become roughly N× larger where N = original_duration / 6).
-- Backfill of existing previews will cost FFmpeg API processing time across all current video products.
+## Étapes finales côté Lovable (après confirmation)
 
-## Files touched
-- `src/hooks/useServerVideoPreview.tsx`
-- `src/hooks/useVideoPreviewGenerator.ts` (audit)
-- `supabase/functions/generate-video-preview/index.ts`
-- `docker/ffmpeg-api/server.js`
-- `src/components/admin/AdminVideoBackfill.tsx` (add force-regenerate option)
+1. Vérifier les secrets Supabase :
+   - `FFMPEG_API_URL` = `https://ffmpeg-api-mjba.onrender.com`
+   - `FFMPEG_API_KEY` = même valeur que sur Render
+2. Tester depuis l'admin :
+   - `Admin → Settings → Regenerate Video Thumbnails` (sur 1-2 vidéos d'abord).
+   - `Admin → Video Backfill → Dry Run` puis backfill réel.
+3. Si OK, le système de previews 720p watermarkées et de thumbnails est opérationnel et **toute future modif Lovable de `docker/ffmpeg-api/server.js` se déploiera automatiquement sur Render**.
+
+## Ce que tu peux faire si tu ne trouves pas le bon repo Lovable
+
+Dis-moi le nom exact du repo Lovable (visible dans l'onglet GitHub de Lovable, menu **+** → GitHub), je te guide pas à pas.
