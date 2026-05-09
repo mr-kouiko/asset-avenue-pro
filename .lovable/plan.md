@@ -1,40 +1,56 @@
-## Objectif
+# Synchroniser Render avec le code FFmpeg de Lovable
 
-Reconnecter le service Render `ffmpeg-api-mjba` au repo GitHub Lovable (au lieu de `mr-kouiko/ffmpeg-api`) pour que toute modification du code FFmpeg dans Lovable se déploie automatiquement.
+## Constat
 
-## Étapes côté Render (à faire par toi)
+Le repo GitHub `mr-kouiko/visite-now-agency-site` (connecté à Render) contient un `server.js` **totalement différent** de celui maintenu dans Lovable (`docker/ffmpeg-api/server.js`):
 
-1. Va sur https://dashboard.render.com → ouvre le service **ffmpeg-api-mjba**.
-2. Onglet **Settings** → section **Build & Deploy** → **Repository** → clique **Disconnect**.
-3. Clique **Connect a repository** → choisis le compte GitHub où Lovable a poussé le projet → sélectionne le repo Lovable (probablement `mr-kouiko/visustock` ou nom similaire — le repo principal Lovable, pas `mr-kouiko/ffmpeg-api`).
-4. Configure :
-   - **Branch** : `main`
-   - **Root Directory** : `docker/ffmpeg-api`
-   - **Dockerfile Path** : `Dockerfile` (relatif au root directory)
-   - **Auto-Deploy** : `Yes`
-5. Vérifie l'onglet **Environment** → la variable `FFMPEG_API_KEY` doit toujours être présente (sinon, regénère-la avec `openssl rand -hex 32` et ajoute-la aussi dans les secrets Supabase Lovable).
-6. Clique **Save Changes** → Render lance automatiquement un nouveau déploiement à partir du code Lovable.
+- Pas de route `/process` (donc pas de previews 720p watermarkées)
+- Pas d'authentification Bearer (`FFMPEG_API_KEY` non vérifié)
+- Pas de validation qualité (luma, scènes, anti-frames noires)
+- Utilise `fluent-ffmpeg` au lieu de `execFile` natif
 
-## Vérification après déploiement
+Render déploie fidèlement ce repo — le problème n'est pas Render, c'est que **le bon code n'est pas dans ce repo**.
 
-Une fois Render passé en "Live", je testerai (depuis le sandbox) :
+## Deux options (à choisir)
 
-- `GET https://ffmpeg-api-mjba.onrender.com/health` → doit retourner `{"status":"ok","ffmpeg":true}`
-- `POST /thumbnail` sans body → doit retourner `"videoUrl is required"` (et non `"No URL provided"`)
-- `POST /process` sans header Bearer → doit retourner `401 Unauthorized`
+### Option A — Recommandée: Connecter Render au repo Lovable
 
-Si les 3 réponses sont correctes, le code Lovable est bien déployé.
+Avantage: chaque modif Lovable de `docker/ffmpeg-api/` se déploie automatiquement sur Render. Plus jamais de désync.
 
-## Étapes finales côté Lovable (après confirmation)
+Étapes côté Render:
+1. Render Dashboard → service `ffmpeg-api-mjba` → Settings → Build & Deploy
+2. Repository → **Disconnect** → **Connect a repository**
+3. Choisir le repo GitHub Lovable (visible dans Lovable → menu **+** → GitHub — c'est le repo principal du projet VisuStock, **pas** `visite-now-agency-site`)
+4. Configurer:
+   - Branch: `main`
+   - Root Directory: `docker/ffmpeg-api`
+   - Dockerfile Path: `Dockerfile`
+   - Auto-Deploy: Yes
+5. Vérifier Environment → `FFMPEG_API_KEY` toujours présent
+6. Save → Manual Deploy
 
-1. Vérifier les secrets Supabase :
-   - `FFMPEG_API_URL` = `https://ffmpeg-api-mjba.onrender.com`
-   - `FFMPEG_API_KEY` = même valeur que sur Render
-2. Tester depuis l'admin :
-   - `Admin → Settings → Regenerate Video Thumbnails` (sur 1-2 vidéos d'abord).
-   - `Admin → Video Backfill → Dry Run` puis backfill réel.
-3. Si OK, le système de previews 720p watermarkées et de thumbnails est opérationnel et **toute future modif Lovable de `docker/ffmpeg-api/server.js` se déploiera automatiquement sur Render**.
+### Option B — Remplacer le contenu du repo `visite-now-agency-site`
 
-## Ce que tu peux faire si tu ne trouves pas le bon repo Lovable
+Avantage: pas de reconfig Render. Inconvénient: il faudra **recopier manuellement** chaque future modif Lovable.
 
-Dis-moi le nom exact du repo Lovable (visible dans l'onglet GitHub de Lovable, menu **+** → GitHub), je te guide pas à pas.
+Étapes:
+1. Dans `visite-now-agency-site/ffmpeg-api/`, remplacer:
+   - `server.js` → contenu de `docker/ffmpeg-api/server.js` (565 lignes, fourni par Lovable)
+   - `package.json` → contenu de `docker/ffmpeg-api/package.json` (dépendances: `express`, `uuid` uniquement)
+   - `Dockerfile` → contenu de `docker/ffmpeg-api/Dockerfile`
+2. Push sur `main` → Render redéploie automatiquement
+3. Vérifier Render → Environment → `FFMPEG_API_KEY` présent (sinon `openssl rand -hex 32` puis l'ajouter aussi dans Supabase secrets Lovable)
+
+## Vérification après déploiement (je la fais)
+
+```
+GET  /health    → {"status":"ok","ffmpeg":true}      (et non juste {"status":"ok"})
+POST /thumbnail → 401 Unauthorized                    (sans Bearer)
+POST /process   → 401 Unauthorized                    (sans Bearer — et non 404)
+```
+
+Si les 3 réponses sont OK, le code Lovable est en prod et je pourrai lancer le backfill des previews.
+
+## Question pour toi
+
+Laquelle des deux options préfères-tu? (Option A est de loin la plus saine sur le long terme.)
