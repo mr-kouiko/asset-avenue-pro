@@ -1,0 +1,1 @@
+DROP FUNCTION public.search_marketplace(uuid, text, text[], text[], text[], text[], text[], text[], text[], boolean, boolean, numeric, numeric, boolean, text, integer, integer);

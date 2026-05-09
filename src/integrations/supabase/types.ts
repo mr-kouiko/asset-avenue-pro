@@ -2573,77 +2573,42 @@ export type Database = {
         Returns: string
       }
       retry_failed_preview: { Args: { _file_id: string }; Returns: undefined }
-      search_marketplace:
-        | {
-            Args: {
-              p_ai_generated?: boolean
-              p_category_id?: string
-              p_color_tags?: string[]
-              p_effect_tags?: string[]
-              p_free_only?: boolean
-              p_limit?: number
-              p_offset?: number
-              p_orientation_tags?: string[]
-              p_platform_tags?: string[]
-              p_price_max?: number
-              p_price_min?: number
-              p_search?: string
-              p_sort?: string
-              p_style_tags?: string[]
-              p_subject_tags?: string[]
-              p_use_case_tags?: string[]
-              p_with_people?: boolean
-            }
-            Returns: {
-              ai_declaration: string
-              category_id: string
-              created_at: string
-              creator_id: string
-              description: string
-              id: string
-              price: number
-              slug: string
-              tags: string[]
-              title: string
-              total_count: number
-            }[]
-          }
-        | {
-            Args: {
-              p_ai_generated?: boolean
-              p_category_id?: string
-              p_color_tags?: string[]
-              p_effect_tags?: string[]
-              p_free_only?: boolean
-              p_limit?: number
-              p_offset?: number
-              p_optimal_only?: boolean
-              p_orientation_tags?: string[]
-              p_platform_tags?: string[]
-              p_price_max?: number
-              p_price_min?: number
-              p_search?: string
-              p_sort?: string
-              p_style_tags?: string[]
-              p_subject_tags?: string[]
-              p_use_case_tags?: string[]
-              p_with_people?: boolean
-            }
-            Returns: {
-              ai_declaration: string
-              category_id: string
-              created_at: string
-              creator_id: string
-              description: string
-              id: string
-              preview_quality: string
-              price: number
-              slug: string
-              tags: string[]
-              title: string
-              total_count: number
-            }[]
-          }
+      search_marketplace: {
+        Args: {
+          p_ai_generated?: boolean
+          p_category_id?: string
+          p_color_tags?: string[]
+          p_effect_tags?: string[]
+          p_free_only?: boolean
+          p_limit?: number
+          p_offset?: number
+          p_optimal_only?: boolean
+          p_orientation_tags?: string[]
+          p_platform_tags?: string[]
+          p_price_max?: number
+          p_price_min?: number
+          p_search?: string
+          p_sort?: string
+          p_style_tags?: string[]
+          p_subject_tags?: string[]
+          p_use_case_tags?: string[]
+          p_with_people?: boolean
+        }
+        Returns: {
+          ai_declaration: string
+          category_id: string
+          created_at: string
+          creator_id: string
+          description: string
+          id: string
+          preview_quality: string
+          price: number
+          slug: string
+          tags: string[]
+          title: string
+          total_count: number
+        }[]
+      }
       spend_videoai_credits: {
         Args: {
           p_amount: number
