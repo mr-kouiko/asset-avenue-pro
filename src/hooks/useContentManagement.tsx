@@ -2,6 +2,25 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateSlug, ensureUniqueSlug, generateSlugifiedFileName } from '@/utils/slugGenerator';
+import { getImageDimensions, getVideoDimensions } from '@/utils/mediaDimensions';
+
+async function buildFileMetadata(file: { type: string; url: string; previewUrl?: string; name: string; isWatermarked?: boolean }): Promise<Record<string, any>> {
+  const meta: Record<string, any> = {
+    isWatermarked: file.isWatermarked || false,
+    originalFileName: file.name,
+  };
+  try {
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    let dims = null;
+    if (isVideo && file.previewUrl) dims = await getVideoDimensions(file.previewUrl);
+    else if (isImage) dims = await getImageDimensions(file.previewUrl || file.url);
+    if (dims) { meta.width = dims.width; meta.height = dims.height; }
+  } catch (e) {
+    console.warn('[useContentManagement] dimension detection failed:', e);
+  }
+  return meta;
+}
 
 interface ContentData {
   title: string;
@@ -95,10 +114,7 @@ export const useContentManagement = () => {
             is_original: true,
             preview_path: file.previewUrl || null,
             thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
-            metadata: {
-              isWatermarked: file.isWatermarked || false,
-              originalFileName: file.name // Store original filename
-            }
+            metadata: await buildFileMetadata(file),
           })
           .select()
           .single();
@@ -184,10 +200,7 @@ export const useContentManagement = () => {
             is_original: true,
             preview_path: file.previewUrl || null,
             thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
-            metadata: {
-              isWatermarked: file.isWatermarked || false,
-              originalFileName: file.name // Store original filename
-            }
+            metadata: await buildFileMetadata(file),
           })
           .select()
           .single();
