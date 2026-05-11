@@ -230,6 +230,33 @@ export const useProductManager = () => {
         console.log('🎬 VFX product with video preview detected');
       }
 
+      // Best-effort: detect intrinsic pixel dimensions so orientation filters
+      // (vertical / horizontal / square) work from real aspect ratio.
+      let detectedWidth: number | undefined;
+      let detectedHeight: number | undefined;
+      try {
+        if (isVideo && submission.file.previewUrl) {
+          const d = await getVideoDimensions(submission.file.previewUrl);
+          if (d) { detectedWidth = d.width; detectedHeight = d.height; }
+        } else if (fileType === 'image' && (submission.file.previewUrl || submission.file.url)) {
+          const d = await getImageDimensions(submission.file.previewUrl || submission.file.url);
+          if (d) { detectedWidth = d.width; detectedHeight = d.height; }
+        }
+      } catch (dimErr) {
+        console.warn('[useProductManager] dimension detection failed:', dimErr);
+      }
+
+      const fileMetadata: Record<string, any> = {
+        isWatermarked: submission.file.isWatermarked || false,
+        isAiGenerated: submission.file.isAiGenerated || false,
+        originalFileName: submission.file.name,
+        previewMediaType: isVfxVideoPreview ? 'video' : undefined,
+      };
+      if (detectedWidth && detectedHeight) {
+        fileMetadata.width = detectedWidth;
+        fileMetadata.height = detectedHeight;
+      }
+
       // Check if content_file already exists for this submission
       const { data: existingFile } = await supabase
         .from('content_files')
@@ -250,13 +277,7 @@ export const useProductManager = () => {
             file_hash: submission.file.fileHash || null,
             preview_path: submission.file.previewUrl,
             thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
-            metadata: {
-              isWatermarked: submission.file.isWatermarked || false,
-              isAiGenerated: submission.file.isAiGenerated || false,
-              originalFileName: submission.file.name,
-              // Store preview media type for VFX products with video previews
-              previewMediaType: isVfxVideoPreview ? 'video' : undefined
-            }
+            metadata: fileMetadata,
           })
           .eq('id', existingFile.id);
 
@@ -276,13 +297,7 @@ export const useProductManager = () => {
             is_original: true,
             preview_path: submission.file.previewUrl,
             thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
-            metadata: {
-              isWatermarked: submission.file.isWatermarked || false,
-              isAiGenerated: submission.file.isAiGenerated || false,
-              originalFileName: submission.file.name,
-              // Store preview media type for VFX products with video previews
-              previewMediaType: isVfxVideoPreview ? 'video' : undefined
-            }
+            metadata: fileMetadata,
           });
 
         if (fileError) throw fileError;
