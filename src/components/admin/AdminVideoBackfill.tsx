@@ -120,7 +120,41 @@ export const AdminVideoBackfill = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Controls */}
+        {/* Step 1 — Audit broken previews (truncated single-frame MP4s) */}
+        <div className="p-4 border-2 border-amber-500/30 rounded-lg bg-amber-50/30 dark:bg-amber-950/20 space-y-3">
+          <div className="flex items-start gap-2">
+            <ScanSearch className="h-4 w-4 mt-0.5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Step 1 — Audit & reset broken previews</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Detects truncated previews (single-frame MP4s &lt; 200 KB) and clears them so Step 2 regenerates a full-length watermarked preview.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Switch id="audit-dry" checked={auditDryRun} onCheckedChange={setAuditDryRun} />
+              <Label htmlFor="audit-dry" className="text-sm">Dry run (scan only)</Label>
+            </div>
+            <Button onClick={runAudit} disabled={auditStatus === 'running'} variant="secondary" size="sm">
+              {auditStatus === 'running' ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Scanning...</>
+              ) : (
+                <><ScanSearch className="h-4 w-4 mr-2" /> {auditDryRun ? 'Scan Previews' : 'Reset Broken Previews'}</>
+              )}
+            </Button>
+          </div>
+          {auditResult && (
+            <div className="text-xs grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="p-2 rounded bg-background border"><div className="text-muted-foreground">Scanned</div><div className="font-bold">{auditResult.scanned ?? 0}</div></div>
+              <div className="p-2 rounded bg-background border"><div className="text-muted-foreground">Broken</div><div className="font-bold text-amber-600">{auditResult.broken ?? 0}</div></div>
+              <div className="p-2 rounded bg-background border"><div className="text-muted-foreground">Unreachable</div><div className="font-bold">{auditResult.unreachable ?? 0}</div></div>
+              <div className="p-2 rounded bg-background border"><div className="text-muted-foreground">Reset</div><div className="font-bold text-green-600">{auditResult.reset ?? 0}</div></div>
+            </div>
+          )}
+        </div>
+
+        {/* Step 2 — Backfill controls */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch id="dry-run" checked={dryRun} onCheckedChange={setDryRun} />
