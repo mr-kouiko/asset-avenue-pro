@@ -242,8 +242,15 @@ serve(async (req) => {
             const videoBlob = await ffmpegResponse.arrayBuffer();
             const videoBytes = new Uint8Array(videoBlob);
 
-            if (videoBytes.length < 1000) {
-              throw new Error(`Output too small / invalid output (${videoBytes.length} bytes)`);
+            // Reject single-frame / truncated outputs. Valid full-length 720p previews
+            // are at least ~250 KB; observed broken outputs are 60–100 KB (1 frame).
+            if (videoBytes.length < 200 * 1024) {
+              throw new Error(`Output too small / invalid output (${videoBytes.length} bytes, need >=200KB for full-length preview)`);
+            }
+            // Cross-check duration header from FFmpeg API (full video length expected).
+            const previewDurHeader = parseFloat(ffmpegResponse.headers.get('x-preview-duration') || '0');
+            if (previewDurHeader > 0 && previewDurHeader < 2) {
+              throw new Error(`Output duration too short (${previewDurHeader}s) — expected full source length`);
             }
 
             console.log(`[backfill] [STAGE:ffmpeg-done] file=${file.file_name} ffmpegMs=${ffmpegTimeMs} outputMB=${(videoBytes.length / 1024 / 1024).toFixed(1)}`);
