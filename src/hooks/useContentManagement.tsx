@@ -114,10 +114,7 @@ export const useContentManagement = () => {
             is_original: true,
             preview_path: file.previewUrl || null,
             thumbnail_path: isVideo ? file.thumbnailUrl || null : file.previewUrl || null,
-            metadata: {
-              isWatermarked: file.isWatermarked || false,
-              originalFileName: file.name // Store original filename
-            }
+            metadata: await buildFileMetadata(file),
           })
           .select()
           .single();
