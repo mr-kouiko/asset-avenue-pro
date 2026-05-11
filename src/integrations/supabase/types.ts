@@ -344,6 +344,7 @@ export type Database = {
           created_at: string
           creator_id: string
           description: string
+          height: number | null
           id: string
           license_id: string | null
           original_language: string | null
@@ -354,6 +355,7 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          width: number | null
         }
         Insert: {
           admin_notes?: string | null
@@ -364,6 +366,7 @@ export type Database = {
           created_at?: string
           creator_id: string
           description: string
+          height?: number | null
           id?: string
           license_id?: string | null
           original_language?: string | null
@@ -374,6 +377,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          width?: number | null
         }
         Update: {
           admin_notes?: string | null
@@ -384,6 +388,7 @@ export type Database = {
           created_at?: string
           creator_id?: string
           description?: string
+          height?: number | null
           id?: string
           license_id?: string | null
           original_language?: string | null
@@ -394,6 +399,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          width?: number | null
         }
         Relationships: [
           {
