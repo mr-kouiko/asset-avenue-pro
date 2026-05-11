@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Video, Play, AlertTriangle, CheckCircle, Loader2, Eye, Server } from 'lucide-react';
+import { Video, Play, AlertTriangle, CheckCircle, Loader2, Eye, Server, ScanSearch } from 'lucide-react';
 
 interface BackfillResponse {
   dryRun?: boolean;
@@ -29,6 +29,42 @@ export const AdminVideoBackfill = () => {
   const [force, setForce] = useState(false);
   const [maxVideos, setMaxVideos] = useState(50);
   const [result, setResult] = useState<BackfillResponse | null>(null);
+  const [auditStatus, setAuditStatus] = useState<JobStatus>('idle');
+  const [auditDryRun, setAuditDryRun] = useState(true);
+  const [auditResult, setAuditResult] = useState<any>(null);
+
+  const runAudit = async () => {
+    setAuditStatus('running');
+    setAuditResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('You must be logged in');
+        setAuditStatus('error');
+        return;
+      }
+      const response = await supabase.functions.invoke('audit-broken-previews', {
+        body: { dryRun: auditDryRun, maxScan: 1000 },
+      });
+      if (response.error) throw new Error(response.error.message || 'Audit failed');
+      const data = response.data;
+      setAuditResult(data);
+      if (data.error) {
+        toast.error(data.error);
+        setAuditStatus('error');
+      } else if (auditDryRun) {
+        toast.success(`Audit: ${data.broken} broken / ${data.scanned} scanned`);
+        setAuditStatus('done');
+      } else {
+        toast.success(`Reset ${data.reset} broken previews — run backfill next`);
+        setAuditStatus('done');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Audit failed: ${msg}`);
+      setAuditStatus('error');
+    }
+  };
 
   const runBackfill = async () => {
     setStatus('running');
