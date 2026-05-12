@@ -1,43 +1,81 @@
-## Constat
+## Goal
 
-Le pipeline serveur (`docker/ffmpeg-api` `/process`) encode déjà la vidéo entière (capée à 60s, ce qui = la limite d'upload du projet → donc équivalent à "vidéo complète"). Le client (`useVideoPreviewGenerator.ts`) cible déjà `video.duration` complet.
+Fix the broken video preview pipeline so every uploaded video reliably gets a watermarked MP4 preview before publishing, and existing stuck items are auto-recovered.
 
-**Mais** le diagnostic du tour précédent a montré que ~6 previews vidéo sur 8 échantillonnées sont des MP4 d'**1 seule frame (0.033s, 60–96 KB)** — résidus d'anciennes générations côté navigateur où MediaRecorder s'est arrêté prématurément. Ces fichiers passent quand même le filtre marketplace (`preview_quality='preview_available'`) et c'est ce qui donne l'impression que "la preview ne joue pas" sur des produits comme `elephantrock-alula-saudiarabia-desert-rockformation`.
+## Root cause (confirmed)
 
-La règle voulue : **chaque preview watermarkée doit faire la même durée que l'original (cap 60s)**.
+- Render `/process` expects JSON `{ videoUrl, watermarkUrl, resolution }` and downloads the source itself. The working `batch-backfill-previews` function already calls it that way.
+- `generate-video-preview` instead downloads the file in Deno and POSTs it as `multipart/form-data` → Render returns 400, preview never produced.
+- Frontend `useAutomaticWatermark` swallows that failure (`// Video preview is optional`), so publish proceeds with `preview_path = null` and the DB trigger keeps the row in `processing_preview` forever.
+- Client-side recorder may produce `video/webm`, but the marketplace requires `preview_path ~ '.mp4'`, causing a second class of stuck items.
 
-## Plan
+## Chosen architecture
 
-### 1. Nouvelle Edge Function `audit-broken-previews`
-- Liste tous les `content_files` vidéo avec `preview_path` non-null
-- Pour chaque preview : `HEAD` → si `Content-Length < 200 KB`, télécharge les premiers 256 KB et appelle un nouveau `POST /probe` du Docker FFmpeg API qui renvoie `{ duration, width, height }`
-- Si `previewDuration < sourceDuration - 1s` OU `previewDuration < 2s` → `UPDATE content_files SET preview_path = NULL, preview_quality = NULL WHERE id = ...`
-- Le trigger DB existant repassera automatiquement la submission en `processing_preview`
-- Rapport JSON : `{ scanned, broken, reset, kept }`
+**Option B** — Edge Function sends JSON, Render downloads. This matches the already-working backfill path, requires no Render redeploy, and avoids re-uploading large bodies through Deno.
 
-### 2. Endpoint `POST /probe` dans `docker/ffmpeg-api/server.js`
-Wrapper léger autour de `ffprobe -show_entries format=duration:stream=width,height` à partir d'une URL distante (téléchargement partiel via Range si possible), retourne `{ duration, width, height, sizeBytes }`.
+## Changes
 
-### 3. Filet de sécurité dans `batch-backfill-previews/index.ts` (ligne 245)
-Remplacer `if (videoBytes.length < 1000)` par :
-- minimum **200 KB**
-- ET `ffprobe` local (le Docker `/process` renvoie déjà l'en-tête `X-Preview-Duration` et `X-Source-Duration` → exposer aussi `X-Source-Duration` côté Docker, et rejeter en Edge Function si `preview < source - 1s`)
+### 1. `supabase/functions/generate-video-preview/index.ts` — rewrite payload
 
-Bonus : passer la `Source-Duration` cible explicitement au Docker `/process` pour qu'il échoue plutôt que de tronquer.
+- Drop the Deno-side download + FormData body.
+- Create a 1-hour signed URL for the source via `supabase.storage.from('uploads').createSignedUrl(videoPath, 3600)`.
+- Build a public URL for the watermark logo in `LOGO DE WATERMARKING`.
+- POST JSON to `FFMPEG_API_URL`:
+  ```json
+  { "videoUrl": "<signed>", "watermarkUrl": "<logo>", "resolution": 720 }
+  ```
+  Headers: `Authorization: Bearer ${FFMPEG_API_KEY}`, `Content-Type: application/json`.
+- Receive MP4 bytes → upload to `previews` bucket (not `uploads/previews/`) at `${userId}/videos/${fileId}_preview.mp4` with `contentType: 'video/mp4'`.
+- Update `content_files.preview_path` (and `preview_status='preview_available'`) for the matching row using `submission_id` or `file_path`.
+- Keep all existing `[STAGE:*]` / `[FAILURE:*]` logs; add `[STAGE:render-call]` with payload summary and `[STAGE:render-done]` with bytes/ms.
+- Return `{ success, previewUrl, previewPath }` on success, structured `failureReason` on failure (no silent OK).
 
-### 4. UI Admin
-Dans `AdminVideoBackfill.tsx`, ajouter un bouton **« 1. Audit & Reset Broken Previews »** au-dessus du bouton de backfill existant, avec progression (scanned/broken/reset). L'admin clique ensuite sur **« 2. Backfill Missing Previews »** déjà en place pour relancer la génération full-length serveur.
+### 2. `src/hooks/useAutomaticWatermark.tsx` — remove silent failures, force MP4
 
-### 5. Vérification
-- Re-tester `elephantrock-alula-saudiarabia-desert-rockformation` : preview doit jouer du début à la fin de la vidéo originale
-- Re-échantillonner 10 produits vidéo aléatoires, confirmer `previewDuration ≈ sourceDuration` partout
-- Compter en SQL : `SELECT COUNT(*) FROM content_files WHERE preview_path IS NOT NULL AND … (size proxy)` → 0 cassée
+- Replace the `MediaRecorder` MIME selection with **MP4 only**. If `MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') === false`, skip the client path entirely and go straight to server-side.
+- Remove the `// Video preview is optional - continue without it` block. Server-side failure must:
+  - throw → caught by outer `processSingle` try/catch
+  - mark file `status: 'error'`, surface a `toast.error` with the `failureReason`
+  - prevent the file from reaching publish
+- Validate before completing: `previewUrl` is set, ends in `.mp4`, blob `> 20 KB`. Otherwise throw "Preview generation failed — cannot publish".
 
-## Fichiers touchés
+### 3. `src/hooks/useProductManager.tsx` & `src/hooks/useContentManagement.tsx` — gate publish
 
-- **Nouveau** : `supabase/functions/audit-broken-previews/index.ts`
-- **Modif** : `docker/ffmpeg-api/server.js` (ajout `/probe`, header `X-Source-Duration`)
-- **Modif** : `supabase/functions/batch-backfill-previews/index.ts` (validation taille + durée minimale = source - 1s)
-- **Modif** : `src/components/admin/AdminVideoBackfill.tsx` (bouton + progression audit)
+- Before inserting a video into `content_files`, assert `submission.file.previewUrl` exists and matches `/\.mp4($|\?)/`. If missing → abort the insert, surface `toast.error("Video preview not ready — cannot publish.")`, and leave the submission in draft.
+- Do not create rows with `preview_path = null` for `file_type='video'`.
 
-Aucune migration SQL, aucune modif marketplace/UI publique. Pas de changement de la logique d'upload (déjà full-length côté client + serveur).
+### 4. `docker/ffmpeg-api/server.js` — no protocol change needed
+
+Already JSON-compatible. Add only:
+- Log incoming payload (`videoUrl` host, `resolution`) at `START`.
+- Echo `Content-Type: video/mp4` (already does).
+- No code change unless we discover an issue during smoke test.
+
+### 5. Auto-backfill (replaces "silent" failure recovery)
+
+- New scheduled `pg_cron` job (every 10 min) that calls `batch-backfill-previews` with `{ dryRun:false, maxVideos:25, batchSize:5 }`.
+- Created via `supabase--read_query` insert path (contains anon key) — not a migration.
+- Existing `AdminVideoBackfill` UI keeps its manual button.
+
+### 6. Storage / DB sanity (migration)
+
+- Ensure `previews` bucket exists, public, allowed MIME `['video/mp4','image/jpeg','image/png','image/webp']`. Drop `video/webm` if present.
+- Confirm `content_files.preview_status` enum already supports `preview_available` / `preview_failed` (it does — no change).
+- Add CHECK trigger: when `file_type='video'` and `preview_path IS NOT NULL`, require `preview_path ILIKE '%.mp4%'`.
+
+## Verification
+
+1. Smoke test: `supabase--curl_edge_functions /generate-video-preview` with the stuck Eiffel Tower video path → expect MP4 bytes saved, `preview_path` populated, status auto-promotes to `approved`.
+2. Upload a fresh vertical MP4 from the UI → confirm publish blocks if preview fails (kill `FFMPEG_API_URL` temporarily) and succeeds otherwise.
+3. Run cron job manually once → confirm Eiffel Tower + any other null-preview videos are healed.
+4. Marketplace filter check: vertical filter returns the new video.
+
+## Files touched
+
+- `supabase/functions/generate-video-preview/index.ts` (rewrite request)
+- `src/hooks/useAutomaticWatermark.tsx` (MP4-only, no silent fallback)
+- `src/hooks/useProductManager.tsx`, `src/hooks/useContentManagement.tsx` (publish gate)
+- `supabase/migrations/<new>.sql` (bucket MIME tightening + preview_path CHECK trigger)
+- DB insert (not a migration) for the cron schedule
+
+No changes required to `docker/ffmpeg-api/server.js`.
