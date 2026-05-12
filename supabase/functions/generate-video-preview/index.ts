@@ -150,7 +150,7 @@ serve(async (req) => {
     const ffmpegStart = Date.now();
     let ffmpegResponse: Response;
     try {
-      ffmpegResponse = await fetch(ffmpegApiUrl, {
+      ffmpegResponse = await fetch(processUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({ videoUrl, watermarkUrl, resolution }),
