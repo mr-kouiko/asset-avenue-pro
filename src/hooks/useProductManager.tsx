@@ -230,6 +230,14 @@ export const useProductManager = () => {
         console.log('🎬 VFX product with video preview detected');
       }
 
+      // HARD GATE: video products must have a real MP4 preview before publishing.
+      if (isVideo) {
+        const pv = submission.file.previewUrl;
+        if (!pv || !/\.mp4(\?|$)/i.test(pv)) {
+          throw new Error('Video preview not ready — cannot publish. Please retry the upload so a watermarked MP4 preview is generated.');
+        }
+      }
+
       // Best-effort: detect intrinsic pixel dimensions so orientation filters
       // (vertical / horizontal / square) work from real aspect ratio.
       let detectedWidth: number | undefined;
