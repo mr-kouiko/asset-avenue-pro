@@ -363,186 +363,28 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
             }
           }
           
-          // Generate and upload preview for videos (watermarked short clip)
+          // Generate and upload preview for videos (watermarked MP4).
+          // Server-side ONLY — client MediaRecorder produces inconsistent webm
+          // and the marketplace strictly requires MP4. Failure HARD-BLOCKS publish.
           if (file.type.startsWith('video/')) {
-            let clientPreviewFailed = false;
-            
-            try {
-              console.log(`🎬 Generating video preview with watermark for: ${file.name}`);
-              
-              // Create video element to generate preview
-              const video = document.createElement('video');
-              video.muted = true;
-              video.playsInline = true;
-              video.preload = 'auto';
-              video.crossOrigin = 'anonymous';
-              
-              // Use proxied URL to bypass CORS and prevent tainted canvas
-              video.src = getProxiedVideoUrl(watermarkedUrl!);
-              console.log(`🔗 Using proxied URL for video preview generation`);
-              
-              // Wait for video metadata to load
-              await new Promise<void>((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('Video preview load timeout')), 30000);
-                video.onloadedmetadata = () => {
-                  clearTimeout(timeout);
-                  resolve();
-                };
-                video.onerror = () => {
-                  clearTimeout(timeout);
-                  reject(new Error('Failed to load video for preview'));
-                };
-              });
-              
-              // Validate video dimensions
-              if (video.videoWidth === 0 || video.videoHeight === 0) {
-                throw new Error('Invalid video dimensions for preview');
-              }
-              
-              // Setup canvas for recording
-              const width = video.videoWidth;
-              const height = video.videoHeight;
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              
-              if (!ctx) throw new Error('Canvas context not available');
-              
-              // Load watermark logo
-              const watermarkLogo = new Image();
-              watermarkLogo.crossOrigin = 'anonymous';
-              let watermarkLoaded = false;
-              
-              await new Promise<void>((resolve) => {
-                watermarkLogo.onload = () => { watermarkLoaded = true; resolve(); };
-                watermarkLogo.onerror = () => resolve();
-                watermarkLogo.src = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
-              });
-              
-              // Calculate watermark dimensions (50% width, centered)
-              let watermarkWidth = width * 0.5;
-              let watermarkHeight = watermarkLoaded ? (watermarkLogo.height / watermarkLogo.width) * watermarkWidth : 0;
-              if (watermarkHeight > height * 0.8) {
-                watermarkHeight = height * 0.8;
-                watermarkWidth = (watermarkLogo.width / watermarkLogo.height) * watermarkHeight;
-              }
-              const watermarkX = (width - watermarkWidth) / 2;
-              const watermarkY = (height - watermarkHeight) / 2;
-              
-              // Setup MediaRecorder
-              const stream = (canvas as any).captureStream(24);
-              if (!stream) throw new Error('Canvas captureStream not supported');
-              
-              const chunks: BlobPart[] = [];
-              const mimeTypes = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
-              let selectedMimeType = 'video/webm';
-              for (const mime of mimeTypes) {
-                if (MediaRecorder.isTypeSupported(mime)) {
-                  selectedMimeType = mime;
-                  break;
-                }
-              }
-              
-              const recorder = new MediaRecorder(stream, {
-                mimeType: selectedMimeType,
-                videoBitsPerSecond: 4_000_000
-              });
-              
-              recorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) chunks.push(e.data);
-              };
-              
-              const recordPromise = new Promise<void>((resolve) => {
-                recorder.onstop = () => resolve();
-              });
-              
-              recorder.start(1000);
-              
-              // Draw frames with watermark
-              let animId = 0;
-              let drawErrors = 0;
-              const draw = () => {
-                try {
-                  ctx.drawImage(video, 0, 0, width, height);
-                  if (watermarkLoaded) {
-                    ctx.save();
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 12;
-                    ctx.globalAlpha = 0.95;
-                    ctx.drawImage(watermarkLogo, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-                    ctx.restore();
-                  }
-                } catch (drawError) {
-                  drawErrors++;
-                  if (drawErrors === 1) {
-                    console.warn('Canvas draw error (possible CORS taint):', drawError);
-                  }
-                }
-                animId = requestAnimationFrame(draw);
-              };
-              
-              await video.play();
-              draw();
-              
-              // Record 6 seconds or video duration (whichever is less)
-              const recordDuration = Math.min(6, isFinite(video.duration) ? video.duration : 6);
-              await new Promise<void>((resolve) => setTimeout(resolve, recordDuration * 1000));
-              
-              cancelAnimationFrame(animId);
-              video.pause();
-              recorder.stop();
-              await recordPromise;
-              
-              if (chunks.length === 0) throw new Error('No video preview data recorded');
-              
-              // Check for high draw error rate - indicates CORS issues
-              if (drawErrors > 10) {
-                throw new Error('Canvas tainted by CORS - falling back to server-side');
-              }
-              
-              const outputMimeType = selectedMimeType.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
-              const previewBlob = new Blob(chunks, { type: outputMimeType });
-              
-              if (previewBlob.size < 1000) throw new Error('Preview too small');
-              
-              const previewExtension = outputMimeType === 'video/mp4' ? 'mp4' : 'webm';
-              const previewPath = `${user.id}/previews/${fileId}_preview.${previewExtension}`;
-              previewUrl = await uploadToSupabase(previewBlob, previewPath, 'previews', undefined, outputMimeType, (progress) => {
-                onProgress?.(fileId, 85 + progress * 0.15);
-              });
-              
-              console.log(`✅ Video preview generated (client-side) and uploaded: ${previewUrl}`);
-            } catch (previewError) {
-              console.warn('Client-side video preview generation failed:', previewError);
-              clientPreviewFailed = true;
+            console.log(`🎬 Requesting server-side MP4 preview for: ${file.name}`);
+
+            const { data, error } = await supabase.functions.invoke('generate-video-preview', {
+              body: { videoPath: filePath, resolution: 720 },
+            });
+
+            if (error) {
+              throw new Error(`Preview generation failed: ${error.message || 'edge function error'}`);
             }
-            
-            // Server-side fallback if client-side failed
-            if (clientPreviewFailed && !previewUrl) {
-              try {
-                console.log(`🔄 Falling back to server-side video preview generation for: ${file.name}`);
-                
-                const { data, error } = await supabase.functions.invoke('generate-video-preview', {
-                  body: {
-                    videoPath: filePath,
-                    resolution: 720
-                  }
-                });
-                
-                if (error) throw error;
-                
-                if (data?.previewUrl) {
-                  previewUrl = data.previewUrl;
-                  console.log(`✅ Video preview generated (server-side): ${previewUrl}`);
-                } else {
-                  console.warn('Server-side preview generation returned no URL');
-                }
-              } catch (serverError) {
-                console.warn('Server-side video preview also failed:', serverError);
-                // Video preview is optional - continue without it
-              }
+            if (!data?.success || !data?.previewUrl) {
+              throw new Error(`Preview generation failed: ${data?.error || data?.failureReason || 'no preview URL returned'}`);
             }
+            if (!/\.mp4(\?|$)/i.test(data.previewUrl)) {
+              throw new Error(`Preview generation produced non-MP4 output: ${data.previewUrl}`);
+            }
+
+            previewUrl = data.previewUrl;
+            console.log(`✅ Video preview ready: ${previewUrl} (cached=${data.cached}, ffmpegMs=${data.ffmpegTimeMs})`);
           }
           
           console.log(`✅ File processed with watermarked thumbnail: ${watermarkedUrl}`);

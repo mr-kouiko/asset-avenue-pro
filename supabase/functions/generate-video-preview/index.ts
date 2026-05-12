@@ -7,302 +7,232 @@ const corsHeaders = {
 };
 
 /**
- * Generate Video Preview Edge Function
- * 
- * Creates a 720p, 6-second watermarked MP4 preview of a video.
- * Uses server-side FFmpeg processing via external API for reliable output.
- * 
- * Flow:
- * 1. Download source video from Supabase storage
- * 2. Process video: resize to 720p, trim to 6 seconds, add watermark
- * 3. Upload generated preview to storage
- * 4. Return preview URL
+ * Generate Video Preview Edge Function (v2 — JSON protocol)
+ *
+ * Calls the Render FFmpeg API with JSON { videoUrl, watermarkUrl, resolution }.
+ * Render downloads the source itself, encodes a 720p watermarked MP4, and streams
+ * the bytes back. We upload the result to the `previews` bucket and update
+ * content_files.preview_path / preview_status.
+ *
+ * Failures are explicit — never silent. Frontend must treat a non-success
+ * response as a hard publish blocker.
  */
 
 interface PreviewRequest {
-  videoPath: string;      // Path in Supabase storage (e.g., "user-id/video.mp4")
-  contentId?: string;     // Content ID to update preview_path
-  duration?: number;      // Optional preview duration in seconds. Omit = full length.
-  resolution?: number;    // Target height (default: 720)
-  force?: boolean;        // Skip cache and regenerate
+  videoPath: string;       // Storage key in `uploads` bucket OR full https URL
+  contentFileId?: string;  // Optional content_files.id to update directly
+  submissionId?: string;   // Optional content_submissions.id (for path resolution)
+  resolution?: number;     // Target height (default 720)
+  force?: boolean;         // Skip cache and regenerate
 }
+
+type FailureReason =
+  | 'missing_param'
+  | 'no_ffmpeg_api'
+  | 'signed_url_error'
+  | 'render_network_error'
+  | 'render_timeout'
+  | 'render_error'
+  | 'invalid_output'
+  | 'upload_error'
+  | 'db_update_error'
+  | 'internal_error';
 
 interface PreviewResponse {
   success: boolean;
   previewUrl?: string;
   previewPath?: string;
-  error?: string;
-  failureReason?: 'timeout' | 'file_too_large' | 'ffmpeg_error' | 'network_error' | 'download_error' | 'upload_error' | 'no_ffmpeg_api' | 'missing_param' | 'internal_error';
   cached?: boolean;
   processingTimeMs?: number;
   ffmpegTimeMs?: number;
+  error?: string;
+  failureReason?: FailureReason;
+}
+
+function fail(reason: FailureReason, message: string, status: number, extras: Record<string, unknown> = {}) {
+  console.error(`[generate-video-preview] [FAILURE:${reason}] ${message}`, extras);
+  return new Response(
+    JSON.stringify({ success: false, error: message, failureReason: reason, ...extras } as PreviewResponse),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
+  );
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   const startTime = Date.now();
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { videoPath, contentId, duration, resolution = 720, force = false }: PreviewRequest = await req.json();
-
-    if (!videoPath) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing required parameter: videoPath' } as PreviewResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    console.log(`[generate-video-preview] Starting preview generation for: ${videoPath}`);
-    console.log(`[generate-video-preview] Settings: duration=${duration ?? 'full'}s, resolution=${resolution}p, force=${force}`);
-
-    // Generate preview path
-    const pathParts = videoPath.split('/');
-    const fileName = pathParts.pop() || 'video';
-    const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
-    const previewFileName = `${fileNameWithoutExt}_preview_${resolution}p.mp4`;
-    const previewPath = `previews/${pathParts.join('/')}/${previewFileName}`;
-
-    // Check if preview already exists (caching) — skip when force=true
-    if (!force) {
-      const { data: existingPreview } = await supabase.storage
-        .from('uploads')
-        .download(previewPath);
-
-      if (existingPreview && existingPreview.size > 0) {
-      console.log(`[generate-video-preview] Preview already exists, returning cached version`);
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(previewPath);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          previewUrl: publicUrl,
-          previewPath,
-          cached: true,
-          processingTimeMs: Date.now() - startTime
-        } as PreviewResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-      }
-    }
-
-    // Download the source video
-    const dlStart = Date.now();
-    console.log(`[generate-video-preview] [STAGE:download] path=${videoPath}`);
-    const { data: videoData, error: downloadError } = await supabase.storage
-      .from('uploads')
-      .download(videoPath);
-
-    if (downloadError || !videoData) {
-      const dlMs = Date.now() - dlStart;
-      console.error(`[generate-video-preview] [FAILURE:download_error] dlMs=${dlMs} path=${videoPath} err=${downloadError?.message || 'no data'}`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Failed to download source video: ${downloadError?.message || 'Unknown error'}`,
-          failureReason: 'download_error',
-          processingTimeMs: Date.now() - startTime,
-        } as PreviewResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    const dlMs = Date.now() - dlStart;
-    console.log(`[generate-video-preview] [STAGE:download-done] dlMs=${dlMs} bytes=${videoData.size} (${(videoData.size / 1024 / 1024).toFixed(1)}MB)`);
-
-    // Download the watermark logo
-    const { data: logoData, error: logoError } = await supabase.storage
-      .from('LOGO DE WATERMARKING')
-      .download('Blue Modern Sound Studio Logo (3).png');
-
-    if (logoError) {
-      console.warn(`[generate-video-preview] Could not download watermark logo:`, logoError);
-      // Continue without watermark if logo fails
-    }
-
-    // For now, we need an external FFmpeg API for proper video processing.
-    // Deno Deploy doesn't have FFmpeg, so we cannot process video server-side without one.
-    
-    // Check if we have an FFmpeg processing API configured
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const ffmpegApiUrl = Deno.env.get('FFMPEG_API_URL');
     const ffmpegApiKey = Deno.env.get('FFMPEG_API_KEY');
-    
-    let previewBlob: Blob;
-    
-    if (ffmpegApiUrl && ffmpegApiKey) {
-      // Use external FFmpeg API for processing
-      const sizeMB = videoData.size / 1024 / 1024;
-      console.log(`[generate-video-preview] [STAGE:ffmpeg-call] Using external FFmpeg API (input=${sizeMB.toFixed(1)}MB)`);
 
-      // Reject early if file is over a hard limit (FFmpeg API has memory/time limits)
-      const MAX_INPUT_MB = 500;
-      if (sizeMB > MAX_INPUT_MB) {
-        const reason = `FILE_TOO_LARGE: input ${sizeMB.toFixed(1)}MB exceeds limit ${MAX_INPUT_MB}MB`;
-        console.error(`[generate-video-preview] [FAILURE:file_too_large] ${reason} | path=${videoPath} | elapsedMs=${Date.now() - startTime}`);
-        return new Response(
-          JSON.stringify({ success: false, error: reason, failureReason: 'file_too_large', processingTimeMs: Date.now() - startTime } as PreviewResponse),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
-        );
-      }
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
-      const videoArrayBuffer = await videoData.arrayBuffer();
-      const videoBytes = new Uint8Array(videoArrayBuffer);
+    const body = (await req.json().catch(() => ({}))) as PreviewRequest;
+    const { videoPath, contentFileId, submissionId, resolution = 720, force = false } = body;
 
-      const formData = new FormData();
-      formData.append('video', new Blob([videoBytes], { type: 'video/mp4' }), 'input.mp4');
-      if (duration) formData.append('duration', duration.toString());
-      formData.append('resolution', resolution.toString());
-      if (logoData) {
-        formData.append('watermark', logoData, 'watermark.png');
-      }
+    if (!videoPath) return fail('missing_param', 'videoPath is required', 400);
+    if (!ffmpegApiUrl) return fail('no_ffmpeg_api', 'FFMPEG_API_URL secret is not configured', 501);
 
-      const ffmpegStart = Date.now();
-      // Apply a generous timeout (5 min) to detect hangs vs slow processing
-      const TIMEOUT_MS = 5 * 60 * 1000;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    console.log(`[generate-video-preview] [START] videoPath=${videoPath} contentFileId=${contentFileId ?? 'n/a'} submissionId=${submissionId ?? 'n/a'} resolution=${resolution} force=${force}`);
 
-      let ffmpegResponse: Response;
-      try {
-        ffmpegResponse = await fetch(ffmpegApiUrl, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${ffmpegApiKey}` },
-          body: formData,
-          signal: controller.signal,
-        });
-      } catch (fetchErr) {
-        clearTimeout(timeoutId);
-        const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError';
-        const reason = isAbort ? 'timeout' : 'network_error';
-        const ffmpegMs = Date.now() - ffmpegStart;
-        console.error(`[generate-video-preview] [FAILURE:${reason}] FFmpeg fetch failed after ${ffmpegMs}ms | path=${videoPath} | size=${sizeMB.toFixed(1)}MB | err=${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
-        return new Response(
-          JSON.stringify({ success: false, error: isAbort ? `FFmpeg API timed out after ${TIMEOUT_MS}ms` : 'FFmpeg API network error', failureReason: reason, processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs } as PreviewResponse),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 504 }
-        );
-      }
-      clearTimeout(timeoutId);
-      const ffmpegMs = Date.now() - ffmpegStart;
-
-      if (!ffmpegResponse.ok) {
-        const errBody = await ffmpegResponse.text().catch(() => '');
-        console.error(`[generate-video-preview] [FAILURE:ffmpeg_error] status=${ffmpegResponse.status} ffmpegMs=${ffmpegMs} path=${videoPath} size=${sizeMB.toFixed(1)}MB body=${errBody.substring(0, 300)}`);
-        return new Response(
-          JSON.stringify({ success: false, error: `FFmpeg API error ${ffmpegResponse.status}: ${errBody.substring(0, 200)}`, failureReason: 'ffmpeg_error', processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs } as PreviewResponse),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
-        );
-      }
-
-      previewBlob = await ffmpegResponse.blob();
-      console.log(`[generate-video-preview] [STAGE:ffmpeg-done] ffmpegMs=${ffmpegMs} outputBytes=${previewBlob.size} (${(previewBlob.size / 1024 / 1024).toFixed(1)}MB)`);
-
-      if (previewBlob.size < 1000) {
-        console.error(`[generate-video-preview] [FAILURE:ffmpeg_error] Output too small (${previewBlob.size} bytes) | path=${videoPath}`);
-        return new Response(
-          JSON.stringify({ success: false, error: `FFmpeg returned invalid output (${previewBlob.size} bytes)`, failureReason: 'ffmpeg_error', processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs } as PreviewResponse),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
-        );
-      }
+    // -------------------------------------------------------------------------
+    // 1. Resolve a downloadable URL for Render
+    // -------------------------------------------------------------------------
+    let videoUrl: string;
+    if (/^https?:\/\//i.test(videoPath)) {
+      // Already a full URL (R2 / external).
+      videoUrl = videoPath;
     } else {
-      // No FFmpeg API configured — cannot generate a valid preview server-side.
-      console.error(`[generate-video-preview] [FAILURE:no_ffmpeg_api] FFMPEG_API_URL/KEY not configured | path=${videoPath} | elapsedMs=${Date.now() - startTime}`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Server-side preview generation requires FFMPEG_API_URL and FFMPEG_API_KEY secrets.',
-          failureReason: 'no_ffmpeg_api',
-          processingTimeMs: Date.now() - startTime,
-        } as PreviewResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 501 }
-      );
+      // Try `uploads` bucket first (frontend default), then `content-uploads`.
+      const candidateBuckets = ['uploads', 'content-uploads'];
+      let signed: string | null = null;
+      let lastErr = '';
+      for (const bucket of candidateBuckets) {
+        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(videoPath, 3600);
+        if (data?.signedUrl) {
+          signed = data.signedUrl;
+          console.log(`[generate-video-preview] [STAGE:signed-url] bucket=${bucket}`);
+          break;
+        }
+        lastErr = error?.message || 'unknown';
+      }
+      if (!signed) return fail('signed_url_error', `Could not create signed URL for ${videoPath}: ${lastErr}`, 500);
+      videoUrl = signed;
     }
 
-    // Upload the preview
-    const upStart = Date.now();
-    console.log(`[generate-video-preview] [STAGE:upload] path=${previewPath} bytes=${previewBlob.size}`);
+    // Watermark logo (public asset)
+    const watermarkUrl = `${supabaseUrl}/storage/v1/object/public/previews/visustock-watermark-logo.png`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(previewPath, previewBlob, {
-        contentType: 'video/mp4',
-        upsert: true,
+    // -------------------------------------------------------------------------
+    // 2. Determine output preview path. Cache-check by HEAD on storage.
+    // -------------------------------------------------------------------------
+    let previewPath: string;
+    if (contentFileId && submissionId) {
+      previewPath = `${submissionId}/${contentFileId}_preview.mp4`;
+    } else {
+      // Derive a stable name from the source path.
+      const baseName = videoPath.split('/').pop()?.replace(/\.[^/.]+$/, '') || 'video';
+      const folder = videoPath.includes('/') ? videoPath.substring(0, videoPath.lastIndexOf('/')) : 'misc';
+      previewPath = `${folder}/${baseName}_preview_${resolution}p.mp4`;
+    }
+
+    if (!force) {
+      const { data: existing } = await supabase.storage.from('previews').download(previewPath);
+      if (existing && existing.size > 20 * 1024) {
+        const { data: { publicUrl } } = supabase.storage.from('previews').getPublicUrl(previewPath);
+        console.log(`[generate-video-preview] [CACHED] previewPath=${previewPath} bytes=${existing.size}`);
+        return new Response(
+          JSON.stringify({ success: true, previewUrl: publicUrl, previewPath, cached: true, processingTimeMs: Date.now() - startTime } as PreviewResponse),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. POST JSON to Render
+    // -------------------------------------------------------------------------
+    console.log(`[generate-video-preview] [STAGE:render-call] url=${ffmpegApiUrl} videoHost=${new URL(videoUrl).host} resolution=${resolution}`);
+
+    const TIMEOUT_MS = 5 * 60 * 1000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (ffmpegApiKey) headers['Authorization'] = `Bearer ${ffmpegApiKey}`;
+
+    const ffmpegStart = Date.now();
+    let ffmpegResponse: Response;
+    try {
+      ffmpegResponse = await fetch(ffmpegApiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ videoUrl, watermarkUrl, resolution }),
+        signal: controller.signal,
       });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const ffmpegMs = Date.now() - ffmpegStart;
+      return fail(
+        isAbort ? 'render_timeout' : 'render_network_error',
+        isAbort ? `FFmpeg API timed out after ${TIMEOUT_MS}ms` : `FFmpeg API network error: ${err instanceof Error ? err.message : String(err)}`,
+        504,
+        { processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs }
+      );
+    }
+    clearTimeout(timeoutId);
+    const ffmpegMs = Date.now() - ffmpegStart;
+
+    if (!ffmpegResponse.ok) {
+      const errBody = await ffmpegResponse.text().catch(() => '');
+      return fail('render_error', `FFmpeg API ${ffmpegResponse.status}: ${errBody.substring(0, 300)}`, 502, {
+        processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs,
+      });
+    }
+
+    const previewBuffer = await ffmpegResponse.arrayBuffer();
+    const previewBytes = new Uint8Array(previewBuffer);
+    console.log(`[generate-video-preview] [STAGE:render-done] ffmpegMs=${ffmpegMs} bytes=${previewBytes.length} (${(previewBytes.length / 1024 / 1024).toFixed(2)}MB)`);
+
+    if (previewBytes.length < 200 * 1024) {
+      return fail('invalid_output', `FFmpeg returned ${previewBytes.length} bytes (need >=200KB for full-length preview)`, 502, {
+        processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs,
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Upload preview MP4 to `previews` bucket
+    // -------------------------------------------------------------------------
+    const upStart = Date.now();
+    const { error: uploadError } = await supabase.storage
+      .from('previews')
+      .upload(previewPath, previewBytes, { contentType: 'video/mp4', upsert: true });
 
     if (uploadError) {
-      const upMs = Date.now() - upStart;
-      console.error(`[generate-video-preview] [FAILURE:upload_error] upMs=${upMs} path=${previewPath} err=${uploadError.message}`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Failed to upload preview: ${uploadError.message}`,
-          failureReason: 'upload_error',
-          processingTimeMs: Date.now() - startTime,
-        } as PreviewResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+      return fail('upload_error', `Preview upload failed: ${uploadError.message}`, 500, {
+        processingTimeMs: Date.now() - startTime, ffmpegTimeMs: ffmpegMs,
+      });
     }
-    const upMs = Date.now() - upStart;
-    console.log(`[generate-video-preview] [STAGE:upload-done] upMs=${upMs}`);
+    console.log(`[generate-video-preview] [STAGE:upload-done] upMs=${Date.now() - upStart} previewPath=${previewPath}`);
 
-    // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(previewPath);
+    const { data: { publicUrl } } = supabase.storage.from('previews').getPublicUrl(previewPath);
 
-    // Update content_files record if we can find it by file_path
-    // This handles cases where contentId is not provided but we can match by path
+    // -------------------------------------------------------------------------
+    // 5. Update content_files row(s)
+    // -------------------------------------------------------------------------
     try {
-      // Build the original file URL to match
-      const { data: { publicUrl: originalFileUrl } } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(videoPath);
-      
-      // Try to update by matching the file_path
-      const { data: updatedFiles, error: updateError } = await supabase
-        .from('content_files')
-        .update({ preview_path: publicUrl })
-        .or(`file_path.eq.${originalFileUrl},file_path.ilike.%${videoPath}`)
-        .select('id');
-
-      if (updateError) {
-        console.warn(`[generate-video-preview] Failed to update content_files:`, updateError);
-      } else if (updatedFiles && updatedFiles.length > 0) {
-        console.log(`[generate-video-preview] Updated ${updatedFiles.length} content_files record(s) with preview path`);
+      let updated = 0;
+      if (contentFileId) {
+        const { error, data } = await supabase
+          .from('content_files')
+          .update({ preview_path: publicUrl, preview_status: 'preview_available' })
+          .eq('id', contentFileId)
+          .select('id');
+        if (error) throw error;
+        updated = data?.length ?? 0;
       } else {
-        console.log(`[generate-video-preview] No matching content_files found for path: ${videoPath}`);
+        // Fallback: match by file_path
+        const { data, error } = await supabase
+          .from('content_files')
+          .update({ preview_path: publicUrl, preview_status: 'preview_available' })
+          .or(`file_path.ilike.%${videoPath}%`)
+          .select('id');
+        if (error) throw error;
+        updated = data?.length ?? 0;
       }
-    } catch (dbError) {
-      console.warn(`[generate-video-preview] DB update error:`, dbError);
+      console.log(`[generate-video-preview] [STAGE:db-update] updated ${updated} content_files row(s)`);
+    } catch (dbErr) {
+      // Preview is on disk; surface as soft failure but still return success URL
+      console.error(`[generate-video-preview] [WARN:db_update_error]`, dbErr);
     }
 
-    // Also update content record if contentId provided (original behavior)
-    if (contentId) {
-      const { error: updateError } = await supabase
-        .from('content')
-        .update({ preview_path: publicUrl })
-        .eq('id', contentId);
-
-      if (updateError) {
-        console.warn(`[generate-video-preview] Failed to update content record:`, updateError);
-        // Don't fail the request, preview was still generated
-      } else {
-        console.log(`[generate-video-preview] Updated content record with preview path`);
-      }
-    }
-
-    const processingTimeMs = Date.now() - startTime;
-    console.log(`[generate-video-preview] [SUCCESS] path=${videoPath} previewPath=${previewPath} totalMs=${processingTimeMs} sizeOut=${previewBlob.size}`);
+    const totalMs = Date.now() - startTime;
+    console.log(`[generate-video-preview] [SUCCESS] previewPath=${previewPath} totalMs=${totalMs} ffmpegMs=${ffmpegMs}`);
 
     return new Response(
       JSON.stringify({
@@ -310,23 +240,14 @@ serve(async (req) => {
         previewUrl: publicUrl,
         previewPath,
         cached: false,
-        processingTimeMs
+        processingTimeMs: totalMs,
+        ffmpegTimeMs: ffmpegMs,
       } as PreviewResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
-  } catch (error) {
-    const elapsedMs = Date.now() - startTime;
-    const msg = error instanceof Error ? error.message : 'Internal server error';
-    console.error(`[generate-video-preview] [FAILURE:internal_error] elapsedMs=${elapsedMs} err=${msg}`, error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: msg,
-        failureReason: 'internal_error',
-        processingTimeMs: elapsedMs,
-      } as PreviewResponse),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
+  } catch (err) {
+    return fail('internal_error', err instanceof Error ? err.message : 'Internal server error', 500, {
+      processingTimeMs: Date.now() - startTime,
+    });
   }
 });
