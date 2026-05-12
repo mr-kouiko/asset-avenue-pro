@@ -136,7 +136,9 @@ serve(async (req) => {
     // -------------------------------------------------------------------------
     // 3. POST JSON to Render
     // -------------------------------------------------------------------------
-    console.log(`[generate-video-preview] [STAGE:render-call] url=${ffmpegApiUrl} videoHost=${new URL(videoUrl).host} resolution=${resolution}`);
+    // Append /process if the secret is just the base URL
+    const processUrl = /\/process(\?|$)/.test(ffmpegApiUrl) ? ffmpegApiUrl : ffmpegApiUrl.replace(/\/$/, '') + '/process';
+    console.log(`[generate-video-preview] [STAGE:render-call] url=${processUrl} videoHost=${new URL(videoUrl).host} resolution=${resolution}`);
 
     const TIMEOUT_MS = 5 * 60 * 1000;
     const controller = new AbortController();
@@ -148,7 +150,7 @@ serve(async (req) => {
     const ffmpegStart = Date.now();
     let ffmpegResponse: Response;
     try {
-      ffmpegResponse = await fetch(ffmpegApiUrl, {
+      ffmpegResponse = await fetch(processUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({ videoUrl, watermarkUrl, resolution }),
