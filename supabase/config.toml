@@ -195,3 +195,6 @@ verify_jwt = true
 
 [functions.auto-translate-product]
 verify_jwt = false
+
+[functions.probe-ffmpeg-api]
+verify_jwt = false
