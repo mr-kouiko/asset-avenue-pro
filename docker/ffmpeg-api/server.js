@@ -487,6 +487,10 @@ app.post('/process', authenticate, async (req, res) => {
     res.setHeader('Content-Length', outputSize);
     res.setHeader('X-Job-Id', jobId);
     res.setHeader('X-Preview-Duration', String(validation.durationSec || duration));
+    res.setHeader('X-Preview-Frame-Count', String(validation.frameCount || 0));
+    res.setHeader('X-Preview-Width', String(validation.width || 0));
+    res.setHeader('X-Preview-Height', String(validation.height || 0));
+    res.setHeader('X-Preview-Codec', String(validation.codec || ''));
     res.setHeader('X-Preview-Avg-Luma', String(validation.avgLuma?.toFixed?.(1) || ''));
     res.setHeader('X-Preview-Attempts', String(attemptLogs.length));
     res.setHeader('X-Preview-Total-Ms', String(totalMs));
