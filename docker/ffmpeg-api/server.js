@@ -310,7 +310,11 @@ app.post('/process', authenticate, async (req, res) => {
   const MAX_RESOLUTION = 720;
   const MAX_FPS = 30;
   const MAX_RETRIES = 1;         // full-length encode: no segment retries
-  const MAX_TOTAL_MS = 120_000;  // overall safeguard for full-length encode
+  // DIAGNOSTIC: raised from 120s/110s to 320s/300s to characterize true Render throughput.
+  // Revert once optimization pass C lands.
+  const MAX_TOTAL_MS = 320_000;  // overall safeguard for full-length encode
+  const PER_ATTEMPT_MS = 300_000;
+
 
   const MUTE_AUDIO = req.body.muted !== false;
   const requestedRes = Number(req.body.resolution) || MAX_RESOLUTION;
@@ -444,8 +448,9 @@ app.post('/process', authenticate, async (req, res) => {
         await new Promise((resolve, reject) => {
           execFile('ffmpeg', ffmpegArgs, {
             maxBuffer: 20 * 1024 * 1024,
-            timeout: 110_000, // per-attempt cap (full-length encode up to 60s)
+            timeout: PER_ATTEMPT_MS, // DIAGNOSTIC: 300s to measure true Render throughput
           }, (error, _stdout, stderr) => {
+
             ffmpegStderr = (stderr || '').toString();
             if (error) reject(new Error(`ffmpeg attempt failed: ${error.message}`));
             else resolve();
