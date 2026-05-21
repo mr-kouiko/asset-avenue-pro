@@ -111,11 +111,11 @@ async function probeSegmentQuality(inputPath, start, duration, jobId) {
   }
 }
 
-// Validate produced preview: not blank/dark/blurry, valid mp4
-async function validateOutput(outputPath, jobId) {
-  // file size sanity
+// Validate produced preview: not blank/dark/blurry, real multi-frame mp4
+async function validateOutput(outputPath, jobId, expectedRes = 720) {
+  // file size sanity — full-length 720p H.264 is always >= 250KB
   const size = fs.statSync(outputPath).size;
-  if (size < 20 * 1024) return { ok: false, reason: `output too small (${size}B)` };
+  if (size < 250 * 1024) return { ok: false, reason: 'output_too_small', detail: `${size}B` };
 
   // probe stream
   let probeJson;
@@ -126,14 +126,40 @@ async function validateOutput(outputPath, jobId) {
     ]);
     probeJson = JSON.parse(out);
   } catch (e) {
-    return { ok: false, reason: `corrupt output: ${e.message}` };
+    return { ok: false, reason: 'corrupt_output', detail: e.message };
   }
   const vstream = probeJson.streams?.find(s => s.codec_type === 'video');
-  if (!vstream) return { ok: false, reason: 'no video stream in output' };
+  if (!vstream) return { ok: false, reason: 'no_video_stream' };
+  if (vstream.codec_name !== 'h264') {
+    return { ok: false, reason: 'wrong_codec', detail: vstream.codec_name };
+  }
+  if (/wrapped_avframe/i.test(JSON.stringify(probeJson))) {
+    return { ok: false, reason: 'wrapped_avframe_output' };
+  }
+  const width = vstream.width || 0;
+  const height = vstream.height || 0;
+  if (height > expectedRes + 16 || width > expectedRes * 2 + 64) {
+    return { ok: false, reason: 'scaling_failed', detail: `${width}x${height}` };
+  }
   const dur = parseFloat(probeJson.format?.duration || '0');
-  if (dur < 2) return { ok: false, reason: `output duration too short (${dur}s)` };
+  if (dur < 3) return { ok: false, reason: 'duration_too_short', detail: `${dur}s` };
 
-  // luma + sharpness check on a few frames
+  // Hard frame-count check — single-frame wrapped outputs report nb_read_frames=1
+  let frameCount = 0;
+  try {
+    const out = await runFfprobe([
+      '-v', 'error', '-count_frames', '-select_streams', 'v:0',
+      '-show_entries', 'stream=nb_read_frames', '-of', 'json', outputPath
+    ]);
+    frameCount = parseInt(JSON.parse(out).streams?.[0]?.nb_read_frames || '0', 10) || 0;
+  } catch (e) {
+    return { ok: false, reason: 'frame_count_probe_failed', detail: e.message };
+  }
+  if (frameCount < 30) {
+    return { ok: false, reason: 'single_frame_output', detail: `frames=${frameCount}` };
+  }
+
+  // luma + black-frame check
   try {
     const out = await new Promise((resolve) => {
       execFile('ffmpeg', [
@@ -146,16 +172,15 @@ async function validateOutput(outputPath, jobId) {
     const re = /YAVG:([\d.]+)/g;
     let m;
     while ((m = re.exec(out)) !== null) lumas.push(parseFloat(m[1]));
-    if (lumas.length === 0) return { ok: false, reason: 'no decodable frames' };
+    if (lumas.length === 0) return { ok: false, reason: 'no_decodable_frames' };
     const avgLuma = lumas.reduce((a, b) => a + b, 0) / lumas.length;
     const minLuma = Math.min(...lumas);
-    if (avgLuma < 16) return { ok: false, reason: `too dark (avgLuma=${avgLuma.toFixed(1)})` };
-    // mostly black frames check
+    if (avgLuma < 16) return { ok: false, reason: 'too_dark', detail: `avgLuma=${avgLuma.toFixed(1)}` };
     const blackFrames = lumas.filter(v => v < 8).length;
-    if (blackFrames / lumas.length > 0.6) return { ok: false, reason: `too many black frames (${blackFrames}/${lumas.length})` };
-    return { ok: true, size, durationSec: dur, avgLuma, minLuma };
+    if (blackFrames / lumas.length > 0.6) return { ok: false, reason: 'too_many_black_frames', detail: `${blackFrames}/${lumas.length}` };
+    return { ok: true, size, durationSec: dur, avgLuma, minLuma, frameCount, width, height, codec: vstream.codec_name };
   } catch (e) {
-    return { ok: false, reason: `validation probe failed: ${e.message}` };
+    return { ok: false, reason: 'validation_probe_failed', detail: e.message };
   }
 }
 
