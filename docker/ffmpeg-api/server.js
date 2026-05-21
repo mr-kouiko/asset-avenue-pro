@@ -378,7 +378,9 @@ app.post('/process', authenticate, async (req, res) => {
       }
     }
 
-    const scaleExpr = `scale=-2:'min(${resolution},ih)':flags=lanczos,fps=fps='min(${MAX_FPS},source_fps)'`;
+    // Valid scale + fps chain. `source_fps` is NOT a valid expression variable for the fps filter
+    // and previously evaluated to 0, producing single-frame outputs. Use a plain numeric fps cap.
+    const scaleExpr = `scale=-2:'min(${resolution}\\,ih)':flags=lanczos,fps=${MAX_FPS}`;
 
     let lastReason = 'no attempts run';
     let success = false;
@@ -403,19 +405,21 @@ app.post('/process', authenticate, async (req, res) => {
         filterComplex = [
           `[1:v]scale=iw/5:-1,format=rgba,colorchannelmixer=aa=0.5[logo]`,
           `[0:v]${scaleExpr}[vid]`,
-          `[vid][logo]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2`
+          `[vid][logo]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[vout]`
         ].join(';');
       } else {
-        filterComplex = `[0:v]${scaleExpr}`;
+        filterComplex = `[0:v]${scaleExpr}[vout]`;
       }
 
-      // CRF in 23-25 range; lower CRF on first attempt for clarity, raise slightly on retry to keep size in check
       const crf = 23 + attempt; // 23, 24, 25
       ffmpegArgs.push(
         '-filter_complex', filterComplex,
+        '-map', '[vout]',
         '-t', String(duration),
+        '-r', String(MAX_FPS),
+        '-vsync', 'cfr',
         '-c:v', 'libx264',
-        '-preset', 'veryfast',           // performance safeguard (<10-15s target)
+        '-preset', 'veryfast',
         '-crf', String(crf),
         '-maxrate', '1500k',
         '-bufsize', '3000k',
@@ -424,7 +428,7 @@ app.post('/process', authenticate, async (req, res) => {
         '-level', '4.0',
         '-g', String(MAX_FPS * 2),
         '-movflags', '+faststart',
-        '-threads', '2',                 // cap CPU/memory
+        '-threads', '2',
       );
 
       if (MUTE_AUDIO) ffmpegArgs.push('-an');
