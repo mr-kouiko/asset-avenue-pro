@@ -1,81 +1,138 @@
-## Goal
+## Root cause
 
-Fix the broken video preview pipeline so every uploaded video reliably gets a watermarked MP4 preview before publishing, and existing stuck items are auto-recovered.
+The Render FFmpeg encoder produces single-frame 0.03s 3840×2160 MP4s because the scale/fps filter chain in `docker/ffmpeg-api/server.js` is malformed and the validator that should catch it is bypassed.
 
-## Root cause (confirmed)
+### Bug 1 — broken fps filter expression (primary cause of 1-frame output)
 
-- Render `/process` expects JSON `{ videoUrl, watermarkUrl, resolution }` and downloads the source itself. The working `batch-backfill-previews` function already calls it that way.
-- `generate-video-preview` instead downloads the file in Deno and POSTs it as `multipart/form-data` → Render returns 400, preview never produced.
-- Frontend `useAutomaticWatermark` swallows that failure (`// Video preview is optional`), so publish proceeds with `preview_path = null` and the DB trigger keeps the row in `processing_preview` forever.
-- Client-side recorder may produce `video/webm`, but the marketplace requires `preview_path ~ '.mp4'`, causing a second class of stuck items.
+In `server.js` line 356:
 
-## Chosen architecture
+```js
+const scaleExpr = `scale=-2:'min(${resolution},ih)':flags=lanczos,fps=fps='min(${MAX_FPS},source_fps)'`;
+```
 
-**Option B** — Edge Function sends JSON, Render downloads. This matches the already-working backfill path, requires no Render redeploy, and avoids re-uploading large bodies through Deno.
+`source_fps` is **not a valid variable** inside the `fps` filter expression evaluator. The expression evaluates to `0` (or NaN), so `fps=0` is passed to libx264. With `-vsync` unset and CFR encoding at 0 fps, ffmpeg writes exactly one frame, then `-t 60` immediately satisfies, producing a ~0.03s file. Because `scale=-2:'min(720,ih)'` is chained *after* an invalid filter, ffmpeg in some libavfilter versions silently drops it for the source raw frame too — hence the 3840×2160 output we see (no scaling applied to the single frame that does make it through, codec just wraps the raw avframe → `wrapped_avframe` behavior in ffprobe).
 
-## Changes
+### Bug 2 — validator never fires for the broken case
 
-### 1. `supabase/functions/generate-video-preview/index.ts` — rewrite payload
+`validateOutput()` at line 115 checks `dur < 2` → rejects. **But it never runs in production** because:
 
-- Drop the Deno-side download + FormData body.
-- Create a 1-hour signed URL for the source via `supabase.storage.from('uploads').createSignedUrl(videoPath, 3600)`.
-- Build a public URL for the watermark logo in `LOGO DE WATERMARKING`.
-- POST JSON to `FFMPEG_API_URL`:
-  ```json
-  { "videoUrl": "<signed>", "watermarkUrl": "<logo>", "resolution": 720 }
-  ```
-  Headers: `Authorization: Bearer ${FFMPEG_API_KEY}`, `Content-Type: application/json`.
-- Receive MP4 bytes → upload to `previews` bucket (not `uploads/previews/`) at `${userId}/videos/${fileId}_preview.mp4` with `contentType: 'video/mp4'`.
-- Update `content_files.preview_path` (and `preview_status='preview_available'`) for the matching row using `submission_id` or `file_path`.
-- Keep all existing `[STAGE:*]` / `[FAILURE:*]` logs; add `[STAGE:render-call]` with payload summary and `[STAGE:render-done]` with bytes/ms.
-- Return `{ success, previewUrl, previewPath }` on success, structured `failureReason` on failure (no silent OK).
+- `MAX_RETRIES = 1` (line 287), and the loop runs `for (attempt = 0; attempt < MAX_RETRIES; …)`. So validation runs exactly once.
+- When validation fails, `throw new Error(...)` → 500 → the edge function should reject. ✅ This part works in isolation.
+- However, observed corrupted previews are **still being uploaded**. This means either (a) the broken output is large enough OR `dur ≥ 2` per ffprobe metadata (single wrapped frame can report container duration = 60s from `-t 60` even though only 1 frame exists), bypassing the duration gate; or (b) the call path that produced them was the **older `batch-backfill-previews` path** whose only check is `videoBytes.length < 200 * 1024` and a header-based `x-preview-duration < 2` — both trivially passable for a 4K wrapped frame.
 
-### 2. `src/hooks/useAutomaticWatermark.tsx` — remove silent failures, force MP4
+In fact a single 4K H.264 keyframe routinely sits 80–250 KB, which is exactly the observed size range. The 200 KB threshold misses about half of them. There is **no frame-count check**, **no resolution check**, **no codec_name check** in either pipeline.
 
-- Replace the `MediaRecorder` MIME selection with **MP4 only**. If `MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') === false`, skip the client path entirely and go straight to server-side.
-- Remove the `// Video preview is optional - continue without it` block. Server-side failure must:
-  - throw → caught by outer `processSingle` try/catch
-  - mark file `status: 'error'`, surface a `toast.error` with the `failureReason`
-  - prevent the file from reaching publish
-- Validate before completing: `previewUrl` is set, ends in `.mp4`, blob `> 20 KB`. Otherwise throw "Preview generation failed — cannot publish".
+### Bug 3 — no observability wiring on success path
 
-### 3. `src/hooks/useProductManager.tsx` & `src/hooks/useContentManagement.tsx` — gate publish
+`preview_status/preview_attempts/preview_failure_reason/preview_last_error` are NULL across all 810 rows because:
 
-- Before inserting a video into `content_files`, assert `submission.file.previewUrl` exists and matches `/\.mp4($|\?)/`. If missing → abort the insert, surface `toast.error("Video preview not ready — cannot publish.")`, and leave the submission in draft.
-- Do not create rows with `preview_path = null` for `file_type='video'`.
+- `generate-video-preview` only writes `preview_status: 'preview_available'` on success (line 215) and never touches `preview_attempts`, `preview_failure_reason`, `preview_last_error`, or `preview_last_attempt_at` on failure paths.
+- `batch-backfill-previews` does persist these on failure, but never increments or resets them on success or before an attempt starts.
 
-### 4. `docker/ffmpeg-api/server.js` — no protocol change needed
+---
 
-Already JSON-compatible. Add only:
-- Log incoming payload (`videoUrl` host, `resolution`) at `START`.
-- Echo `Content-Type: video/mp4` (already does).
-- No code change unless we discover an issue during smoke test.
+## Fixes
 
-### 5. Auto-backfill (replaces "silent" failure recovery)
+### A. Fix the encoder (`docker/ffmpeg-api/server.js`)
 
-- New scheduled `pg_cron` job (every 10 min) that calls `batch-backfill-previews` with `{ dryRun:false, maxVideos:25, batchSize:5 }`.
-- Created via `supabase--read_query` insert path (contains anon key) — not a migration.
-- Existing `AdminVideoBackfill` UI keeps its manual button.
+1. Replace the broken filter chain with a sane explicit one:
+   ```js
+   const targetH = `min(${resolution}\\,ih)`;
+   const scaleExpr = `scale=-2:'${targetH}':flags=lanczos`;
+   // separate fps filter using a valid form:
+   const fpsExpr = `fps=fps='min(${MAX_FPS},${MAX_FPS})'`; // capped CFR; or just `fps=${MAX_FPS}`
+   ```
+   Use `fps=30` (or detect probed input fps via `ffprobe -show_streams r_frame_rate` and pass `Math.min(30, sourceFps)` from JS). `source_fps` as an expression variable does not exist.
 
-### 6. Storage / DB sanity (migration)
+2. Add explicit `-vsync cfr` and `-r 30` output flags as a belt-and-braces against pathological filter graphs:
+   ```
+   '-r', '30', '-vsync', 'cfr'
+   ```
 
-- Ensure `previews` bucket exists, public, allowed MIME `['video/mp4','image/jpeg','image/png','image/webp']`. Drop `video/webm` if present.
-- Confirm `content_files.preview_status` enum already supports `preview_available` / `preview_failed` (it does — no change).
-- Add CHECK trigger: when `file_type='video'` and `preview_path IS NOT NULL`, require `preview_path ILIKE '%.mp4%'`.
+3. Add explicit output stream mapping so filter_complex output is unambiguous: label the chain end `[vout]` and add `-map "[vout]"`.
 
-## Verification
+### B. Harden `validateOutput()` (same file)
 
-1. Smoke test: `supabase--curl_edge_functions /generate-video-preview` with the stuck Eiffel Tower video path → expect MP4 bytes saved, `preview_path` populated, status auto-promotes to `approved`.
-2. Upload a fresh vertical MP4 from the UI → confirm publish blocks if preview fails (kill `FFMPEG_API_URL` temporarily) and succeeds otherwise.
-3. Run cron job manually once → confirm Eiffel Tower + any other null-preview videos are healed.
-4. Marketplace filter check: vertical filter returns the new video.
+Add these rejection rules before returning `ok:true`:
 
-## Files touched
+- `codec_name !== 'h264'` → reject (`wrong_codec`)
+- `nb_read_frames < fps * minDurationSec` via `ffprobe -count_frames -select_streams v:0 -show_entries stream=nb_read_frames` → reject if `< 30` (`single_frame_output`)
+- `width > 2 * resolution` or `height > resolution + 8` → reject (`scaling_failed`)
+- `format.tags.encoder` containing `wrapped_avframe` OR `vstream.codec_name === 'wrapped_avframe'` → reject (`wrapped_avframe_output`)
+- bump min size floor `20 KB → 250 KB` for full-length 720p
+- existing duration `< 3` (raise from 2)
 
-- `supabase/functions/generate-video-preview/index.ts` (rewrite request)
-- `src/hooks/useAutomaticWatermark.tsx` (MP4-only, no silent fallback)
-- `src/hooks/useProductManager.tsx`, `src/hooks/useContentManagement.tsx` (publish gate)
-- `supabase/migrations/<new>.sql` (bucket MIME tightening + preview_path CHECK trigger)
-- DB insert (not a migration) for the cron schedule
+Return the rejection reason in `attemptLogs` and bubble it via the 500 response body.
 
-No changes required to `docker/ffmpeg-api/server.js`.
+### C. Mirror the validation in `generate-video-preview` edge function
+
+Even though Render now validates, the edge function must double-check before upload (defense in depth):
+
+- After `previewBytes = …`, run a lightweight magic-byte check (MP4 `ftyp` box present, `moov` atom present, file > 250 KB).
+- Read the `X-Preview-Frame-Count` / `X-Preview-Width` / `X-Preview-Height` headers we will add to Render's response and reject if `frameCount < 30` or `width > 2*resolution`.
+- On rejection, do **not** upload, do **not** flip `preview_status` to `preview_available`. Instead update the row with the new failure fields (see D).
+
+### D. Wire real observability into `generate-video-preview`
+
+Wrap every `fail(...)` and the success path to persist on `content_files` when `contentFileId` is provided:
+
+```ts
+async function recordOutcome(contentFileId, outcome) {
+  await supabase.from('content_files').update({
+    preview_status: outcome.ok ? 'preview_available' : 'preview_failed',
+    preview_failure_reason: outcome.reason ?? null,
+    preview_last_error: outcome.message?.slice(0, 500) ?? null,
+    preview_last_attempt_at: new Date().toISOString(),
+    preview_attempts: supabase.rpc ? undefined : undefined, // use raw SQL below
+  }).eq('id', contentFileId);
+  // increment attempts atomically:
+  await supabase.rpc('increment_preview_attempts', { _id: contentFileId });
+}
+```
+
+Add a small SQL helper:
+```sql
+create or replace function public.increment_preview_attempts(_id uuid)
+returns void language sql as $$
+  update public.content_files
+  set preview_attempts = coalesce(preview_attempts, 0) + 1
+  where id = _id;
+$$;
+```
+
+Call `recordOutcome` from every `fail()` exit and from the success path.
+
+### E. Stop the DB trigger from auto-promoting bad rows
+
+The existing trigger that flips `status='processing_preview' → 'approved'` when `preview_path` becomes non-null must additionally require `preview_status = 'preview_available'`. (Otherwise a successful storage upload of a corrupted file from the old pipeline can still promote the submission.) Migration:
+
+```sql
+-- pseudo: locate trigger function used by content_files preview promotion
+-- modify guard:  IF NEW.preview_path IS NOT NULL AND NEW.preview_status = 'preview_available'
+```
+
+---
+
+## Migration impact
+
+- One new function `increment_preview_attempts(uuid)`.
+- One trigger function update to require `preview_status = 'preview_available'`.
+- No data changes — legacy 154 corrupt rows stay untouched until the recovery phase (out of scope per instructions).
+
+## How future corrupt previews are prevented permanently
+
+1. **Encoder cannot emit single-frame**: fixed fps filter + `-r 30 -vsync cfr` + valid filter labels means libx264 receives a real frame stream.
+2. **Render-side validator** rejects with `frame_count`, `codec_name`, `wrapped_avframe`, `scaling_failed`, raised size/duration floors.
+3. **Edge-function validator** re-checks frame count + dimensions via response headers before upload — Render compromise alone cannot pollute the bucket.
+4. **DB trigger** refuses to flip `status='approved'` unless `preview_status='preview_available'`.
+5. **Observability columns** are now written on every attempt; admin panel `AdminFailedPreviews` immediately surfaces regressions instead of NULL.
+
+---
+
+## Files changed
+
+- `docker/ffmpeg-api/server.js` — filter chain fix, hardened `validateOutput`, new response headers (`X-Preview-Frame-Count`, `X-Preview-Width`, `X-Preview-Height`, `X-Preview-Codec`).
+- `supabase/functions/generate-video-preview/index.ts` — header-based validation, `recordOutcome` helper, failure persistence.
+- New migration: `increment_preview_attempts` RPC + trigger guard for `preview_status`.
+
+No frontend, no marketplace, no fallback URL logic touched.
