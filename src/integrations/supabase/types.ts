@@ -2539,6 +2539,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_preview_attempts: { Args: { _id: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       log_admin_profile_access: {
         Args: { accessed_profile_user_id: string; admin_user_id: string }
