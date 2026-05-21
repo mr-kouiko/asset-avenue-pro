@@ -460,8 +460,8 @@ app.post('/process', authenticate, async (req, res) => {
       const encMs = Date.now() - encStart;
 
       // Validate
-      const v = await validateOutput(outputPath, jobId);
-      attemptLogs.push({ attempt, startOffset, encMs, ok: v.ok, reason: v.reason, size: v.size, avgLuma: v.avgLuma });
+      const v = await validateOutput(outputPath, jobId, resolution);
+      attemptLogs.push({ attempt, startOffset, encMs, ok: v.ok, reason: v.reason, detail: v.detail, size: v.size, frameCount: v.frameCount, width: v.width, height: v.height, avgLuma: v.avgLuma });
       if (v.ok) {
         // Size guard: aim 1-3MB. If oversized > 4MB, allow but log; if undersized warn only.
         console.log(`[${jobId}] attempt=${attempt} VALID size=${v.size} dur=${v.durationSec} avgLuma=${v.avgLuma?.toFixed(1)} encMs=${encMs}`);
