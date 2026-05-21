@@ -310,7 +310,11 @@ app.post('/process', authenticate, async (req, res) => {
   const MAX_RESOLUTION = 720;
   const MAX_FPS = 30;
   const MAX_RETRIES = 1;         // full-length encode: no segment retries
-  const MAX_TOTAL_MS = 120_000;  // overall safeguard for full-length encode
+  // DIAGNOSTIC: raised from 120s/110s to 320s/300s to characterize true Render throughput.
+  // Revert once optimization pass C lands.
+  const MAX_TOTAL_MS = 320_000;  // overall safeguard for full-length encode
+  const PER_ATTEMPT_MS = 300_000;
+
 
   const MUTE_AUDIO = req.body.muted !== false;
   const requestedRes = Number(req.body.resolution) || MAX_RESOLUTION;
