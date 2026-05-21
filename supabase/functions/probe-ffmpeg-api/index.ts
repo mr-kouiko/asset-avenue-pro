@@ -28,7 +28,8 @@ Deno.serve(async (req) => {
 
   // mode=process — verifies new server.js by checking response headers
   const sampleVideo = u.searchParams.get("video") ||
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
+    "https://download.samplelib.com/mp4/sample-5s.mp4";
+  console.log("PROBE_START", { sampleVideo, base });
   try {
     const t0 = Date.now();
     const r = await fetch(`${base}/process`, {
@@ -48,15 +49,17 @@ Deno.serve(async (req) => {
     out.preview_codec = r.headers.get("x-preview-codec");
     out.preview_width = r.headers.get("x-preview-width");
     out.preview_height = r.headers.get("x-preview-height");
+    out.attempts_hdr = r.headers.get("x-preview-attempts");
     out.new_build_detected = !!r.headers.get("x-preview-frame-count");
     if (r.status !== 200) {
-      out.process_body = (await r.text()).slice(0, 2000);
+      out.process_body = (await r.text()).slice(0, 4000);
     } else {
       const buf = await r.arrayBuffer();
       out.bytes = buf.byteLength;
     }
   } catch (e) { out.process_error = (e as Error).message; }
 
+  console.log("PROBE_RESULT", JSON.stringify(out));
   return json(out);
 });
 
