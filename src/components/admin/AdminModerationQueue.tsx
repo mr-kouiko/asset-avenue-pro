@@ -232,6 +232,7 @@ export const AdminModerationQueue = () => {
     onSuccess: () => {
       toast.success('Status updated');
       queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation-queue-counts'] });
     },
     onError: (err) => toast.error(`Error: ${err.message}`),
   });
