@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -13,7 +13,20 @@ import {
   Shield, Bot, User, ScanLine, FileDown, FileQuestion
 } from "lucide-react";
 
-type StatusFilter = 'all' | 'pending_review' | 'pending_scan' | 'scan_failed' | 'approved_ai' | 'approved_ai_assisted';
+type StatusFilter = 'needs_review' | 'pending_review' | 'ai_assisted' | 'rejected' | 'all';
+
+// Statuses that are NOT visible on the public marketplace and require admin attention.
+const NEEDS_REVIEW_STATUSES = [
+  'pending_review', 'pending_scan', 'scan_failed',
+  'approved_ai', 'approved_ai_assisted', 'rejected_ai_assisted',
+];
+const AI_ASSISTED_STATUSES = ['approved_ai', 'approved_ai_assisted', 'rejected_ai_assisted'];
+const REJECTED_STATUSES = ['rejected', 'rejected_ai_assisted'];
+const ALL_REVIEWABLE = [
+  'pending_review', 'pending_scan', 'scan_failed',
+  'approved_ai', 'approved_ai_assisted',
+  'rejected', 'rejected_ai_assisted',
+];
 
 const STATUS_COLORS: Record<string, string> = {
   pending_review: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
