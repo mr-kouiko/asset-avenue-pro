@@ -160,19 +160,37 @@ async function validateOutput(outputPath, jobId, expectedRes = 720) {
   }
 
   // luma + black-frame check
+  // NOTE: signalstats per-frame stats (YAVG etc.) are exposed as frame metadata
+  // (lavfi.signalstats.YAVG=...). At default loglevel they do NOT appear in stderr,
+  // which caused a validator false-positive: healthy previews flagged `no_decodable_frames`
+  // because the YAVG: regex never matched. Use `metadata=mode=print:file=-` to force
+  // the values to stdout so we can parse them deterministically.
   try {
-    const out = await new Promise((resolve) => {
+    const { stdout: lumaOut, stderr: lumaErr } = await new Promise((resolve) => {
       execFile('ffmpeg', [
+        '-nostats', '-loglevel', 'error',
         '-i', outputPath,
-        '-vf', 'scale=320:-2,signalstats',
+        '-vf', 'scale=320:-2,signalstats,metadata=mode=print:file=-',
         '-f', 'null', '-'
-      ], { maxBuffer: 20 * 1024 * 1024, timeout: 20000 }, (_err, _stdout, stderr) => resolve(stderr?.toString() || ''));
+      ], { maxBuffer: 20 * 1024 * 1024, timeout: 20000 }, (_err, stdout, stderr) => {
+        resolve({ stdout: stdout?.toString() || '', stderr: stderr?.toString() || '' });
+      });
     });
     const lumas = [];
-    const re = /YAVG:([\d.]+)/g;
+    // Primary format: `lavfi.signalstats.YAVG=128.45`
+    const reMeta = /lavfi\.signalstats\.YAVG=([\d.]+)/g;
     let m;
-    while ((m = re.exec(out)) !== null) lumas.push(parseFloat(m[1]));
-    if (lumas.length === 0) return { ok: false, reason: 'no_decodable_frames' };
+    while ((m = reMeta.exec(lumaOut)) !== null) lumas.push(parseFloat(m[1]));
+    // Legacy fallback: `YAVG:128.45` or `YAVG=...` from verbose loglevel
+    if (lumas.length === 0) {
+      const reLegacy = /YAVG[:=]([\d.]+)/g;
+      const combined = `${lumaOut}\n${lumaErr}`;
+      while ((m = reLegacy.exec(combined)) !== null) lumas.push(parseFloat(m[1]));
+    }
+    if (lumas.length === 0) {
+      console.warn(`[${jobId}] luma probe returned 0 samples — stderr tail: ${lumaErr.slice(-300)}`);
+      return { ok: false, reason: 'no_decodable_frames', detail: `stderr=${lumaErr.slice(-120)}` };
+    }
     const avgLuma = lumas.reduce((a, b) => a + b, 0) / lumas.length;
     const minLuma = Math.min(...lumas);
     if (avgLuma < 16) return { ok: false, reason: 'too_dark', detail: `avgLuma=${avgLuma.toFixed(1)}` };
