@@ -271,28 +271,42 @@ export const AdminModerationQueue = () => {
 
   const primaryFile = contentFiles?.[0] || null;
 
+  const TabBadge = ({ n }: { n: number }) => (
+    <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[11px] font-semibold ${n > 0 ? 'bg-amber-500 text-white' : 'bg-muted text-muted-foreground'}`}>
+      {n}
+    </span>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Shield className="h-5 w-5" />
-          AI Moderation Queue
-        </h2>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Flagged</SelectItem>
-            <SelectItem value="pending_review">Pending Review</SelectItem>
-            <SelectItem value="pending_scan">Pending Scan</SelectItem>
-            <SelectItem value="scan_failed">Scan Failed</SelectItem>
-            <SelectItem value="approved_ai">Approved (AI)</SelectItem>
-            <SelectItem value="approved_ai_assisted">Approved (AI Assisted)</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            AI &amp; Borderline Review Queue
+          </h2>
+          {counts && counts.needs_review > 0 && (
+            <Badge variant="destructive" className="text-xs">
+              {counts.needs_review} item{counts.needs_review === 1 ? '' : 's'} need review
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Only <code className="px-1 rounded bg-muted">approved</code> items appear on the marketplace. Everything here is admin-only.
+        </p>
       </div>
+
+      <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="needs_review">Needs Review<TabBadge n={counts?.needs_review ?? 0} /></TabsTrigger>
+          <TabsTrigger value="pending_review">Pending<TabBadge n={counts?.pending_review ?? 0} /></TabsTrigger>
+          <TabsTrigger value="ai_assisted">AI Assisted<TabBadge n={counts?.ai_assisted ?? 0} /></TabsTrigger>
+          <TabsTrigger value="rejected">Rejected<TabBadge n={counts?.rejected ?? 0} /></TabsTrigger>
+          <TabsTrigger value="all">All<TabBadge n={counts?.all ?? 0} /></TabsTrigger>
+        </TabsList>
+      </Tabs>
+
 
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Loading queue...</div>
