@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,64 +28,98 @@ Deno.serve(async (req) => {
     return json(out);
   }
 
-  // Default 17s clean test clip; user-overridable
-  const sampleVideo = u.searchParams.get("video") ||
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
-  const resolution = parseInt(u.searchParams.get("resolution") || "720", 10);
-  const returnBytes = u.searchParams.get("return_bytes") !== "false";
+  // mode=fetch_last — return a previously uploaded probe artifact URL
+  // (deterministic path so the caller can retrieve after gateway timeout)
+  const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPA_SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supa = createClient(SUPA_URL, SUPA_SRK);
+  const probeKey = u.searchParams.get("key") || "probe-latest.mp4";
+  const probePath = `__probe__/${probeKey}`;
 
-  console.log("PROBE_START", { sampleVideo, base, resolution });
-
-  try {
-    const t0 = Date.now();
-    const r = await fetch(`${base}/process`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(key ? { Authorization: `Bearer ${key}` } : {}),
-      },
-      body: JSON.stringify({ videoUrl: sampleVideo, resolution, muted: true }),
-    });
-    const headers: Record<string, string> = {};
-    r.headers.forEach((v, k) => { headers[k] = v; });
-    out.elapsed_ms = Date.now() - t0;
-    out.process_status = r.status;
-    out.process_headers_subset = {
-      ct: headers["content-type"],
-      cl: headers["content-length"],
-      frame_count: headers["x-preview-frame-count"],
-      codec: headers["x-preview-codec"],
-      width: headers["x-preview-width"],
-      height: headers["x-preview-height"],
-      duration: headers["x-preview-duration"],
-      avg_luma: headers["x-preview-avg-luma"],
-      attempts: headers["x-preview-attempts"],
-      total_ms: headers["x-preview-total-ms"],
-      job_id: headers["x-job-id"],
-    };
-
-    if (r.status !== 200) {
-      out.ok = false;
-      out.process_body = (await r.text()).slice(0, 8000);
-    } else {
-      const buf = new Uint8Array(await r.arrayBuffer());
-      out.ok = true;
-      out.bytes = buf.byteLength;
-      // MP4 magic-byte sniff (ftyp at offset 4)
-      const ftyp = new TextDecoder().decode(buf.slice(4, 8));
-      out.ftyp_marker = ftyp;
-      out.valid_mp4_container = ftyp === "ftyp";
-      if (returnBytes && buf.byteLength <= 8 * 1024 * 1024) {
-        out.mp4_base64 = encodeBase64(buf);
-      } else if (returnBytes) {
-        out.mp4_base64_omitted = `too_large_${buf.byteLength}B`;
-      }
-    }
-  } catch (e) {
-    out.process_error = (e as Error).message;
+  if (mode === "fetch_last") {
+    const { data: pub } = supa.storage.from("public-previews").getPublicUrl(probePath);
+    out.public_url = pub?.publicUrl;
+    return json(out);
   }
 
-  console.log("PROBE_RESULT", JSON.stringify({ ...out, mp4_base64: undefined }));
+  const sampleVideo = u.searchParams.get("video") ||
+    "https://download.samplelib.com/mp4/sample-10s.mp4";
+  const resolution = parseInt(u.searchParams.get("resolution") || "720", 10);
+  const upload = u.searchParams.get("upload") !== "false";
+
+  console.log("PROBE_START", { sampleVideo, base, resolution, probePath });
+
+  // Fire-and-forget: respond immediately so the HTTP gateway doesn't cancel.
+  // Result lands in storage at probePath; caller polls via mode=fetch_last.
+  const job = (async () => {
+    try {
+      const t0 = Date.now();
+      const r = await fetch(`${base}/process`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(key ? { Authorization: `Bearer ${key}` } : {}),
+        },
+        body: JSON.stringify({ videoUrl: sampleVideo, resolution, muted: true }),
+      });
+      const headers: Record<string, string> = {};
+      r.headers.forEach((v, k) => { headers[k] = v; });
+      const result: Record<string, unknown> = {
+        elapsed_ms: Date.now() - t0,
+        process_status: r.status,
+        headers_subset: {
+          ct: headers["content-type"],
+          cl: headers["content-length"],
+          frame_count: headers["x-preview-frame-count"],
+          codec: headers["x-preview-codec"],
+          width: headers["x-preview-width"],
+          height: headers["x-preview-height"],
+          duration: headers["x-preview-duration"],
+          avg_luma: headers["x-preview-avg-luma"],
+          attempts: headers["x-preview-attempts"],
+          total_ms: headers["x-preview-total-ms"],
+          job_id: headers["x-job-id"],
+        },
+      };
+      if (r.status === 200) {
+        const buf = new Uint8Array(await r.arrayBuffer());
+        result.bytes = buf.byteLength;
+        const ftyp = new TextDecoder().decode(buf.slice(4, 8));
+        result.ftyp_marker = ftyp;
+        result.valid_mp4_container = ftyp === "ftyp";
+        if (upload) {
+          const { error: upErr } = await supa.storage
+            .from("public-previews")
+            .upload(probePath, buf, { contentType: "video/mp4", upsert: true });
+          if (upErr) result.upload_error = upErr.message;
+          else {
+            const { data: pub } = supa.storage.from("public-previews").getPublicUrl(probePath);
+            result.public_url = pub?.publicUrl;
+          }
+        }
+      } else {
+        result.process_body = (await r.text()).slice(0, 4000);
+      }
+      // Persist result JSON alongside the MP4
+      await supa.storage.from("public-previews").upload(
+        `__probe__/${probeKey}.json`,
+        new Blob([JSON.stringify(result, null, 2)], { type: "application/json" }),
+        { upsert: true, contentType: "application/json" },
+      );
+      console.log("PROBE_RESULT", JSON.stringify(result));
+    } catch (e) {
+      console.error("PROBE_ERROR", (e as Error).message);
+    }
+  })();
+  // @ts-ignore EdgeRuntime is available at runtime
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(job);
+
+  const { data: pub } = supa.storage.from("public-previews").getPublicUrl(probePath);
+  const { data: pubJson } = supa.storage.from("public-previews").getPublicUrl(`__probe__/${probeKey}.json`);
+  out.dispatched = true;
+  out.probe_path = probePath;
+  out.mp4_url = pub?.publicUrl;
+  out.result_json_url = pubJson?.publicUrl;
   return json(out);
 });
 
