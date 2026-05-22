@@ -428,6 +428,35 @@ export const AdminModerationQueue = () => {
                         </div>
                       )}
 
+                      {/* Final Decision Summary */}
+                      {(() => {
+                        const latest: any = detectionResults?.[0];
+                        const score = latest?.detection_score ?? latest?.final_confidence;
+                        let reason = '';
+                        if (sub.status === 'approved') reason = 'Approved — visible on marketplace.';
+                        else if (sub.status === 'pending_review') reason = 'Awaiting first AI scan or manual review.';
+                        else if (sub.status === 'pending_scan') reason = 'Queued for AI scan.';
+                        else if (sub.status === 'scan_failed') reason = 'AI scan failed — manual review required.';
+                        else if (sub.status === 'approved_ai') reason = `Classified as AI-generated (score ${score != null ? (score * 100).toFixed(0) + '%' : 'n/a'}).`;
+                        else if (sub.status === 'approved_ai_assisted') reason = `Borderline AI score (${score != null ? (score * 100).toFixed(0) + '%' : 'n/a'}) — mismatch with seller declaration "${sub.ai_declaration || 'n/a'}". Hidden from marketplace until admin approves.`;
+                        else if (sub.status === 'rejected') reason = sub.rejection_reason || 'Rejected by admin.';
+                        else if (sub.status === 'rejected_ai_assisted') reason = `Auto-rejected (AI score ${score != null ? (score * 100).toFixed(0) + '%' : 'n/a'} vs seller declaration "${sub.ai_declaration || 'n/a'}").`;
+                        return (
+                          <div className="p-3 rounded-lg border bg-background text-xs space-y-1">
+                            <div className="font-semibold text-sm flex items-center gap-2">
+                              Final decision
+                              <Badge className={STATUS_COLORS[sub.status] || 'bg-muted'}>{sub.status.replace(/_/g, ' ')}</Badge>
+                            </div>
+                            <p className="text-muted-foreground">{reason}</p>
+                            {latest && (
+                              <p className="text-[10px] text-muted-foreground">
+                                Classified {new Date(latest.created_at).toLocaleString()} · model {latest.model_used}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* Detection Results */}
                       {detectionResults && detectionResults.length > 0 ? (
                         <div className="space-y-2">
