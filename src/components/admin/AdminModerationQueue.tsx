@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -13,7 +13,20 @@ import {
   Shield, Bot, User, ScanLine, FileDown, FileQuestion
 } from "lucide-react";
 
-type StatusFilter = 'all' | 'pending_review' | 'pending_scan' | 'scan_failed' | 'approved_ai' | 'approved_ai_assisted';
+type StatusFilter = 'needs_review' | 'pending_review' | 'ai_assisted' | 'rejected' | 'all';
+
+// Statuses that are NOT visible on the public marketplace and require admin attention.
+const NEEDS_REVIEW_STATUSES = [
+  'pending_review', 'pending_scan', 'scan_failed',
+  'approved_ai', 'approved_ai_assisted', 'rejected_ai_assisted',
+];
+const AI_ASSISTED_STATUSES = ['approved_ai', 'approved_ai_assisted', 'rejected_ai_assisted'];
+const REJECTED_STATUSES = ['rejected', 'rejected_ai_assisted'];
+const ALL_REVIEWABLE = [
+  'pending_review', 'pending_scan', 'scan_failed',
+  'approved_ai', 'approved_ai_assisted',
+  'rejected', 'rejected_ai_assisted',
+];
 
 const STATUS_COLORS: Record<string, string> = {
   pending_review: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -23,6 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
   approved_ai: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   approved_ai_assisted: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
   rejected: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-200',
+  rejected_ai_assisted: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-200',
 };
 
 const DECLARATION_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -102,29 +116,52 @@ function ScoreBar({ label, value, max = 1 }: { label: string; value: number | nu
 }
 
 export const AdminModerationQueue = () => {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending_review');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_review');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const [previewModal, setPreviewModal] = useState<{ open: boolean; file: any | null }>({ open: false, file: null });
   const queryClient = useQueryClient();
 
-  // Fetch submissions
+  // Live counters across all reviewable statuses (for tab badges).
+  const { data: counts } = useQuery({
+    queryKey: ['moderation-queue-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('content_submissions')
+        .select('status')
+        .in('status', ALL_REVIEWABLE);
+      if (error) throw error;
+      const c = { needs_review: 0, pending_review: 0, ai_assisted: 0, rejected: 0, all: 0 };
+      (data || []).forEach((row: any) => {
+        c.all++;
+        if (NEEDS_REVIEW_STATUSES.includes(row.status)) c.needs_review++;
+        if (row.status === 'pending_review') c.pending_review++;
+        if (AI_ASSISTED_STATUSES.includes(row.status)) c.ai_assisted++;
+        if (REJECTED_STATUSES.includes(row.status)) c.rejected++;
+      });
+      return c;
+    },
+    refetchInterval: 30_000,
+  });
+
+  // Fetch submissions for the active tab.
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['moderation-queue', statusFilter],
     queryFn: async () => {
-      let query = supabase
+      let statuses: string[];
+      switch (statusFilter) {
+        case 'needs_review': statuses = NEEDS_REVIEW_STATUSES; break;
+        case 'pending_review': statuses = ['pending_review']; break;
+        case 'ai_assisted': statuses = AI_ASSISTED_STATUSES; break;
+        case 'rejected': statuses = REJECTED_STATUSES; break;
+        default: statuses = ALL_REVIEWABLE;
+      }
+      const { data, error } = await supabase
         .from('content_submissions')
         .select('id, title, status, ai_declaration, created_at, creator_id, admin_notes, rejection_reason')
+        .in('status', statuses)
         .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      } else {
-        query = query.in('status', ['pending_review', 'pending_scan', 'scan_failed', 'approved_ai', 'approved_ai_assisted']);
-      }
-
-      const { data, error } = await query;
+        .limit(100);
       if (error) throw error;
       return data || [];
     },
@@ -195,6 +232,7 @@ export const AdminModerationQueue = () => {
     onSuccess: () => {
       toast.success('Status updated');
       queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation-queue-counts'] });
     },
     onError: (err) => toast.error(`Error: ${err.message}`),
   });
@@ -227,6 +265,7 @@ export const AdminModerationQueue = () => {
     onSuccess: (data) => {
       toast.success(`Re-scan complete: ${data.status}`);
       queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation-queue-counts'] });
       queryClient.invalidateQueries({ queryKey: ['detection-results'] });
     },
     onError: (err) => toast.error(`Scan error: ${err.message}`),
@@ -234,28 +273,42 @@ export const AdminModerationQueue = () => {
 
   const primaryFile = contentFiles?.[0] || null;
 
+  const TabBadge = ({ n }: { n: number }) => (
+    <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[11px] font-semibold ${n > 0 ? 'bg-amber-500 text-white' : 'bg-muted text-muted-foreground'}`}>
+      {n}
+    </span>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Shield className="h-5 w-5" />
-          AI Moderation Queue
-        </h2>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Flagged</SelectItem>
-            <SelectItem value="pending_review">Pending Review</SelectItem>
-            <SelectItem value="pending_scan">Pending Scan</SelectItem>
-            <SelectItem value="scan_failed">Scan Failed</SelectItem>
-            <SelectItem value="approved_ai">Approved (AI)</SelectItem>
-            <SelectItem value="approved_ai_assisted">Approved (AI Assisted)</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            AI &amp; Borderline Review Queue
+          </h2>
+          {counts && counts.needs_review > 0 && (
+            <Badge variant="destructive" className="text-xs">
+              {counts.needs_review} item{counts.needs_review === 1 ? '' : 's'} need review
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Only <code className="px-1 rounded bg-muted">approved</code> items appear on the marketplace. Everything here is admin-only.
+        </p>
       </div>
+
+      <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="needs_review">Needs Review<TabBadge n={counts?.needs_review ?? 0} /></TabsTrigger>
+          <TabsTrigger value="pending_review">Pending<TabBadge n={counts?.pending_review ?? 0} /></TabsTrigger>
+          <TabsTrigger value="ai_assisted">AI Assisted<TabBadge n={counts?.ai_assisted ?? 0} /></TabsTrigger>
+          <TabsTrigger value="rejected">Rejected<TabBadge n={counts?.rejected ?? 0} /></TabsTrigger>
+          <TabsTrigger value="all">All<TabBadge n={counts?.all ?? 0} /></TabsTrigger>
+        </TabsList>
+      </Tabs>
+
 
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Loading queue...</div>
@@ -374,6 +427,35 @@ export const AdminModerationQueue = () => {
                           )}
                         </div>
                       )}
+
+                      {/* Final Decision Summary */}
+                      {(() => {
+                        const latest: any = detectionResults?.[0];
+                        const score = latest?.detection_score ?? latest?.final_confidence;
+                        let reason = '';
+                        if (sub.status === 'approved') reason = 'Approved — visible on marketplace.';
+                        else if (sub.status === 'pending_review') reason = 'Awaiting first AI scan or manual review.';
+                        else if (sub.status === 'pending_scan') reason = 'Queued for AI scan.';
+                        else if (sub.status === 'scan_failed') reason = 'AI scan failed — manual review required.';
+                        else if (sub.status === 'approved_ai') reason = `Classified as AI-generated (score ${score != null ? (score * 100).toFixed(0) + '%' : 'n/a'}).`;
+                        else if (sub.status === 'approved_ai_assisted') reason = `Borderline AI score (${score != null ? (score * 100).toFixed(0) + '%' : 'n/a'}) — mismatch with seller declaration "${sub.ai_declaration || 'n/a'}". Hidden from marketplace until admin approves.`;
+                        else if (sub.status === 'rejected') reason = sub.rejection_reason || 'Rejected by admin.';
+                        else if (sub.status === 'rejected_ai_assisted') reason = `Auto-rejected (AI score ${score != null ? (score * 100).toFixed(0) + '%' : 'n/a'} vs seller declaration "${sub.ai_declaration || 'n/a'}").`;
+                        return (
+                          <div className="p-3 rounded-lg border bg-background text-xs space-y-1">
+                            <div className="font-semibold text-sm flex items-center gap-2">
+                              Final decision
+                              <Badge className={STATUS_COLORS[sub.status] || 'bg-muted'}>{sub.status.replace(/_/g, ' ')}</Badge>
+                            </div>
+                            <p className="text-muted-foreground">{reason}</p>
+                            {latest && (
+                              <p className="text-[10px] text-muted-foreground">
+                                Classified {new Date(latest.created_at).toLocaleString()} · model {latest.model_used}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Detection Results */}
                       {detectionResults && detectionResults.length > 0 ? (
