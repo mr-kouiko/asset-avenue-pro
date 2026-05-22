@@ -36,6 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
   approved_ai: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   approved_ai_assisted: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
   rejected: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-200',
+  rejected_ai_assisted: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-200',
 };
 
 const DECLARATION_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
