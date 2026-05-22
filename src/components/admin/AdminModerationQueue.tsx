@@ -265,6 +265,7 @@ export const AdminModerationQueue = () => {
     onSuccess: (data) => {
       toast.success(`Re-scan complete: ${data.status}`);
       queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['moderation-queue-counts'] });
       queryClient.invalidateQueries({ queryKey: ['detection-results'] });
     },
     onError: (err) => toast.error(`Scan error: ${err.message}`),
