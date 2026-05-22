@@ -462,22 +462,39 @@ app.post('/process', authenticate, async (req, res) => {
       console.log(`[${jobId}] attempt=${attempt} encode start=${startOffset.toFixed(2)} crf=${crf}`);
 
       let ffmpegStderr = '';
+      let killInfo = null;
       try {
         await new Promise((resolve, reject) => {
-          execFile('ffmpeg', ffmpegArgs, {
+          const child = execFile('ffmpeg', ffmpegArgs, {
             maxBuffer: 20 * 1024 * 1024,
-            timeout: PER_ATTEMPT_MS, // DIAGNOSTIC: 300s to measure true Render throughput
+            timeout: PER_ATTEMPT_MS,
+            killSignal: 'SIGTERM',
           }, (error, _stdout, stderr) => {
-
             ffmpegStderr = (stderr || '').toString();
-            if (error) reject(new Error(`ffmpeg attempt failed: ${error.message}`));
-            else resolve();
+            if (error) {
+              // Distinguish termination cause:
+              //  - Node timeout/maxBuffer  => error.killed=true,  error.signal='SIGTERM'
+              //  - OOM killer / Render restart => error.killed=false, error.signal='SIGKILL'
+              //  - ffmpeg exited on its own => error.signal=null,  error.code=<int>
+              killInfo = {
+                message: error.message,
+                code: error.code ?? null,
+                signal: error.signal ?? null,
+                killedByNode: error.killed === true,
+                cmdElapsedMs: Date.now() - encStart,
+                stderrTail: ffmpegStderr.slice(-800),
+                rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+              };
+              console.error(`[${jobId}] FFMPEG_KILL ${JSON.stringify(killInfo)}`);
+              reject(new Error(`ffmpeg attempt failed: signal=${killInfo.signal} code=${killInfo.code} killedByNode=${killInfo.killedByNode} elapsedMs=${killInfo.cmdElapsedMs}`));
+            } else resolve();
           });
+          child.on('spawn', () => console.log(`[${jobId}] ffmpeg spawned pid=${child.pid}`));
         });
       } catch (e) {
-        lastReason = `${e.message} | ${ffmpegStderr.slice(-300)}`;
+        lastReason = `${e.message} | stderrTail=${ffmpegStderr.slice(-300)}`;
         console.error(`[${jobId}] attempt=${attempt} ffmpeg failed: ${lastReason}`);
-        attemptLogs.push({ attempt, startOffset, ok: false, reason: lastReason });
+        attemptLogs.push({ attempt, startOffset, ok: false, reason: lastReason, kill: killInfo });
         continue;
       }
       const encMs = Date.now() - encStart;
