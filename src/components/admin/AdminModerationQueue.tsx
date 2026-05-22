@@ -116,29 +116,52 @@ function ScoreBar({ label, value, max = 1 }: { label: string; value: number | nu
 }
 
 export const AdminModerationQueue = () => {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending_review');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('needs_review');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const [previewModal, setPreviewModal] = useState<{ open: boolean; file: any | null }>({ open: false, file: null });
   const queryClient = useQueryClient();
 
-  // Fetch submissions
+  // Live counters across all reviewable statuses (for tab badges).
+  const { data: counts } = useQuery({
+    queryKey: ['moderation-queue-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('content_submissions')
+        .select('status')
+        .in('status', ALL_REVIEWABLE);
+      if (error) throw error;
+      const c = { needs_review: 0, pending_review: 0, ai_assisted: 0, rejected: 0, all: 0 };
+      (data || []).forEach((row: any) => {
+        c.all++;
+        if (NEEDS_REVIEW_STATUSES.includes(row.status)) c.needs_review++;
+        if (row.status === 'pending_review') c.pending_review++;
+        if (AI_ASSISTED_STATUSES.includes(row.status)) c.ai_assisted++;
+        if (REJECTED_STATUSES.includes(row.status)) c.rejected++;
+      });
+      return c;
+    },
+    refetchInterval: 30_000,
+  });
+
+  // Fetch submissions for the active tab.
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['moderation-queue', statusFilter],
     queryFn: async () => {
-      let query = supabase
+      let statuses: string[];
+      switch (statusFilter) {
+        case 'needs_review': statuses = NEEDS_REVIEW_STATUSES; break;
+        case 'pending_review': statuses = ['pending_review']; break;
+        case 'ai_assisted': statuses = AI_ASSISTED_STATUSES; break;
+        case 'rejected': statuses = REJECTED_STATUSES; break;
+        default: statuses = ALL_REVIEWABLE;
+      }
+      const { data, error } = await supabase
         .from('content_submissions')
         .select('id, title, status, ai_declaration, created_at, creator_id, admin_notes, rejection_reason')
+        .in('status', statuses)
         .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      } else {
-        query = query.in('status', ['pending_review', 'pending_scan', 'scan_failed', 'approved_ai', 'approved_ai_assisted']);
-      }
-
-      const { data, error } = await query;
+        .limit(100);
       if (error) throw error;
       return data || [];
     },
