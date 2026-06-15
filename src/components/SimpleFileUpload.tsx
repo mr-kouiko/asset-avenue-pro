@@ -835,14 +835,6 @@ export const SimpleFileUpload = ({
                     </div>
                   )}
                   
-                  {file.status === 'detecting-ai' && (
-                    <div className="mt-2 flex items-center space-x-2">
-                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                      <p className="text-xs text-muted-foreground">
-                        🤖 Détection IA en cours...
-                      </p>
-                    </div>
-                  )}
                   
                   
                   {file.error && (
