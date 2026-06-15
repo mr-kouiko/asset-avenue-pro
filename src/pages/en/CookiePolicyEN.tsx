@@ -1,8 +1,13 @@
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 const CookiePolicyEN = () => {
+  useSEO({
+    title: "Cookie Policy",
+    description: "Understand which cookies VisuStock uses, why we use them and how you can control them in your browser preferences.",
+  });
   return (
     <div className="min-h-screen bg-background">
       <Header />
