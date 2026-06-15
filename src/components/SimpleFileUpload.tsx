@@ -7,8 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
-import { useAIImageDetection } from "@/hooks/useAIImageDetection";
-import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 import { detectProductType, type DetectedProductType } from "@/utils/contentTypeDetector";
 
 // Session storage key for backup of active uploads
