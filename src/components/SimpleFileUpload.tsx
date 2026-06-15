@@ -57,8 +57,6 @@ export const SimpleFileUpload = ({
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
-  const { detectImage } = useAIImageDetection();
-  const { detectVideo } = useAIVideoDetection();
   
   // ANTI-REMOUNT PROTECTION: Warn user ONLY if uploads were truly interrupted
   useEffect(() => {
