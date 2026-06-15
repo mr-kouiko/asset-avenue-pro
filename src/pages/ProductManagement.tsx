@@ -63,8 +63,6 @@ const ProductManagement = () => {
     publishProduct, 
     loading 
   } = useProductManager();
-  const { detectImage, isDetecting: isDetectingImage } = useAIImageDetection();
-  const { detectVideo, isDetecting: isDetectingVideo } = useAIVideoDetection();
   
   
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
