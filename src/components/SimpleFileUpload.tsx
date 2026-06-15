@@ -135,7 +135,7 @@ export const SimpleFileUpload = ({
   useEffect(() => {
     const activeUploads = files.filter(f => 
       f.status === 'uploading' || f.status === 'processing' || 
-      f.status === 'detecting-ai' || f.status === 'checking-duplicate'
+      f.status === 'checking-duplicate'
     );
     
     if (activeUploads.length > 0) {
