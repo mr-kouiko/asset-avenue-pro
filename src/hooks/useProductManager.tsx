@@ -177,7 +177,7 @@ export const useProductManager = () => {
 
         if (updateError) throw updateError;
         submissionId = updatedSubmission.id;
-        console.log('📝 Updated draft to pending_review:', submissionId);
+        console.log('📝 Updated draft to approved:', submissionId);
       } else {
         // Create new content submission with pending_review
         const { data: submissionData, error: submissionError } = await supabase
