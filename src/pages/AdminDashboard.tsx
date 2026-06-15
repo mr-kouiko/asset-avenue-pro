@@ -25,7 +25,7 @@ import {
   FileArchive,
   HardDrive
 } from "lucide-react";
-import { Bot } from "lucide-react";
+
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
 import { AdminPayoutsPanel } from "@/components/admin/AdminPayoutsPanel";
@@ -40,7 +40,7 @@ import { AdminContentReports } from "@/components/admin/AdminContentReports";
 import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
 import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
 import { AdminProductTranslations } from "@/components/admin/AdminProductTranslations";
-import { AdminModerationQueue } from "@/components/admin/AdminModerationQueue";
+
 import { AdminVideoBackfill } from "@/components/admin/AdminVideoBackfill";
 import { AdminFailedPreviews } from "@/components/admin/AdminFailedPreviews";
 
@@ -233,10 +233,6 @@ const AdminDashboard = () => {
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="moderation" className="flex items-center gap-1">
-              <Bot className="h-4 w-4" />
-              <span className="hidden sm:inline">AI Mod</span>
-            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
@@ -283,10 +279,6 @@ const AdminDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* AI Moderation Tab */}
-          <TabsContent value="moderation">
-            <AdminModerationQueue />
-          </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">

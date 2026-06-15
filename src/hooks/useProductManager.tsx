@@ -166,7 +166,7 @@ export const useProductManager = () => {
             tags: submission.productData.tags,
             price: productPrice,
             slug: uniqueSlug,
-            status: 'pending_review',
+            status: 'approved',
             ai_declaration: submission.productData.aiDeclaration || null,
             updated_at: new Date().toISOString()
           })
@@ -177,7 +177,7 @@ export const useProductManager = () => {
 
         if (updateError) throw updateError;
         submissionId = updatedSubmission.id;
-        console.log('📝 Updated draft to pending_review:', submissionId);
+        console.log('📝 Updated draft to approved:', submissionId);
       } else {
         // Create new content submission with pending_review
         const { data: submissionData, error: submissionError } = await supabase
@@ -190,7 +190,7 @@ export const useProductManager = () => {
             tags: submission.productData.tags,
             price: productPrice,
             slug: uniqueSlug,
-            status: 'pending_review',
+            status: 'approved',
             ai_declaration: submission.productData.aiDeclaration || null
           })
           .select()
@@ -330,7 +330,7 @@ export const useProductManager = () => {
 
       // Automatic AI content scan disabled — submissions go directly to manual admin review.
 
-      toast.success(`✅ Product submitted for review: ${submission.productData.title}`);
+      toast.success(`✅ Product published: ${submission.productData.title}`);
       return true;
 
     } catch (error) {
