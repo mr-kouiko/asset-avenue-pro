@@ -330,7 +330,7 @@ export const useProductManager = () => {
 
       // Automatic AI content scan disabled — submissions go directly to manual admin review.
 
-      toast.success(`✅ Product submitted for review: ${submission.productData.title}`);
+      toast.success(`✅ Product published: ${submission.productData.title}`);
       return true;
 
     } catch (error) {
