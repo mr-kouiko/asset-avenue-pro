@@ -442,66 +442,6 @@ const ProductManagement = () => {
     }
   };
 
-  // Re-analyze AI detection for a file
-  const handleReanalyzeAI = async (fileId: string) => {
-    const file = uploadedFiles.find(f => f.id === fileId);
-    if (!file) return;
-
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-
-    if (!isImage && !isVideo) {
-      toast.error('AI detection only works for images and videos');
-      return;
-    }
-
-    setIsReanalyzing(true);
-    toast.info('Re-analyzing content for AI detection...');
-
-    try {
-      let isAiGenerated = false;
-      let confidence = 0;
-
-      if (isImage) {
-        const result = await detectImage(file.url);
-        if (result) {
-          isAiGenerated = result.isAiGenerated;
-          confidence = result.confidence;
-        }
-      } else if (isVideo) {
-        const result = await detectVideo(file.url);
-        if (result) {
-          isAiGenerated = result.isAiGenerated;
-          confidence = result.confidence;
-        }
-      }
-
-      // Update the file's AI detection status
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileId ? { ...f, isAiGenerated } : f
-      ));
-
-      // Update the product data
-      updateProductData(fileId, { isAiGenerated });
-
-      // Update sessionStorage
-      const updatedFiles = uploadedFiles.map(f => 
-        f.id === fileId ? { ...f, isAiGenerated } : f
-      );
-      sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
-
-      if (isAiGenerated) {
-        toast.success(`AI content detected (${Math.round(confidence * 100)}% confidence)`);
-      } else {
-        toast.success('Content appears authentic (no AI markers detected)');
-      }
-    } catch (error) {
-      console.error('Re-analyze error:', error);
-      toast.error('Failed to re-analyze content');
-    } finally {
-      setIsReanalyzing(false);
-    }
-  };
 
 
   const resolveOwnedSubmissionIdForUser = async (
