@@ -15,7 +15,7 @@ interface SEOConfig {
   noindex?: boolean;
 }
 
-const DEFAULT_IMAGE = 'https://lovable.dev/opengraph-image-p98pqg.png';
+const DEFAULT_IMAGE = 'https://visustock.com/__l5e/assets-v1/3d772d83-288d-4e75-b369-f849731fa339/og-image.jpg';
 const SITE_NAME = 'VisuStock';
 const BASE_URL = 'https://visustock.com';
 
