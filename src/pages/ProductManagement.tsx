@@ -10,8 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, ArrowRight, Plus, X, Save, Eye, Upload, Play, Image, Music, Video, FileText, Trash2, RefreshCw, Gift, ChevronLeft, ChevronRight, Layers, Bot } from "lucide-react";
-import { useAIImageDetection } from "@/hooks/useAIImageDetection";
-import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
