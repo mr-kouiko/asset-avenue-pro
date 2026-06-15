@@ -184,8 +184,8 @@ export const useSEO = (config: SEOConfig) => {
         })
       };
 
-      // Remove existing structured data
-      const existingScript = document.querySelector('script[type="application/ld+json"]');
+      // Remove only previously-injected dynamic structured data (preserve sitewide Organization schema from index.html)
+      const existingScript = document.querySelector('script[type="application/ld+json"][data-seo-dynamic="true"]');
       if (existingScript) {
         existingScript.remove();
       }
@@ -193,6 +193,7 @@ export const useSEO = (config: SEOConfig) => {
       // Add new structured data
       const script = document.createElement('script');
       script.type = 'application/ld+json';
+      script.setAttribute('data-seo-dynamic', 'true');
       script.text = JSON.stringify(structuredData);
       document.head.appendChild(script);
     }
@@ -215,13 +216,14 @@ export const useSEO = (config: SEOConfig) => {
         }
       };
 
-      const existingScript = document.querySelector('script[type="application/ld+json"]');
+      const existingScript = document.querySelector('script[type="application/ld+json"][data-seo-dynamic="true"]');
       if (existingScript) {
         existingScript.remove();
       }
 
       const script = document.createElement('script');
       script.type = 'application/ld+json';
+      script.setAttribute('data-seo-dynamic', 'true');
       script.text = JSON.stringify(websiteData);
       document.head.appendChild(script);
     }
