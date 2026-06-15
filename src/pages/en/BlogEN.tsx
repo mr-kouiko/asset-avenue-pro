@@ -259,6 +259,10 @@ const categories = [
 ];
 
 const BlogEN = () => {
+  useSEO({
+    title: "Blog — Tips, Trends & Creator Insights",
+    description: "Read VisuStock's blog for stock photography tips, video trends, AI workflow guides and earnings stories from creators.",
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
