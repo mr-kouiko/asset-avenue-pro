@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -258,6 +259,10 @@ const categories = [
 ];
 
 const BlogEN = () => {
+  useSEO({
+    title: "Blog — Tips, Trends & Creator Insights",
+    description: "Read VisuStock's blog for stock photography tips, video trends, AI workflow guides and earnings stories from creators.",
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 

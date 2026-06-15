@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Users, Camera, Video, Music, Palette, Award, Heart, Zap, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSEO } from "@/hooks/useSEO";
 
 const AboutEN = () => {
+  useSEO({
+    title: "About Us — Our Story & Mission",
+    description: "Discover VisuStock's mission to empower creators with a fair marketplace for stock photos, videos, audio and AI-generated content.",
+  });
   return (
     <div className="min-h-screen bg-background">
       <Header />

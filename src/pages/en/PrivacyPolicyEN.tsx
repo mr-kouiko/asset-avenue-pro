@@ -2,8 +2,13 @@ import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 const PrivacyPolicyEN = () => {
+  useSEO({
+    title: "Privacy Policy",
+    description: "Learn how VisuStock collects, uses and protects your personal data, including GDPR rights and cookie practices.",
+  });
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />

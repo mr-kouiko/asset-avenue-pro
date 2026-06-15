@@ -2,8 +2,13 @@ import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 const TermsEN = () => {
+  useSEO({
+    title: "Terms & Conditions",
+    description: "Read the VisuStock Terms & Conditions covering account use, purchases, licensing and creator obligations on our marketplace.",
+  });
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />

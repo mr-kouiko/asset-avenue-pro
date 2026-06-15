@@ -1,8 +1,13 @@
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
+import { useSEO } from "@/hooks/useSEO";
 
 const LicenseAgreementEN = () => {
+  useSEO({
+    title: "License Agreement",
+    description: "Review the VisuStock license agreement detailing how purchased stock assets may be used, modified and redistributed.",
+  });
   return (
     <div className="min-h-screen bg-background">
       <Header />
