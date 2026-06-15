@@ -233,10 +233,6 @@ const AdminDashboard = () => {
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="moderation" className="flex items-center gap-1">
-              <Bot className="h-4 w-4" />
-              <span className="hidden sm:inline">AI Mod</span>
-            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
