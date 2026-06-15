@@ -16,7 +16,7 @@ interface UploadFile {
   id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'detecting-ai' | 'completed' | 'error';
+  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'completed' | 'error';
   url?: string;
   error?: string;
   isWatermarked?: boolean;
