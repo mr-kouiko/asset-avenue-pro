@@ -72,7 +72,7 @@ const ProductManagement = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
-  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null); // Track current draft
   const [allDrafts, setAllDrafts] = useState<DraftProduct[]>([]); // All available drafts for navigation
   const [currentDraftIndex, setCurrentDraftIndex] = useState(0); // Current position in drafts list
