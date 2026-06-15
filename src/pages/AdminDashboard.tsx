@@ -279,10 +279,6 @@ const AdminDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* AI Moderation Tab */}
-          <TabsContent value="moderation">
-            <AdminModerationQueue />
-          </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
