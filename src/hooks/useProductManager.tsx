@@ -166,7 +166,7 @@ export const useProductManager = () => {
             tags: submission.productData.tags,
             price: productPrice,
             slug: uniqueSlug,
-            status: 'pending_review',
+            status: 'approved',
             ai_declaration: submission.productData.aiDeclaration || null,
             updated_at: new Date().toISOString()
           })
@@ -190,7 +190,7 @@ export const useProductManager = () => {
             tags: submission.productData.tags,
             price: productPrice,
             slug: uniqueSlug,
-            status: 'pending_review',
+            status: 'approved',
             ai_declaration: submission.productData.aiDeclaration || null
           })
           .select()
