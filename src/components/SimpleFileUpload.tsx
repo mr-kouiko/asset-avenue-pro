@@ -7,8 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAutomaticWatermark } from "@/hooks/useAutomaticWatermark";
-import { useAIImageDetection } from "@/hooks/useAIImageDetection";
-import { useAIVideoDetection } from "@/hooks/useAIVideoDetection";
 import { detectProductType, type DetectedProductType } from "@/utils/contentTypeDetector";
 
 // Session storage key for backup of active uploads
@@ -18,7 +16,7 @@ interface UploadFile {
   id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'detecting-ai' | 'completed' | 'error';
+  status: 'pending' | 'checking-duplicate' | 'uploading' | 'processing' | 'completed' | 'error';
   url?: string;
   error?: string;
   isWatermarked?: boolean;
@@ -59,8 +57,6 @@ export const SimpleFileUpload = ({
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processFiles, isProcessing } = useAutomaticWatermark();
-  const { detectImage } = useAIImageDetection();
-  const { detectVideo } = useAIVideoDetection();
   
   // ANTI-REMOUNT PROTECTION: Warn user ONLY if uploads were truly interrupted
   useEffect(() => {
@@ -139,7 +135,7 @@ export const SimpleFileUpload = ({
   useEffect(() => {
     const activeUploads = files.filter(f => 
       f.status === 'uploading' || f.status === 'processing' || 
-      f.status === 'detecting-ai' || f.status === 'checking-duplicate'
+      f.status === 'checking-duplicate'
     );
     
     if (activeUploads.length > 0) {
@@ -440,71 +436,9 @@ export const SimpleFileUpload = ({
       const isAudio = detectedMimeType.startsWith('audio/');
       const isPDF = detectedMimeType === 'application/pdf';
       
-      // AUTOMATIC AI DETECTION - Only for images and videos
-      let isAiGenerated = false;
-      let aiConfidence = 0;
-      
-      if (isImage || isVideo) {
-        // Update status to detecting AI
-        setFiles(prev => prev.map(f => 
-          f.id === uploadFileData.id ? { ...f, status: 'detecting-ai', progress: 100 } : f
-        ));
-        
-        try {
-          // For images: use watermarked or preview URL (these are IMAGES)
-          // For videos: use watermarkedUrl which is the ORIGINAL VIDEO file (NOT the thumbnail which is a JPEG)
-          // The SightEngine API requires the actual video file for video AI detection
-          let urlToAnalyze: string | undefined;
-          
-          if (isVideo) {
-            // CRITICAL: For video AI detection, we MUST use the actual video URL, not the thumbnail
-            // processedFile.watermarkedUrl contains the original video URL for videos
-            // processedFile.thumbnailUrl is a JPEG screenshot - NOT usable for video AI detection
-            urlToAnalyze = processedFile.watermarkedUrl;
-            console.log(`🎥 [AI-DETECTION] Video URL sources - watermarkedUrl: ${processedFile.watermarkedUrl}, thumbnailUrl: ${processedFile.thumbnailUrl}`);
-          } else {
-            urlToAnalyze = processedFile.watermarkedUrl || processedFile.thumbnailUrl!;
-          }
-          
-          if (!urlToAnalyze) {
-            console.warn(`🤖 [AI-DETECTION] No URL available for ${uploadFileData.file.name}, skipping detection`);
-          } else {
-            console.log(`🤖 [AI-DETECTION] Analyzing ${isImage ? 'image' : 'video'}: ${uploadFileData.file.name}, URL: ${urlToAnalyze}`);
-            
-            if (isImage) {
-              const result = await detectImage(urlToAnalyze);
-              if (result) {
-                isAiGenerated = result.isAiGenerated;
-                aiConfidence = result.confidence;
-                console.log(`🤖 [AI-DETECTION] Image result: AI=${isAiGenerated}, confidence=${aiConfidence}`);
-              }
-            } else if (isVideo) {
-              // Pass BOTH the video URL (for SightEngine) and thumbnail URL (for Gemini fallback)
-              const thumbnailForFallback = processedFile.thumbnailUrl;
-              console.log(`🎥 [AI-DETECTION] Calling detectVideo with URL: ${urlToAnalyze}, thumbnail fallback: ${thumbnailForFallback}`);
-              const result = await detectVideo(urlToAnalyze, { 
-                thumbnailUrl: thumbnailForFallback,
-                threshold: 0.5 
-              });
-              console.log(`🎥 [AI-DETECTION] Video detection raw result:`, result);
-              if (result) {
-                isAiGenerated = result.isAiGenerated;
-                aiConfidence = result.confidence;
-                console.log(`🤖 [AI-DETECTION] Video result: AI=${isAiGenerated}, confidence=${aiConfidence}, method=${result.detectionMethod}`);
-              } else {
-                console.warn(`🤖 [AI-DETECTION] Video detection returned null result`);
-              }
-            }
-          }
-          
-          if (isAiGenerated) {
-            toast.info(`🤖 AI content detected: ${uploadFileData.file.name} (${Math.round(aiConfidence * 100)}% confidence)`);
-          }
-        } catch (aiError) {
-          console.error('🤖 [AI-DETECTION] Error:', aiError);
-          // Continue without AI detection on error - don't block upload
-        }
-      }
+      // Automatic AI detection disabled — admins review content manually.
+      const isAiGenerated = false;
+      const aiConfidence = 0;
 
       // AUTOMATIC CATEGORY DETECTION — centralized detector (extension + MIME + zip inspection)
       let detectedCategory: 'photo' | 'video' | 'audio' | 'ebook' | 'vfx' | 'vector' | 'other' | undefined;
@@ -901,14 +835,6 @@ export const SimpleFileUpload = ({
                     </div>
                   )}
                   
-                  {file.status === 'detecting-ai' && (
-                    <div className="mt-2 flex items-center space-x-2">
-                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                      <p className="text-xs text-muted-foreground">
-                        🤖 Détection IA en cours...
-                      </p>
-                    </div>
-                  )}
                   
                   
                   {file.error && (
@@ -917,9 +843,6 @@ export const SimpleFileUpload = ({
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {file.status === 'detecting-ai' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  )}
                   {file.status === 'completed' && (
                     <>
                       <Check className="h-4 w-4 text-green-500" />

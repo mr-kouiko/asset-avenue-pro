@@ -155,7 +155,7 @@ export const useProductManager = () => {
 
       let submissionId: string;
 
-      // If draftId is provided, update existing draft to pending_scan
+      // If draftId is provided, update existing draft to pending_review
       if (submission.draftId) {
         const { data: updatedSubmission, error: updateError } = await supabase
           .from('content_submissions')
@@ -166,7 +166,7 @@ export const useProductManager = () => {
             tags: submission.productData.tags,
             price: productPrice,
             slug: uniqueSlug,
-            status: 'pending_scan',
+            status: 'pending_review',
             ai_declaration: submission.productData.aiDeclaration || null,
             updated_at: new Date().toISOString()
           })
@@ -177,9 +177,9 @@ export const useProductManager = () => {
 
         if (updateError) throw updateError;
         submissionId = updatedSubmission.id;
-        console.log('📝 Updated draft to pending_scan:', submissionId);
+        console.log('📝 Updated draft to pending_review:', submissionId);
       } else {
-        // Create new content submission with pending_scan
+        // Create new content submission with pending_review
         const { data: submissionData, error: submissionError } = await supabase
           .from('content_submissions')
           .insert({
@@ -190,7 +190,7 @@ export const useProductManager = () => {
             tags: submission.productData.tags,
             price: productPrice,
             slug: uniqueSlug,
-            status: 'pending_scan',
+            status: 'pending_review',
             ai_declaration: submission.productData.aiDeclaration || null
           })
           .select()
@@ -328,29 +328,7 @@ export const useProductManager = () => {
           .eq('draft_id', submission.draftId);
       }
 
-      // Trigger server-side AI content scan (non-blocking)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-content`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            submissionId,
-            aiDeclaration: submission.productData.aiDeclaration || 'no_ai_used'
-          }),
-        }).then(async (res) => {
-          if (res.ok) {
-            const scanResult = await res.json();
-            console.log('🔍 [SCAN] Result:', scanResult.status, scanResult.detection_score);
-          } else {
-            console.warn('🔍 [SCAN] Failed:', res.status);
-          }
-        }).catch(err => console.warn('🔍 [SCAN] Error:', err));
-      }
+      // Automatic AI content scan disabled — submissions go directly to manual admin review.
 
       toast.success(`✅ Product submitted for review: ${submission.productData.title}`);
       return true;
