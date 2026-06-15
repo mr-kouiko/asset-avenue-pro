@@ -1206,6 +1206,17 @@ const BlogArticleEN = () => {
   const { slug } = useParams<{ slug: string }>();
   const article = articleContent[slug as keyof typeof articleContent] || defaultArticle;
 
+  useSEO({
+    title: article.title.length > 55 ? `${article.title.slice(0, 52)}...` : article.title,
+    description: article.excerpt?.slice(0, 158) || "Read the latest insights from the VisuStock blog.",
+    type: "article",
+    author: article.author,
+    publishedTime: article.publishDate,
+    tags: article.tags,
+    image: article.image,
+  });
+
+
   useEffect(() => {
     if (!article.slug) return;
     const url = `https://visustock.com/blog/${article.slug}`;
