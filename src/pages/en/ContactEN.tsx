@@ -10,7 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, MapPin, Clock, Code } from "lucide-react";
 
+import { useSEO } from "@/hooks/useSEO";
+
 const ContactEN = () => {
+  useSEO({
+    title: "Contact Us",
+    description: "Get in touch with the VisuStock team for support, billing, partnerships or legal inquiries. We typically reply within one business day.",
+  });
   useEffect(() => {
     const schema = {
       "@context": "https://schema.org",
