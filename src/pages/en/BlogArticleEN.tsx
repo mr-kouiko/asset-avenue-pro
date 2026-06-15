@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -1204,6 +1205,48 @@ const defaultArticle = {
 const BlogArticleEN = () => {
   const { slug } = useParams<{ slug: string }>();
   const article = articleContent[slug as keyof typeof articleContent] || defaultArticle;
+
+  useEffect(() => {
+    if (!article.slug) return;
+    const url = `https://visustock.com/blog/${article.slug}`;
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": article.title,
+      "description": article.excerpt,
+      "image": [article.image],
+      "datePublished": article.publishDate,
+      "dateModified": article.updatedDate,
+      "author": {
+        "@type": "Person",
+        "name": article.author,
+        "jobTitle": article.authorRole,
+        "image": article.authorAvatar
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "VisuStock",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://visustock.com/favicon.png"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": url
+      },
+      "keywords": article.tags.join(", "),
+      "articleSection": article.category,
+      "url": url
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.setAttribute("data-seo-page", "blog-article");
+    script.text = JSON.stringify(schema);
+    document.head.appendChild(script);
+    return () => { script.remove(); };
+  }, [article]);
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
