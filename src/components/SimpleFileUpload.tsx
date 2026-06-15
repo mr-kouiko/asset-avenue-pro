@@ -843,9 +843,6 @@ export const SimpleFileUpload = ({
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {file.status === 'detecting-ai' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  )}
                   {file.status === 'completed' && (
                     <>
                       <Check className="h-4 w-4 text-green-500" />
