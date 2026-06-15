@@ -147,7 +147,7 @@ serve(async (req) => {
       videoUrl = signed;
     }
 
-    const watermarkUrl = `${supabaseUrl}/storage/v1/object/public/previews/visustock-watermark-logo.png`;
+    const watermarkUrl = `${supabaseUrl}/storage/v1/object/public/LOGO%20DE%20WATERMARKING/watermark.png`;
 
     // -------------------------------------------------------------------------
     // 2. Determine output preview path. Cache-check by HEAD on storage.
