@@ -83,12 +83,26 @@ serve(async (req) => {
     let scanned = 0;
     let unreachable = 0;
 
+    // Canonical server-generated preview path: .../previews/<submission_uuid>/<file_uuid>_preview.mp4
+    // Anything else (e.g. .../previews/<sub>/previews/<ts>-<rand>_preview.mp4 or
+    // .../previews/<sub>/videos/<ts>-<rand>_original_preview_720p.mp4) is a legacy
+    // client-side MediaRecorder output known to display 0:00 in browsers because
+    // the container has no duration metadata. Flag them up-front, no HEAD needed.
+    const CANONICAL = /\/previews\/[0-9a-f-]{36}\/[0-9a-f-]{36}_preview\.mp4(\?|$)/i;
+
     // HEAD requests in batches of 10
     const BATCH = 10;
     for (let i = 0; i < (files || []).length; i += BATCH) {
       const slice = files!.slice(i, i + BATCH);
       await Promise.all(slice.map(async (f: any) => {
         scanned++;
+        if (!CANONICAL.test(f.preview_path)) {
+          broken.push({
+            fileId: f.id, submissionId: f.submission_id, fileName: f.file_name,
+            sizeBytes: null, reason: 'legacy client-generated preview (0:00 duration)',
+          });
+          return;
+        }
         try {
           const r = await fetch(f.preview_path, { method: 'HEAD' });
           if (!r.ok) {
