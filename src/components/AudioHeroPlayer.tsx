@@ -383,30 +383,6 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
           </div>
         </div>
 
-        {/* Download Watermarked Preview Button */}
-        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <Button
-            onClick={handleDownloadWatermarked}
-            disabled={isLoading || error || isDownloading}
-            variant="outline"
-            className="w-full bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400"
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Preparing watermarked preview...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4 mr-2" />
-                Download Watermarked Preview (Free)
-              </>
-            )}
-          </Button>
-          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
-            Preview includes audio watermark for evaluation purposes
-          </p>
-        </div>
       </div>
     </div>
   );
