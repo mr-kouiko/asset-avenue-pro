@@ -143,7 +143,7 @@ export function useVideoPreviewGenerator() {
       // Load watermark logo with timeout
       const watermarkLogo = new Image();
       watermarkLogo.crossOrigin = 'anonymous';
-      const watermarkUrl = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
+      const watermarkUrl = 'https://i.imgur.com/UsTmDOl.png';
       
       let watermarkLoaded = false;
       await new Promise<void>((resolve) => {

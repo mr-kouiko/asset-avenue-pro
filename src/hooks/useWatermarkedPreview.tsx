@@ -33,7 +33,7 @@ export const useWatermarkedPreview = ({ imageUrl, enabled = false }: UseWatermar
         const watermarkedBlob = await createWebPreviewWithWatermark(file, {
           opacity: 0.3,
           spacing: 150,
-          logoPath: 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png'
+          logoPath: 'https://i.imgur.com/UsTmDOl.png'
         });
         
         const watermarkedUrl = URL.createObjectURL(watermarkedBlob);
