@@ -169,10 +169,13 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
         mainBuffer.sampleRate
       );
 
-      // Create main audio source
+      // Create main audio source with ducking gain (lower main to make watermark audible)
       const mainSource = offlineContext.createBufferSource();
       mainSource.buffer = mainBuffer;
-      mainSource.connect(offlineContext.destination);
+      const mainGain = offlineContext.createGain();
+      mainGain.gain.value = 0.7;
+      mainSource.connect(mainGain);
+      mainGain.connect(offlineContext.destination);
       mainSource.start(0);
 
       // Add watermark every 15 seconds
@@ -183,9 +186,9 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
         const watermarkSource = offlineContext.createBufferSource();
         watermarkSource.buffer = watermarkBuffer;
         
-        // Create gain node for watermark volume
+        // Watermark at full volume so it stands out above ducked main track
         const gainNode = offlineContext.createGain();
-        gainNode.gain.value = 0.8; // Slightly lower than main
+        gainNode.gain.value = 1.0;
         
         watermarkSource.connect(gainNode);
         gainNode.connect(offlineContext.destination);
