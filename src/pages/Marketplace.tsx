@@ -175,7 +175,7 @@ const Marketplace = () => {
     const f: MarketplaceFilters = {
       category: selectedCategory,
       searchQuery: debouncedSearch || undefined,
-      sortBy,
+      sortBy: sortBy === "all-videos" ? "recent" : sortBy,
       page,
     };
 
@@ -619,8 +619,11 @@ const Marketplace = () => {
 
             <div className="flex items-center gap-4">
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  {isVideoSection && (
+                    <SelectItem value="all-videos">All videos</SelectItem>
+                  )}
                   <SelectItem value="popular">Most popular</SelectItem>
                   <SelectItem value="recent">Most recent</SelectItem>
                   <SelectItem value="price-low">Price: Low to High</SelectItem>
