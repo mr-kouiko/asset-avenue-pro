@@ -147,7 +147,31 @@ serve(async (req) => {
       videoUrl = signed;
     }
 
-    const watermarkUrl = `${supabaseUrl}/storage/v1/object/public/LOGO%20DE%20WATERMARKING/watermark.png`;
+    // Ensure watermark logo exists at a clean URL in the `previews` bucket
+    // (Render's docker fails to download URLs with spaces/parens reliably).
+    const cleanWatermarkPath = 'visustock-watermark-logo.png';
+    try {
+      const { data: wmExisting } = await supabase.storage.from('previews').download(cleanWatermarkPath);
+      if (!wmExisting || wmExisting.size < 1000) throw new Error('missing');
+    } catch (_) {
+      try {
+        const srcUrl = `${supabaseUrl}/storage/v1/object/public/LOGO%20DE%20WATERMARKING/watermark.png`;
+        const wmResp = await fetch(srcUrl);
+        if (wmResp.ok) {
+          const wmBytes = new Uint8Array(await wmResp.arrayBuffer());
+          await supabase.storage.from('previews').upload(cleanWatermarkPath, wmBytes, {
+            contentType: 'image/png',
+            upsert: true,
+          });
+          console.log('[generate-video-preview] [STAGE:watermark-seeded] copied watermark to previews bucket');
+        } else {
+          console.warn('[generate-video-preview] watermark source fetch failed:', wmResp.status);
+        }
+      } catch (e) {
+        console.warn('[generate-video-preview] watermark seed failed:', (e as Error).message);
+      }
+    }
+    const watermarkUrl = `${supabaseUrl}/storage/v1/object/public/previews/${cleanWatermarkPath}`;
 
     // -------------------------------------------------------------------------
     // 2. Determine output preview path. Cache-check by HEAD on storage.
