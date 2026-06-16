@@ -540,7 +540,7 @@ export const createWebPreviewWithWatermark = async (
 };
 
 // Default watermark logo from Supabase storage
-const DEFAULT_LOGO_URL = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png';
+const DEFAULT_LOGO_URL = 'https://i.imgur.com/UsTmDOl.png';
 
 // Generate video thumbnail by extracting frame at 1 second
 // Returns clean thumbnail WITHOUT watermark - watermark is added by VideoWatermark component

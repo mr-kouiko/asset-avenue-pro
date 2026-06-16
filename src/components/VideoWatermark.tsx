@@ -55,7 +55,7 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
   return (
     <div className={className}>
       <img 
-        src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/LOGO%20DE%20WATERMARKING/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png"
+        src="https://i.imgur.com/UsTmDOl.png"
         alt=""
         className="w-auto h-auto"
         style={getSizeStyle()}

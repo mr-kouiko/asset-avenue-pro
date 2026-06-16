@@ -11,7 +11,7 @@ const path = require('path');
  * Produces: output_prefix_preview_720p_watermarked.mp4 and output_prefix_fullscreen_watermarked.mp4
  */
 
-const LOGO_URL = 'https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/logo%20VisuStock%20%20transparent%20GRAND/Blue%20Modern%20Sound%20Studio%20Logo%20(3).png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dvIFZpc3VTdG9jayAgdHJhbnNwYXJlbnQgR1JBTkQvQmx1ZSBNb2Rlcm4gU291bmQgU3R1ZGlvIExvZ28gKDMpLnBuZyIsImlhdCI6MTc1NTg4OTI5NywiZXhwIjo0OTA5NDg5Mjk3fQ.XKuuCbKXmB3_zfUii6S3nQBwRSV4dUwUsteQzzzOPiQ';
+const LOGO_URL = 'https://i.imgur.com/UsTmDOl.png';
 
 function downloadLogo() {
   const logoPath = '/tmp/visustock_logo.png';
