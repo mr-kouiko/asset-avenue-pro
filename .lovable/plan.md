@@ -1,36 +1,52 @@
-# Why some previews show 0:00
+## Goal
 
-The previews showing `0:00` are **old client-side generated files** from before the server-side FFmpeg pipeline. Two patterns in the DB confirm this:
+Permanently remove the 253 video products whose preview file is a legacy client-generated MediaRecorder output (the ones that show `0:00` in the player). None of them have any sales, so deletion is safe.
 
-- Path shape `/previews/<sub>/previews/<ts>-<rand>_preview.mp4` and `/previews/<sub>/videos/<ts>-<rand>_original_preview_720p.mp4` → produced by `useVideoPreviewGenerator` / `useAutomaticWatermark` (Canvas + MediaRecorder in the browser).
-- Path shape `/previews/<sub>/<fileId>_preview.mp4` → produced by the new server-side `generate-video-preview` / `batch-backfill-previews` (FFmpeg API on Render). These are the healthy ones.
+## Scope (verified via DB query)
 
-### Root cause
-MediaRecorder on Chromium writes a WebM/MP4 container **without a duration in the header** (it's an unfinalized stream). Browsers then display `0:00` until the user seeks to the end. On top of that, some of those recordings were truncated to a single frame when the source tab was throttled, so the file really is ~0 s.
+- 253 `content_files` rows where `file_type` is a video AND `preview_path` does NOT match the canonical server pattern `/previews/<submission_uuid>/<file_uuid>_preview.mp4`.
+- 0 of them are tied to any transaction — safe to hard-delete.
+- All corresponding `content_submissions` rows will be deleted too (1 submission per file).
 
-### Recommendation
-Don't delete the rows — just **re-process** them through the server pipeline. The FFmpeg job rewrites the file at the same canonical path `previews/<submission_id>/<file_id>_preview.mp4`, fixes the duration, and applies the new Imgur watermark. No public URLs need to change because the product page reads `preview_path` from the DB.
+## What gets deleted
 
-## Plan
+For each of the 253 affected submissions:
 
-1. **Detect broken previews** — Add a one-shot SQL helper (or just a manual query) that flags any `content_files` row whose `preview_path` does NOT match the canonical server pattern `…/previews/<submission_id>/<file_id>_preview.mp4`. Set `preview_path = NULL` and `preview_status = NULL` on those rows so the existing backfill picks them up.
+1. `content_files` rows (original + any derivative rows for that submission)
+2. `content_submissions` row
+3. `product_translations` rows (FK to submission)
+4. `content_likes`, `user_favorites`, `reviews`, `content_reports` rows pointing to the submission
+5. `detection_results` rows for the submission
+6. `seller_earnings` — none exist (no sales), so nothing to remove
+7. Storage files in the `previews` / `uploads` buckets at the broken `preview_path` (best-effort cleanup; original `file_path` in `private-videos` left alone unless you want it gone too)
 
-2. **Reuse `batch-backfill-previews`** — No code change needed. Run it from the Admin → Video Backfill panel with `force: false` (default). It will:
-   - Find rows where `preview_path IS NULL` and submission is approved
-   - Re-encode at 720p with the new Imgur watermark
-   - Upload to `previews/<submission_id>/<file_id>_preview.mp4`
-   - Update `preview_path` in the DB
+## How it runs
 
-3. **Surface them in the admin UI** — In `src/components/admin/AdminVideoBackfill.tsx`, add a "Reset legacy previews" button that runs the SQL from step 1 (via a tiny new edge function `reset-legacy-previews` restricted to admins). After clicking, the existing "Run backfill" button regenerates them in batches of 5.
+A new admin-only edge function `purge-broken-video-products`:
 
-4. **Keep the rows** — Do NOT delete the products. The originals in `private-videos` / `content-uploads` are intact; only the preview file is being replaced.
+- Re-runs the same detection query (canonical regex) to build the kill list.
+- Refuses to delete any submission that has a row in `transactions` (defense-in-depth, even though current count is 0).
+- Deletes child rows first, then the submission, inside a single transactional RPC for safety.
+- Returns `{ scanned, deletedSubmissions, deletedFiles, skippedWithSales, storageDeleted }`.
+- Supports `dryRun: true` so you can preview the exact list before pulling the trigger.
 
-## Technical details
+A new section in `AdminVideoBackfill.tsx` ("Step 0 — Purge broken video products") with:
 
-- Canonical regex used to detect legacy previews:
-  `preview_path !~ '/previews/[0-9a-f-]{36}/[0-9a-f-]{36}_preview\.mp4$'`
-- Legacy files in `previews/<sub>/videos/…` and `previews/<sub>/previews/…` can be deleted from storage after the new preview is confirmed (optional cleanup step, can be done later via a storage prefix list).
-- The new edge function `reset-legacy-previews` needs: admin JWT check (same pattern as `batch-backfill-previews`), one `UPDATE content_files SET preview_path = NULL, preview_status = NULL WHERE …` statement, returns the count.
+- "Preview list" button (dry run) → shows count and sample titles
+- "Delete permanently" button (with a confirm dialog typing `DELETE`)
 
-## What you should do
-**Don't get rid of them.** Approve this plan and after I ship it, open Admin → Video Backfill, click "Reset legacy previews", then "Run backfill" until the counter hits 0.
+## Technical notes
+
+- New SQL function `public.delete_submission_cascade(submission_id uuid)` — SECURITY DEFINER, admin-only, deletes child rows in correct FK order and the submission itself.
+- Edge function loops with batches of 25, calls the RPC, also issues `supabase.storage.from('previews').remove([...])` / `uploads` for each broken `preview_path`.
+- No change to backfill or watermark logic.
+- Sitemaps / SEO: deleted submissions will naturally drop out of the next sitemap rebuild; nothing else to do.
+
+## Out of scope
+
+- Original video files in the `private-videos` bucket. Tell me if you want those wiped too (they belong to the same sellers, so they can re-upload cleanly).
+- The audit/backfill flow stays in place for the future — it just won't have anything to fix after the purge.
+
+## Deliverable
+
+After you approve and run it once with dry-run off, the 253 broken products are gone, marketplace no longer shows any `0:00` videos, and the legacy MediaRecorder paths are permanently retired.
