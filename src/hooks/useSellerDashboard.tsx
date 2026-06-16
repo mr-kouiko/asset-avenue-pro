@@ -610,6 +610,14 @@ export const useSellerDashboard = () => {
         // Continue anyway as this is not critical
       }
 
+      // Collect file paths before deleting content_files (so we can also clean uploaded_files)
+      const contentFilePaths = await supabase
+        .from('content_files')
+        .select('file_path, file_name')
+        .eq('submission_id', id);
+      const pathsToClean = (contentFilePaths.data || []).map(f => f.file_path).filter(Boolean) as string[];
+      const namesToClean = (contentFilePaths.data || []).map(f => f.file_name).filter(Boolean) as string[];
+
       // Delete content files
       const { error: filesError } = await supabase
         .from('content_files')
@@ -622,6 +630,29 @@ export const useSellerDashboard = () => {
         // Restore UI if deletion failed
         await fetchSubmissions();
         return false;
+      }
+
+      // Also remove the originating rows from uploaded_files so they don't
+      // reappear as "unsubmitted files" in the seller back office.
+      try {
+        // 1) by draft_id link
+        await supabase.from('uploaded_files').delete()
+          .eq('user_id', user.id)
+          .eq('draft_id', id);
+        // 2) by file_url matching the deleted content_files paths
+        if (pathsToClean.length > 0) {
+          await supabase.from('uploaded_files').delete()
+            .eq('user_id', user.id)
+            .in('file_url', pathsToClean);
+        }
+        // 3) by file_name as a last-resort match
+        if (namesToClean.length > 0) {
+          await supabase.from('uploaded_files').delete()
+            .eq('user_id', user.id)
+            .in('file_name', namesToClean);
+        }
+      } catch (cleanupErr) {
+        console.warn('uploaded_files cleanup warning:', cleanupErr);
       }
 
       console.log('Files deleted successfully');
