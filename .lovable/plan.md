@@ -1,27 +1,38 @@
-## Problème confirmé
+# Why only one premium video appears under "All videos"
 
-Dans `src/components/AudioHeroPlayer.tsx` (fonction `handleDownloadWatermarked`), le watermark est mixé via un `GainNode` à `0.8` pendant que la piste principale joue à pleine échelle (pas de gain appliqué → ~1.0). Résultat : le watermark est noyé sous la musique dans le WAV téléchargé, alors que dans le lecteur web (`useAudioWatermark`) il joue via un `<audio>` séparé à `WATERMARK_RELATIVE_VOLUME * mainVolume = 1.0 * volume`, donc beaucoup plus audible.
+## Root cause (verified in DB)
 
-## Correctif proposé
+I queried `content_submissions` for the video category. Out of ~28 video products:
 
-Dans `handleDownloadWatermarked` :
+- **1** video is `approved` AND has a watermarked MP4 preview (`preview_quality = 'preview_available'`)
+  - `Couple watching a beautiful golden sunset over the mountains`
+- **1** video is `approved` but has NO preview file (`76a3ac54… Active Young Woman Tracking Home Workout`)
+- **~26** videos are stuck in `status = 'processing_preview'` (preview never generated)
 
-1. **Baisser légèrement la piste principale** via un `GainNode` (ex. `0.7`) pour faire de la place au watermark (ducking statique).
-2. **Monter le watermark** à `1.0` (au lieu de `0.8`).
-3. Optionnel : démarrer le premier watermark à `t = 2s` (déjà le cas) et garder l'intervalle de 15s.
+The marketplace RPC `search_marketplace` (and the project's strict rule) requires every video to have a `preview_available` MP4 before being shown — there is intentionally NO fallback to the original file. So the filter is working correctly; the problem is upstream: previews were never produced for those uploads.
 
-Effet : ratio watermark/musique passe de ~0.8 à ~1.43 → watermark clairement audible dans le fichier téléchargé, cohérent avec le rendu du lecteur web.
+The one `approved`-without-preview row is a separate inconsistency — the DB trigger that forces video status to `processing_preview` until a preview exists didn't run on that legacy row.
 
-Aucun autre fichier modifié, aucune logique métier touchée, pas de changement DB.
+## Fix plan
 
-## Détails techniques
+### 1. Backfill missing video previews (primary fix)
+Run the existing server-side FFmpeg backfill so the ~26 stuck videos get their 720p watermarked MP4 preview generated. Once each preview lands, the existing DB trigger will auto-promote the submission to `approved` and it will appear in the marketplace.
 
-```ts
-// Main source avec gain réduit
-const mainGain = offlineContext.createGain();
-mainGain.gain.value = 0.7;
-mainSource.connect(mainGain).connect(offlineContext.destination);
+- Use the admin panel at `AdminVideoBackfill` (component already exists) to enqueue all `processing_preview` videos, OR
+- Trigger the Dockerized FFmpeg API endpoint described in `mem://architecture/video-preview-backfill-system` for every stuck submission id.
 
-// Watermark à volume plein
-gainNode.gain.value = 1.0;
-```
+### 2. Re-sync the one orphan `approved` row
+Submission `76a3ac54-5829-48bf-9fad-e6c2d8c80805` is `approved` but has no preview. Two options — pick one:
+- (a) Demote it back to `processing_preview` and include it in the backfill run, then let the trigger promote it again when the preview is ready. (Recommended — keeps the "no preview = not visible" guarantee intact.)
+- (b) Leave it hidden by the RPC (current behavior) until a preview is generated.
+
+### 3. No code change to filtering
+I will NOT relax the "video requires MP4 preview" rule — it's a Core project constraint and the right behavior. The dropdown is working; the catalog just needs its previews built.
+
+## Deliverable for the user
+A short message in chat confirming the backfill was triggered (or instructions to click the backfill button in the admin dashboard), plus the expected outcome: once previews finish generating, the "All videos" view will show all ~27 premium videos before the Pexels free layer.
+
+## Technical notes
+- Trigger handling status flips: see migration history around `processing_preview` → `approved`.
+- Backfill infra: `docker/ffmpeg-api/` (server-side) and `src/components/admin/AdminVideoBackfill.tsx` (UI).
+- No frontend or RPC edits are part of this plan.
