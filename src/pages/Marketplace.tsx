@@ -175,7 +175,7 @@ const Marketplace = () => {
     const f: MarketplaceFilters = {
       category: selectedCategory,
       searchQuery: debouncedSearch || undefined,
-      sortBy,
+      sortBy: sortBy === "all-videos" ? "recent" : sortBy,
       page,
     };
 
