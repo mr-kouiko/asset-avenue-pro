@@ -51,18 +51,16 @@ serve(async (req) => {
       );
     }
 
-    // Get the watermark logo
-    const { data: logoData, error: logoError } = await supabase.storage
-      .from('logo VisuStock  transparent GRAND')
-      .download('Blue Modern Sound Studio Logo (3).png');
-
-    if (logoError) {
-      console.error('Failed to download watermark logo:', logoError);
+    // Get the watermark logo (hosted on Imgur)
+    const logoResp = await fetch('https://i.imgur.com/UsTmDOl.png');
+    if (!logoResp.ok) {
+      console.error('Failed to download watermark logo:', logoResp.status);
       return new Response(
-        JSON.stringify({ error: 'Failed to download watermark logo', details: logoError.message }),
+        JSON.stringify({ error: 'Failed to download watermark logo', details: `HTTP ${logoResp.status}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
+    const logoData = new Blob([await logoResp.arrayBuffer()], { type: 'image/png' });
 
     // For now, we'll implement a placeholder response
     // In production, you would use FFmpeg to apply watermark to video
