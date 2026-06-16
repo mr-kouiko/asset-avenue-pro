@@ -624,6 +624,9 @@ const Marketplace = () => {
                   {isVideoSection && (
                     <SelectItem value="all-videos">All videos</SelectItem>
                   )}
+                  {isPhotoSection && (
+                    <SelectItem value="all-photos">All photos</SelectItem>
+                  )}
                   <SelectItem value="popular">Most popular</SelectItem>
                   <SelectItem value="recent">Most recent</SelectItem>
                   <SelectItem value="price-low">Price: Low to High</SelectItem>
