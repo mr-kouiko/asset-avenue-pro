@@ -175,7 +175,7 @@ const Marketplace = () => {
     const f: MarketplaceFilters = {
       category: selectedCategory,
       searchQuery: debouncedSearch || undefined,
-      sortBy: sortBy === "all-videos" ? "recent" : sortBy,
+      sortBy: sortBy === "all-videos" || sortBy === "all-photos" ? "recent" : sortBy,
       page,
     };
 
@@ -623,6 +623,9 @@ const Marketplace = () => {
                 <SelectContent>
                   {isVideoSection && (
                     <SelectItem value="all-videos">All videos</SelectItem>
+                  )}
+                  {isPhotoSection && (
+                    <SelectItem value="all-photos">All photos</SelectItem>
                   )}
                   <SelectItem value="popular">Most popular</SelectItem>
                   <SelectItem value="recent">Most recent</SelectItem>
