@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { addWatermarkToVideo } from '@/utils/watermark';
+
 
 export interface UploadProgress {
   fileId: string;
