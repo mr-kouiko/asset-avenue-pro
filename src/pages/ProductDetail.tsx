@@ -659,12 +659,12 @@ const ProductDetailInner = () => {
       </div>
 
 
-            {/* Download Preview Button - Prominent for video/audio */}
-            {(product.type === 'video' || product.type === 'vfx' || isAudioByExtension) && product.previewUrl && product.hasWatermarkedPreview && (
+            {/* Download Preview Button - Audio only (videos use on-site CSS watermark) */}
+            {isAudioByExtension && product.previewUrl && product.hasWatermarkedPreview && (
               <DownloadPreviewButton 
                 previewUrl={product.previewUrl} 
                 title={product.title} 
-                type={product.type === 'video' || product.type === 'vfx' ? 'video' : 'audio'}
+                type="audio"
               />
             )}
 
