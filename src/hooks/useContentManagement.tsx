@@ -102,11 +102,6 @@ export const useContentManagement = () => {
 
         // Then create the associated file entry
         const isVideo = file.type.startsWith('video/');
-
-        // HARD GATE: video must have a real MP4 preview before publishing.
-        if (isVideo && (!file.previewUrl || !/\.mp4(\?|$)/i.test(file.previewUrl))) {
-          throw new Error(`Video preview not ready for ${file.name} — cannot publish. Retry the upload to regenerate the MP4 preview.`);
-        }
         const { data: fileData, error: fileError } = await supabase
           .from('content_files')
           .insert({
