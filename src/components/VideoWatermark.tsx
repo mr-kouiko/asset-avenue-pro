@@ -9,42 +9,39 @@ interface VideoWatermarkProps {
 }
 
 /**
- * Image-based diagonal tiled watermark overlay using the VisuStock logo.
- * Sits absolutely positioned over a media element. No re-encoding required.
+ * Large horizontal VisuStock logo centered over the media.
  * Pointer-events disabled so it never blocks playback controls.
  */
 export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
-  className = 'absolute inset-0 z-20 pointer-events-none overflow-hidden',
+  className = 'absolute inset-0 z-20 pointer-events-none flex items-center justify-center overflow-hidden',
   size = 'normal',
 }) => {
-  const { tile, opacity } = useMemo(() => {
+  const { widthPct, opacity } = useMemo(() => {
     switch (size) {
       case 'thumbnail':
-        return { tile: 140, opacity: 0.32 };
+        return { widthPct: 70, opacity: 0.55 };
       case 'large':
-        return { tile: 260, opacity: 0.26 };
+        return { widthPct: 55, opacity: 0.45 };
       case 'normal':
       default:
-        return { tile: 200, opacity: 0.28 };
+        return { widthPct: 60, opacity: 0.5 };
     }
   }, [size]);
 
   return (
     <div className={className} aria-hidden="true">
-      <div
-        className="absolute"
+      <img
+        src={watermarkLogo.url}
+        alt=""
+        draggable={false}
         style={{
-          // Oversize + center so rotation never reveals empty edges.
-          top: '-50%',
-          left: '-50%',
-          width: '200%',
-          height: '200%',
-          backgroundImage: `url("${watermarkLogo.url}")`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: `${tile}px ${tile}px`,
-          transform: 'rotate(-28deg)',
+          width: `${widthPct}%`,
+          maxWidth: '100%',
+          height: 'auto',
           opacity,
           mixBlendMode: 'overlay',
+          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          userSelect: 'none',
         }}
       />
     </div>
