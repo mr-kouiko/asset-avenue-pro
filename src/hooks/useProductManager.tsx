@@ -230,21 +230,18 @@ export const useProductManager = () => {
         console.log('🎬 VFX product with video preview detected');
       }
 
-      // HARD GATE: video products must have a real MP4 preview before publishing.
-      if (isVideo) {
-        const pv = submission.file.previewUrl;
-        if (!pv || !/\.mp4(\?|$)/i.test(pv)) {
-          throw new Error('Video preview not ready — cannot publish. Please retry the upload so a watermarked MP4 preview is generated.');
-        }
-      }
+      // Videos no longer use the old server-side MP4 preview pipeline.
+      // They publish with the original MP4 and are protected at playback time
+      // by the CSS watermark overlay in the video player.
+      const previewPath = isVideo ? null : submission.file.previewUrl || null;
 
       // Best-effort: detect intrinsic pixel dimensions so orientation filters
       // (vertical / horizontal / square) work from real aspect ratio.
       let detectedWidth: number | undefined;
       let detectedHeight: number | undefined;
       try {
-        if (isVideo && submission.file.previewUrl) {
-          const d = await getVideoDimensions(submission.file.previewUrl);
+        if (isVideo && submission.file.url) {
+          const d = await getVideoDimensions(submission.file.url);
           if (d) { detectedWidth = d.width; detectedHeight = d.height; }
         } else if (fileType === 'image' && (submission.file.previewUrl || submission.file.url)) {
           const d = await getImageDimensions(submission.file.previewUrl || submission.file.url);
@@ -283,7 +280,7 @@ export const useProductManager = () => {
             file_format: submission.file.type,
             file_size: submission.file.size,
             file_hash: submission.file.fileHash || null,
-            preview_path: submission.file.previewUrl,
+            preview_path: previewPath,
             thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
             metadata: fileMetadata,
           })
@@ -303,7 +300,7 @@ export const useProductManager = () => {
             file_size: submission.file.size,
             file_hash: submission.file.fileHash || null,
             is_original: true,
-            preview_path: submission.file.previewUrl,
+            preview_path: previewPath,
             thumbnail_path: (isVideo || isPDF) ? submission.file.thumbnailUrl : submission.file.previewUrl,
             metadata: fileMetadata,
           });
