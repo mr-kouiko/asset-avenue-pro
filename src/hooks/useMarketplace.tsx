@@ -131,8 +131,7 @@ function processMarketplaceData(
         else if (fileType === 'document' || fileFormat === 'application/pdf') contentType = 'ebook';
       }
 
-      // Media URL — STRICT: video playback requires an MP4 watermarked preview_path.
-      // No GIF/WebP fallback. No fallback to original.
+      // Media URL — stream the original MP4; player overlays a CSS watermark.
       let mediaUrl: string | undefined;
       if (contentType === 'video') {
         const isMp4 = (p?: string) => !!p && /\.mp4($|\?)/i.test(p);
@@ -141,8 +140,16 @@ function processMarketplaceData(
           mediaUrl = mp4File.preview_path.startsWith('http')
             ? mp4File.preview_path
             : buildPublicUrlCached('previews', mp4File.preview_path);
+        } else {
+          const originalVideo =
+            files.find((f: any) => f.is_original && f.file_path) ||
+            files.find((f: any) => f.file_path);
+          if (originalVideo?.file_path) {
+            mediaUrl = originalVideo.file_path.startsWith('http')
+              ? originalVideo.file_path
+              : buildPublicUrlCached('uploads', originalVideo.file_path);
+          }
         }
-        // No fallback: no MP4 preview means no playable media (UI will show static thumbnail).
       } else if (contentType === 'audio') {
         // Prefer watermarked preview_path; fall back to original file_path for legacy items.
         const audioPreview = files.find((f: any) => f.preview_path);

@@ -429,24 +429,30 @@ export const useProductDetail = (productId: string) => {
           }
         }
 
-        // For video files: STRICT — only the watermarked preview_path is served. No fallback to original file_path.
+        // For video files: stream the original MP4 directly. The player adds a CSS
+        // watermark overlay. Prefer preview_path when present (legacy), else fall back
+        // to the original file_path from the uploads bucket.
         if (contentType === 'video' && filesList.length > 0) {
           const videoFileWithPreview = filesList.find((f: any) => f.preview_path);
+          const resolve = (path: string, bucket: 'previews' | 'uploads') => {
+            if (path.startsWith('http')) return path;
+            const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+            return data.publicUrl;
+          };
           if (videoFileWithPreview?.preview_path) {
-            console.log('🎬 Using preview_path for video playback:', videoFileWithPreview.preview_path);
-            if (videoFileWithPreview.preview_path.startsWith('http')) {
-              previewUrl = videoFileWithPreview.preview_path;
-            } else {
-              const { data: publicData } = supabase.storage
-                .from('previews')
-                .getPublicUrl(videoFileWithPreview.preview_path);
-              previewUrl = publicData.publicUrl;
-            }
+            previewUrl = resolve(videoFileWithPreview.preview_path, 'previews');
           } else {
-            console.warn('⛔ Video has no preview_path — playback blocked (no fallback to original).');
-            previewUrl = undefined;
+            const originalVideo =
+              filesList.find((f: any) => f.is_original && f.file_path) ||
+              filesList.find((f: any) => f.file_path);
+            if (originalVideo?.file_path) {
+              previewUrl = resolve(originalVideo.file_path, 'uploads');
+            } else {
+              previewUrl = undefined;
+            }
           }
         }
+
 
         // Check if any file has isAiGenerated flag in metadata
         const isAiGenerated = filesList.some((file: any) => 
