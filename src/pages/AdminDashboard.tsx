@@ -41,8 +41,6 @@ import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
 import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
 import { AdminProductTranslations } from "@/components/admin/AdminProductTranslations";
 
-import { AdminVideoBackfill } from "@/components/admin/AdminVideoBackfill";
-import { AdminFailedPreviews } from "@/components/admin/AdminFailedPreviews";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -523,12 +521,6 @@ const AdminDashboard = () => {
           {/* Integrity Scanner Tab */}
           <TabsContent value="integrity">
             <AdminIntegrityPanel />
-            <div className="mt-6">
-              <AdminVideoBackfill />
-            </div>
-            <div className="mt-6">
-              <AdminFailedPreviews />
-            </div>
             <div className="mt-6">
               <AdminProductTranslations />
             </div>

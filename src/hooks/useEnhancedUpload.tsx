@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { addWatermarkToVideo } from '@/utils/watermark';
+
 
 export interface UploadProgress {
   fileId: string;
@@ -552,137 +552,10 @@ export function useEnhancedUpload(options: UseEnhancedUploadOptions = {}) {
       if (mimeType.startsWith('image/')) {
         thumbnailUrl = await generateImageThumbnail(file);
       } else if (mimeType.startsWith('video/')) {
-        // Generate client-side thumbnail as immediate fallback
+        // Client-side thumbnail only — no server-side preview/watermark pipeline.
+        // The original MP4 is streamed back and protected by a CSS overlay in the player.
         thumbnailUrl = await generateVideoThumbnail(file);
-        
-        // Generate watermarked video preview client-side
-        updateProgress(id, { status: 'processing', progress: 92 });
-        try {
-          console.log('[useEnhancedUpload] Generating client-side watermarked video preview...');
-          
-          // Request a signed URL for the uploaded file (private bucket)
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const userId = session.user.id;
-            
-            // Extract storage path from the upload URL
-            const urlParts = new URL(url);
-            const pathname = urlParts.pathname;
-            let storagePath: string | null = null;
-            const patterns = [
-              '/storage/v1/object/public/uploads/',
-              '/storage/v1/object/public/content-uploads/',
-            ];
-            for (const pattern of patterns) {
-              if (pathname.includes(pattern)) {
-                storagePath = pathname.split(pattern)[1];
-                break;
-              }
-            }
-            
-            // Get a signed URL for the private original
-            let videoSourceUrl = url;
-            if (storagePath) {
-              try {
-                const { data: signedData, error: signedError } = await supabase.functions.invoke('generate-signed-url', {
-                  body: { storagePath, bucket: 'content-uploads', expiresIn: 900 },
-                });
-                if (!signedError && signedData?.signedUrl) {
-                  videoSourceUrl = signedData.signedUrl;
-                  console.log('[useEnhancedUpload] Got signed URL for preview generation');
-                }
-              } catch (signedUrlErr) {
-                console.warn('[useEnhancedUpload] Signed URL request failed, using original URL:', signedUrlErr);
-              }
-            }
-            
-            const watermarkedBlob = await addWatermarkToVideo(file, { opacity: 0.6 });
-            
-            // Upload watermarked preview to the PUBLIC previews bucket
-            const previewFileName = `${userId}/previews/${id}_watermarked_preview.webm`;
-            
-            updateProgress(id, { status: 'processing', progress: 96 });
-            
-            const { data: previewData, error: previewUploadError } = await supabase.storage
-              .from('previews')
-              .upload(previewFileName, watermarkedBlob, {
-                contentType: 'video/webm',
-                cacheControl: '3600',
-                upsert: true,
-              });
-            
-            if (previewUploadError) {
-              console.warn('[useEnhancedUpload] Failed to upload watermarked preview:', previewUploadError);
-            } else if (previewData) {
-              const { data: previewUrlData } = supabase.storage
-                .from('previews')
-                .getPublicUrl(previewData.path);
-              
-              previewUrl = previewUrlData.publicUrl;
-              console.log('[useEnhancedUpload] Watermarked preview uploaded to previews bucket:', previewUrl);
-              
-              // Update content_files record with preview_path
-              if (storagePath) {
-                supabase
-                  .from('content_files')
-                  .update({ preview_path: previewUrl })
-                  .or(`file_path.eq.${url},file_path.ilike.%${storagePath}`)
-                  .select('id')
-                  .then(({ data: updatedFiles, error: updateError }) => {
-                    if (updateError) {
-                      console.warn('[useEnhancedUpload] Failed to update content_files preview_path:', updateError);
-                    } else if (updatedFiles && updatedFiles.length > 0) {
-                      console.log(`[useEnhancedUpload] Updated ${updatedFiles.length} content_files with preview_path`);
-                    }
-                  });
-              }
-            }
-          }
-        } catch (previewError) {
-          console.warn('[useEnhancedUpload] Client-side watermarked preview generation failed:', previewError);
-          // Non-blocking - continue with upload completion
-        }
-        
-        // Still trigger server-side thumbnail generation
-        try {
-          const urlParts = new URL(url);
-          const pathname = urlParts.pathname;
-          let storagePath: string | null = null;
-          const patterns = [
-            '/storage/v1/object/public/uploads/',
-            '/storage/v1/object/public/content-uploads/',
-          ];
-          for (const pattern of patterns) {
-            if (pathname.includes(pattern)) {
-              storagePath = pathname.split(pattern)[1];
-              break;
-            }
-          }
-          
-          if (storagePath) {
-            const pathParts = storagePath.split('/');
-            const userId = pathParts[0] || 'unknown';
-            const thumbnailPath = `${userId}/thumbnails/${id}_smart_thumbnail.jpg`;
-            
-            supabase.functions.invoke('generate-video-thumbnail', {
-              body: { 
-                videoPath: storagePath,
-                outputPath: thumbnailPath,
-                smartDetection: true
-              },
-            }).then(({ data, error }) => {
-              if (error) {
-                console.warn('[useEnhancedUpload] Smart thumbnail generation failed:', error);
-              } else if (data?.thumbnailUrl) {
-                console.log('[useEnhancedUpload] Smart thumbnail generated:', data.thumbnailUrl);
-              }
-            }).catch(err => {
-              console.warn('[useEnhancedUpload] Smart thumbnail request failed:', err);
-            });
-          }
-        } catch (thumbError) {
-          console.warn('[useEnhancedUpload] Failed to trigger thumbnail generation:', thumbError);
-        }
+        updateProgress(id, { status: 'processing', progress: 98 });
       }
 
       updateProgress(id, { status: 'complete', progress: 100 });

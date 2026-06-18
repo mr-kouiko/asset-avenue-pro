@@ -6,6 +6,9 @@ interface UseWatermarkedPreviewProps {
   enabled?: boolean;
 }
 
+/**
+ * Image-only watermarked preview generator (videos use a CSS overlay in the player).
+ */
 export const useWatermarkedPreview = ({ imageUrl, enabled = false }: UseWatermarkedPreviewProps) => {
   const [watermarkedUrl, setWatermarkedUrl] = useState<string | undefined>(imageUrl);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,38 +22,37 @@ export const useWatermarkedPreview = ({ imageUrl, enabled = false }: UseWatermar
       return;
     }
 
-    const generateWatermarkedPreview = async () => {
+    let cancelled = false;
+    const run = async () => {
       try {
         setIsProcessing(true);
         setError(null);
-        
-        // Fetch the image file
         const response = await fetch(imageUrl);
         const blob = await response.blob();
+        if (!blob.type.startsWith('image/')) {
+          setWatermarkedUrl(imageUrl);
+          return;
+        }
         const file = new File([blob], 'preview.jpg', { type: blob.type });
-        
-        // Generate watermarked preview
-        const watermarkedBlob = await createWebPreviewWithWatermark(file, {
+        const wmBlob = await createWebPreviewWithWatermark(file, {
           opacity: 0.3,
           spacing: 150,
-          logoPath: 'https://i.imgur.com/UsTmDOl.png'
+          logoPath: 'https://i.imgur.com/UsTmDOl.png',
         });
-        
-        const watermarkedUrl = URL.createObjectURL(watermarkedBlob);
-        setWatermarkedUrl(watermarkedUrl);
+        if (cancelled) return;
+        setWatermarkedUrl(URL.createObjectURL(wmBlob));
       } catch (err) {
         console.error('Failed to generate watermarked preview:', err);
         setError(err instanceof Error ? err.message : 'Failed to generate preview');
-        setWatermarkedUrl(imageUrl); // Fallback to original
+        setWatermarkedUrl(imageUrl);
       } finally {
-        setIsProcessing(false);
+        if (!cancelled) setIsProcessing(false);
       }
     };
-
-    generateWatermarkedPreview();
+    run();
+    return () => { cancelled = true; };
   }, [imageUrl, enabled]);
 
-  // Cleanup object URL when component unmounts
   useEffect(() => {
     return () => {
       if (watermarkedUrl && watermarkedUrl !== imageUrl && watermarkedUrl.startsWith('blob:')) {
@@ -59,9 +61,5 @@ export const useWatermarkedPreview = ({ imageUrl, enabled = false }: UseWatermar
     };
   }, [watermarkedUrl, imageUrl]);
 
-  return {
-    watermarkedUrl,
-    isProcessing,
-    error
-  };
+  return { watermarkedUrl, isProcessing, error };
 };

@@ -47,8 +47,6 @@ verify_jwt = false
 [functions.chunked-upload]
 verify_jwt = true
 
-[functions.watermark-video]
-verify_jwt = true
 
 [functions.r2-upload]
 verify_jwt = true
@@ -125,14 +123,6 @@ verify_jwt = false
 [functions.pay-with-credits]
 verify_jwt = true
 
-[functions.generate-video-preview]
-verify_jwt = true
-
-[functions.generate-video-thumbnail]
-verify_jwt = true
-
-[functions.backfill-video-thumbnails]
-verify_jwt = true
 
 
 [functions.image-to-video]
@@ -180,8 +170,6 @@ verify_jwt = false
 [functions.generate-pexels-seo]
 verify_jwt = false
 
-[functions.batch-backfill-previews]
-verify_jwt = false
 
 [functions.generate-veo-video]
 verify_jwt = true
@@ -196,5 +184,3 @@ verify_jwt = true
 [functions.auto-translate-product]
 verify_jwt = false
 
-[functions.probe-ffmpeg-api]
-verify_jwt = false
