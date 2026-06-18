@@ -1,65 +1,63 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface VideoWatermarkProps {
   className?: string;
   size?: 'normal' | 'large' | 'thumbnail';
+  text?: string;
 }
 
-export const VideoWatermark: React.FC<VideoWatermarkProps> = ({ 
-  className = "absolute inset-0 z-20 pointer-events-none flex items-center justify-center",
-  size = 'normal'
+/**
+ * CSS-only diagonal repeated watermark overlay.
+ * Sits absolutely positioned over a media element. No re-encoding required.
+ * Pointer-events disabled so it never blocks playback controls.
+ */
+export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
+  className = 'absolute inset-0 z-20 pointer-events-none overflow-hidden',
+  size = 'normal',
+  text = 'VISUSTOCK',
 }) => {
-  // Define sizes for different contexts
-  // Tight black drop shadow (80% opacity, small blur) creates a border effect for white backgrounds
-  const tightShadow = 'drop-shadow(0 1px 1px rgba(0,0,0,0.2)) drop-shadow(0 -1px 1px rgba(0,0,0,0.2)) drop-shadow(1px 0 1px rgba(0,0,0,0.2)) drop-shadow(-1px 0 1px rgba(0,0,0,0.2))';
-  
-  const getSizeStyle = () => {
+  const { fontSize, tileW, tileH, opacity } = useMemo(() => {
     switch (size) {
       case 'thumbnail':
-        // 3x size for marketplace thumbnails - covers large portion
-        return {
-          width: '60%',
-          height: 'auto',
-          maxWidth: '80%',
-          maxHeight: '80%',
-          objectFit: 'contain' as const,
-          filter: `${tightShadow} drop-shadow(0 4px 12px rgba(0,0,0,0.45))`,
-          opacity: 1
-        };
+        return { fontSize: 22, tileW: 220, tileH: 140, opacity: 0.32 };
       case 'large':
-        // 2x size for enlarged previews
-        return {
-          width: '40%',
-          height: 'auto',
-          maxWidth: '60%',
-          maxHeight: '60%',
-          objectFit: 'contain' as const,
-          filter: `${tightShadow} drop-shadow(0 3px 10px rgba(0,0,0,0.35))`,
-          opacity: 1
-        };
+        return { fontSize: 32, tileW: 320, tileH: 200, opacity: 0.28 };
       case 'normal':
       default:
-        // Normal size for detailed view and fullscreen
-        return {
-          width: '20%',
-          height: 'auto',
-          maxWidth: '40%',
-          maxHeight: '40%',
-          objectFit: 'contain' as const,
-          filter: `${tightShadow} drop-shadow(0 2px 8px rgba(0,0,0,0.28))`,
-          opacity: 0.96
-        };
+        return { fontSize: 28, tileW: 280, tileH: 180, opacity: 0.26 };
     }
-  };
+  }, [size]);
+
+  // Inline SVG tile, repeated via background-image. Rotated text + soft shadow.
+  const svg = useMemo(() => {
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    return `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${tileW}' height='${tileH}'>
+        <g transform='rotate(-28 ${tileW / 2} ${tileH / 2})'>
+          <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
+                font-family='system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+                font-weight='700' font-size='${fontSize}'
+                fill='white' fill-opacity='${opacity}'
+                stroke='black' stroke-opacity='${opacity * 0.55}' stroke-width='0.6'
+                letter-spacing='2'>${escaped}</text>
+        </g>
+      </svg>`;
+  }, [text, tileW, tileH, fontSize, opacity]);
+
+  const dataUrl = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
 
   return (
-    <div className={className}>
-      <img 
-        src="https://i.imgur.com/UsTmDOl.png"
-        alt=""
-        className="w-auto h-auto"
-        style={getSizeStyle()}
-      />
-    </div>
+    <div
+      className={className}
+      style={{
+        backgroundImage: dataUrl,
+        backgroundRepeat: 'repeat',
+        backgroundSize: `${tileW}px ${tileH}px`,
+        mixBlendMode: 'overlay',
+      }}
+      aria-hidden="true"
+    />
   );
 };
+
+export default VideoWatermark;

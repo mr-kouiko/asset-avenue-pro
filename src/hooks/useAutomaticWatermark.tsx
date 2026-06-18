@@ -145,54 +145,7 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
     return publicUrl;
   };
 
-  const processVideoWatermark = async (
-    file: File,
-    videoMeta: any,
-    userId: string,
-    fileId: string
-  ): Promise<string> => {
-    console.log(`Processing video: ${file.name}, MIME type: ${file.type}`);
-    
-    // Only MP4 videos are accepted
-    const supportedVideoFormats = ['video/mp4'];
-    const videoMimeType = file.type || detectMimeType(file, file);
-    
-    if (!supportedVideoFormats.includes(videoMimeType)) {
-      console.warn(`Unsupported video format: ${videoMimeType}, uploading as original`);
-    }
-
-    // Upload original video with correct MIME type
-    const videoExtension = file.name.split('.').pop()?.toLowerCase();
-    const videoPath = `${userId}/videos/${fileId}_original.${videoExtension}`;
-    
-    // Force the correct video MIME type
-    const originalUrl = await uploadToSupabase(file, videoPath, 'uploads', file, videoMimeType);
-
-    // Call edge function for server-side video watermarking
-    const outputPath = `${userId}/videos/${fileId}_watermarked.${videoExtension}`;
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('watermark-video', {
-        body: {
-          videoPath: videoPath,
-          watermarkSize: videoMeta.watermarkSize,
-          outputPath,
-          mimeType: videoMimeType
-        }
-      });
-
-      if (error) {
-        console.warn('Video watermarking service not yet fully implemented:', error);
-        return originalUrl;
-      }
-
-      console.log('Video watermark processing result:', data);
-      return originalUrl; // Return original until full implementation
-    } catch (error) {
-      console.error('Error calling video watermark service:', error);
-      return originalUrl;
-    }
-  };
+  // Video watermarking is performed via CSS overlay in the player — no server-side encoding.
 
   const processFiles = useCallback(async (files: File[], onProgress?: (fileId: string, progress: number) => void): Promise<ProcessedFile[]> => {
     setIsProcessing(true);
@@ -287,48 +240,14 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
               console.log(`📦 Archive file detected: ${file.name} - thumbnail will be set via Product Management`);
               thumbnailUrl = watermarkedUrl!; // Use file URL as placeholder
             }
-            // For video files, try server-side thumbnail generation first (more reliable for .mov)
-            else if (file.type.startsWith('video/')) {
-              console.log(`🎬 Generating server-side thumbnail for video: ${file.name}`);
-              
-              try {
-                const { data, error } = await supabase.functions.invoke('generate-video-thumbnail', {
-                  body: {
-                    videoPath: filePath,
-                    outputPath: `${user.id}/thumbnails/${fileId}_thumbnail.jpg`,
-                    timeOffset: 1
-                  }
-                });
-
-                if (error) throw error;
-                if (data?.thumbnailUrl) {
-                  thumbnailUrl = data.thumbnailUrl;
-                  console.log(`✅ Server-side thumbnail generated: ${thumbnailUrl}`);
-                } else {
-                  throw new Error('No thumbnail URL returned from server');
-                }
-              } catch (serverError) {
-                console.warn('Server-side thumbnail failed, trying browser fallback:', serverError);
-                // Fall through to browser-based thumbnail generation
-                const thumbnailBlob = await generateThumbnail(file, {
-                  maxSize: 400,
-                  quality: 0.8,
-                  format: 'image/jpeg'
-                });
-                
-                const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.jpg`;
-                thumbnailUrl = await uploadToSupabase(thumbnailBlob, thumbnailPath, 'thumbnails', undefined, 'image/jpeg', (progress) => {
-                  onProgress?.(fileId, 60 + progress * 0.2);
-                });
-              }
-            } else {
-              // For non-video/non-archive files, use browser-based thumbnail generation
+            // Browser-based thumbnail generation for all media (videos included).
+            else {
               const thumbnailBlob = await generateThumbnail(file, {
                 maxSize: 400,
                 quality: 0.8,
                 format: 'image/jpeg'
               });
-              
+
               const thumbnailPath = `${user.id}/thumbnails/${fileId}_thumbnail.jpg`;
               thumbnailUrl = await uploadToSupabase(thumbnailBlob, thumbnailPath, 'thumbnails', undefined, 'image/jpeg', (progress) => {
                 onProgress?.(fileId, 60 + progress * 0.2);
@@ -363,29 +282,10 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
             }
           }
           
-          // Generate and upload preview for videos (watermarked MP4).
-          // Server-side ONLY — client MediaRecorder produces inconsistent webm
-          // and the marketplace strictly requires MP4. Failure HARD-BLOCKS publish.
-          if (file.type.startsWith('video/')) {
-            console.log(`🎬 Requesting server-side MP4 preview for: ${file.name}`);
+          // Videos: no server-side preview is generated. The original MP4 is streamed
+          // directly and protected by a CSS watermark overlay in the player.
 
-            const { data, error } = await supabase.functions.invoke('generate-video-preview', {
-              body: { videoPath: filePath, resolution: 720 },
-            });
-
-            if (error) {
-              throw new Error(`Preview generation failed: ${error.message || 'edge function error'}`);
-            }
-            if (!data?.success || !data?.previewUrl) {
-              throw new Error(`Preview generation failed: ${data?.error || data?.failureReason || 'no preview URL returned'}`);
-            }
-            if (!/\.mp4(\?|$)/i.test(data.previewUrl)) {
-              throw new Error(`Preview generation produced non-MP4 output: ${data.previewUrl}`);
-            }
-
-            previewUrl = data.previewUrl;
-            console.log(`✅ Video preview ready: ${previewUrl} (cached=${data.cached}, ffmpegMs=${data.ffmpegTimeMs})`);
-          }
+          
           
           console.log(`✅ File processed with watermarked thumbnail: ${watermarkedUrl}`);
 

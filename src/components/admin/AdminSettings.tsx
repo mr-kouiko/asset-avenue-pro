@@ -87,23 +87,7 @@ export const AdminSettings = () => {
   };
 
   const regenerateThumbnails = async () => {
-    try {
-      toast.loading('Génération des miniatures en cours...');
-      const { data, error } = await supabase.functions.invoke('backfill-video-thumbnails', {
-        body: { limit: 200, offset: 0, skipExisting: false }
-      });
-      
-      if (error) throw error;
-      
-      toast.success(data.message || `${data.successful} miniature(s) générée(s) avec succès`);
-      
-      if (data.failed > 0) {
-        toast.warning(`${data.failed} échec(s) de génération`);
-      }
-    } catch (error) {
-      console.error('Error regenerating thumbnails:', error);
-      toast.error('Erreur lors de la génération des miniatures');
-    }
+    toast.info('Server-side video thumbnail regeneration has been removed. Thumbnails are generated in the browser at upload time.');
   };
 
   return (
