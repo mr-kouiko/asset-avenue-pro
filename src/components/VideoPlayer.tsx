@@ -377,7 +377,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   }
 
   return (
-    <div ref={containerRef} className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'}`}>
+    <div ref={containerRef} className={`${className} relative bg-black rounded-lg border border-border overflow-hidden ${compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[200px]' : 'min-h-[140px]'}`}>
       {/* Media element with typed <source> (helps mobile) */}
       {type === 'video' ? (
         <video
@@ -389,7 +389,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           muted={isMuted}
           playsInline={deviceInfo.isMobile}
           crossOrigin="anonymous"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           style={{ display: isLoading || hasError ? 'none' : 'block' }}
           controls={false}
         >
