@@ -40,7 +40,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
 
   return (
     <div
-      className={`${className} relative overflow-hidden bg-stock-gray`}
+      className={`${className} relative overflow-hidden bg-black`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -49,7 +49,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
         <LazyImage
           src={thumbnail}
           alt={title}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${hovered && showVideo ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-200 ${hovered && showVideo ? 'opacity-0' : 'opacity-100'}`}
         />
       )}
 
@@ -65,7 +65,7 @@ export const WatermarkedVideoThumbnail: React.FC<WatermarkedVideoThumbnailProps>
           crossOrigin="anonymous"
           onCanPlay={() => setCanPlay(true)}
           onContextMenu={(e) => e.preventDefault()}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${hovered ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-200 ${hovered ? 'opacity-100' : 'opacity-0'}`}
         />
       )}
 

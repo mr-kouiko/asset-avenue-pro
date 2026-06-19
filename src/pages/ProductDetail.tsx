@@ -240,6 +240,33 @@ const ProductDetailInner = () => {
     return () => { cancelled = true; };
   }, [isVideoLikeProduct, product?.id, product?.previewUrl]);
 
+  // Detect intrinsic video aspect ratio so the player container fits the source
+  // (no cropping, no forced 16:9). Defaults to 16/9 until known.
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+  useEffect(() => {
+    setVideoAspectRatio(null);
+    const src = product?.previewUrl || fallbackProduct?.previewUrl;
+    const isVid = (product?.type === 'video') || (fallbackProduct?.type === 'video') ||
+      (product?.type === 'vfx' && !!product?.previewUrl?.toLowerCase().includes('.mp4'));
+    if (!isVid || !src) return;
+    let cancelled = false;
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.crossOrigin = 'anonymous';
+    v.muted = true;
+    const onMeta = () => {
+      if (!cancelled && v.videoWidth > 0 && v.videoHeight > 0) {
+        setVideoAspectRatio(v.videoWidth / v.videoHeight);
+      }
+      v.removeAttribute('src');
+      try { v.load(); } catch {}
+    };
+    v.addEventListener('loadedmetadata', onMeta);
+    v.addEventListener('error', () => { try { v.load(); } catch {} });
+    v.src = src.split('#')[0];
+    return () => { cancelled = true; };
+  }, [product?.previewUrl, product?.type, fallbackProduct?.previewUrl, fallbackProduct?.type]);
+
 
   const formatDuration = (sec: number) => {
     const s = Math.max(0, Math.round(sec));
@@ -356,7 +383,10 @@ const ProductDetailInner = () => {
         <div className="container py-8">
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
+              <div
+                className={`relative overflow-hidden rounded-lg ${fp.type === 'video' ? 'bg-black' : 'bg-stock-gray aspect-[4/3]'} border border-stock-border shadow-lg ${fp.type === 'video' ? 'max-h-[80vh] mx-auto' : ''}`}
+                style={fp.type === 'video' ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+              >
                 {fp.type === 'video' ? (
                   <MediaPlayer 
                     src={fp.previewUrl || ''}
@@ -564,7 +594,13 @@ const ProductDetailInner = () => {
         <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Video/Image Display */}
         <div className="lg:col-span-2 space-y-6">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
+      {(() => {
+        const isVid = product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'));
+        return (
+      <div
+        className={`relative overflow-hidden rounded-lg border border-stock-border shadow-lg ${isVid ? 'bg-black max-h-[80vh] mx-auto' : 'aspect-[4/3] bg-stock-gray'}`}
+        style={isVid ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+      >
         {(product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'))) ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
@@ -657,6 +693,8 @@ const ProductDetailInner = () => {
         )}
         
       </div>
+        );
+      })()}
 
 
             {/* Download Preview Button - Audio only (videos use on-site CSS watermark) */}

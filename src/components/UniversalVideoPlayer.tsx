@@ -25,7 +25,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   src, 
   thumbnail,
   poster, 
-  className = "w-full h-full object-cover",
+  className = "w-full h-full object-contain",
   showThumbnailFirst = false,
   autoPlay = false,
   controls = true,
@@ -380,7 +380,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             <img 
               src={thumbnail} 
               alt="Video preview" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onError={() => setVideoError(true)}
             />
             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
@@ -427,7 +427,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
         <img 
           src={thumbnail}
           alt="Video preview"
-          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform group-hover:scale-105"
           onError={() => setVideoError(true)}
         />
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
