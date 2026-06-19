@@ -594,7 +594,13 @@ const ProductDetailInner = () => {
         <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Video/Image Display */}
         <div className="lg:col-span-2 space-y-6">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stock-gray border border-stock-border shadow-lg">
+      {(() => {
+        const isVid = product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'));
+        return (
+      <div
+        className={`relative overflow-hidden rounded-lg border border-stock-border shadow-lg ${isVid ? 'bg-black max-h-[80vh] mx-auto' : 'aspect-[4/3] bg-stock-gray'}`}
+        style={isVid ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+      >
         {(product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'))) ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
             {product.previewUrl ? (
