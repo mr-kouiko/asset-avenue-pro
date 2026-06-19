@@ -25,7 +25,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   src, 
   thumbnail,
   poster, 
-  className = "w-full h-full object-cover",
+  className = "w-full h-full object-contain",
   showThumbnailFirst = false,
   autoPlay = false,
   controls = true,
