@@ -240,6 +240,33 @@ const ProductDetailInner = () => {
     return () => { cancelled = true; };
   }, [isVideoLikeProduct, product?.id, product?.previewUrl]);
 
+  // Detect intrinsic video aspect ratio so the player container fits the source
+  // (no cropping, no forced 16:9). Defaults to 16/9 until known.
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+  useEffect(() => {
+    setVideoAspectRatio(null);
+    const src = product?.previewUrl || fallbackProduct?.previewUrl;
+    const isVid = (product?.type === 'video') || (fallbackProduct?.type === 'video') ||
+      (product?.type === 'vfx' && !!product?.previewUrl?.toLowerCase().includes('.mp4'));
+    if (!isVid || !src) return;
+    let cancelled = false;
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.crossOrigin = 'anonymous';
+    v.muted = true;
+    const onMeta = () => {
+      if (!cancelled && v.videoWidth > 0 && v.videoHeight > 0) {
+        setVideoAspectRatio(v.videoWidth / v.videoHeight);
+      }
+      v.removeAttribute('src');
+      try { v.load(); } catch {}
+    };
+    v.addEventListener('loadedmetadata', onMeta);
+    v.addEventListener('error', () => { try { v.load(); } catch {} });
+    v.src = src.split('#')[0];
+    return () => { cancelled = true; };
+  }, [product?.previewUrl, product?.type, fallbackProduct?.previewUrl, fallbackProduct?.type]);
+
 
   const formatDuration = (sec: number) => {
     const s = Math.max(0, Math.round(sec));
