@@ -473,8 +473,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`${className} relative bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-border overflow-hidden ${
-        compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[300px]' : 'min-h-[140px]'
+      className={`${className} relative ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
+        compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[200px]' : 'min-h-[140px]'
       }`}
       role="group"
       aria-label={title}
@@ -492,7 +492,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
           muted={isMuted}
           playsInline
           crossOrigin={shouldUseCrossOrigin ? 'anonymous' : undefined}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           style={{ opacity: isLoading ? 0 : 1 }}
           controls={false}
           controlsList="nodownload"
