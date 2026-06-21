@@ -139,12 +139,12 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
 
           {/* Free Stock Tab */}
           <TabsContent value="free" className="mt-0">
-            {freeLoading ? (
+            {freeContentLoading ? (
               <ContentSkeleton />
             ) : freeContent.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {freeContent.map((item, index) => (
+                  {freeContent.map((item: any, index) => (
                     <ContentCard
                       key={item.id}
                       id={item.id}
@@ -158,17 +158,19 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
                       downloads={item.downloads}
                       isLiked={item.isLiked}
                       priority={index < 3}
+                      onClick={item._pexelsSlug ? () => navigate(`/products/${item._pexelsSlug}`) : undefined}
                     />
                   ))}
                 </div>
                 <div className="text-center">
                   <Button variant="outline" asChild>
-                    <Link to="/marketplace?price=free" className="inline-flex items-center gap-2">
+                    <Link to="/free-stock-library" className="inline-flex items-center gap-2">
                       Browse All Free Content
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
+
               </>
             ) : (
               <EmptyState message="No free content available yet. Check back soon!" />
