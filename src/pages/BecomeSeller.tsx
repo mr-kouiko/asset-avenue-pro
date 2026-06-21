@@ -62,16 +62,23 @@ const BecomeSeller = () => {
   };
 
   const handlePaidRegistration = async () => {
-    const { data, error } = await supabase.functions.invoke("seller-registration-payment");
+    const origin = window.location.origin;
+    const { data, error } = await supabase.functions.invoke("create-paypal-order", {
+      body: {
+        order_type: "seller_registration",
+        success_url: `${origin}/seller-registration-success`,
+        cancel_url: `${origin}/seller-registration-cancelled`,
+      },
+    });
 
     if (error) {
       throw new Error(error.message);
     }
 
-    if (data.url) {
-      window.location.href = data.url;
+    if (data?.approval_url) {
+      window.location.href = data.approval_url;
     } else {
-      throw new Error("No checkout URL received");
+      throw new Error("No PayPal approval URL received");
     }
   };
 
@@ -196,14 +203,14 @@ const BecomeSeller = () => {
               <div>
                 {isFreeRegistration ? (
                   <div className="flex items-center justify-center gap-3">
-                    <span className="text-2xl text-muted-foreground line-through">€15</span>
+                    <span className="text-2xl text-muted-foreground line-through">$15</span>
                     <span className="text-5xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
                       FREE
                     </span>
                   </div>
                 ) : (
                   <>
-                    <span className="text-5xl font-bold">€15</span>
+                    <span className="text-5xl font-bold">$15</span>
                     <span className="text-muted-foreground ml-2">one-time payment</span>
                   </>
                 )}
@@ -256,7 +263,7 @@ const BecomeSeller = () => {
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Become a Seller - €15
+                      Become a Seller - $15
                     </>
                   )}
                 </Button>

@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 
 interface Transaction {
   id: string;
-  stripe_payment_intent_id: string;
+  paypal_order_id?: string | null;
   buyer_id: string;
   seller_id: string;
   submission_id: string;
@@ -141,11 +141,12 @@ export const AdminTransactionsDashboard = () => {
   };
 
   const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = searchTerm === '' || 
+    const orderRef = (transaction.paypal_order_id || '').toLowerCase();
+    const matchesSearch = searchTerm === '' ||
       transaction.content_submissions?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.buyer_profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.seller_profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.stripe_payment_intent_id.toLowerCase().includes(searchTerm.toLowerCase());
+      orderRef.includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || transaction.status === statusFilter;
 
@@ -295,7 +296,9 @@ export const AdminTransactionsDashboard = () => {
                     </div>
                     <div className="text-right">
                       <p><strong>Date:</strong> {new Date(transaction.created_at).toLocaleDateString()}</p>
-                      <p className="text-xs">ID: {transaction.stripe_payment_intent_id.slice(-8)}</p>
+                      {transaction.paypal_order_id && (
+                        <p className="text-xs">PayPal: {transaction.paypal_order_id.slice(-8)}</p>
+                      )}
                     </div>
                   </div>
                 </div>

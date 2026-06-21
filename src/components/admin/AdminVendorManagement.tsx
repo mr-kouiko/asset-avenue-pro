@@ -25,7 +25,6 @@ interface VendorData {
   approved_products: number;
   pending_products: number;
   total_sales: number;
-  stripe_connected: boolean;
 }
 
 export const AdminVendorManagement = () => {
@@ -49,12 +48,6 @@ export const AdminVendorManagement = () => {
             .select('id, status')
             .eq('creator_id', creator.user_id);
 
-          const { data: stripeAccount } = await supabase
-            .from('stripe_accounts')
-            .select('onboarding_completed')
-            .eq('user_id', creator.user_id)
-            .maybeSingle();
-
           const { data: transactions } = await supabase
             .from('transactions')
             .select('amount_seller')
@@ -73,7 +66,6 @@ export const AdminVendorManagement = () => {
             approved_products: submissions?.filter(s => s.status === 'approved').length || 0,
             pending_products: submissions?.filter(s => s.status === 'pending').length || 0,
             total_sales: totalSales / 100,
-            stripe_connected: stripeAccount?.onboarding_completed || false
           };
         })
       );
@@ -91,54 +83,41 @@ export const AdminVendorManagement = () => {
 
   const totalVendors = vendors?.length || 0;
   const activeVendors = vendors?.filter(v => v.total_products > 0).length || 0;
-  const stripeConnected = vendors?.filter(v => v.stripe_connected).length || 0;
   const totalProducts = vendors?.reduce((sum, v) => sum + v.total_products, 0) || 0;
 
   return (
     <div className="space-y-6">
       {/* Vendor Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Store className="h-4 w-4" />
-              Total vendeurs
+              Total vendors
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalVendors}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-500" />
-              Vendeurs actifs
+              Active vendors
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">{activeVendors}</div>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
-              Stripe connecté
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stripeConnected}</div>
-          </CardContent>
-        </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Package className="h-4 w-4" />
-              Total produits
+              Total products
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -199,16 +178,11 @@ export const AdminVendorManagement = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{vendor.store_name || vendor.display_name || 'Sans nom'}</h4>
-                        {vendor.stripe_connected ? (
-                          <Badge variant="default" className="text-xs">Stripe ✓</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">Stripe ✗</Badge>
-                        )}
+                        <h4 className="font-medium">{vendor.store_name || vendor.display_name || 'No name'}</h4>
                       </div>
                       <p className="text-sm text-muted-foreground">{vendor.email_masked}</p>
                       <p className="text-xs text-muted-foreground">
-                        Inscrit le {new Date(vendor.created_at).toLocaleDateString()}
+                        Joined on {new Date(vendor.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
