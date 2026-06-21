@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Link } from 'react-router-dom';
+import { memo, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,9 @@ import { ContentCard } from '@/components/ContentCard';
 import { CalendarCurations } from '@/components/CalendarCurations';
 import { CollectionsGrid } from '@/components/CollectionsGrid';
 import { useTrendingContent } from '@/hooks/useTrendingContent';
-import { useFreeContent } from '@/hooks/useFreeContent';
+import { useFreeContent, FreeItem } from '@/hooks/useFreeContent';
+import { generatePexelsProductSlug } from '@/utils/pexelsSlug';
+
 
 const ContentSkeleton = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
