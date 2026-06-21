@@ -224,18 +224,44 @@ const Marketplace = () => {
     }
 
     if (isVideoSection) {
-      if (videoFilters.useCase.length) f.useCaseTags = resolveFilterTags(videoFilters.useCase, VIDEO_USE_CASE_TAGS);
-      if (videoFilters.style.length) f.styleTags = resolveFilterTags(videoFilters.style, VIDEO_STYLE_TAGS);
-      if (videoFilters.format.length) f.orientationTags = resolveFilterTags(videoFilters.format, VIDEO_FORMAT_TAGS);
-      if (videoFilters.effects.length) f.effectTags = resolveFilterTags(videoFilters.effects, VIDEO_EFFECT_TAGS);
-      if (videoFilters.platform.length) f.platformTags = resolveFilterTags(videoFilters.platform, VIDEO_PLATFORM_TAGS);
-      if (videoFilters.aiGenerated !== null) f.aiGenerated = videoFilters.aiGenerated;
-      if (videoFilters.withPeople !== null) f.withPeople = videoFilters.withPeople;
-      if (videoFilters.aiVideos.length > 0) f.aiGenerated = true;
+      const vf = debouncedVideoFilters;
+
+      // Tag-array filters (multi-select)
+      if (vf.useCase.length)  f.useCaseTags    = resolveFilterTags(vf.useCase,  VIDEO_USE_CASE_TAGS);
+      if (vf.style.length)    f.styleTags      = resolveFilterTags(vf.style,    VIDEO_STYLE_TAGS);
+      if (vf.effects.length)  f.effectTags     = resolveFilterTags(vf.effects,  VIDEO_EFFECT_TAGS);
+      if (vf.platform.length) f.platformTags   = resolveFilterTags(vf.platform, VIDEO_PLATFORM_TAGS);
+
+      // Orientation: merge "format" multi-select AND single "orientation" quick filter.
+      const orientationSelections: string[] = [...vf.format];
+      if (vf.orientation) orientationSelections.push(vf.orientation);
+      if (orientationSelections.length) {
+        f.orientationTags = resolveFilterTags(orientationSelections, VIDEO_FORMAT_TAGS);
+      }
+
+      // Priority 1 — connect the 4 previously inactive filters.
+      // Each goes through its own dedicated parameter so a later migration
+      // can swap any one of them to a typed DB column without side-effects.
+      if (vf.resolution) {
+        f.resolutionTags = resolveFilterTags([vf.resolution], VIDEO_RESOLUTION_TAGS);
+      }
+      if (vf.loopable === true) {
+        f.loopableTags = VIDEO_LOOPABLE_TAGS;
+      }
+      if (vf.copySpace === true) {
+        f.copySpaceTags = VIDEO_COPY_SPACE_TAGS;
+      }
+      const durationTags = resolveDurationTags(vf.duration[0], vf.duration[1]);
+      if (durationTags.length) f.durationTags = durationTags;
+
+      // Booleans
+      if (vf.aiGenerated !== null) f.aiGenerated = vf.aiGenerated;
+      if (vf.withPeople !== null) f.withPeople = vf.withPeople;
+      if (vf.aiVideos.length > 0) f.aiGenerated = true;
     }
 
     return f;
-  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection]);
+  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, debouncedVideoFilters, isPhotoSection, isVideoSection]);
 
   // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
