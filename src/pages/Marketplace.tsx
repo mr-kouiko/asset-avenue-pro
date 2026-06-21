@@ -153,8 +153,27 @@ const Marketplace = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // ── Debounce video filters (priority 2) ────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedVideoFilters(videoFilters), 180);
+    return () => clearTimeout(timer);
+  }, [videoFilters]);
+
+  // ── Sync video filters → URL (priority 3) ──────────────────
+  useEffect(() => {
+    if (!isVideoSection) return;
+    const next = new URLSearchParams(searchParams);
+    VIDEO_FILTER_PARAM_KEYS.forEach(k => next.delete(k));
+    const vfParams = videoFiltersToParams(debouncedVideoFilters);
+    Object.entries(vfParams).forEach(([k, v]) => next.set(k, v));
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedVideoFilters, isVideoSection]);
+
   // ── Reset page on filter changes ───────────────────────────
-  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, videoFilters]);
+  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, debouncedVideoFilters]);
 
   // ── URL sync ────────────────────────────────────────────────
   useEffect(() => {
