@@ -609,7 +609,7 @@ const Marketplace = () => {
               </div>
             ))}
           </div>
-        ) : marketplaceContent.length === 0 && pexelsItems.length === 0 ? (
+        ) : marketplaceContent.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-muted-foreground text-lg">No content found</div>
             <p className="text-muted-foreground/60 mt-2">Try adjusting your search filters</p>
