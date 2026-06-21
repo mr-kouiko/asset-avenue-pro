@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Link } from 'react-router-dom';
+import { memo, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,9 @@ import { ContentCard } from '@/components/ContentCard';
 import { CalendarCurations } from '@/components/CalendarCurations';
 import { CollectionsGrid } from '@/components/CollectionsGrid';
 import { useTrendingContent } from '@/hooks/useTrendingContent';
-import { useFreeContent } from '@/hooks/useFreeContent';
+import { useFreeContent, FreeItem } from '@/hooks/useFreeContent';
+import { generatePexelsProductSlug } from '@/utils/pexelsSlug';
+
 
 const ContentSkeleton = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -32,8 +34,51 @@ interface HomepageTabsProps {
 }
 
 export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
+  const navigate = useNavigate();
   const { content: trendingContent, loading: trendingLoading } = useTrendingContent(6);
-  const { content: freeContent, loading: freeLoading } = useFreeContent(6);
+  const { content: visustockFree, loading: freeLoading } = useFreeContent(6);
+  const [pexelsFree, setPexelsFree] = useState<FreeItem[]>([]);
+  const [pexelsLoading, setPexelsLoading] = useState(false);
+
+  // Fetch Pexels curated photos to supplement free content
+  useEffect(() => {
+    if (freeLoading) return;
+    const needed = 6 - visustockFree.length;
+    if (needed <= 0) {
+      setPexelsFree([]);
+      return;
+    }
+    setPexelsLoading(true);
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    fetch(`https://${projectId}.supabase.co/functions/v1/pexels-search?type=photos&per_page=${needed}&page=1`, {
+      headers: { apikey },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const photos = data.photos || [];
+        const mapped: (FreeItem & { _pexelsSlug?: string })[] = photos.map((p: any) => ({
+          id: `pexels-${p.id}`,
+          title: p.alt || 'Pexels photo',
+          author: p.photographer,
+          price: 0,
+          type: 'photo' as const,
+          thumbnail: p.src.large || p.src.medium,
+          likes: 0,
+          downloads: 0,
+          isLiked: false,
+          _pexelsSlug: generatePexelsProductSlug('photo', p.id, p.alt, p.alt),
+        }));
+        setPexelsFree(mapped);
+      })
+      .catch(() => setPexelsFree([]))
+      .finally(() => setPexelsLoading(false));
+  }, [freeLoading, visustockFree.length]);
+
+  const freeContent = [...visustockFree, ...pexelsFree].slice(0, 6);
+  const freeContentLoading = freeLoading || pexelsLoading;
+
+
 
   return (
     <section className={`py-16 bg-surface ${className || ''}`}>
@@ -94,36 +139,46 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
 
           {/* Free Stock Tab */}
           <TabsContent value="free" className="mt-0">
-            {freeLoading ? (
+            {freeContentLoading ? (
               <ContentSkeleton />
             ) : freeContent.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {freeContent.map((item, index) => (
-                    <ContentCard
-                      key={item.id}
-                      id={item.id}
-                      title={item.title}
-                      author={item.author}
-                      price={item.price}
-                      type={item.type}
-                      thumbnail={item.thumbnail}
-                      videoUrl={item.videoUrl}
-                      likes={item.likes}
-                      downloads={item.downloads}
-                      isLiked={item.isLiked}
-                      priority={index < 3}
-                    />
-                  ))}
+                  {freeContent.map((item: any, index) => {
+                    const card = (
+                      <ContentCard
+                        id={item.id}
+                        title={item.title}
+                        author={item.author}
+                        price={item.price}
+                        type={item.type}
+                        thumbnail={item.thumbnail}
+                        videoUrl={item.videoUrl}
+                        likes={item.likes}
+                        downloads={item.downloads}
+                        isLiked={item.isLiked}
+                        priority={index < 3}
+                      />
+                    );
+                    return item._pexelsSlug ? (
+                      <Link key={item.id} to={`/products/${item._pexelsSlug}`} className="block">
+                        {card}
+                      </Link>
+                    ) : (
+                      <div key={item.id}>{card}</div>
+                    );
+                  })}
+
                 </div>
                 <div className="text-center">
                   <Button variant="outline" asChild>
-                    <Link to="/marketplace?price=free" className="inline-flex items-center gap-2">
+                    <Link to="/free-stock-library" className="inline-flex items-center gap-2">
                       Browse All Free Content
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
+
               </>
             ) : (
               <EmptyState message="No free content available yet. Check back soon!" />
