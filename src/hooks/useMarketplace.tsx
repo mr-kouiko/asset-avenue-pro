@@ -44,7 +44,11 @@ export interface MarketplaceFilters {
   withPeople?: boolean | null;
   sortBy?: string;
   page?: number;
-  
+  // New video filters — tag-based today, ready for typed-column migration.
+  resolutionTags?: string[];
+  loopableTags?: string[];
+  copySpaceTags?: string[];
+  durationTags?: string[];
 }
 
 export const PAGE_SIZE = 40;
