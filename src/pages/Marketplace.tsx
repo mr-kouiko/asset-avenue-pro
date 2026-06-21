@@ -561,11 +561,6 @@ const Marketplace = () => {
                   {totalCount.toLocaleString()} marketplace results
                 </span>
               )}
-              {pexelsItems.length > 0 && (
-                <span className="text-xs text-muted-foreground/70">
-                  + {pexelsItems.length} free via Pexels
-                </span>
-              )}
               {page > 1 && (
                 <Badge variant="secondary">Page {page}</Badge>
               )}
