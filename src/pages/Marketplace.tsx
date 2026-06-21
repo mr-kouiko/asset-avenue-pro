@@ -23,6 +23,7 @@ import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersP
 import PhotoFiltersPanel, { type PhotoFilters } from "@/components/PhotoFiltersPanel";
 import {
   resolveFilterTags,
+  resolveDurationTags,
   SUBJECT_TAGS,
   STYLE_TAGS,
   USE_CASE_TAGS,
@@ -34,7 +35,16 @@ import {
   VIDEO_FORMAT_TAGS,
   VIDEO_EFFECT_TAGS,
   VIDEO_PLATFORM_TAGS,
+  VIDEO_RESOLUTION_TAGS,
+  VIDEO_LOOPABLE_TAGS,
+  VIDEO_COPY_SPACE_TAGS,
 } from "@/utils/filterTagMapper";
+import {
+  DEFAULT_VIDEO_FILTERS,
+  videoFiltersToParams,
+  videoFiltersFromParams,
+  VIDEO_FILTER_PARAM_KEYS,
+} from "@/utils/videoFiltersUrl";
 
 // ── Section Header ────────────────────────────────────────────
 const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
