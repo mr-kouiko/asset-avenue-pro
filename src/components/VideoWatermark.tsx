@@ -19,12 +19,12 @@ export const VideoWatermark: React.FC<VideoWatermarkProps> = ({
   const { widthPct, opacity } = useMemo(() => {
     switch (size) {
       case 'thumbnail':
-        return { widthPct: 70, opacity: 0.55 };
+        return { widthPct: 45, opacity: 0.5 };
       case 'large':
-        return { widthPct: 55, opacity: 0.45 };
+        return { widthPct: 30, opacity: 0.4 };
       case 'normal':
       default:
-        return { widthPct: 60, opacity: 0.5 };
+        return { widthPct: 35, opacity: 0.45 };
     }
   }, [size]);
 
