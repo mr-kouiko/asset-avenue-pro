@@ -271,7 +271,7 @@ const Marketplace = () => {
   };
 
   // ── SEO noindex ─────────────────────────────────────────────
-  const hasEmptyResults = !loading && marketplaceContent.length === 0 && pexelsItems.length === 0;
+  const hasEmptyResults = !loading && marketplaceContent.length === 0;
   const shouldApplyNoIndex = shouldNoIndexPage({
     hasResults: marketplaceContent.length > 0,
     resultCount: marketplaceContent.length,
