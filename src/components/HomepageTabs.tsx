@@ -144,23 +144,31 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
             ) : freeContent.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {freeContent.map((item: any, index) => (
-                    <ContentCard
-                      key={item.id}
-                      id={item.id}
-                      title={item.title}
-                      author={item.author}
-                      price={item.price}
-                      type={item.type}
-                      thumbnail={item.thumbnail}
-                      videoUrl={item.videoUrl}
-                      likes={item.likes}
-                      downloads={item.downloads}
-                      isLiked={item.isLiked}
-                      priority={index < 3}
-                      onClick={item._pexelsSlug ? () => navigate(`/products/${item._pexelsSlug}`) : undefined}
-                    />
-                  ))}
+                  {freeContent.map((item: any, index) => {
+                    const card = (
+                      <ContentCard
+                        id={item.id}
+                        title={item.title}
+                        author={item.author}
+                        price={item.price}
+                        type={item.type}
+                        thumbnail={item.thumbnail}
+                        videoUrl={item.videoUrl}
+                        likes={item.likes}
+                        downloads={item.downloads}
+                        isLiked={item.isLiked}
+                        priority={index < 3}
+                      />
+                    );
+                    return item._pexelsSlug ? (
+                      <Link key={item.id} to={`/products/${item._pexelsSlug}`} className="block">
+                        {card}
+                      </Link>
+                    ) : (
+                      <div key={item.id}>{card}</div>
+                    );
+                  })}
+
                 </div>
                 <div className="text-center">
                   <Button variant="outline" asChild>
