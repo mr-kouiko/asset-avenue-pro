@@ -115,6 +115,43 @@ export const VIDEO_PLATFORM_TAGS: Record<string, string[]> = {
   "ads": ["ads", "advertisement", "commercial"],
 };
 
+// ----------------------------------------------------------------------------
+// New video filter mappings (kept tag-based for compatibility).
+// NOTE: each filter is intentionally isolated in its own array so a future
+// migration can swap it to a typed DB column (duration_seconds, resolution,
+// is_loopable, copy_space, has_people) without touching the others.
+// ----------------------------------------------------------------------------
+
+export const VIDEO_RESOLUTION_TAGS: Record<string, string[]> = {
+  "hd": ["hd", "1080p", "full hd", "fhd"],
+  "4k": ["4k", "uhd", "ultra hd", "2160p", "high resolution"],
+};
+
+export const VIDEO_LOOPABLE_TAGS: string[] = [
+  "loop", "loopable", "seamless", "seamless loop", "looping",
+];
+
+export const VIDEO_COPY_SPACE_TAGS: string[] = [
+  "copy space", "copyspace", "negative space", "blank space", "text space",
+];
+
+/**
+ * Bucket a duration range [min,max] (seconds) into a tag set.
+ * Returns [] when the slider is at its default [0,60] (= no filter).
+ */
+export function resolveDurationTags(min: number, max: number): string[] {
+  if (min <= 0 && max >= 60) return [];
+  const tags = new Set<string>();
+  if (max <= 10) {
+    ["short", "5s", "10s", "under 10s", "quick"].forEach(t => tags.add(t));
+  } else if (max <= 30) {
+    ["short", "medium", "10s", "15s", "20s", "30s"].forEach(t => tags.add(t));
+  } else {
+    ["medium", "long", "30s", "45s", "60s", "minute"].forEach(t => tags.add(t));
+  }
+  return [...tags];
+}
+
 // ============================================================================
 // RESOLVER
 // ============================================================================
