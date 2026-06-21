@@ -125,11 +125,12 @@ const Marketplace = () => {
     aiGenerated: null, withPeople: null, numberOfPeople: null, copySpace: null, color: null,
   });
 
-  const [videoFilters, setVideoFilters] = useState<VideoFilters>({
-    useCase: [], aiVideos: [], style: [], format: [], effects: [],
-    orientation: null, resolution: null, aiGenerated: null, loopable: null,
-    withPeople: null, copySpace: null, platform: [], duration: [0, 60],
-  });
+  // Initialize video filters from URL on first render (deep-linkable filters).
+  const [videoFilters, setVideoFilters] = useState<VideoFilters>(() =>
+    videoFiltersFromParams(searchParams)
+  );
+  // Debounced copy used to build the RPC payload (priority 2 — 180ms).
+  const [debouncedVideoFilters, setDebouncedVideoFilters] = useState<VideoFilters>(videoFilters);
 
   const [isMobileVideoFilterOpen, setIsMobileVideoFilterOpen] = useState(false);
   const [isMobilePhotoFilterOpen, setIsMobilePhotoFilterOpen] = useState(false);
