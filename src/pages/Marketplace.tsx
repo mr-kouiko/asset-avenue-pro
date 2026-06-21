@@ -322,9 +322,7 @@ const Marketplace = () => {
   const renderContentSections = () => {
     const hasPremium = premiumContent.length > 0;
     const hasFreeCreator = freeCreatorContent.length > 0;
-    const hasPexels = pexelsItems.length > 0;
-    const showSectionHeaders = (hasPremium && (hasFreeCreator || hasPexels)) ||
-      (hasFreeCreator && hasPexels);
+    const showSectionHeaders = hasPremium && hasFreeCreator;
 
     return (
       <>
@@ -352,32 +350,6 @@ const Marketplace = () => {
               {freeCreatorContent.map((content) => (
                 <ContentCard key={content.id} {...content} />
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pexels Free Stock */}
-        {hasPexels && (
-          <div className="mb-8">
-            <Separator className="mb-6" />
-            <SectionHeader icon={Globe} title="Free Stock — Powered by Pexels" count={pexelsItems.length} variant="pexels" />
-            <div className={isVideoSection
-              ? "grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
-              : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
-            }>
-              {pexelsItems.map((item) => (
-                <PexelsCard key={item.id} item={item} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {pexelsLoading && !hasPexels && (
-          <div className="mt-8">
-            <Separator className="mb-6" />
-            <div className="flex items-center gap-2 text-sm text-muted-foreground px-4 py-3">
-              <Globe className="h-4 w-4 animate-pulse" />
-              Loading free stock from Pexels…
             </div>
           </div>
         )}
