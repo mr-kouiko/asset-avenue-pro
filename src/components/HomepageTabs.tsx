@@ -34,8 +34,51 @@ interface HomepageTabsProps {
 }
 
 export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
+  const navigate = useNavigate();
   const { content: trendingContent, loading: trendingLoading } = useTrendingContent(6);
-  const { content: freeContent, loading: freeLoading } = useFreeContent(6);
+  const { content: visustockFree, loading: freeLoading } = useFreeContent(6);
+  const [pexelsFree, setPexelsFree] = useState<FreeItem[]>([]);
+  const [pexelsLoading, setPexelsLoading] = useState(false);
+
+  // Fetch Pexels curated photos to supplement free content
+  useEffect(() => {
+    if (freeLoading) return;
+    const needed = 6 - visustockFree.length;
+    if (needed <= 0) {
+      setPexelsFree([]);
+      return;
+    }
+    setPexelsLoading(true);
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    fetch(`https://${projectId}.supabase.co/functions/v1/pexels-search?type=photos&per_page=${needed}&page=1`, {
+      headers: { apikey },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const photos = data.photos || [];
+        const mapped: (FreeItem & { _pexelsSlug?: string })[] = photos.map((p: any) => ({
+          id: `pexels-${p.id}`,
+          title: p.alt || 'Pexels photo',
+          author: p.photographer,
+          price: 0,
+          type: 'photo' as const,
+          thumbnail: p.src.large || p.src.medium,
+          likes: 0,
+          downloads: 0,
+          isLiked: false,
+          _pexelsSlug: generatePexelsProductSlug('photo', p.id, p.alt, p.alt),
+        }));
+        setPexelsFree(mapped);
+      })
+      .catch(() => setPexelsFree([]))
+      .finally(() => setPexelsLoading(false));
+  }, [freeLoading, visustockFree.length]);
+
+  const freeContent = [...visustockFree, ...pexelsFree].slice(0, 6);
+  const freeContentLoading = freeLoading || pexelsLoading;
+
+
 
   return (
     <section className={`py-16 bg-surface ${className || ''}`}>
