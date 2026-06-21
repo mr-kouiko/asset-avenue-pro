@@ -210,21 +210,6 @@ const Marketplace = () => {
   // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
 
-  // ── Fetch Pexels data (supplemental) ────────────────────────
-  const pexelsOrientation = useMemo(() => {
-    if (isPhotoSection && photoFilters.orientation.length === 1) {
-      const map: Record<string, string> = { vertical: 'portrait', horizontal: 'landscape', square: 'square' };
-      return map[photoFilters.orientation[0]] || undefined;
-    }
-    return undefined;
-  }, [isPhotoSection, photoFilters.orientation]);
-
-  const { items: pexelsItems, loading: pexelsLoading } = usePexelsSearch({
-    query: debouncedSearch,
-    category: selectedCategory,
-    orientation: pexelsOrientation,
-    enabled: !isAudioSection && selectedCategory !== 'ebook' && selectedCategory !== 'vfx',
-  });
 
   // ── Split marketplace content into paid & free ──────────────
   const { premiumContent, freeCreatorContent } = useMemo(() => {
