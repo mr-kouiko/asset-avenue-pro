@@ -44,7 +44,11 @@ export interface MarketplaceFilters {
   withPeople?: boolean | null;
   sortBy?: string;
   page?: number;
-  
+  // New video filters — tag-based today, ready for typed-column migration.
+  resolutionTags?: string[];
+  loopableTags?: string[];
+  copySpaceTags?: string[];
+  durationTags?: string[];
 }
 
 export const PAGE_SIZE = 40;
@@ -279,7 +283,10 @@ export const useMarketplace = (filters: MarketplaceFilters = {}) => {
         p_sort: currentFilters.sortBy || 'recent',
         p_offset: offset,
         p_limit: PAGE_SIZE,
-        
+        p_resolution_tags: currentFilters.resolutionTags?.length ? currentFilters.resolutionTags : null,
+        p_loopable_tags: currentFilters.loopableTags?.length ? currentFilters.loopableTags : null,
+        p_copy_space_tags: currentFilters.copySpaceTags?.length ? currentFilters.copySpaceTags : null,
+        p_duration_tags: currentFilters.durationTags?.length ? currentFilters.durationTags : null,
       });
 
       // Abort if a newer fetch started

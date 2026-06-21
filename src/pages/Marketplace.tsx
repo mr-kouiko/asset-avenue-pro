@@ -23,6 +23,7 @@ import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersP
 import PhotoFiltersPanel, { type PhotoFilters } from "@/components/PhotoFiltersPanel";
 import {
   resolveFilterTags,
+  resolveDurationTags,
   SUBJECT_TAGS,
   STYLE_TAGS,
   USE_CASE_TAGS,
@@ -34,7 +35,16 @@ import {
   VIDEO_FORMAT_TAGS,
   VIDEO_EFFECT_TAGS,
   VIDEO_PLATFORM_TAGS,
+  VIDEO_RESOLUTION_TAGS,
+  VIDEO_LOOPABLE_TAGS,
+  VIDEO_COPY_SPACE_TAGS,
 } from "@/utils/filterTagMapper";
+import {
+  DEFAULT_VIDEO_FILTERS,
+  videoFiltersToParams,
+  videoFiltersFromParams,
+  VIDEO_FILTER_PARAM_KEYS,
+} from "@/utils/videoFiltersUrl";
 
 // ── Section Header ────────────────────────────────────────────
 const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
@@ -61,7 +71,7 @@ const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -115,11 +125,12 @@ const Marketplace = () => {
     aiGenerated: null, withPeople: null, numberOfPeople: null, copySpace: null, color: null,
   });
 
-  const [videoFilters, setVideoFilters] = useState<VideoFilters>({
-    useCase: [], aiVideos: [], style: [], format: [], effects: [],
-    orientation: null, resolution: null, aiGenerated: null, loopable: null,
-    withPeople: null, copySpace: null, platform: [], duration: [0, 60],
-  });
+  // Initialize video filters from URL on first render (deep-linkable filters).
+  const [videoFilters, setVideoFilters] = useState<VideoFilters>(() =>
+    videoFiltersFromParams(searchParams)
+  );
+  // Debounced copy used to build the RPC payload (priority 2 — 180ms).
+  const [debouncedVideoFilters, setDebouncedVideoFilters] = useState<VideoFilters>(videoFilters);
 
   const [isMobileVideoFilterOpen, setIsMobileVideoFilterOpen] = useState(false);
   const [isMobilePhotoFilterOpen, setIsMobilePhotoFilterOpen] = useState(false);
@@ -142,8 +153,27 @@ const Marketplace = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // ── Debounce video filters (priority 2) ────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedVideoFilters(videoFilters), 180);
+    return () => clearTimeout(timer);
+  }, [videoFilters]);
+
+  // ── Sync video filters → URL (priority 3) ──────────────────
+  useEffect(() => {
+    if (!isVideoSection) return;
+    const next = new URLSearchParams(searchParams);
+    VIDEO_FILTER_PARAM_KEYS.forEach(k => next.delete(k));
+    const vfParams = videoFiltersToParams(debouncedVideoFilters);
+    Object.entries(vfParams).forEach(([k, v]) => next.set(k, v));
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedVideoFilters, isVideoSection]);
+
   // ── Reset page on filter changes ───────────────────────────
-  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, videoFilters]);
+  useEffect(() => { setPage(1); }, [selectedCategory, debouncedSearch, sortBy, photoFilters, debouncedVideoFilters]);
 
   // ── URL sync ────────────────────────────────────────────────
   useEffect(() => {
@@ -194,18 +224,44 @@ const Marketplace = () => {
     }
 
     if (isVideoSection) {
-      if (videoFilters.useCase.length) f.useCaseTags = resolveFilterTags(videoFilters.useCase, VIDEO_USE_CASE_TAGS);
-      if (videoFilters.style.length) f.styleTags = resolveFilterTags(videoFilters.style, VIDEO_STYLE_TAGS);
-      if (videoFilters.format.length) f.orientationTags = resolveFilterTags(videoFilters.format, VIDEO_FORMAT_TAGS);
-      if (videoFilters.effects.length) f.effectTags = resolveFilterTags(videoFilters.effects, VIDEO_EFFECT_TAGS);
-      if (videoFilters.platform.length) f.platformTags = resolveFilterTags(videoFilters.platform, VIDEO_PLATFORM_TAGS);
-      if (videoFilters.aiGenerated !== null) f.aiGenerated = videoFilters.aiGenerated;
-      if (videoFilters.withPeople !== null) f.withPeople = videoFilters.withPeople;
-      if (videoFilters.aiVideos.length > 0) f.aiGenerated = true;
+      const vf = debouncedVideoFilters;
+
+      // Tag-array filters (multi-select)
+      if (vf.useCase.length)  f.useCaseTags    = resolveFilterTags(vf.useCase,  VIDEO_USE_CASE_TAGS);
+      if (vf.style.length)    f.styleTags      = resolveFilterTags(vf.style,    VIDEO_STYLE_TAGS);
+      if (vf.effects.length)  f.effectTags     = resolveFilterTags(vf.effects,  VIDEO_EFFECT_TAGS);
+      if (vf.platform.length) f.platformTags   = resolveFilterTags(vf.platform, VIDEO_PLATFORM_TAGS);
+
+      // Orientation: merge "format" multi-select AND single "orientation" quick filter.
+      const orientationSelections: string[] = [...vf.format];
+      if (vf.orientation) orientationSelections.push(vf.orientation);
+      if (orientationSelections.length) {
+        f.orientationTags = resolveFilterTags(orientationSelections, VIDEO_FORMAT_TAGS);
+      }
+
+      // Priority 1 — connect the 4 previously inactive filters.
+      // Each goes through its own dedicated parameter so a later migration
+      // can swap any one of them to a typed DB column without side-effects.
+      if (vf.resolution) {
+        f.resolutionTags = resolveFilterTags([vf.resolution], VIDEO_RESOLUTION_TAGS);
+      }
+      if (vf.loopable === true) {
+        f.loopableTags = VIDEO_LOOPABLE_TAGS;
+      }
+      if (vf.copySpace === true) {
+        f.copySpaceTags = VIDEO_COPY_SPACE_TAGS;
+      }
+      const durationTags = resolveDurationTags(vf.duration[0], vf.duration[1]);
+      if (durationTags.length) f.durationTags = durationTags;
+
+      // Booleans
+      if (vf.aiGenerated !== null) f.aiGenerated = vf.aiGenerated;
+      if (vf.withPeople !== null) f.withPeople = vf.withPeople;
+      if (vf.aiVideos.length > 0) f.aiGenerated = true;
     }
 
     return f;
-  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, videoFilters, isPhotoSection, isVideoSection]);
+  }, [selectedCategory, debouncedSearch, sortBy, page, photoFilters, debouncedVideoFilters, isPhotoSection, isVideoSection]);
 
   // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
@@ -231,11 +287,7 @@ const Marketplace = () => {
     aiGenerated: null, withPeople: null, numberOfPeople: null, copySpace: null, color: null,
   });
 
-  const resetVideoFilters = () => setVideoFilters({
-    useCase: [], aiVideos: [], style: [], format: [], effects: [],
-    orientation: null, resolution: null, aiGenerated: null, loopable: null,
-    withPeople: null, copySpace: null, platform: [], duration: [0, 60],
-  });
+  const resetVideoFilters = () => setVideoFilters({ ...DEFAULT_VIDEO_FILTERS });
 
   // ── Searchable content for suggestions ──────────────────────
   const searchableContent: SearchableContent[] = useMemo(() =>
