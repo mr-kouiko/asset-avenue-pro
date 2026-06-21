@@ -71,7 +71,7 @@ const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
 
 const Marketplace = () => {
   const { t, language } = useLanguage();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
