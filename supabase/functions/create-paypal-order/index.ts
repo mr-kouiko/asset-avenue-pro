@@ -120,6 +120,11 @@ serve(async (req) => {
         : 'VisuStock Infinity - Monthly Subscription';
       
       console.log('Creating Infinity order:', { is_yearly, totalAmount, currency });
+    } else if (order_type === 'seller_registration') {
+      // Seller registration one-time fee (server-enforced, fixed amount)
+      totalAmount = 15;
+      orderDescription = 'VisuStock - Seller Registration (one-time fee)';
+      console.log('Creating Seller Registration order:', { userId: user.id, totalAmount });
     } else {
       // Marketplace purchase
       if (!cart_items || cart_items.length === 0) {
@@ -155,6 +160,8 @@ serve(async (req) => {
     } else if (order_type === 'infinity') {
       customId.is_yearly = body.is_yearly || false;
       customId.plan_type = 'infinity';
+    } else if (order_type === 'seller_registration') {
+      // No extra data needed; user_id already in customId
     } else {
       customId.cart_items = cart_items;
     }

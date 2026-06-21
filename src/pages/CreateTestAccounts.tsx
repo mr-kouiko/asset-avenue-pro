@@ -185,7 +185,7 @@ export const CreateTestAccounts = () => {
               ⚠️ Sécurité renforcée :
             </h4>
             <ul className="space-y-1 text-sm text-yellow-800 dark:text-yellow-200">
-              <li>• Paramètres Stripe gérés via les secrets sécurisés</li>
+              <li>• Paiements gérés via PayPal (clés stockées dans les secrets sécurisés)</li>
               <li>• Accès aux données sensibles audité et loggé</li>
               <li>• Policies RLS strictes sur toutes les tables</li>
               <li>• Authentification requise pour tous les paiements</li>

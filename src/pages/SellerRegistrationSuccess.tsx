@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -12,32 +12,35 @@ const SellerRegistrationSuccess = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const ran = useRef(false);
 
   useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+
     const verifyPayment = async () => {
-      const sessionId = searchParams.get("session_id");
-      
-      if (!sessionId) {
+      // PayPal returns 'token' as the order ID by default; we also support paypal_order_id
+      const orderId =
+        searchParams.get("paypal_order_id") ||
+        searchParams.get("token") ||
+        searchParams.get("order_id");
+
+      if (!orderId) {
         setStatus("error");
-        setErrorMessage("No session ID found");
+        setErrorMessage("No PayPal order ID found in the URL");
         return;
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke("verify-seller-payment", {
-          body: { session_id: sessionId },
+        const { data, error } = await supabase.functions.invoke("capture-paypal-order", {
+          body: { order_id: orderId },
         });
 
-        if (error) {
-          throw new Error(error.message);
-        }
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error(data?.error || "Capture failed");
 
-        if (data.success) {
-          setStatus("success");
-          toast.success("Congratulations! You are now a seller.");
-        } else {
-          throw new Error(data.error || "Verification failed");
-        }
+        setStatus("success");
+        toast.success("Congratulations! You are now a seller.");
       } catch (error) {
         console.error("Verification error:", error);
         setStatus("error");
@@ -95,6 +98,9 @@ const SellerRegistrationSuccess = () => {
             )}
             {status === "error" && (
               <div className="space-y-4">
+                <Button onClick={() => navigate("/become-seller")} className="w-full">
+                  Try again
+                </Button>
                 <Button onClick={() => navigate("/")} variant="outline" className="w-full">
                   Back to Home
                 </Button>

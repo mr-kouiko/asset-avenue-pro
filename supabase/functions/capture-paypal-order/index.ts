@@ -381,6 +381,54 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
+    } else if (orderType === 'seller_registration') {
+      // ============ SELLER REGISTRATION ============
+      const targetUserId = customData.user_id || user.id;
+
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .upsert(
+          { user_id: targetUserId, role: 'creator' },
+          { onConflict: 'user_id,role', ignoreDuplicates: true }
+        );
+
+      if (roleError) {
+        console.error('Error upserting creator role:', roleError);
+        throw new Error('Failed to grant creator role');
+      }
+
+      await supabaseAdmin
+        .from('paypal_orders')
+        .update({
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+        })
+        .eq('paypal_order_id', order_id);
+
+      await supabaseAdmin.from('security_audit_log').insert({
+        event_type: 'seller_registration_paypal',
+        user_id: targetUserId,
+        target_table: 'user_roles',
+        details: {
+          paypal_order_id: order_id,
+          amount_paid: orderAmount,
+          currency: currency,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      console.log('Seller registration completed for user:', targetUserId);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: order_id,
+          status: captureData.status,
+          order_type: 'seller_registration',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
     } else {
       // ============ MARKETPLACE PURCHASE ============
       const cartItems = customData.cart_items || [];

@@ -1181,7 +1181,6 @@ export type Database = {
           commission_rate: number
           created_at: string
           id: string
-          stripe_application_fee_rate: number
           updated_at: string
         }
         Insert: {
@@ -1191,7 +1190,6 @@ export type Database = {
           commission_rate?: number
           created_at?: string
           id?: string
-          stripe_application_fee_rate?: number
           updated_at?: string
         }
         Update: {
@@ -1201,7 +1199,6 @@ export type Database = {
           commission_rate?: number
           created_at?: string
           id?: string
-          stripe_application_fee_rate?: number
           updated_at?: string
         }
         Relationships: []
@@ -1687,45 +1684,6 @@ export type Database = {
           scope_filter?: string | null
           started_at?: string | null
           status?: string | null
-        }
-        Relationships: []
-      }
-      stripe_accounts: {
-        Row: {
-          account_type: string
-          charges_enabled: boolean
-          created_at: string
-          id: string
-          onboarding_completed: boolean
-          payouts_enabled: boolean
-          requirements: Json | null
-          stripe_account_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          account_type: string
-          charges_enabled?: boolean
-          created_at?: string
-          id?: string
-          onboarding_completed?: boolean
-          payouts_enabled?: boolean
-          requirements?: Json | null
-          stripe_account_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          account_type?: string
-          charges_enabled?: boolean
-          created_at?: string
-          id?: string
-          onboarding_completed?: boolean
-          payouts_enabled?: boolean
-          requirements?: Json | null
-          stripe_account_id?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -2215,17 +2173,8 @@ export type Database = {
           ai_model: string
           ai_provider: string
           commission_rate: number
-          created_at: string
           id: string
-          stripe_application_fee_rate: number
-          updated_at: string
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "platform_settings"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       admin_get_profile_email_emergency: {
         Args: {
@@ -2264,16 +2213,18 @@ export type Database = {
         Args: { p_reason: string; p_request_id: string }
         Returns: undefined
       }
-      admin_update_platform_settings: {
-        Args: {
-          new_commission_rate?: number
-          new_stripe_application_fee_rate?: number
-          new_stripe_publishable_key?: string
-          new_stripe_secret_key?: string
-          new_stripe_webhook_secret?: string
-        }
-        Returns: boolean
-      }
+      admin_update_platform_settings:
+        | { Args: { new_commission_rate?: number }; Returns: undefined }
+        | {
+            Args: {
+              new_commission_rate?: number
+              new_stripe_application_fee_rate?: number
+              new_stripe_publishable_key?: string
+              new_stripe_secret_key?: string
+              new_stripe_webhook_secret?: string
+            }
+            Returns: boolean
+          }
       check_admin_access_patterns: { Args: never; Returns: undefined }
       check_and_insert_file: {
         Args: {
