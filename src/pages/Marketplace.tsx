@@ -287,11 +287,7 @@ const Marketplace = () => {
     aiGenerated: null, withPeople: null, numberOfPeople: null, copySpace: null, color: null,
   });
 
-  const resetVideoFilters = () => setVideoFilters({
-    useCase: [], aiVideos: [], style: [], format: [], effects: [],
-    orientation: null, resolution: null, aiGenerated: null, loopable: null,
-    withPeople: null, copySpace: null, platform: [], duration: [0, 60],
-  });
+  const resetVideoFilters = () => setVideoFilters({ ...DEFAULT_VIDEO_FILTERS });
 
   // ── Searchable content for suggestions ──────────────────────
   const searchableContent: SearchableContent[] = useMemo(() =>
