@@ -2,17 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
-import { PexelsCard } from "@/components/PexelsCard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Video, Camera, Sparkles, Gift, Globe } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Video, Camera, Sparkles, Gift } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useSearchParams, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useMarketplace, PAGE_SIZE, type MarketplaceFilters } from "@/hooks/useMarketplace";
-import { usePexelsSearch } from "@/hooks/usePexelsSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -213,21 +210,6 @@ const Marketplace = () => {
   // ── Fetch marketplace data ──────────────────────────────────
   const { content: marketplaceContent, loading, totalCount, totalPages } = useMarketplace(marketplaceFilters);
 
-  // ── Fetch Pexels data (supplemental) ────────────────────────
-  const pexelsOrientation = useMemo(() => {
-    if (isPhotoSection && photoFilters.orientation.length === 1) {
-      const map: Record<string, string> = { vertical: 'portrait', horizontal: 'landscape', square: 'square' };
-      return map[photoFilters.orientation[0]] || undefined;
-    }
-    return undefined;
-  }, [isPhotoSection, photoFilters.orientation]);
-
-  const { items: pexelsItems, loading: pexelsLoading } = usePexelsSearch({
-    query: debouncedSearch,
-    category: selectedCategory,
-    orientation: pexelsOrientation,
-    enabled: !isAudioSection && selectedCategory !== 'ebook' && selectedCategory !== 'vfx',
-  });
 
   // ── Split marketplace content into paid & free ──────────────
   const { premiumContent, freeCreatorContent } = useMemo(() => {
@@ -289,7 +271,7 @@ const Marketplace = () => {
   };
 
   // ── SEO noindex ─────────────────────────────────────────────
-  const hasEmptyResults = !loading && marketplaceContent.length === 0 && pexelsItems.length === 0;
+  const hasEmptyResults = !loading && marketplaceContent.length === 0;
   const shouldApplyNoIndex = shouldNoIndexPage({
     hasResults: marketplaceContent.length > 0,
     resultCount: marketplaceContent.length,
@@ -340,9 +322,7 @@ const Marketplace = () => {
   const renderContentSections = () => {
     const hasPremium = premiumContent.length > 0;
     const hasFreeCreator = freeCreatorContent.length > 0;
-    const hasPexels = pexelsItems.length > 0;
-    const showSectionHeaders = (hasPremium && (hasFreeCreator || hasPexels)) ||
-      (hasFreeCreator && hasPexels);
+    const showSectionHeaders = hasPremium && hasFreeCreator;
 
     return (
       <>
@@ -370,32 +350,6 @@ const Marketplace = () => {
               {freeCreatorContent.map((content) => (
                 <ContentCard key={content.id} {...content} />
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pexels Free Stock */}
-        {hasPexels && (
-          <div className="mb-8">
-            <Separator className="mb-6" />
-            <SectionHeader icon={Globe} title="Free Stock — Powered by Pexels" count={pexelsItems.length} variant="pexels" />
-            <div className={isVideoSection
-              ? "grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
-              : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
-            }>
-              {pexelsItems.map((item) => (
-                <PexelsCard key={item.id} item={item} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {pexelsLoading && !hasPexels && (
-          <div className="mt-8">
-            <Separator className="mb-6" />
-            <div className="flex items-center gap-2 text-sm text-muted-foreground px-4 py-3">
-              <Globe className="h-4 w-4 animate-pulse" />
-              Loading free stock from Pexels…
             </div>
           </div>
         )}
@@ -607,11 +561,6 @@ const Marketplace = () => {
                   {totalCount.toLocaleString()} marketplace results
                 </span>
               )}
-              {pexelsItems.length > 0 && (
-                <span className="text-xs text-muted-foreground/70">
-                  + {pexelsItems.length} free via Pexels
-                </span>
-              )}
               {page > 1 && (
                 <Badge variant="secondary">Page {page}</Badge>
               )}
@@ -660,7 +609,7 @@ const Marketplace = () => {
               </div>
             ))}
           </div>
-        ) : marketplaceContent.length === 0 && pexelsItems.length === 0 ? (
+        ) : marketplaceContent.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-muted-foreground text-lg">No content found</div>
             <p className="text-muted-foreground/60 mt-2">Try adjusting your search filters</p>
