@@ -144,7 +144,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
         <div className="flex items-center gap-2">
           <Video className="h-5 w-5 text-primary" />
           <span className="font-semibold">
-            {language === 'en' ? "Video Filters" : "Filtres Vidéo"}
+            {t("vf.title")}
           </span>
           {activeFiltersCount > 0 && (
             <Badge variant="secondary" className="ml-1">
@@ -155,7 +155,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
         {activeFiltersCount > 0 && (
           <Button variant="ghost" size="sm" onClick={onReset} className="h-8 px-2 text-xs">
             <RotateCcw className="h-3 w-3 mr-1" />
-            {language === 'en' ? "Reset" : "Réinitialiser"}
+            {t("vf.reset")}
           </Button>
         )}
       </div>
@@ -168,7 +168,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
               <div className="flex items-center gap-2">
                 <Video className="h-4 w-4 text-orange-500" />
                 <span className="text-sm font-medium">
-                  {language === 'en' ? "By Use Case" : "Par Utilisation"}
+                  {t("vf.section.useCase")}
                 </span>
                 {filters.useCase.length > 0 && (
                   <Badge variant="outline" className="h-5 px-1.5 text-xs">
@@ -204,7 +204,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-purple-500" />
                 <span className="text-sm font-medium">
-                  {language === 'en' ? "AI Videos" : "Vidéos IA"}
+                  {t("vf.section.aiVideos")}
                 </span>
                 <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">
                   ⭐
@@ -243,7 +243,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
               <div className="flex items-center gap-2">
                 <Palette className="h-4 w-4 text-blue-500" />
                 <span className="text-sm font-medium">
-                  {language === 'en' ? "By Style" : "Par Style"}
+                  {t("vf.section.style")}
                 </span>
                 {filters.style.length > 0 && (
                   <Badge variant="outline" className="h-5 px-1.5 text-xs">
@@ -279,7 +279,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
               <div className="flex items-center gap-2">
                 <Maximize2 className="h-4 w-4 text-green-500" />
                 <span className="text-sm font-medium">
-                  {language === 'en' ? "By Format" : "Par Format"}
+                  {t("vf.section.format")}
                 </span>
                 {filters.format.length > 0 && (
                   <Badge variant="outline" className="h-5 px-1.5 text-xs">
@@ -316,7 +316,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
               <div className="flex items-center gap-2">
                 <Wand2 className="h-4 w-4 text-yellow-500" />
                 <span className="text-sm font-medium">
-                  {language === 'en' ? "Effects & Elements" : "Effets & Éléments"}
+                  {t("vf.section.effects")}
                 </span>
                 {filters.effects.length > 0 && (
                   <Badge variant="outline" className="h-5 px-1.5 text-xs">
@@ -349,17 +349,17 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
           {/* Quick Filters */}
           <div className="space-y-3">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {language === 'en' ? "Quick Filters" : "Filtres rapides"}
+              {t("vf.quickFilters")}
             </Label>
 
             {/* Orientation */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Orientation" : "Orientation"}</Label>
+              <Label className="text-sm">{t("vf.orientation")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  { value: "vertical", label: language === 'en' ? "Vertical" : "Vertical", icon: Smartphone },
-                  { value: "horizontal", label: language === 'en' ? "Horizontal" : "Horizontal", icon: Monitor },
-                  { value: "square", label: language === 'en' ? "Square" : "Carré", icon: Square },
+                  { value: "vertical", label: t("vf.orient.vertical"), icon: Smartphone },
+                  { value: "horizontal", label: t("vf.orient.horizontal"), icon: Monitor },
+                  { value: "square", label: t("vf.orient.square"), icon: Square },
                 ].map((option) => (
                   <Button
                     key={option.value}
@@ -377,7 +377,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
 
             {/* Resolution */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Resolution" : "Résolution"}</Label>
+              <Label className="text-sm">{t("vf.resolution")}</Label>
               <div className="flex gap-1.5">
                 {[
                   { value: "hd", label: "HD" },
@@ -398,7 +398,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
 
             {/* AI Generated Toggle */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "AI Generated" : "Généré par IA"}</Label>
+              <Label className="text-sm">{t("vf.aiGenerated")}</Label>
               <div className="flex gap-1.5">
                 <Button
                   variant={filters.aiGenerated === true ? "default" : "outline"}
@@ -406,7 +406,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("aiGenerated", filters.aiGenerated === true ? null : true)}
                 >
-                  {language === 'en' ? "Yes" : "Oui"}
+                  {t("vf.yes")}
                 </Button>
                 <Button
                   variant={filters.aiGenerated === false ? "default" : "outline"}
@@ -414,14 +414,14 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("aiGenerated", filters.aiGenerated === false ? null : false)}
                 >
-                  {language === 'en' ? "No" : "Non"}
+                  {t("vf.no")}
                 </Button>
               </div>
             </div>
 
             {/* Loopable */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Loopable" : "En boucle"}</Label>
+              <Label className="text-sm">{t("vf.loopable")}</Label>
               <div className="flex gap-1.5">
                 <Button
                   variant={filters.loopable === true ? "default" : "outline"}
@@ -429,7 +429,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("loopable", filters.loopable === true ? null : true)}
                 >
-                  {language === 'en' ? "Yes" : "Oui"}
+                  {t("vf.yes")}
                 </Button>
                 <Button
                   variant={filters.loopable === false ? "default" : "outline"}
@@ -437,14 +437,14 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("loopable", filters.loopable === false ? null : false)}
                 >
-                  {language === 'en' ? "No" : "Non"}
+                  {t("vf.no")}
                 </Button>
               </div>
             </div>
 
             {/* With People */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "With People" : "Avec des personnes"}</Label>
+              <Label className="text-sm">{t("vf.withPeople")}</Label>
               <div className="flex gap-1.5">
                 <Button
                   variant={filters.withPeople === true ? "default" : "outline"}
@@ -452,7 +452,7 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("withPeople", filters.withPeople === true ? null : true)}
                 >
-                  {language === 'en' ? "Yes" : "Oui"}
+                  {t("vf.yes")}
                 </Button>
                 <Button
                   variant={filters.withPeople === false ? "default" : "outline"}
@@ -460,14 +460,14 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("withPeople", filters.withPeople === false ? null : false)}
                 >
-                  {language === 'en' ? "No" : "Non"}
+                  {t("vf.no")}
                 </Button>
               </div>
             </div>
 
             {/* Copy Space */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Copy Space" : "Espace texte"}</Label>
+              <Label className="text-sm">{t("vf.copySpace")}</Label>
               <div className="flex gap-1.5">
                 <Button
                   variant={filters.copySpace === true ? "default" : "outline"}
@@ -475,14 +475,14 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
                   className="h-7 text-xs"
                   onClick={() => updateBooleanFilter("copySpace", filters.copySpace === true ? null : true)}
                 >
-                  {language === 'en' ? "Yes" : "Oui"}
+                  {t("vf.yes")}
                 </Button>
               </div>
             </div>
 
             {/* Platform */}
             <div className="space-y-2">
-              <Label className="text-sm">{language === 'en' ? "Platform" : "Plateforme"}</Label>
+              <Label className="text-sm">{t("vf.platform")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {platformOptions.map((option) => (
                   <Button
