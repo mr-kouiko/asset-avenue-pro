@@ -230,6 +230,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=3600",
       },
     });
