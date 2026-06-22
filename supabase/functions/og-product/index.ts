@@ -18,6 +18,26 @@ Deno.serve(async (req) => {
       return new Response("Missing slug parameter", { status: 400 });
     }
 
+    // Detect social crawlers vs human browsers.
+    // Humans get an immediate 302 redirect to the real product page (never see raw HTML).
+    // Crawlers (Facebook, Twitter, LinkedIn, WhatsApp, Slack, Discord, Telegram, Pinterest, Google bot, etc.)
+    // get the full HTML with OG/Twitter meta tags.
+    const ua = (req.headers.get("user-agent") || "").toLowerCase();
+    const isCrawler = /facebookexternalhit|facebookcatalog|twitterbot|linkedinbot|slackbot|discordbot|telegrambot|whatsapp|pinterest|googlebot|bingbot|applebot|redditbot|embedly|quora link preview|outbrain|vkshare|w3c_validator|yandex|baiduspider|skypeuripreview|nuzzel|bitlybot|tumblr|flipboard|chatgpt|gptbot|perplexity|claudebot|metainspector|iframely/.test(ua);
+
+    // For humans we don't even need to hit the DB — redirect straight to the canonical page.
+    if (!isCrawler) {
+      const redirectUrl = `https://visustock.com/products/${encodeURIComponent(slug)}`;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          ...corsHeaders,
+          Location: redirectUrl,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -210,6 +230,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=3600",
       },
     });
