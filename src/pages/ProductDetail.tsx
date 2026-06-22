@@ -50,14 +50,23 @@ const DownloadPreviewButton = ({ previewUrl, title, type }: { previewUrl: string
     if (downloading) return;
     setDownloading(true);
     const filenameBase = (title || 'preview').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
-    const ext = type === 'video' ? 'mp4' : 'mp3';
-    const filename = `${filenameBase}_preview.${ext}`;
+    // Audio is re-encoded to WAV after baking the watermark; video keeps mp4.
+    const ext = type === 'video' ? 'mp4' : 'wav';
+    const filename = `${filenameBase}_watermarked_preview.${ext}`;
     const cleanUrl = previewUrl.split('#')[0];
 
     try {
-      const response = await fetch(cleanUrl, { mode: 'cors' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
+      let blob: Blob;
+      if (type === 'audio') {
+        // Bake the whisper watermark into the file before downloading,
+        // otherwise the user gets the raw unwatermarked preview.
+        const { bakeAudioWatermark } = await import('@/utils/audioWatermarkBake');
+        blob = await bakeAudioWatermark(cleanUrl);
+      } else {
+        const response = await fetch(cleanUrl, { mode: 'cors' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        blob = await response.blob();
+      }
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
@@ -66,15 +75,18 @@ const DownloadPreviewButton = ({ previewUrl, title, type }: { previewUrl: string
       a.click();
       a.remove();
       URL.revokeObjectURL(blobUrl);
-    } catch {
-      // Fallback: open in new tab
-      const a = document.createElement('a');
-      a.href = cleanUrl;
-      a.download = filename;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    } catch (err) {
+      console.error('Watermarked preview download failed:', err);
+      // Fallback: open original in new tab (video only; audio fallback would be unwatermarked)
+      if (type === 'video') {
+        const a = document.createElement('a');
+        a.href = cleanUrl;
+        a.download = filename;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } finally {
       setDownloading(false);
     }
