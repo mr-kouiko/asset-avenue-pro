@@ -43,11 +43,11 @@ interface VideoFiltersPanelProps {
 }
 
 const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPanelProps) => {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const [openSections, setOpenSections] = useState<string[]>(["useCase", "aiVideos"]);
 
   const toggleSection = (section: string) => {
-    setOpenSections(prev => 
+    setOpenSections(prev =>
       prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
     );
   };
@@ -68,59 +68,60 @@ const VideoFiltersPanel = ({ filters, onFiltersChange, onReset }: VideoFiltersPa
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  // Video taxonomy data
+  // Video taxonomy data — labels resolved via i18n keys (filter values unchanged)
   const useCaseOptions = [
-    { value: "social-media", label: "Social Media (Reels/TikTok/Shorts)" },
-    { value: "ads-marketing", label: "Ads & Marketing" },
-    { value: "business-corporate", label: "Business & Corporate" },
-    { value: "startup-saas", label: "Startup & SaaS" },
-    { value: "ecommerce-product", label: "E-commerce & Product" },
-    { value: "real-estate", label: "Real Estate" },
-    { value: "luxury-lifestyle", label: "Luxury & Lifestyle" },
-    { value: "motivation-success", label: "Motivation & Success" },
+    { value: "social-media", label: t("vf.uc.social-media") },
+    { value: "ads-marketing", label: t("vf.uc.ads-marketing") },
+    { value: "business-corporate", label: t("vf.uc.business-corporate") },
+    { value: "startup-saas", label: t("vf.uc.startup-saas") },
+    { value: "ecommerce-product", label: t("vf.uc.ecommerce-product") },
+    { value: "real-estate", label: t("vf.uc.real-estate") },
+    { value: "luxury-lifestyle", label: t("vf.uc.luxury-lifestyle") },
+    { value: "motivation-success", label: t("vf.uc.motivation-success") },
   ];
 
   const aiVideoOptions = [
-    { value: "ai-generated", label: "AI-Generated Videos" },
-    { value: "ai-cinematic", label: "AI Cinematic B-Roll" },
-    { value: "ai-avatars", label: "AI Avatars" },
-    { value: "ai-backgrounds", label: "AI Background Loops" },
-    { value: "ai-motion-graphics", label: "AI Motion Graphics" },
+    { value: "ai-generated", label: t("vf.ai.ai-generated") },
+    { value: "ai-cinematic", label: t("vf.ai.ai-cinematic") },
+    { value: "ai-avatars", label: t("vf.ai.ai-avatars") },
+    { value: "ai-backgrounds", label: t("vf.ai.ai-backgrounds") },
+    { value: "ai-motion-graphics", label: t("vf.ai.ai-motion-graphics") },
   ];
 
   const styleOptions = [
-    { value: "cinematic", label: "Cinematic" },
-    { value: "minimal", label: "Minimal" },
-    { value: "futuristic", label: "Futuristic" },
-    { value: "abstract", label: "Abstract" },
-    { value: "documentary", label: language === 'en' ? "Documentary" : "Documentaire" },
-    { value: "urban-street", label: language === 'en' ? "Urban / Street" : "Urbain / Street" },
-    { value: "nature-travel", label: language === 'en' ? "Nature / Travel" : "Nature / Voyage" },
+    { value: "cinematic", label: t("vf.style.cinematic") },
+    { value: "minimal", label: t("vf.style.minimal") },
+    { value: "futuristic", label: t("vf.style.futuristic") },
+    { value: "abstract", label: t("vf.style.abstract") },
+    { value: "documentary", label: t("vf.style.documentary") },
+    { value: "urban-street", label: t("vf.style.urban-street") },
+    { value: "nature-travel", label: t("vf.style.nature-travel") },
   ];
 
   const formatOptions = [
-    { value: "vertical", label: language === 'en' ? "Vertical (9:16)" : "Vertical (9:16)", icon: Smartphone },
-    { value: "square", label: language === 'en' ? "Square (1:1)" : "Carré (1:1)", icon: Square },
-    { value: "horizontal", label: language === 'en' ? "Horizontal (16:9)" : "Horizontal (16:9)", icon: Monitor },
-    { value: "4k", label: "4K", icon: Maximize2 },
-    { value: "loopable", label: language === 'en' ? "Loopable" : "En boucle", icon: RotateCcw },
+    { value: "vertical", label: t("vf.fmt.vertical"), icon: Smartphone },
+    { value: "square", label: t("vf.fmt.square"), icon: Square },
+    { value: "horizontal", label: t("vf.fmt.horizontal"), icon: Monitor },
+    { value: "4k", label: t("vf.fmt.4k"), icon: Maximize2 },
+    { value: "loopable", label: t("vf.fmt.loopable"), icon: RotateCcw },
   ];
 
   const effectsOptions = [
-    { value: "backgrounds-loops", label: language === 'en' ? "Backgrounds & Loops" : "Arrière-plans & Boucles" },
-    { value: "transitions", label: language === 'en' ? "Transitions" : "Transitions" },
-    { value: "overlays", label: language === 'en' ? "Overlays" : "Overlays" },
-    { value: "light-leaks", label: language === 'en' ? "Light Leaks / Glitches" : "Light Leaks / Glitches" },
-    { value: "particles", label: language === 'en' ? "Particles" : "Particules" },
-    { value: "countdowns", label: language === 'en' ? "Countdowns" : "Comptes à rebours" },
+    { value: "backgrounds-loops", label: t("vf.effect.backgrounds-loops") },
+    { value: "transitions", label: t("vf.effect.transitions") },
+    { value: "overlays", label: t("vf.effect.overlays") },
+    { value: "light-leaks", label: t("vf.effect.light-leaks") },
+    { value: "particles", label: t("vf.effect.particles") },
+    { value: "countdowns", label: t("vf.effect.countdowns") },
   ];
 
   const platformOptions = [
-    { value: "tiktok", label: "TikTok" },
-    { value: "instagram", label: "Instagram" },
-    { value: "youtube", label: "YouTube" },
-    { value: "ads", label: language === 'en' ? "Ads" : "Publicités" },
+    { value: "tiktok", label: t("vf.plat.tiktok") },
+    { value: "instagram", label: t("vf.plat.instagram") },
+    { value: "youtube", label: t("vf.plat.youtube") },
+    { value: "ads", label: t("vf.plat.ads") },
   ];
+
 
   const activeFiltersCount = 
     filters.useCase.length + 
