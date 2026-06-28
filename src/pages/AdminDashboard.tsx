@@ -35,6 +35,7 @@ import { AdminSecurityLogs } from "@/components/admin/AdminSecurityLogs";
 import { AdminVendorManagement } from "@/components/admin/AdminVendorManagement";
 import { AdminOrdersTracking } from "@/components/admin/AdminOrdersTracking";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { AdminGoogleMerchant } from "@/components/admin/AdminGoogleMerchant";
 import { AdminSupportTickets } from "@/components/admin/AdminSupportTickets";
 import { AdminContentReports } from "@/components/admin/AdminContentReports";
 import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
@@ -275,6 +276,10 @@ const AdminDashboard = () => {
               <HardDrive className="h-4 w-4" />
               <span className="hidden sm:inline">Integrity</span>
             </TabsTrigger>
+            <TabsTrigger value="merchant" className="flex items-center gap-1">
+              <ShoppingBag className="h-4 w-4" />
+              <span className="hidden sm:inline">Google Shop</span>
+            </TabsTrigger>
           </TabsList>
 
 
@@ -387,6 +392,10 @@ const AdminDashboard = () => {
                 <AdminSettings />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="merchant">
+            <AdminGoogleMerchant />
           </TabsContent>
 
           {/* Users Tab */}
