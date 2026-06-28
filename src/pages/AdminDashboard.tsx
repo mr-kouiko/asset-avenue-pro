@@ -29,7 +29,7 @@ import {
 import { AdminTransactionsDashboard } from "@/components/AdminTransactionsDashboard";
 import { AdminSEOCoPilot } from "@/components/admin/AdminSEOCoPilot";
 import { AdminPayoutsPanel } from "@/components/admin/AdminPayoutsPanel";
-import { Wallet } from "lucide-react";
+import { Wallet, ShoppingBag } from "lucide-react";
 import { AdminUsersManagement } from "@/components/admin/AdminUsersManagement";
 import { AdminSecurityLogs } from "@/components/admin/AdminSecurityLogs";
 import { AdminVendorManagement } from "@/components/admin/AdminVendorManagement";
