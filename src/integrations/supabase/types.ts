@@ -635,6 +635,44 @@ export type Database = {
         }
         Relationships: []
       }
+      google_merchant_sync_log: {
+        Row: {
+          action: string
+          created_at: string
+          error: string | null
+          google_product_id: string | null
+          id: string
+          status: string
+          submission_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error?: string | null
+          google_product_id?: string | null
+          id?: string
+          status: string
+          submission_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error?: string | null
+          google_product_id?: string | null
+          id?: string
+          status?: string
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_merchant_sync_log_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrity_issues: {
         Row: {
           age_hours: number | null
@@ -829,6 +867,30 @@ export type Database = {
           name?: string
           price?: number | null
           type?: string
+        }
+        Relationships: []
+      }
+      merchant_sync_queue: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          processed_at: string | null
+          submission_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          submission_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          submission_id?: string
         }
         Relationships: []
       }
