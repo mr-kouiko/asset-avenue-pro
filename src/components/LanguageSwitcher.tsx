@@ -23,7 +23,7 @@ export const LanguageSwitcher = ({ variant = "default" }: LanguageSwitcherProps)
         <Button variant="ghost" size="sm" className="gap-1.5 h-9 px-2">
           <Globe className="h-4 w-4" />
           {variant === "default" && (
-            <span className="text-sm font-medium">{current.flag} {language.toUpperCase()}</span>
+            <span className="text-sm font-medium">{current.flag}</span>
           )}
         </Button>
       </DropdownMenuTrigger>
