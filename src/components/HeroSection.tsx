@@ -122,7 +122,7 @@ export const HeroSection = () => {
             <div className="relative">
               <img
                 src={HERO_IMAGE}
-                alt="Hero"
+                alt="VisuStock premium digital marketplace creative assets"
                 width={512}
                 height={288}
                 loading="eager"

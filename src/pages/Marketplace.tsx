@@ -461,6 +461,10 @@ const Marketplace = () => {
       <Navigation />
 
       <div className="container py-8">
+        <h1 className="text-3xl font-bold tracking-tight mb-6">
+          {t('marketplace.title')}
+        </h1>
+
         {/* Search and Filters Header */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row gap-4 mb-6">

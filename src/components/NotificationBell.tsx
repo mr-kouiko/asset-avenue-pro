@@ -83,6 +83,7 @@ export const NotificationBell = () => {
         variant="ghost"
         size="icon"
         className="relative"
+        aria-label="Notifications"
         onClick={() => setOpen(!open)}
       >
         <Bell className="h-5 w-5" />

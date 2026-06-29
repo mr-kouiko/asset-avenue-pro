@@ -51,7 +51,7 @@ export const Header = () => {
         <Link to={lp("/")} className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png"
-            alt="VisuStock" 
+            alt="VisuStock - Premium Digital Marketplace" 
             className="h-8 md:h-10 w-auto"
           />
         </Link>
@@ -68,7 +68,7 @@ export const Header = () => {
         <Link to={lp("/")} className="flex items-center shrink-0">
           <img 
             src="/lovable-uploads/d9197b59-e998-47b4-9d0f-604b4a1002ba.png" 
-            alt="VisuStock" 
+            alt="VisuStock - Premium Digital Marketplace" 
             className="h-8 md:h-10 w-auto max-w-[120px] md:max-w-none object-contain"
           />
         </Link>
@@ -114,7 +114,7 @@ export const Header = () => {
 
           {/* Cart - Show on tablet+ for logged in users */}
           {user && (
-            <Button variant="ghost" size="sm" className="relative hidden sm:flex h-10 w-10 p-0" asChild>
+            <Button variant="ghost" size="sm" className="relative hidden sm:flex h-10 w-10 p-0" aria-label="Shopping cart" asChild>
               <Link to={lp("/cart")}>
                 <ShoppingCart className="h-5 w-5" />
                 {getItemCount() > 0 && (

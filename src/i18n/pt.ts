@@ -26,6 +26,7 @@ export const pt = {
   'common.download': 'Baixar',
   'common.addToCart': 'Adicionar ao carrinho',
   'lang.switch': 'Idioma',
+  'marketplace.title': 'Marketplace de Conteúdo Digital',
 
   // Video filters panel
   'vf.title': 'Filtros de vídeo',
