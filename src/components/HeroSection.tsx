@@ -3,7 +3,8 @@ import { useContentStats } from "@/hooks/useContentStats";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
 import { useAuth } from "@/hooks/useAuth";
-import heroImage from "@/assets/hero-image.jpg";
+
+const HERO_IMAGE = "/hero-image.jpg";
 
 export const HeroSection = () => {
   const { stats, loading } = useContentStats();
