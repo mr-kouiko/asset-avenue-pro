@@ -711,5 +711,6 @@ export default function AIImageGenerator() {
         */}
       </section>
     </div>
+    </div>
   );
 }
