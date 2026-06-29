@@ -39,7 +39,15 @@ function getServiceAccount() {
     ?.replace(/\\n/g, "\n")
     .trim();
 
-  console.log({
+  const rawKey = Deno.env.get("GOOGLE_PRIVATE_KEY");
+  const lines = privateKey?.split("\n") ?? [];
+  console.log("[GMC] GOOGLE_PRIVATE_KEY debug", {
+    exists: !!rawKey,
+    rawLength: rawKey?.length ?? 0,
+    normalizedLength: privateKey?.length ?? 0,
+    lineCount: lines.length,
+    firstLine: lines[0] ?? null,
+    lastLine: lines[lines.length - 1] ?? null,
     hasKey: !!privateKey,
     startsCorrectly: privateKey?.startsWith("-----BEGIN PRIVATE KEY-----"),
     endsCorrectly: privateKey?.endsWith("-----END PRIVATE KEY-----"),
