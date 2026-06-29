@@ -136,6 +136,7 @@ const AppRoutes = () => (
     <Route path="/studio-ai/image-to-video" element={<ImageToVideo />} />
     <Route path="/studio-ai/text-to-video" element={<TextToVideoAI />} />
     <Route path="/studio-ai/image-converter" element={<ImageConverter />} />
+    <Route path="/studio-ai/image-resizer" element={<ImageResizer />} />
     <Route path="/studio-ai/adjust-music-duration" element={<AdjustMusicDuration />} />
     <Route path="/studio-ai/image-upscale" element={<ImageUpscale />} />
     <Route path="/ai-upscaler" element={<AIUpscaler />} />
