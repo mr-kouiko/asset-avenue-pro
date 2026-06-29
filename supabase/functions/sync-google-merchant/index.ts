@@ -27,9 +27,38 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return buf.buffer;
 }
 
+function parseServiceAccount(raw: string): any {
+  let s = raw.trim();
+  // Strip wrapping single/double quotes if user pasted with quotes
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1);
+  }
+  // Try base64 decode if it doesn't look like JSON
+  if (!s.startsWith("{")) {
+    try {
+      const decoded = atob(s.replace(/\s+/g, ""));
+      if (decoded.trim().startsWith("{")) s = decoded;
+    } catch {}
+  }
+  try {
+    return JSON.parse(s);
+  } catch {
+    // Fix unescaped newlines inside the private_key value
+    const fixed = s.replace(/"private_key"\s*:\s*"([\s\S]*?)"\s*,/, (_m, key) => {
+      const escaped = key.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/"/g, '\\"');
+      return `"private_key":"${escaped}",`;
+    });
+    return JSON.parse(fixed);
+  }
+}
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken && cachedToken.expires > Date.now() + 60000) return cachedToken.token;
-  const sa = JSON.parse(SERVICE_ACCOUNT_JSON);
+  const sa = parseServiceAccount(SERVICE_ACCOUNT_JSON);
+  // Normalize escaped newlines in private_key
+  if (sa.private_key && !sa.private_key.includes("\n") && sa.private_key.includes("\\n")) {
+    sa.private_key = sa.private_key.replace(/\\n/g, "\n");
+  }
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const claim = {
