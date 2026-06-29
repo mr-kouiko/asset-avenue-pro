@@ -212,6 +212,7 @@ export default function ImageResizer() {
   }, []);
 
   return (
+    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <canvas ref={canvasRef} className="hidden" />
 
