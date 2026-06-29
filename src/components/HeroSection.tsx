@@ -121,8 +121,10 @@ export const HeroSection = () => {
           <div className="hidden xl:flex flex-1 max-w-lg">
             <div className="relative">
               <img
-                src={heroImage}
+                src={HERO_IMAGE}
                 alt="Hero"
+                width={512}
+                height={288}
                 loading="eager"
                 fetchPriority="high"
                 className="w-full rounded-2xl shadow-2xl"
