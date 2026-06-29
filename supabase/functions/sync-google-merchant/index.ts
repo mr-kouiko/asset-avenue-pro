@@ -7,11 +7,13 @@ const corsHeaders = {
 
 const SITE_URL = "https://visustock.com";
 const MERCHANT_ID = Deno.env.get("GOOGLE_MERCHANT_ID")!;
-const SERVICE_ACCOUNT_JSON = Deno.env.get("GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON")!;
+const GOOGLE_PROJECT_ID = Deno.env.get("GOOGLE_PROJECT_ID");
+const GOOGLE_CLIENT_EMAIL = Deno.env.get("GOOGLE_CLIENT_EMAIL");
+const GOOGLE_PRIVATE_KEY_RAW = Deno.env.get("GOOGLE_PRIVATE_KEY");
 
 let cachedToken: { token: string; expires: number } | null = null;
 
-// --- Google OAuth (Service Account JWT -> access token) ---
+// --- Helpers ---
 function b64url(input: ArrayBuffer | string): string {
   const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
   let bin = "";
@@ -27,38 +29,30 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return buf.buffer;
 }
 
-function parseServiceAccount(raw: string): any {
-  let s = raw.trim();
-  // Strip wrapping single/double quotes if user pasted with quotes
-  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-    s = s.slice(1, -1);
+function getServiceAccount() {
+  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY_RAW) {
+    throw new Error("Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY env vars");
   }
-  // Try base64 decode if it doesn't look like JSON
-  if (!s.startsWith("{")) {
-    try {
-      const decoded = atob(s.replace(/\s+/g, ""));
-      if (decoded.trim().startsWith("{")) s = decoded;
-    } catch {}
+  let privateKey = GOOGLE_PRIVATE_KEY_RAW.trim();
+  // Strip wrapping quotes if user pasted them
+  if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
+    privateKey = privateKey.slice(1, -1);
   }
-  try {
-    return JSON.parse(s);
-  } catch {
-    // Fix unescaped newlines inside the private_key value
-    const fixed = s.replace(/"private_key"\s*:\s*"([\s\S]*?)"\s*,/, (_m, key) => {
-      const escaped = key.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/"/g, '\\"');
-      return `"private_key":"${escaped}",`;
-    });
-    return JSON.parse(fixed);
+  // Convert escaped \n into real newlines
+  privateKey = privateKey.replace(/\\n/g, "\n");
+  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+    throw new Error("GOOGLE_PRIVATE_KEY does not look like a PEM private key");
   }
+  return {
+    project_id: GOOGLE_PROJECT_ID,
+    client_email: GOOGLE_CLIENT_EMAIL,
+    private_key: privateKey,
+  };
 }
 
 async function getAccessToken(): Promise<string> {
   if (cachedToken && cachedToken.expires > Date.now() + 60000) return cachedToken.token;
-  const sa = parseServiceAccount(SERVICE_ACCOUNT_JSON);
-  // Normalize escaped newlines in private_key
-  if (sa.private_key && !sa.private_key.includes("\n") && sa.private_key.includes("\\n")) {
-    sa.private_key = sa.private_key.replace(/\\n/g, "\n");
-  }
+  const sa = getServiceAccount();
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const claim = {
@@ -84,8 +78,13 @@ async function getAccessToken(): Promise<string> {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(`Token exchange failed: ${JSON.stringify(json)}`);
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  if (!res.ok) {
+    console.error("Google token exchange failed:", res.status, text);
+    throw new Error(`Google token exchange failed (${res.status}): ${json.error_description ?? json.error ?? text}`);
+  }
   cachedToken = { token: json.access_token, expires: Date.now() + json.expires_in * 1000 };
   return json.access_token;
 }
@@ -119,8 +118,13 @@ async function gmcInsert(token: string, product: any) {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(product),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data));
+  const text = await res.text();
+  let data: any; try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!res.ok) {
+    const msg = data?.error?.message ?? text;
+    console.error("GMC insert failed:", res.status, msg);
+    throw new Error(`GMC insert ${res.status}: ${msg}`);
+  }
   return data;
 }
 
@@ -133,7 +137,8 @@ async function gmcDelete(token: string, offerId: string) {
   });
   if (!res.ok && res.status !== 404) {
     const txt = await res.text();
-    throw new Error(txt);
+    console.error("GMC delete failed:", res.status, txt);
+    throw new Error(`GMC delete ${res.status}: ${txt}`);
   }
 }
 
@@ -141,8 +146,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    if (!MERCHANT_ID || !SERVICE_ACCOUNT_JSON) {
-      return new Response(JSON.stringify({ error: "Google Merchant secrets not configured" }), {
+    const missing: string[] = [];
+    if (!MERCHANT_ID) missing.push("GOOGLE_MERCHANT_ID");
+    if (!GOOGLE_CLIENT_EMAIL) missing.push("GOOGLE_CLIENT_EMAIL");
+    if (!GOOGLE_PRIVATE_KEY_RAW) missing.push("GOOGLE_PRIVATE_KEY");
+    if (missing.length) {
+      return new Response(JSON.stringify({ error: `Missing secrets: ${missing.join(", ")}` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -197,15 +206,16 @@ Deno.serve(async (req) => {
         }
       } catch (e: any) {
         failed++;
-        errors.push({ id: sub.id, error: e.message });
+        const msg = e?.message ?? String(e);
+        console.error(`processOne(${action}) failed for ${sub.id}:`, msg);
+        errors.push({ id: sub.id, error: msg });
         await admin.from("google_merchant_sync_log").insert({
-          submission_id: sub.id, action, status: "error", error: e.message?.slice(0, 1000),
+          submission_id: sub.id, action, status: "error", error: msg?.slice(0, 1000),
         });
       }
     }
 
     if (mode === "full") {
-      // Push all approved premium products
       const PAGE = 200;
       let from = 0;
       while (true) {
@@ -232,7 +242,6 @@ Deno.serve(async (req) => {
     } else if (mode === "delete" && body.submissionId) {
       await processOne({ id: body.submissionId }, "delete");
     } else {
-      // Drain queue
       const { data: q } = await admin
         .from("merchant_sync_queue")
         .select("id, submission_id, action")
@@ -257,8 +266,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
-    console.error("sync-google-merchant error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    const msg = e?.message ?? String(e);
+    console.error("sync-google-merchant fatal:", msg, e?.stack);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
