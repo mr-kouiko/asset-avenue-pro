@@ -42,6 +42,19 @@ export const Footer = () => {
         <div className="border-t mt-8 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} VisuStock. All rights reserved.</p>
           <div className="flex items-center gap-4">
+            <a
+              href="https://sitepatent.com/?utm_source=visustock.com&utm_medium=badge"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center"
+            >
+              <img
+                src="https://sitepatent.com/api/badge?style=dark"
+                alt="Featured on SitePatent"
+                height={54}
+                className="h-[54px] w-auto"
+              />
+            </a>
             <Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <span>|</span>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms & Conditions</Link>
