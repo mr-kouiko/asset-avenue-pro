@@ -10,6 +10,14 @@ const MERCHANT_ID = Deno.env.get("GOOGLE_MERCHANT_ID")!;
 const GOOGLE_PROJECT_ID = Deno.env.get("GOOGLE_PROJECT_ID");
 const GOOGLE_CLIENT_EMAIL = Deno.env.get("GOOGLE_CLIENT_EMAIL");
 const GOOGLE_PRIVATE_KEY_RAW = Deno.env.get("GOOGLE_PRIVATE_KEY");
+// Merchant API requires a dataSource ID (numeric) created in Merchant Center
+// under Data sources → API. Store just the numeric ID (e.g. "12345678901").
+const GOOGLE_MERCHANT_DATA_SOURCE = Deno.env.get("GOOGLE_MERCHANT_DATA_SOURCE");
+
+const MERCHANT_API_BASE = "https://merchantapi.googleapis.com/products/v1beta";
+const CONTENT_LANGUAGE = "en";
+const FEED_LABEL = "US";
+const CHANNEL = "ONLINE";
 
 let cachedToken: { token: string; expires: number } | null = null;
 
@@ -89,58 +97,75 @@ async function getAccessToken(): Promise<string> {
   return json.access_token;
 }
 
-// --- Build Google product payload ---
-function buildProductPayload(sub: any, thumbnail: string | null) {
+// --- Build Merchant API ProductInput payload ---
+// Docs: https://developers.google.com/merchant/api/reference/rest/products_v1beta/accounts.productInputs
+function buildProductInput(sub: any, thumbnail: string | null) {
   const link = `${SITE_URL}/products/${sub.slug}`;
   const title = (sub.title ?? "Untitled").slice(0, 150);
   const description = (sub.description ?? title).slice(0, 5000);
+  const priceMicros = Math.round(Number(sub.price) * 1_000_000).toString();
   return {
-    offerId: sub.id,
-    title,
-    description,
-    link,
-    imageLink: thumbnail || `${SITE_URL}/og-image.jpg`,
-    contentLanguage: "en",
-    targetCountry: "US",
-    channel: "online",
-    availability: "in stock",
-    condition: "new",
-    price: { value: Number(sub.price).toFixed(2), currency: "USD" },
-    identifierExists: false,
-    googleProductCategory: "Arts & Entertainment > Hobbies & Creative Arts",
+    offerId: String(sub.id),
+    contentLanguage: CONTENT_LANGUAGE,
+    feedLabel: FEED_LABEL,
+    channel: CHANNEL,
+    productAttributes: {
+      title,
+      description,
+      link,
+      imageLink: thumbnail || `${SITE_URL}/og-image.jpg`,
+      availability: "in_stock",
+      condition: "new",
+      price: { amountMicros: priceMicros, currencyCode: "USD" },
+      identifierExists: false,
+      googleProductCategory: "Arts & Entertainment > Hobbies & Creative Arts",
+      productTypes: ["Digital Stock Media"],
+    },
   };
 }
 
+function productInputName(offerId: string) {
+  // accounts/{account}/productInputs/{channel}~{contentLanguage}~{feedLabel}~{offerId}
+  return `accounts/${MERCHANT_ID}/productInputs/${CHANNEL.toLowerCase()}~${CONTENT_LANGUAGE}~${FEED_LABEL}~${offerId}`;
+}
+
+function dataSourceName() {
+  return `accounts/${MERCHANT_ID}/dataSources/${GOOGLE_MERCHANT_DATA_SOURCE}`;
+}
+
 async function gmcInsert(token: string, product: any) {
-  const url = `https://shoppingcontent.googleapis.com/content/v2.1/${MERCHANT_ID}/products`;
+  const url = `${MERCHANT_API_BASE}/accounts/${MERCHANT_ID}/productInputs:insert?dataSource=${encodeURIComponent(dataSourceName())}`;
+  console.error("[GMC] POST", url);
   const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(product),
   });
   const text = await res.text();
+  console.error("[GMC] insert status", res.status, "body", text);
   let data: any; try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok) {
     const msg = data?.error?.message ?? text;
-    console.error("GMC insert failed:", res.status, msg);
-    throw new Error(`GMC insert ${res.status}: ${msg}`);
+    throw new Error(`Merchant API insert ${res.status}: ${msg}`);
   }
   return data;
 }
 
 async function gmcDelete(token: string, offerId: string) {
-  const productId = `online:en:US:${offerId}`;
-  const url = `https://shoppingcontent.googleapis.com/content/v2.1/${MERCHANT_ID}/products/${productId}`;
+  const name = productInputName(String(offerId));
+  const url = `${MERCHANT_API_BASE}/${name}?dataSource=${encodeURIComponent(dataSourceName())}`;
+  console.error("[GMC] DELETE", url);
   const res = await fetch(url, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
+  const text = await res.text();
+  console.error("[GMC] delete status", res.status, "body", text);
   if (!res.ok && res.status !== 404) {
-    const txt = await res.text();
-    console.error("GMC delete failed:", res.status, txt);
-    throw new Error(`GMC delete ${res.status}: ${txt}`);
+    throw new Error(`Merchant API delete ${res.status}: ${text}`);
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -150,6 +175,7 @@ Deno.serve(async (req) => {
     if (!MERCHANT_ID) missing.push("GOOGLE_MERCHANT_ID");
     if (!GOOGLE_CLIENT_EMAIL) missing.push("GOOGLE_CLIENT_EMAIL");
     if (!GOOGLE_PRIVATE_KEY_RAW) missing.push("GOOGLE_PRIVATE_KEY");
+    if (!GOOGLE_MERCHANT_DATA_SOURCE) missing.push("GOOGLE_MERCHANT_DATA_SOURCE");
     if (missing.length) {
       return new Response(JSON.stringify({ error: `Missing secrets: ${missing.join(", ")}` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -197,7 +223,7 @@ Deno.serve(async (req) => {
           const thumbUrl = thumb
             ? (thumb.startsWith("http") ? thumb : `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/content-files/${thumb}`)
             : null;
-          await gmcInsert(token, buildProductPayload(sub, thumbUrl));
+          await gmcInsert(token, buildProductInput(sub, thumbUrl));
           uploaded++;
           await admin.from("google_merchant_sync_log").insert({
             submission_id: sub.id, action: "upsert", status: "success",
