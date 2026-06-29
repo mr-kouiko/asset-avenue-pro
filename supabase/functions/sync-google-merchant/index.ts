@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
           const thumbUrl = thumb
             ? (thumb.startsWith("http") ? thumb : `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/content-files/${thumb}`)
             : null;
-          await gmcInsert(token, buildProductPayload(sub, thumbUrl));
+          await gmcInsert(token, buildProductInput(sub, thumbUrl));
           uploaded++;
           await admin.from("google_merchant_sync_log").insert({
             submission_id: sub.id, action: "upsert", status: "success",
