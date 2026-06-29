@@ -49,7 +49,7 @@ export const Footer = () => {
               className="inline-flex items-center"
             >
               <img
-                src="https://sitepatent.com/api/badge?style=dark"
+                src="https://sitepatent.com/api/badge?style=classic"
                 alt="Featured on SitePatent"
                 height={54}
                 className="h-[54px] w-auto"
