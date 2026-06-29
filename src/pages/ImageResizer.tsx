@@ -394,5 +394,6 @@ export default function ImageResizer() {
         </Accordion>
       </section>
     </div>
+    </div>
   );
 }
