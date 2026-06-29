@@ -7,9 +7,6 @@ const corsHeaders = {
 
 const SITE_URL = "https://visustock.com";
 const MERCHANT_ID = Deno.env.get("GOOGLE_MERCHANT_ID")!;
-const GOOGLE_PROJECT_ID = Deno.env.get("GOOGLE_PROJECT_ID");
-const GOOGLE_CLIENT_EMAIL = Deno.env.get("GOOGLE_CLIENT_EMAIL");
-const GOOGLE_PRIVATE_KEY_RAW = Deno.env.get("GOOGLE_PRIVATE_KEY");
 // Merchant API requires a dataSource ID (numeric) created in Merchant Center
 // under Data sources → API. Store just the numeric ID (e.g. "12345678901").
 const GOOGLE_MERCHANT_DATA_SOURCE = Deno.env.get("GOOGLE_MERCHANT_DATA_SOURCE");
@@ -38,24 +35,21 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 }
 
 function getServiceAccount() {
-  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY_RAW) {
-    throw new Error("Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY env vars");
+  const serviceAccount = {
+    project_id: Deno.env.get("GOOGLE_PROJECT_ID"),
+    client_email: Deno.env.get("GOOGLE_CLIENT_EMAIL"),
+    private_key: Deno.env.get("GOOGLE_PRIVATE_KEY")?.replace(/\\n/g, "\n"),
+  };
+
+  if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
+    throw new Error("Missing Google auth secrets: GOOGLE_PROJECT_ID, GOOGLE_CLIENT_EMAIL, or GOOGLE_PRIVATE_KEY");
   }
-  let privateKey = GOOGLE_PRIVATE_KEY_RAW.trim();
-  // Strip wrapping quotes if user pasted them
-  if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
-    privateKey = privateKey.slice(1, -1);
-  }
-  // Convert escaped \n into real newlines
-  privateKey = privateKey.replace(/\\n/g, "\n");
-  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+
+  if (!serviceAccount.private_key.includes("BEGIN PRIVATE KEY")) {
     throw new Error("GOOGLE_PRIVATE_KEY does not look like a PEM private key");
   }
-  return {
-    project_id: GOOGLE_PROJECT_ID,
-    client_email: GOOGLE_CLIENT_EMAIL,
-    private_key: privateKey,
-  };
+
+  return serviceAccount;
 }
 
 async function getAccessToken(): Promise<string> {
@@ -173,8 +167,9 @@ Deno.serve(async (req) => {
   try {
     const missing: string[] = [];
     if (!MERCHANT_ID) missing.push("GOOGLE_MERCHANT_ID");
-    if (!GOOGLE_CLIENT_EMAIL) missing.push("GOOGLE_CLIENT_EMAIL");
-    if (!GOOGLE_PRIVATE_KEY_RAW) missing.push("GOOGLE_PRIVATE_KEY");
+    if (!Deno.env.get("GOOGLE_PROJECT_ID")) missing.push("GOOGLE_PROJECT_ID");
+    if (!Deno.env.get("GOOGLE_CLIENT_EMAIL")) missing.push("GOOGLE_CLIENT_EMAIL");
+    if (!Deno.env.get("GOOGLE_PRIVATE_KEY")) missing.push("GOOGLE_PRIVATE_KEY");
     if (!GOOGLE_MERCHANT_DATA_SOURCE) missing.push("GOOGLE_MERCHANT_DATA_SOURCE");
     if (missing.length) {
       return new Response(JSON.stringify({ error: `Missing secrets: ${missing.join(", ")}` }), {
