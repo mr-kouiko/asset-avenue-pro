@@ -121,6 +121,15 @@ const imageTools: AITool[] = [
     available: true,
     badge: 'Free'
   },
+  {
+    id: 'image-resizer',
+    title: 'Image Resizer',
+    description: 'Resize images for social media, ads, and web — lock aspect ratio, crop to presets, and export in PNG/JPEG/WebP.',
+    icon: <Crop className="w-6 h-6" />,
+    href: '/studio-ai/image-resizer',
+    available: true,
+    badge: 'Free'
+  },
 ];
 
 const audioTools: AITool[] = [
