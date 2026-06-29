@@ -26,6 +26,7 @@ export const en = {
   'common.download': 'Download',
   'common.addToCart': 'Add to cart',
   'lang.switch': 'Language',
+  'marketplace.title': 'Digital Content Marketplace',
 
   // Video filters panel
   'vf.title': 'Video Filters',
