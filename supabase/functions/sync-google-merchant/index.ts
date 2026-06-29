@@ -175,6 +175,7 @@ Deno.serve(async (req) => {
     if (!MERCHANT_ID) missing.push("GOOGLE_MERCHANT_ID");
     if (!GOOGLE_CLIENT_EMAIL) missing.push("GOOGLE_CLIENT_EMAIL");
     if (!GOOGLE_PRIVATE_KEY_RAW) missing.push("GOOGLE_PRIVATE_KEY");
+    if (!GOOGLE_MERCHANT_DATA_SOURCE) missing.push("GOOGLE_MERCHANT_DATA_SOURCE");
     if (missing.length) {
       return new Response(JSON.stringify({ error: `Missing secrets: ${missing.join(", ")}` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
