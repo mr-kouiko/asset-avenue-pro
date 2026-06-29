@@ -138,7 +138,7 @@ export const BuyerInvoices = () => {
       <CardContent>
         {orders.length === 0 ? (
           <div className="text-center py-12 border border-dashed rounded-md">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">No purchases yet.</p>
           </div>
         ) : (
