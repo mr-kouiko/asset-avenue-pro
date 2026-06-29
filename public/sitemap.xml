@@ -11,6 +11,7 @@
   <url><loc>https://visustock.com/collections</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://visustock.com/ai-image-generator</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://visustock.com/studio-ai</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://visustock.com/studio-ai/image-resizer</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://visustock.com/packages-pricing</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://visustock.com/buy-credits</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://visustock.com/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
