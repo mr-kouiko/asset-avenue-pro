@@ -29,8 +29,8 @@ const Support = () => {
       ? "Support Center - Get Help with VisuStock"
       : "Centre d'Aide - Obtenez de l'Aide avec VisuStock",
     description: language === 'en'
-      ? "Find answers to your questions about VisuStock, our creative marketplace, licensing, and seller features."
-      : "Trouvez les réponses à vos questions sur VisuStock, notre marketplace de contenus créatifs, les licences et la vente de contenus.",
+      ? "Get help with VisuStock: browse FAQs, send a support ticket, or contact our team for questions about licensing, selling, downloads, and account issues."
+      : "Obtenez de l'aide sur VisuStock : parcourez la FAQ, envoyez un ticket ou contactez notre équipe pour toute question sur les licences, la vente, les téléchargements et votre compte.",
     type: 'website'
   });
   
