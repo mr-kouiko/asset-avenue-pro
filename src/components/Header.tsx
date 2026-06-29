@@ -114,7 +114,7 @@ export const Header = () => {
 
           {/* Cart - Show on tablet+ for logged in users */}
           {user && (
-            <Button variant="ghost" size="sm" className="relative hidden sm:flex h-10 w-10 p-0" asChild>
+            <Button variant="ghost" size="sm" className="relative hidden sm:flex h-10 w-10 p-0" aria-label="Shopping cart" asChild>
               <Link to={lp("/cart")}>
                 <ShoppingCart className="h-5 w-5" />
                 {getItemCount() > 0 && (
