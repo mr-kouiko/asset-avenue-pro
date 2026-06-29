@@ -444,5 +444,6 @@ export default function RemoveBackground() {
         */}
       </section>
     </div>
+    </div>
   );
 }
