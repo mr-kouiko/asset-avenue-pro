@@ -200,11 +200,24 @@ const CollectionDetail = () => {
 
   const Icon = collectionIcons[collection.id] || Briefcase;
 
+  const faqSchema = collection.faq.length > 0 && !showEmptyState ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": collection.faq.map((item) => ({
+      "@type": "Question",
+      "name": item.question,
+      "acceptedAnswer": { "@type": "Answer", "text": item.answer },
+    })),
+  } : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <Navigation />
-      
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
+
       <main className="container py-8">
         {/* Breadcrumb */}
         <nav className="text-sm text-muted-foreground mb-6">

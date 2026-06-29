@@ -198,6 +198,36 @@ export const useSEO = (config: SEOConfig) => {
       document.head.appendChild(script);
     }
 
+    // Article structured data
+    if (type === 'article') {
+      const articleData = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": title,
+        "description": description,
+        "image": image,
+        "url": fullUrl,
+        "mainEntityOfPage": { "@type": "WebPage", "@id": fullUrl },
+        "publisher": {
+          "@type": "Organization",
+          "name": SITE_NAME,
+          "logo": { "@type": "ImageObject", "url": `${BASE_URL}/favicon.ico` }
+        },
+        ...(author && { "author": { "@type": "Person", "name": author } }),
+        ...(publishedTime && { "datePublished": publishedTime, "dateModified": publishedTime }),
+        ...(tags.length > 0 && { "keywords": tags.join(', ') }),
+      };
+
+      const existingScript = document.querySelector('script[type="application/ld+json"][data-seo-dynamic="true"]');
+      if (existingScript) existingScript.remove();
+
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-seo-dynamic', 'true');
+      script.text = JSON.stringify(articleData);
+      document.head.appendChild(script);
+    }
+
     // Website structured data for non-product pages
     if (type === 'website') {
       const websiteData = {
