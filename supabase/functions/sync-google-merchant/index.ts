@@ -10,6 +10,14 @@ const MERCHANT_ID = Deno.env.get("GOOGLE_MERCHANT_ID")!;
 const GOOGLE_PROJECT_ID = Deno.env.get("GOOGLE_PROJECT_ID");
 const GOOGLE_CLIENT_EMAIL = Deno.env.get("GOOGLE_CLIENT_EMAIL");
 const GOOGLE_PRIVATE_KEY_RAW = Deno.env.get("GOOGLE_PRIVATE_KEY");
+// Merchant API requires a dataSource ID (numeric) created in Merchant Center
+// under Data sources → API. Store just the numeric ID (e.g. "12345678901").
+const GOOGLE_MERCHANT_DATA_SOURCE = Deno.env.get("GOOGLE_MERCHANT_DATA_SOURCE");
+
+const MERCHANT_API_BASE = "https://merchantapi.googleapis.com/products/v1beta";
+const CONTENT_LANGUAGE = "en";
+const FEED_LABEL = "US";
+const CHANNEL = "ONLINE";
 
 let cachedToken: { token: string; expires: number } | null = null;
 
