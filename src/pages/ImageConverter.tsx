@@ -552,5 +552,6 @@ export default function ImageConverter() {
         */}
       </section>
     </div>
+    </div>
   );
 }
