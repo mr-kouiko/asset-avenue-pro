@@ -35,10 +35,20 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 }
 
 function getServiceAccount() {
+  const privateKey = Deno.env.get("GOOGLE_PRIVATE_KEY")
+    ?.replace(/\\n/g, "\n")
+    .trim();
+
+  console.log({
+    hasKey: !!privateKey,
+    startsCorrectly: privateKey?.startsWith("-----BEGIN PRIVATE KEY-----"),
+    endsCorrectly: privateKey?.endsWith("-----END PRIVATE KEY-----"),
+  });
+
   const serviceAccount = {
     project_id: Deno.env.get("GOOGLE_PROJECT_ID"),
     client_email: Deno.env.get("GOOGLE_CLIENT_EMAIL"),
-    private_key: Deno.env.get("GOOGLE_PRIVATE_KEY")?.replace(/\\n/g, "\n"),
+    private_key: privateKey,
   };
 
   if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
