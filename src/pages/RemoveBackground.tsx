@@ -149,6 +149,7 @@ export default function RemoveBackground() {
   };
 
   return (
+    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
@@ -442,6 +443,7 @@ export default function RemoveBackground() {
           - "Portrait with hair edges preserved by AI background remover"
         */}
       </section>
+    </div>
     </div>
   );
 }

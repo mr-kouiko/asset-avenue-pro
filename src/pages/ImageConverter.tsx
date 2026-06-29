@@ -231,6 +231,7 @@ export default function ImageConverter() {
   const showQuality = outputFormat === 'jpeg' || outputFormat === 'webp';
 
   return (
+    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <canvas ref={canvasRef} className="hidden" />
       
@@ -550,6 +551,7 @@ export default function ImageConverter() {
           - "Browser-based image to PDF conversion preview"
         */}
       </section>
+    </div>
     </div>
   );
 }
