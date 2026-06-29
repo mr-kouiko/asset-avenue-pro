@@ -160,7 +160,7 @@ export const BuyerOrderHistory = () => {
       {orders.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <ShoppingBag className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No orders yet</h3>
             <p className="text-muted-foreground text-center mb-4">
               Start exploring our marketplace to find amazing content

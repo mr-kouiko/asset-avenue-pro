@@ -668,8 +668,8 @@ const Marketplace = () => {
         ) : marketplaceContent.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-muted-foreground text-lg">No content found</div>
-            <p className="text-muted-foreground/60 mt-2">Try adjusting your search filters</p>
-            <p className="text-muted-foreground/40 mt-4 text-sm">
+            <p className="text-muted-foreground mt-2">Try adjusting your search filters</p>
+            <p className="text-muted-foreground mt-4 text-sm">
               Browse our <a href="/marketplace" className="text-primary hover:underline">marketplace</a> to discover creative content.
             </p>
           </div>
