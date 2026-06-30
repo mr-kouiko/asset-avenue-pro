@@ -279,6 +279,24 @@ const ProductDetailInner = () => {
     return () => { cancelled = true; };
   }, [product?.previewUrl, product?.type, fallbackProduct?.previewUrl, fallbackProduct?.type]);
 
+  // Detect intrinsic image aspect ratio so portrait images aren't letterboxed/cropped in a 4:3 box.
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  useEffect(() => {
+    setImageAspectRatio(null);
+    const isImg = (product?.type === 'photo') || (fallbackProduct?.type === 'photo') || (product?.type === 'ebook') || (fallbackProduct?.type === 'ebook');
+    const src = (product?.thumbnail || fallbackProduct?.thumbnail || product?.previewUrl || fallbackProduct?.previewUrl) as string | undefined;
+    if (!isImg || !src) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+    img.src = src;
+    return () => { cancelled = true; };
+  }, [product?.thumbnail, product?.type, product?.previewUrl, fallbackProduct?.thumbnail, fallbackProduct?.type, fallbackProduct?.previewUrl]);
+
 
   const formatDuration = (sec: number) => {
     const s = Math.max(0, Math.round(sec));
@@ -396,8 +414,8 @@ const ProductDetailInner = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div
-                className={`relative overflow-hidden rounded-lg ${fp.type === 'video' ? 'bg-black' : 'bg-stock-gray aspect-[4/3]'} border border-stock-border shadow-lg ${fp.type === 'video' ? 'max-h-[80vh] mx-auto' : ''}`}
-                style={fp.type === 'video' ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+                className={`relative overflow-hidden rounded-lg ${fp.type === 'video' ? 'bg-black' : 'bg-stock-gray'} border border-stock-border shadow-lg ${fp.type === 'video' ? 'max-h-[80vh] mx-auto' : 'max-h-[80vh] mx-auto w-full'}`}
+                style={fp.type === 'video' ? { aspectRatio: videoAspectRatio || 16 / 9 } : (fp.type === 'photo' || fp.type === 'ebook') ? { aspectRatio: imageAspectRatio || 4 / 3 } : undefined}
               >
                 {fp.type === 'video' ? (
                   <MediaPlayer 
@@ -610,8 +628,8 @@ const ProductDetailInner = () => {
         const isVid = product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'));
         return (
       <div
-        className={`relative overflow-hidden rounded-lg border border-stock-border shadow-lg ${isVid ? 'bg-black max-h-[80vh] mx-auto' : 'aspect-[4/3] bg-stock-gray'}`}
-        style={isVid ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+        className={`relative overflow-hidden rounded-lg border border-stock-border shadow-lg ${isVid ? 'bg-black max-h-[80vh] mx-auto' : 'bg-stock-gray max-h-[80vh] mx-auto w-full'}`}
+        style={isVid ? { aspectRatio: videoAspectRatio || 16 / 9 } : (!isAudioByExtension ? { aspectRatio: imageAspectRatio || 4 / 3 } : undefined)}
       >
         {(product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'))) ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
@@ -651,7 +669,7 @@ const ProductDetailInner = () => {
             category={product.category?.name || 'Music'}
           />
         ) : (
-          <div className="relative">
+          <div className="relative w-full h-full">
             <img
               src={watermarkedUrl || product.thumbnail}
               alt={product.title}
