@@ -422,7 +422,7 @@ const ProductDetailInner = () => {
                   <img
                     src={watermarkedUrl || fp.thumbnail}
                     alt={fp.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     draggable="false"
                     onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
                   />
@@ -655,7 +655,7 @@ const ProductDetailInner = () => {
             <img
               src={watermarkedUrl || product.thumbnail}
               alt={product.title}
-              className={`w-full h-full object-cover ${isProcessing ? 'opacity-75' : ''}`}
+              className={`w-full h-full object-contain ${isProcessing ? 'opacity-75' : ''}`}
               draggable="false"
               onError={(e) => {
                 e.currentTarget.src = '/placeholder.svg';
