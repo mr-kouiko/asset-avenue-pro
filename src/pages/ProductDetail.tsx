@@ -414,8 +414,8 @@ const ProductDetailInner = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div
-                className={`relative overflow-hidden rounded-lg ${fp.type === 'video' ? 'bg-black' : 'bg-stock-gray aspect-[4/3]'} border border-stock-border shadow-lg ${fp.type === 'video' ? 'max-h-[80vh] mx-auto' : ''}`}
-                style={fp.type === 'video' ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+                className={`relative overflow-hidden rounded-lg ${fp.type === 'video' ? 'bg-black' : 'bg-stock-gray'} border border-stock-border shadow-lg ${fp.type === 'video' ? 'max-h-[80vh] mx-auto' : 'max-h-[80vh] mx-auto w-full'}`}
+                style={fp.type === 'video' ? { aspectRatio: videoAspectRatio || 16 / 9 } : (fp.type === 'photo' || fp.type === 'ebook') ? { aspectRatio: imageAspectRatio || 4 / 3 } : undefined}
               >
                 {fp.type === 'video' ? (
                   <MediaPlayer 
