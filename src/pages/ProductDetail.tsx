@@ -628,8 +628,8 @@ const ProductDetailInner = () => {
         const isVid = product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'));
         return (
       <div
-        className={`relative overflow-hidden rounded-lg border border-stock-border shadow-lg ${isVid ? 'bg-black max-h-[80vh] mx-auto' : 'aspect-[4/3] bg-stock-gray'}`}
-        style={isVid ? { aspectRatio: videoAspectRatio || 16 / 9 } : undefined}
+        className={`relative overflow-hidden rounded-lg border border-stock-border shadow-lg ${isVid ? 'bg-black max-h-[80vh] mx-auto' : 'bg-stock-gray max-h-[80vh] mx-auto w-full'}`}
+        style={isVid ? { aspectRatio: videoAspectRatio || 16 / 9 } : (!isAudioByExtension ? { aspectRatio: imageAspectRatio || 4 / 3 } : undefined)}
       >
         {(product.type === 'video' || (product.type === 'vfx' && product.previewUrl?.includes('.mp4'))) ? (
           <div className="w-full h-full bg-black rounded-xl overflow-hidden">
