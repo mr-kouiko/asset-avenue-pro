@@ -279,6 +279,24 @@ const ProductDetailInner = () => {
     return () => { cancelled = true; };
   }, [product?.previewUrl, product?.type, fallbackProduct?.previewUrl, fallbackProduct?.type]);
 
+  // Detect intrinsic image aspect ratio so portrait images aren't letterboxed/cropped in a 4:3 box.
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  useEffect(() => {
+    setImageAspectRatio(null);
+    const isImg = (product?.type === 'photo') || (fallbackProduct?.type === 'photo') || (product?.type === 'ebook') || (fallbackProduct?.type === 'ebook');
+    const src = (product?.thumbnail || fallbackProduct?.thumbnail || product?.previewUrl || fallbackProduct?.previewUrl) as string | undefined;
+    if (!isImg || !src) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+    img.src = src;
+    return () => { cancelled = true; };
+  }, [product?.thumbnail, product?.type, product?.previewUrl, fallbackProduct?.thumbnail, fallbackProduct?.type, fallbackProduct?.previewUrl]);
+
 
   const formatDuration = (sec: number) => {
     const s = Math.max(0, Math.round(sec));
