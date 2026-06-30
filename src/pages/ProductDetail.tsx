@@ -669,7 +669,7 @@ const ProductDetailInner = () => {
             category={product.category?.name || 'Music'}
           />
         ) : (
-          <div className="relative">
+          <div className="relative w-full h-full">
             <img
               src={watermarkedUrl || product.thumbnail}
               alt={product.title}
