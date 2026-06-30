@@ -109,6 +109,25 @@
       ]
     }
     </script>
+
+    <!-- Self-referencing canonical / og:url / twitter:url for non-product routes.
+         Product pages are pre-rendered server-side via the og-product Edge Function
+         (supabase/functions/og-product) which serves crawler-specific HTML with
+         per-product og:title, og:description, og:image, og:type and og:url. -->
+    <script>
+      (function () {
+        try {
+          var url = location.origin + location.pathname;
+          var setAttr = function (sel, attr, val) {
+            var el = document.querySelector(sel);
+            if (el) el.setAttribute(attr, val);
+          };
+          setAttr('link[rel="canonical"]', 'href', url);
+          setAttr('meta[property="og:url"]', 'content', url);
+          setAttr('meta[name="twitter:url"]', 'content', url);
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>
