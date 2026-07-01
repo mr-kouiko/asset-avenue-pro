@@ -1434,13 +1434,13 @@ const BlogArticleEN = () => {
                   return <p key={index} className="font-semibold my-4">{paragraph.replace(/\*\*/g, '')}</p>;
                 }
                 if (paragraph.startsWith('- ')) {
-                  return <li key={index} className="ml-6 my-1">{paragraph.replace('- ', '')}</li>;
+                  return <li key={index} className="ml-6 my-1">{renderInline(paragraph.replace('- ', ''))}</li>;
                 }
                 if (paragraph.match(/^\d+\./)) {
-                  return <li key={index} className="ml-6 my-1 list-decimal">{paragraph.replace(/^\d+\.\s*/, '')}</li>;
+                  return <li key={index} className="ml-6 my-1 list-decimal">{renderInline(paragraph.replace(/^\d+\.\s*/, ''))}</li>;
                 }
                 if (paragraph.trim()) {
-                  return <p key={index} className="my-4 text-muted-foreground leading-relaxed">{paragraph}</p>;
+                  return <p key={index} className="my-4 text-muted-foreground leading-relaxed">{renderInline(paragraph)}</p>;
                 }
                 return null;
               })}
