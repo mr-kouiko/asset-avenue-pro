@@ -1332,6 +1332,23 @@ const BlogArticleEN = () => {
     window.open(shareUrls[platform], '_blank', 'width=600,height=400');
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        <main className="container py-12 max-w-4xl">
+          <Skeleton className="h-8 w-32 mb-6" />
+          <Skeleton className="h-12 w-3/4 mb-4" />
+          <Skeleton className="h-64 w-full mb-8" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-5/6" />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
