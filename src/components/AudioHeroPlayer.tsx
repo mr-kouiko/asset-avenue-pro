@@ -346,7 +346,7 @@ export const AudioHeroPlayer = ({ src, title, author, category }: AudioHeroPlaye
               <span className="text-sm font-mono text-slate-600 dark:text-slate-400">
                 {formatTime(currentTime)}
               </span>
-              <span className="text-sm font-mono text-slate-400 dark:text-slate-500">
+              <span className="text-sm font-mono text-slate-600 dark:text-slate-400">
                 {formatTime(duration)}
               </span>
             </div>
