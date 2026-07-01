@@ -135,6 +135,10 @@ const ProductDetailInner = () => {
   // Hooks for cart and direct purchase
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading, userCredits, canPayWithCreditsForItem, payWithCredits, getItemTotal } = useDirectPurchase();
+  const { hasInfinityAccess } = useInfinityAccess(product?.type, product?.category?.name);
+  const infinityFileId = hasInfinityAccess
+    ? product?.files?.find((f) => f.is_original)?.id ?? product?.files?.[0]?.id
+    : undefined;
 
   // Redirect from legacy /product/:uuid to SEO-friendly /products/:slug
   useEffect(() => {
