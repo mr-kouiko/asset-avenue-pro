@@ -1,23 +1,24 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSEO } from "@/hooks/useSEO";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, Calendar, Clock, User, ArrowRight, TrendingUp, 
-  Camera, Video, Lightbulb, Palette, BookOpen, Star
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Search, Calendar, Clock, ArrowRight, TrendingUp,
+  Camera, Video, Lightbulb, Palette, BookOpen, Star, Sparkles, Wand2, Package,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useBlogPosts, BlogPost } from "@/hooks/useBlogPosts";
 
-interface BlogArticle {
+interface Article {
   id: string;
   slug: string;
   title: string;
   excerpt: string;
-  content: string;
   category: string;
   author: string;
   authorRole: string;
@@ -29,85 +30,12 @@ interface BlogArticle {
   featured: boolean;
 }
 
-const blogArticles: BlogArticle[] = [
+const staticArticles: Article[] = [
   {
-    id: "9",
+    id: "static-9",
     slug: "studio-ai-visustock-all-in-one-creative-ai-platform",
-    title: "Studio AI by VisuStock: The All-in-One Creative AI Platform for Modern Creators",
-    excerpt: "In today's fast-paced digital world, content creators need speed, quality, and flexibility. Studio AI is VisuStock's all-in-one creative AI suite designed to help creators generate, enhance, and transform visual, video, and audio content in just a few clicks.",
-    content: `In today's fast-paced digital world, content creators need speed, quality, and flexibility. Whether you're a videographer, designer, marketer, or entrepreneur, producing high-quality visuals and videos consistently can be time-consuming and expensive.
-
-That's exactly why Studio AI by VisuStock was created.
-
-## What is Studio AI?
-
-Studio AI is VisuStock's all-in-one creative AI suite designed to help creators generate, enhance, and transform visual, video, and audio content in just a few clicks.
-
-Instead of using multiple tools and platforms, Studio AI brings everything together in one clean, powerful interface — built specifically for content creators and digital sellers.
-
-## Powerful AI Tools in One Place
-
-Studio AI offers a growing collection of AI-powered tools, organized into three main categories:
-
-### 🎬 Video Tools
-
-**Image to Video**
-Turn static images into dynamic, engaging videos using AI motion and effects — perfect for social media, ads, and storytelling.
-
-**Text to Video (Coming Soon)**
-Generate complete videos from simple text prompts. Ideal for explainer videos, marketing content, and presentations.
-
-**Video Upscale**
-Enhance video resolution and quality, making old or low-resolution footage look sharper and more professional.
-
-### 🖼️ Image Tools
-
-**AI Image Generator**
-Create stunning images and illustrations from text prompts using advanced AI models.
-
-**Remove Background**
-Instantly remove backgrounds from images with clean, professional results — perfect for product photos and designs.
-
-**Create Variations (Coming Soon)**
-Generate multiple creative variations from a single image to explore different styles and concepts.
-
-### 🎧 Audio Tools
-
-**Text to Speech**
-Convert text into natural-sounding voiceovers for videos, ads, tutorials, and presentations.
-
-## Why Studio AI Stands Out
-
-✔ **All-in-one platform** – No need to jump between different tools
-✔ **Creator-focused** – Built for designers, videographers, and digital sellers
-✔ **Fast & intuitive** – Simple interface, powerful results
-✔ **Marketplace-ready content** – Perfect for selling images, videos, and AI creations on VisuStock
-✔ **Constantly evolving** – New tools and features added regularly
-
-## Create and Sell with VisuStock
-
-One of the biggest advantages of Studio AI is its seamless connection with the VisuStock marketplace. Creators can:
-
-- Produce AI-generated images, videos, and audio
-- Enhance and upscale existing content
-- Sell their creations directly on VisuStock
-- Monetize creativity faster than ever before
-
-Studio AI isn't just about creation — it's about turning creativity into income.
-
-## Who is Studio AI For?
-
-- Content creators & influencers
-- Graphic designers & video editors
-- Digital marketers & agencies
-- Entrepreneurs & online sellers
-- Anyone who wants to create professional content with AI
-
-## Start Creating with Studio AI Today
-
-Studio AI by VisuStock is redefining how creators work — making professional content creation faster, smarter, and more accessible.
-
-If you want to create more, faster, and smarter, Studio AI is your new creative workspace.`,
+    title: "Studio AI by VisuStock: The All-in-One Creative AI Platform",
+    excerpt: "Studio AI is VisuStock's all-in-one creative AI suite to generate, enhance, and transform visual, video, and audio content in just a few clicks.",
     category: "AI Tools",
     author: "VisuStock Team",
     authorRole: "Product Team",
@@ -115,15 +43,14 @@ If you want to create more, faster, and smarter, Studio AI is your new creative 
     publishDate: "2026-01-18",
     readTime: 6,
     image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=450&fit=crop",
-    tags: ["AI", "Studio AI", "Video", "Image", "Audio", "Content Creation", "Tools"],
+    tags: ["AI", "Studio AI", "Content Creation"],
     featured: true,
   },
   {
-    id: "1",
+    id: "static-1",
     slug: "stock-photography-tips-composition-lighting-guide-2026",
-    title: "Mastering Stock Photography in 2026: A Complete Guide for Creators",
-    excerpt: "Learn the essential techniques and strategies to create compelling stock images that sell. From composition to lighting, we cover everything you need to know.",
-    content: "",
+    title: "Mastering Stock Photography in 2026: A Complete Guide",
+    excerpt: "Essential techniques and strategies to create compelling stock images that sell — from composition to lighting.",
     category: "Photography",
     author: "Sarah Chen",
     authorRole: "Senior Photography Editor",
@@ -131,15 +58,14 @@ If you want to create more, faster, and smarter, Studio AI is your new creative 
     publishDate: "2026-01-10",
     readTime: 12,
     image: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800&h=450&fit=crop",
-    tags: ["Photography", "Tips", "Beginners", "Composition"],
+    tags: ["Photography", "Tips", "Composition"],
     featured: true,
   },
   {
-    id: "2",
+    id: "static-2",
     slug: "stock-video-trends-4k-drone-footage-vertical-content",
     title: "Video Content Trends Driving Sales in the Stock Market",
-    excerpt: "Discover the hottest video trends that buyers are searching for. Stay ahead of the curve and maximize your earnings with trending content.",
-    content: "",
+    excerpt: "Discover the hottest video trends that buyers are searching for and stay ahead of the curve.",
     category: "Video",
     author: "Marcus Johnson",
     authorRole: "Video Content Strategist",
@@ -147,164 +73,106 @@ If you want to create more, faster, and smarter, Studio AI is your new creative 
     publishDate: "2026-01-08",
     readTime: 8,
     image: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800&h=450&fit=crop",
-    tags: ["Video", "Trends", "Strategy", "Marketing"],
+    tags: ["Video", "Trends", "Marketing"],
     featured: true,
-  },
-  {
-    id: "3",
-    slug: "ai-creative-tools-generative-art-future-content-creation",
-    title: "How AI is Transforming the Creative Industry: Opportunities & Challenges",
-    excerpt: "Explore the impact of artificial intelligence on stock content creation. Learn how to leverage AI tools while maintaining authenticity.",
-    content: "",
-    category: "Industry Insights",
-    author: "Dr. Elena Rodriguez",
-    authorRole: "Technology Analyst",
-    authorAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop",
-    publishDate: "2026-01-05",
-    readTime: 15,
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=450&fit=crop",
-    tags: ["AI", "Technology", "Future", "Innovation"],
-    featured: true,
-  },
-  {
-    id: "4",
-    slug: "color-psychology-marketing-visual-design-branding",
-    title: "Color Psychology in Visual Content: Creating Emotional Connections",
-    excerpt: "Understand how color choices influence buyer decisions and learn to create visually compelling content that resonates emotionally.",
-    content: "",
-    category: "Design",
-    author: "Yuki Tanaka",
-    authorRole: "Creative Director",
-    authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    publishDate: "2026-01-03",
-    readTime: 10,
-    image: "https://images.unsplash.com/photo-1525909002-1b05e0c869d8?w=800&h=450&fit=crop",
-    tags: ["Design", "Color Theory", "Psychology", "Branding"],
-    featured: false,
-  },
-  {
-    id: "5",
-    slug: "passive-income-stock-photography-success-stories-earnings",
-    title: "Building Passive Income Through Stock Content: Success Stories",
-    excerpt: "Real stories from creators who turned their passion into profitable careers. Learn from their journeys and apply their strategies.",
-    content: "",
-    category: "Success Stories",
-    author: "James Mitchell",
-    authorRole: "Community Manager",
-    authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-    publishDate: "2026-01-01",
-    readTime: 14,
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop",
-    tags: ["Success", "Income", "Inspiration", "Career"],
-    featured: false,
-  },
-  {
-    id: "6",
-    slug: "stock-audio-music-sound-effects-podcast-production",
-    title: "The Audio Content Revolution: Why Sound Design Matters More Than Ever",
-    excerpt: "From podcasts to video production, audio content demand is soaring. Learn how to create professional audio that sells.",
-    content: "",
-    category: "Audio",
-    author: "Alex Rivera",
-    authorRole: "Audio Production Lead",
-    authorAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-    publishDate: "2025-12-28",
-    readTime: 9,
-    image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=450&fit=crop",
-    tags: ["Audio", "Sound Design", "Music", "Production"],
-    featured: false,
-  },
-  {
-    id: "7",
-    slug: "creative-workflow-productivity-burnout-prevention-tips",
-    title: "Creating a Sustainable Creative Workflow: Avoiding Burnout",
-    excerpt: "Maintain your creative momentum without burning out. Practical tips for managing your time and energy as a content creator.",
-    content: "",
-    category: "Lifestyle",
-    author: "Priya Sharma",
-    authorRole: "Wellness Coach",
-    authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
-    publishDate: "2025-12-25",
-    readTime: 7,
-    image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=450&fit=crop",
-    tags: ["Wellness", "Productivity", "Lifestyle", "Mental Health"],
-    featured: false,
-  },
-  {
-    id: "8",
-    slug: "stock-content-licensing-copyright-royalty-free-guide",
-    title: "Licensing 101: Understanding and Protecting Your Creative Work",
-    excerpt: "Navigate the complex world of content licensing with confidence. Know your rights and maximize the value of your creations.",
-    content: "",
-    category: "Legal",
-    author: "Michael Torres",
-    authorRole: "Legal Advisor",
-    authorAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop",
-    publishDate: "2025-12-22",
-    readTime: 11,
-    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=450&fit=crop",
-    tags: ["Legal", "Licensing", "Copyright", "Business"],
-    featured: false,
   },
 ];
 
-const categories = [
-  { name: "All", icon: BookOpen },
-  { name: "AI Tools", icon: Lightbulb },
-  { name: "Photography", icon: Camera },
-  { name: "Video", icon: Video },
-  { name: "Design", icon: Palette },
-  { name: "Industry Insights", icon: TrendingUp },
-  { name: "Success Stories", icon: Star },
-];
+const categoryIcons: Record<string, typeof BookOpen> = {
+  "All": BookOpen,
+  "AI Visuals": Sparkles,
+  "AI Tools": Lightbulb,
+  "Stock Footage": Video,
+  "Video": Video,
+  "Photography": Camera,
+  "Design": Palette,
+  "Creative Trends": TrendingUp,
+  "Industry Insights": TrendingUp,
+  "Success Stories": Star,
+  "Prompts": Wand2,
+  "Digital Assets": Package,
+};
+
+const dbToArticle = (p: BlogPost): Article => ({
+  id: p.id,
+  slug: p.slug,
+  title: p.title,
+  excerpt: p.excerpt,
+  category: p.category,
+  author: p.author,
+  authorRole: p.author_role,
+  authorAvatar: p.author_avatar ?? "https://visustock.com/favicon.png",
+  publishDate: p.published_at,
+  readTime: p.read_time,
+  image: p.hero_image,
+  tags: p.tags ?? [],
+  featured: p.featured,
+});
 
 const BlogEN = () => {
   useSEO({
-    title: "Blog — Tips, Trends & Creator Insights",
-    description: "Read VisuStock's blog for stock photography tips, video trends, AI workflow guides and earnings stories from creators.",
+    title: "VisuStock Blog — AI Visuals, Stock Footage & Creative Trends",
+    description: "Weekly insights on AI visuals, stock footage, prompt engineering, digital assets and creative trends for modern creators and marketers.",
   });
+
+  const { data: dbPosts, isLoading } = useBlogPosts();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const filteredArticles = blogArticles.filter(article => {
-    const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         article.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+  const articles: Article[] = useMemo(() => {
+    const merged = [
+      ...(dbPosts ?? []).map(dbToArticle),
+      ...staticArticles,
+    ];
+    // Dedup by slug (DB wins)
+    const seen = new Set<string>();
+    return merged.filter(a => (seen.has(a.slug) ? false : (seen.add(a.slug), true)))
+      .sort((a, b) => +new Date(b.publishDate) - +new Date(a.publishDate));
+  }, [dbPosts]);
+
+  const categories = useMemo(() => {
+    const names = new Set<string>(["All"]);
+    articles.forEach(a => names.add(a.category));
+    return Array.from(names).map(name => ({ name, icon: categoryIcons[name] ?? BookOpen }));
+  }, [articles]);
+
+  const filteredArticles = articles.filter(article => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      article.title.toLowerCase().includes(q) ||
+      article.excerpt.toLowerCase().includes(q) ||
+      article.tags.some(tag => tag.toLowerCase().includes(q));
     const matchesCategory = selectedCategory === "All" || article.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const featuredArticles = blogArticles.filter(a => a.featured);
-  const regularArticles = filteredArticles.filter(a => !a.featured || selectedCategory !== "All" || searchQuery);
+  const featuredArticles = articles.filter(a => a.featured).slice(0, 3);
+  const showFeatured = selectedCategory === "All" && !searchQuery && featuredArticles.length > 0;
+  const regularArticles = showFeatured
+    ? filteredArticles.filter(a => !featuredArticles.some(f => f.slug === a.slug))
+    : filteredArticles;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <Navigation />
-      
+
       <main className="container py-8 sm:py-12">
-        {/* Hero Section */}
         <section className="text-center mb-12">
           <Badge variant="secondary" className="mb-4">
-            <Lightbulb className="w-3 h-3 mr-1" />
-            Insights & Inspiration
+            <Sparkles className="w-3 h-3 mr-1" />
+            AI-powered insights, twice a week
           </Badge>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
             The VisuStock Blog
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Expert tips, industry trends, and inspiring stories from the world of digital content creation.
+            Fresh takes on AI visuals, stock footage, prompt engineering, creative trends and digital assets — updated every Tuesday and Friday.
           </p>
-          
-          {/* Search Bar */}
+
           <div className="max-w-xl mx-auto relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
@@ -317,7 +185,6 @@ const BlogEN = () => {
           </div>
         </section>
 
-        {/* Category Filters */}
         <section className="mb-10">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
             {categories.map((category) => {
@@ -338,21 +205,28 @@ const BlogEN = () => {
           </div>
         </section>
 
-        {/* Featured Articles - Only show when no filter */}
-        {selectedCategory === "All" && !searchQuery && (
+        {isLoading && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-72 rounded-lg" />
+            ))}
+          </div>
+        )}
+
+        {showFeatured && (
           <section className="mb-16">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-primary" />
               Featured Articles
             </h2>
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Main Featured */}
               <Card className="lg:col-span-2 lg:row-span-2 overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-300">
                 <Link to={`/blog/${featuredArticles[0]?.slug}`} className="block">
                   <div className="relative h-64 lg:h-full overflow-hidden">
                     <img
                       src={featuredArticles[0]?.image}
                       alt={featuredArticles[0]?.title}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -367,7 +241,7 @@ const BlogEN = () => {
                       <div className="flex items-center gap-4 text-sm text-white/70">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {formatDate(featuredArticles[0]?.publishDate || '')}
+                          {formatDate(featuredArticles[0]?.publishDate || "")}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
@@ -379,7 +253,6 @@ const BlogEN = () => {
                 </Link>
               </Card>
 
-              {/* Secondary Featured */}
               {featuredArticles.slice(1, 3).map((article) => (
                 <Card key={article.id} className="overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300">
                   <Link to={`/blog/${article.slug}`}>
@@ -387,6 +260,7 @@ const BlogEN = () => {
                       <img
                         src={article.image}
                         alt={article.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
@@ -396,12 +270,16 @@ const BlogEN = () => {
                       <h3 className="font-bold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
                         {article.title}
                       </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{article.excerpt}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(article.publishDate)}
+                        </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {article.readTime} min
                         </span>
-                        <span>{formatDate(article.publishDate)}</span>
                       </div>
                     </CardContent>
                   </Link>
@@ -411,107 +289,54 @@ const BlogEN = () => {
           </section>
         )}
 
-        {/* All Articles Grid */}
         <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">
-              {selectedCategory === "All" && !searchQuery ? "Latest Articles" : `${filteredArticles.length} Articles Found`}
-            </h2>
-          </div>
-
-          {regularArticles.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <h2 className="text-2xl font-bold mb-6">
+            {selectedCategory === "All" ? "Latest Articles" : selectedCategory}
+          </h2>
+          {regularArticles.length === 0 && !isLoading ? (
+            <p className="text-center text-muted-foreground py-12">
+              No articles yet in this section — check back soon, new posts land every Tuesday and Friday.
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {regularArticles.map((article) => (
-                <Card key={article.id} className="overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300 flex flex-col">
+                <Card key={article.id} className="overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300 h-full flex flex-col">
                   <Link to={`/blog/${article.slug}`} className="flex flex-col h-full">
                     <div className="relative h-48 overflow-hidden">
                       <img
                         src={article.image}
                         alt={article.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <Badge className="absolute top-3 left-3 text-xs">{article.category}</Badge>
+                      <Badge className="absolute top-4 left-4 bg-primary/90">{article.category}</Badge>
                     </div>
-                    <CardContent className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                    <CardContent className="p-5 flex flex-col flex-1">
+                      <h3 className="font-bold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
                         {article.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
                         {article.excerpt}
                       </p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-3 border-t">
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={article.authorAvatar}
-                            alt={article.author}
-                            className="w-6 h-6 rounded-full object-cover"
-                          />
-                          <span>{article.author}</span>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {formatDate(article.publishDate)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {article.readTime} min
+                          </span>
                         </div>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {article.readTime} min
-                        </span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </CardContent>
                   </Link>
                 </Card>
               ))}
             </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground mb-4">No articles found matching your criteria.</p>
-              <Button variant="outline" onClick={() => { setSearchQuery(""); setSelectedCategory("All"); }}>
-                Clear Filters
-              </Button>
-            </Card>
           )}
-        </section>
-
-        {/* Newsletter Section */}
-        <section className="mt-16">
-          <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground overflow-hidden">
-            <CardContent className="p-8 sm:p-12 text-center relative">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
-              <div className="relative z-10">
-                <h3 className="text-2xl sm:text-3xl font-bold mb-4">Stay Inspired</h3>
-                <p className="text-lg opacity-90 mb-6 max-w-xl mx-auto">
-                  Get weekly insights, tips, and inspiration delivered straight to your inbox.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="bg-white/20 border-white/30 placeholder:text-white/60 text-white"
-                  />
-                  <Button variant="secondary" className="shrink-0">
-                    Subscribe
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-                <p className="text-xs opacity-70 mt-4">
-                  No spam, unsubscribe anytime. Read our privacy policy.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Tags Cloud */}
-        <section className="mt-12">
-          <h3 className="text-lg font-semibold mb-4 text-center">Popular Topics</h3>
-          <div className="flex flex-wrap justify-center gap-2">
-            {Array.from(new Set(blogArticles.flatMap(a => a.tags))).map((tag) => (
-              <Badge 
-                key={tag} 
-                variant="outline" 
-                className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                onClick={() => setSearchQuery(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
         </section>
       </main>
     </div>

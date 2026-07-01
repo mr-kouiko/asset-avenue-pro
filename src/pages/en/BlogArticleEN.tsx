@@ -1,5 +1,28 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useBlogPost } from "@/hooks/useBlogPosts";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Render a line of text with inline markdown links [label](url) as anchors.
+const renderInline = (text: string): React.ReactNode[] => {
+  const parts: React.ReactNode[] = [];
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const [, label, href] = match;
+    if (href.startsWith("/")) {
+      parts.push(<Link key={key++} to={href} className="text-primary underline hover:opacity-80">{label}</Link>);
+    } else {
+      parts.push(<a key={key++} href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">{label}</a>);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+};
 import { useSEO } from "@/hooks/useSEO";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -1205,7 +1228,29 @@ const defaultArticle = {
 
 const BlogArticleEN = () => {
   const { slug } = useParams<{ slug: string }>();
-  const article = articleContent[slug as keyof typeof articleContent] || defaultArticle;
+  const { data: dbPost, isLoading: dbLoading } = useBlogPost(slug);
+
+  const staticArticle = articleContent[slug as keyof typeof articleContent];
+  const article = staticArticle ?? (dbPost ? {
+    id: dbPost.id,
+    slug: dbPost.slug,
+    title: dbPost.title,
+    excerpt: dbPost.excerpt,
+    category: dbPost.category,
+    author: dbPost.author,
+    authorRole: dbPost.author_role,
+    authorBio: dbPost.author_bio ?? "",
+    authorAvatar: dbPost.author_avatar ?? "https://visustock.com/favicon.png",
+    publishDate: dbPost.published_at,
+    updatedDate: dbPost.updated_at,
+    readTime: dbPost.read_time,
+    image: dbPost.hero_image,
+    tags: dbPost.tags ?? [],
+    content: dbPost.content,
+    relatedArticles: [],
+  } : defaultArticle);
+
+  const isLoading = !staticArticle && dbLoading;
 
   useSEO({
     title: article.title.length > 55 ? `${article.title.slice(0, 52)}...` : article.title,
@@ -1286,6 +1331,23 @@ const BlogArticleEN = () => {
 
     window.open(shareUrls[platform], '_blank', 'width=600,height=400');
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <Navigation />
+        <main className="container py-12 max-w-4xl">
+          <Skeleton className="h-8 w-32 mb-6" />
+          <Skeleton className="h-12 w-3/4 mb-4" />
+          <Skeleton className="h-64 w-full mb-8" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-5/6" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -1372,13 +1434,13 @@ const BlogArticleEN = () => {
                   return <p key={index} className="font-semibold my-4">{paragraph.replace(/\*\*/g, '')}</p>;
                 }
                 if (paragraph.startsWith('- ')) {
-                  return <li key={index} className="ml-6 my-1">{paragraph.replace('- ', '')}</li>;
+                  return <li key={index} className="ml-6 my-1">{renderInline(paragraph.replace('- ', ''))}</li>;
                 }
                 if (paragraph.match(/^\d+\./)) {
-                  return <li key={index} className="ml-6 my-1 list-decimal">{paragraph.replace(/^\d+\.\s*/, '')}</li>;
+                  return <li key={index} className="ml-6 my-1 list-decimal">{renderInline(paragraph.replace(/^\d+\.\s*/, ''))}</li>;
                 }
                 if (paragraph.trim()) {
-                  return <p key={index} className="my-4 text-muted-foreground leading-relaxed">{paragraph}</p>;
+                  return <p key={index} className="my-4 text-muted-foreground leading-relaxed">{renderInline(paragraph)}</p>;
                 }
                 return null;
               })}
