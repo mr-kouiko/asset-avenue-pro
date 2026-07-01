@@ -1,5 +1,28 @@
 import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useBlogPost } from "@/hooks/useBlogPosts";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Render a line of text with inline markdown links [label](url) as anchors.
+const renderInline = (text: string): React.ReactNode[] => {
+  const parts: React.ReactNode[] = [];
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const [, label, href] = match;
+    if (href.startsWith("/")) {
+      parts.push(<Link key={key++} to={href} className="text-primary underline hover:opacity-80">{label}</Link>);
+    } else {
+      parts.push(<a key={key++} href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">{label}</a>);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+};
 import { useSEO } from "@/hooks/useSEO";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
@@ -1205,7 +1228,29 @@ const defaultArticle = {
 
 const BlogArticleEN = () => {
   const { slug } = useParams<{ slug: string }>();
-  const article = articleContent[slug as keyof typeof articleContent] || defaultArticle;
+  const { data: dbPost, isLoading: dbLoading } = useBlogPost(slug);
+
+  const staticArticle = articleContent[slug as keyof typeof articleContent];
+  const article = staticArticle ?? (dbPost ? {
+    id: dbPost.id,
+    slug: dbPost.slug,
+    title: dbPost.title,
+    excerpt: dbPost.excerpt,
+    category: dbPost.category,
+    author: dbPost.author,
+    authorRole: dbPost.author_role,
+    authorBio: dbPost.author_bio ?? "",
+    authorAvatar: dbPost.author_avatar ?? "https://visustock.com/favicon.png",
+    publishDate: dbPost.published_at,
+    updatedDate: dbPost.updated_at,
+    readTime: dbPost.read_time,
+    image: dbPost.hero_image,
+    tags: dbPost.tags ?? [],
+    content: dbPost.content,
+    relatedArticles: [],
+  } : defaultArticle);
+
+  const isLoading = !staticArticle && dbLoading;
 
   useSEO({
     title: article.title.length > 55 ? `${article.title.slice(0, 52)}...` : article.title,
