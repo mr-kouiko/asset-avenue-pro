@@ -32,6 +32,8 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
+import { useInfinityAccess } from "@/hooks/useInfinityAccess";
+import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { useLikes } from "@/hooks/useLikes";
 import { SocialShareLazy } from "@/components/SocialShareLazy";
 import { useSEO } from "@/hooks/useSEO";
