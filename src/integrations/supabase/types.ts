@@ -154,6 +154,78 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          author: string
+          author_avatar: string | null
+          author_bio: string | null
+          author_role: string
+          category: string
+          content: string
+          created_at: string
+          excerpt: string
+          featured: boolean
+          hero_image: string
+          id: string
+          keywords: string[]
+          meta_description: string | null
+          published_at: string
+          read_time: number
+          seo_title: string | null
+          slug: string
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author?: string
+          author_avatar?: string | null
+          author_bio?: string | null
+          author_role?: string
+          category: string
+          content: string
+          created_at?: string
+          excerpt: string
+          featured?: boolean
+          hero_image: string
+          id?: string
+          keywords?: string[]
+          meta_description?: string | null
+          published_at?: string
+          read_time?: number
+          seo_title?: string | null
+          slug: string
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          author_avatar?: string | null
+          author_bio?: string | null
+          author_role?: string
+          category?: string
+          content?: string
+          created_at?: string
+          excerpt?: string
+          featured?: boolean
+          hero_image?: string
+          id?: string
+          keywords?: string[]
+          meta_description?: string | null
+          published_at?: string
+          read_time?: number
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
