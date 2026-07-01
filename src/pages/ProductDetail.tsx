@@ -32,6 +32,8 @@ import { useWatermarkedPreview } from "@/hooks/useWatermarkedPreview";
 import { useVideoPricing } from "@/hooks/useVideoPricing";
 import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useCart } from "@/hooks/useCart";
+import { useInfinityAccess } from "@/hooks/useInfinityAccess";
+import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { useLikes } from "@/hooks/useLikes";
 import { SocialShareLazy } from "@/components/SocialShareLazy";
 import { useSEO } from "@/hooks/useSEO";
@@ -133,6 +135,10 @@ const ProductDetailInner = () => {
   // Hooks for cart and direct purchase
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading, userCredits, canPayWithCreditsForItem, payWithCredits, getItemTotal } = useDirectPurchase();
+  const { hasInfinityAccess } = useInfinityAccess(product?.type, product?.category?.name);
+  const infinityFileId = hasInfinityAccess
+    ? product?.files?.find((f) => f.is_original)?.id ?? product?.files?.[0]?.id
+    : undefined;
 
   // Redirect from legacy /product/:uuid to SEO-friendly /products/:slug
   useEffect(() => {
@@ -950,7 +956,21 @@ const ProductDetailInner = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-3">
-              {isFreeContent ? (
+              {hasInfinityAccess && infinityFileId ? (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3">
+                  <div className="text-sm font-medium text-primary">
+                    ✨ Included with your VisuStock Infinity subscription
+                  </div>
+                  <SecureDownloadButton
+                    contentFileId={infinityFileId}
+                    fileName={product?.title}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Download with Infinity
+                  </SecureDownloadButton>
+                </div>
+              ) : isFreeContent ? (
                 <Button 
                   size="lg" 
                   className="flex-1 bg-green-600 hover:bg-green-700"
