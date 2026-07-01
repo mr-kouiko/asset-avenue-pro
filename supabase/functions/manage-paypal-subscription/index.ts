@@ -152,46 +152,31 @@ serve(async (req) => {
       }
 
       case 'cancel': {
-        // Cancel subscription
-        console.log('Cancelling subscription:', subscription_id);
+        // Infinity is billed via the PayPal Orders API (one-time capture),
+        // not the Subscriptions API — so there is nothing to cancel on
+        // PayPal's side. Just flip the local row; the user keeps access
+        // until current_period_end elapses.
+        console.log('Cancelling local Infinity subscription for user:', user.id);
 
-        const { data: subscription, error: fetchError } = await supabaseAdmin
+        // If a subscription_id was passed, honor it; otherwise cancel the
+        // user's most recent active row.
+        let query = supabaseAdmin
           .from('user_subscriptions')
-          .select('*')
-          .eq('id', subscription_id)
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('user_id', user.id)
-          .single();
+          .eq('status', 'active');
 
-        if (fetchError || !subscription) {
-          throw new Error('Subscription not found');
+        if (subscription_id) {
+          query = query.eq('id', subscription_id);
         }
 
-        // Cancel on PayPal
-        const cancelResponse = await fetch(
-          `${PAYPAL_API_URL}/v1/billing/subscriptions/${subscription.paypal_subscription_id}/cancel`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ reason: 'User requested cancellation' }),
-          }
-        );
-
-        if (!cancelResponse.ok && cancelResponse.status !== 204) {
-          const error = await cancelResponse.text();
-          console.error('PayPal cancel error:', error);
-          throw new Error('Failed to cancel subscription on PayPal');
+        const { error: updErr } = await query;
+        if (updErr) {
+          console.error('Local cancel error:', updErr);
+          throw new Error('Failed to cancel subscription');
         }
 
-        // Update local status
-        await supabaseAdmin
-          .from('user_subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('id', subscription_id);
-
-        console.log('Subscription cancelled successfully');
+        console.log('Local subscription flagged as cancelled');
 
         return new Response(
           JSON.stringify({ success: true, message: 'Subscription cancelled' }),

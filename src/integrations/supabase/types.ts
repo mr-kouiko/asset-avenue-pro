@@ -2336,6 +2336,7 @@ export type Database = {
         Returns: boolean
       }
       expire_ended_subscriptions: { Args: never; Returns: number }
+      expire_lapsed_subscriptions: { Args: never; Returns: undefined }
       generate_product_slug: {
         Args: { tags_input: string[]; title_input: string }
         Returns: string
@@ -2553,6 +2554,11 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_infinity_active: { Args: { _user_id?: string }; Returns: boolean }
+      is_infinity_eligible_file: {
+        Args: { _content_file_id: string }
+        Returns: boolean
+      }
       log_admin_profile_access: {
         Args: { accessed_profile_user_id: string; admin_user_id: string }
         Returns: boolean
