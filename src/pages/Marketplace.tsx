@@ -456,8 +456,60 @@ const Marketplace = () => {
   };
 
   // ── Render ──────────────────────────────────────────────────
+  // ── Structured data (CollectionPage + ItemList + BreadcrumbList) ─
+  const categoryLabelMap: Record<string, string> = {
+    all: "All Assets", photo: "Stock Photos", video: "Stock Videos",
+    audio: "Royalty-Free Music & Audio", ebook: "Ebooks", illustration: "Illustrations",
+  };
+  const categoryLabel = categoryLabelMap[selectedCategory] || "Marketplace";
+  const pageUrl = `https://visustock.com${location.pathname}`;
+
+  const collectionSchema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${pageUrl}#collection`,
+    name: `${categoryLabel} — VisuStock Marketplace`,
+    description: `Browse ${categoryLabel.toLowerCase()} on VisuStock. Licensed digital assets for creators, marketers and studios.`,
+    url: pageUrl,
+    isPartOf: { "@type": "WebSite", "@id": "https://visustock.com/#website" },
+    breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+    mainEntity: { "@id": `${pageUrl}#itemlist` },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "@id": `${pageUrl}#breadcrumb`,
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://visustock.com/" },
+      { "@type": "ListItem", position: 2, name: "Marketplace", item: "https://visustock.com/marketplace" },
+      ...(selectedCategory !== "all"
+        ? [{ "@type": "ListItem", position: 3, name: categoryLabel, item: pageUrl }]
+        : []),
+    ],
+  };
+
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${pageUrl}#itemlist`,
+    name: `${categoryLabel} listings`,
+    numberOfItems: marketplaceContent.length,
+    itemListElement: marketplaceContent.slice(0, 40).map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      url: `https://visustock.com/products/${item.slug || item.id}`,
+      name: item.title,
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd id="ld-marketplace-collection" data={collectionSchema} />
+      <JsonLd id="ld-marketplace-breadcrumb" data={breadcrumbSchema} />
+      {marketplaceContent.length > 0 && (
+        <JsonLd id="ld-marketplace-itemlist" data={itemListSchema} />
+      )}
       <Header />
       <Navigation />
 
