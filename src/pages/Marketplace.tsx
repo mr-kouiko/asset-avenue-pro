@@ -18,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useSEO } from "@/hooks/useSEO";
 import { useSEONoIndex, shouldNoIndexPage } from "@/hooks/useSEONoIndex";
 import { SearchWithSuggestions } from "@/components/SearchWithSuggestions";
+import { JsonLd } from "@/components/JsonLd";
 import type { SearchableContent } from "@/utils/fuzzySearch";
 import VideoFiltersPanel, { type VideoFilters } from "@/components/VideoFiltersPanel";
 import PhotoFiltersPanel, { type PhotoFilters } from "@/components/PhotoFiltersPanel";
