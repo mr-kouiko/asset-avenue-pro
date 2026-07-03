@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Store, Image as ImageIcon, Video, Music, FileText, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { JsonLd } from "@/components/JsonLd";
+import { useSEO } from "@/hooks/useSEO";
 
 interface SellerProfile {
   store_name: string | null;
@@ -46,6 +48,14 @@ const SellerPortfolio = () => {
   const [productsLoading, setProductsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
+
+  const seoStoreName = seller?.store_name || seller?.display_name || "Creator";
+  useSEO({
+    title: `${seoStoreName} — Creator Portfolio`,
+    description: `Discover photos, videos, audio and ebooks by ${seoStoreName} on VisuStock. License premium creator assets for your projects.`,
+    type: "website",
+    image: seller?.avatar_url || undefined,
+  });
 
   // Fetch all seller products directly from database (no limit)
   const fetchSellerProducts = useCallback(async (userId: string, storeName: string) => {
@@ -242,11 +252,53 @@ const SellerPortfolio = () => {
   }
 
   const storeName = seller.store_name || seller.display_name || "Anonymous Store";
+  const profileUrl = `https://visustock.com/seller/${storeSlug}`;
+
+  const personSchema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": `${profileUrl}#person`,
+    name: storeName,
+    url: profileUrl,
+    image: seller.avatar_url || undefined,
+    jobTitle: "VisuStock Creator",
+    worksFor: { "@type": "Organization", "@id": "https://visustock.com/#organization", name: "VisuStock" },
+    mainEntityOfPage: profileUrl,
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://visustock.com/" },
+      { "@type": "ListItem", position: 2, name: "Creators", item: "https://visustock.com/marketplace" },
+      { "@type": "ListItem", position: 3, name: storeName, item: profileUrl },
+    ],
+  };
+
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Assets by ${storeName}`,
+    numberOfItems: sellerProducts.length,
+    itemListElement: sellerProducts.slice(0, 60).map((p, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      url: `https://visustock.com/products/${p.slug || p.id}`,
+      name: p.title,
+    })),
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd id="ld-seller-person" data={personSchema} />
+      <JsonLd id="ld-seller-breadcrumb" data={breadcrumbSchema} />
+      {sellerProducts.length > 0 && (
+        <JsonLd id="ld-seller-itemlist" data={itemListSchema} />
+      )}
       <Header />
       <Navigation />
+      
       
       <div className="container py-8">
         {/* Seller Header */}
