@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Store, Image as ImageIcon, Video, Music, FileText, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { JsonLd } from "@/components/JsonLd";
+import { useSEO } from "@/hooks/useSEO";
 
 interface SellerProfile {
   store_name: string | null;
