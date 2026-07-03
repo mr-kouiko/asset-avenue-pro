@@ -49,6 +49,14 @@ const SellerPortfolio = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
 
+  const seoStoreName = seller?.store_name || seller?.display_name || "Creator";
+  useSEO({
+    title: `${seoStoreName} — Creator Portfolio`,
+    description: `Discover photos, videos, audio and ebooks by ${seoStoreName} on VisuStock. License premium creator assets for your projects.`,
+    type: "website",
+    image: seller?.avatar_url || undefined,
+  });
+
   // Fetch all seller products directly from database (no limit)
   const fetchSellerProducts = useCallback(async (userId: string, storeName: string) => {
     setProductsLoading(true);
