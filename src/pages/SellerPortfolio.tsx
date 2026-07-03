@@ -244,11 +244,53 @@ const SellerPortfolio = () => {
   }
 
   const storeName = seller.store_name || seller.display_name || "Anonymous Store";
+  const profileUrl = `https://visustock.com/seller/${storeSlug}`;
+
+  const personSchema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": `${profileUrl}#person`,
+    name: storeName,
+    url: profileUrl,
+    image: seller.avatar_url || undefined,
+    jobTitle: "VisuStock Creator",
+    worksFor: { "@type": "Organization", "@id": "https://visustock.com/#organization", name: "VisuStock" },
+    mainEntityOfPage: profileUrl,
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://visustock.com/" },
+      { "@type": "ListItem", position: 2, name: "Creators", item: "https://visustock.com/marketplace" },
+      { "@type": "ListItem", position: 3, name: storeName, item: profileUrl },
+    ],
+  };
+
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Assets by ${storeName}`,
+    numberOfItems: sellerProducts.length,
+    itemListElement: sellerProducts.slice(0, 60).map((p, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      url: `https://visustock.com/products/${p.slug || p.id}`,
+      name: p.title,
+    })),
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd id="ld-seller-person" data={personSchema} />
+      <JsonLd id="ld-seller-breadcrumb" data={breadcrumbSchema} />
+      {sellerProducts.length > 0 && (
+        <JsonLd id="ld-seller-itemlist" data={itemListSchema} />
+      )}
       <Header />
       <Navigation />
+      
       
       <div className="container py-8">
         {/* Seller Header */}
