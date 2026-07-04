@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "visustock-mcp",
+      "version": "0.1.0",
+      "title": "VisuStock Marketplace"
+    },
+    "tools": [
+      {
+        "name": "search_marketplace",
+        "title": "Search VisuStock marketplace",
+        "description": "Search approved products (photos, videos, audio, VFX, ebooks) on the VisuStock marketplace by keyword and optional filters. Returns titles, slugs, prices (USD), and product URLs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Keyword or phrase to search titles, descriptions, and tags."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Max results (default 20)."
+            },
+            "max_price": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Filter to products at or below this USD price."
+            },
+            "only_free": {
+              "type": "boolean",
+              "description": "If true, return only free items (price = 0)."
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_product",
+        "title": "Get VisuStock product details",
+        "description": "Fetch full details for a single approved VisuStock product by its slug or UUID: title, description, price (USD), tags, dimensions, and canonical URL.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug_or_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Product slug (preferred) or UUID."
+            }
+          },
+          "required": [
+            "slug_or_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_categories",
+        "title": "List VisuStock categories",
+        "description": "List all content categories on the VisuStock marketplace with their slugs and category page URLs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
