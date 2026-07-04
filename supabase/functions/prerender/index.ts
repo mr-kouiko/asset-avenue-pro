@@ -506,6 +506,335 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ===== /s/categories/:slug =====
+    if (path.startsWith("/s/categories/")) {
+      const slug = path.replace("/s/categories/", "").split("?")[0].split("/")[0];
+      const canonical = `${SITE_URL}/s/categories/${slug}`;
+
+      const { data: cat } = await supabase
+        .from("categories")
+        .select("id, name, slug, description")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      const displayName = cat?.name || slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const desc = cat?.description
+        || `Browse professional ${displayName.toLowerCase()} stock content on VisuStock. High-quality assets for your creative projects.`;
+
+      let products: Product[] = [];
+      if (cat?.id) {
+        const { data } = await supabase
+          .from("content_submissions")
+          .select("id, title, slug, price, description")
+          .eq("status", "approved")
+          .eq("category_id", cat.id)
+          .not("slug", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        products = data || [];
+      }
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Categories", url: `${SITE_URL}/marketplace` },
+        { name: displayName, url: canonical },
+      ];
+
+      const itemListElement = products.map((p, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `${SITE_URL}/products/${p.slug}`,
+        name: p.title,
+      }));
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "CollectionPage",
+            "@id": `${canonical}#collection`,
+            url: canonical,
+            name: `${displayName} Stock Content`,
+            description: desc,
+            mainEntity: { "@type": "ItemList", itemListElement },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const itemsHtml = products.length
+        ? products.map((p) => `<article><h3><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}${p.price ? `<p>Price: €${p.price}</p>` : ""}</article>`).join("\n")
+        : `<p>New ${esc(displayName.toLowerCase())} content is being curated. <a href="${SITE_URL}/marketplace">Browse the full marketplace</a>.</p>`;
+
+      const body = `
+        <section>
+          <p>${esc(desc)}</p>
+        </section>
+        <section>
+          <h2>${esc(displayName)} Content (${products.length} items)</h2>
+          ${itemsHtml}
+        </section>`;
+
+      return new Response(
+        buildHtml({
+          title: `${displayName} Stock Photos, Videos & Audio | VisuStock`,
+          desc,
+          h1: `${displayName} Stock Media`,
+          url: canonical,
+          canonical,
+          img: logo,
+          type: "website",
+          body,
+          breadcrumbs,
+          schema,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
+      );
+    }
+
+    // ===== /s/collections/:slug =====
+    if (path.startsWith("/s/collections/") || path.startsWith("/collections/")) {
+      const slug = path.replace(/^\/(s\/)?collections\//, "").split("?")[0].split("/")[0];
+      const canonical = `${SITE_URL}/s/collections/${slug}`;
+      const displayName = slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const desc = `Curated ${displayName.toLowerCase()} stock collection on VisuStock — premium photos, videos and audio for your creative projects.`;
+
+      // Fetch products matching the collection slug via tags or title
+      const keyword = slug.replace(/-/g, " ");
+      const { data: prodData } = await supabase
+        .from("content_submissions")
+        .select("id, title, slug, price, description, tags")
+        .eq("status", "approved")
+        .not("slug", "is", null)
+        .or(`title.ilike.%${keyword}%,tags.cs.{${keyword}}`)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      const products: Product[] = prodData || [];
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Collections", url: `${SITE_URL}/collections` },
+        { name: displayName, url: canonical },
+      ];
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "CollectionPage",
+            "@id": `${canonical}#collection`,
+            url: canonical,
+            name: `${displayName} Collection`,
+            description: desc,
+            mainEntity: {
+              "@type": "ItemList",
+              itemListElement: products.map((p, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                url: `${SITE_URL}/products/${p.slug}`,
+                name: p.title,
+              })),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const itemsHtml = products.length
+        ? products.map((p) => `<article><h3><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}</article>`).join("\n")
+        : `<p>This ${esc(displayName.toLowerCase())} collection is being curated. <a href="${SITE_URL}/marketplace">Explore the marketplace</a>.</p>`;
+
+      const body = `
+        <section><p>${esc(desc)}</p></section>
+        <section>
+          <h2>${esc(displayName)} Items (${products.length})</h2>
+          ${itemsHtml}
+        </section>`;
+
+      return new Response(
+        buildHtml({
+          title: `${displayName} Collection | VisuStock`,
+          desc,
+          h1: `${displayName} Collection`,
+          url: canonical,
+          canonical,
+          img: logo,
+          type: "website",
+          body,
+          breadcrumbs,
+          schema,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
+      );
+    }
+
+    // ===== /blog (index) =====
+    if (path === "/blog" || path === "/blog/") {
+      const { data: posts } = await supabase
+        .from("blog_posts")
+        .select("slug, title, excerpt, published_at, hero_image, author")
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(50);
+
+      const canonical = `${SITE_URL}/blog`;
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Blog", url: canonical },
+      ];
+      const list = posts || [];
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Blog",
+            "@id": `${canonical}#blog`,
+            url: canonical,
+            name: "VisuStock Blog",
+            description: "Insights, tutorials and news for creators and content buyers.",
+            blogPost: list.map((p: any) => ({
+              "@type": "BlogPosting",
+              headline: p.title,
+              url: `${SITE_URL}/blog/${p.slug}`,
+              datePublished: p.published_at,
+            })),
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const itemsHtml = list.length
+        ? list.map((p: any) => `<article><h3><a href="${SITE_URL}/blog/${p.slug}">${esc(p.title)}</a></h3>${p.excerpt ? `<p>${esc(p.excerpt)}</p>` : ""}${p.published_at ? `<time datetime="${p.published_at}">${p.published_at.split("T")[0]}</time>` : ""}</article>`).join("\n")
+        : `<p>New posts coming soon.</p>`;
+
+      return new Response(
+        buildHtml({
+          title: "Blog - Stock Media Insights & Tutorials | VisuStock",
+          desc: "Read the VisuStock blog for creator tutorials, licensing tips and industry insights.",
+          h1: "VisuStock Blog",
+          url: canonical,
+          canonical,
+          img: logo,
+          type: "website",
+          body: `<section>${itemsHtml}</section>`,
+          breadcrumbs,
+          schema,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
+      );
+    }
+
+    // ===== /blog/:slug =====
+    if (path.startsWith("/blog/")) {
+      const slug = path.replace("/blog/", "").split("?")[0].split("/")[0];
+      const canonical = `${SITE_URL}/blog/${slug}`;
+
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("slug, title, excerpt, content, hero_image, author, author_role, published_at, updated_at, category, tags, seo_title, meta_description")
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+
+      if (!post) {
+        return new Response(
+          buildHtml({
+            title: "Post Not Found | VisuStock Blog",
+            desc: "This blog post is unavailable.",
+            h1: "Post Not Found",
+            url: canonical,
+            canonical,
+            img: logo,
+            type: "website",
+            body: `<p>This post doesn't exist. <a href="${SITE_URL}/blog">Back to blog</a>.</p>`,
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      const img = post.hero_image || logo;
+      const title = post.seo_title || post.title;
+      const desc = post.meta_description || post.excerpt || `${post.title} — VisuStock Blog`;
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Blog", url: `${SITE_URL}/blog` },
+        { name: post.title, url: canonical },
+      ];
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BlogPosting",
+            "@id": `${canonical}#post`,
+            headline: post.title,
+            description: desc,
+            image: img,
+            url: canonical,
+            datePublished: post.published_at,
+            dateModified: post.updated_at || post.published_at,
+            author: { "@type": "Person", name: post.author || "VisuStock Team" },
+            publisher: {
+              "@type": "Organization",
+              name: "VisuStock",
+              logo: { "@type": "ImageObject", url: logo },
+            },
+            mainEntityOfPage: canonical,
+            ...(post.tags?.length && { keywords: post.tags.join(", ") }),
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const body = `
+        <article>
+          ${post.hero_image ? `<img src="${esc(post.hero_image)}" alt="${esc(post.title)}" width="1200" height="630">` : ""}
+          <p><em>By ${esc(post.author || "VisuStock Team")}${post.author_role ? `, ${esc(post.author_role)}` : ""}${post.published_at ? ` — <time datetime="${post.published_at}">${post.published_at.split("T")[0]}</time>` : ""}</em></p>
+          ${post.excerpt ? `<p><strong>${esc(post.excerpt)}</strong></p>` : ""}
+          <div>${markdownToHtml(post.content || "")}</div>
+          ${post.tags?.length ? `<p>Tags: ${post.tags.map((t: string) => esc(t)).join(", ")}</p>` : ""}
+        </article>
+        <nav><a href="${SITE_URL}/blog">← Back to blog</a></nav>`;
+
+      return new Response(
+        buildHtml({
+          title: `${title} | VisuStock Blog`,
+          desc: desc.substring(0, 160),
+          h1: post.title,
+          url: canonical,
+          canonical,
+          img,
+          type: "article",
+          body,
+          breadcrumbs,
+          schema,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
+      );
+    }
+
     // ===== STATIC PAGES =====
     const staticPages: Record<string, { title: string; desc: string; h1: string }> = {
       "/about": { title: "About VisuStock", desc: "Learn about VisuStock marketplace", h1: "About Us" },
