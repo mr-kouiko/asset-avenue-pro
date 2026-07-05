@@ -18,7 +18,7 @@ const PRERENDER_ENDPOINT =
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2Zwb3BocG9xdWd0dXZmeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1ODQzMzEsImV4cCI6MjA3MDE2MDMzMX0.m8KZCGvdZm2v6jBiQnv6LQqM2DPhuaVlcVWrTc0dMp8";
 
-const PRERENDER_TIMEOUT_MS = 4000;
+const PRERENDER_TIMEOUT_MS = 8000;
 
 const CRAWLER_UA_PATTERNS = [
   "googlebot",
@@ -76,6 +76,7 @@ async function fetchPrerender(pathAndQuery, request) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PRERENDER_TIMEOUT_MS);
   try {
+    console.log(`[prerender] fetching Supabase: ${url}`);
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -86,8 +87,8 @@ async function fetchPrerender(pathAndQuery, request) {
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
       },
       signal: controller.signal,
-      cf: { cacheTtl: 1800, cacheEverything: true },
     });
+    console.log(`[prerender] Supabase response: status=${res.status}, content-type=${res.headers.get("content-type") || "none"}`);
     return res;
   } finally {
     clearTimeout(timer);
@@ -97,18 +98,24 @@ async function fetchPrerender(pathAndQuery, request) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const ua = request.headers.get("user-agent") || "";
+    const crawler = isCrawler(ua);
+
+    console.log(`[prerender] incoming: method=${request.method}, path=${url.pathname}${url.search || ""}, ua="${ua}", isCrawler=${crawler}`);
 
     // Only intercept GET/HEAD html-ish navigations.
     if (request.method !== "GET" && request.method !== "HEAD") {
+      console.log(`[prerender] passthrough: non-GET/HEAD method (${request.method})`);
       return fetch(request);
     }
 
     if (shouldSkip(url.pathname)) {
+      console.log(`[prerender] passthrough: path skipped (${url.pathname})`);
       return fetch(request);
     }
 
-    const ua = request.headers.get("user-agent") || "";
-    if (!isCrawler(ua)) {
+    if (!crawler) {
+      console.log(`[prerender] passthrough: not a crawler`);
       return fetch(request);
     }
 
@@ -123,20 +130,21 @@ export default {
         headers.set("Vary", "User-Agent");
         // Force HTML content-type in case the function ever returns JSON fallback.
         if (!headers.get("content-type")?.includes("text/html")) {
-          // Function returned JSON (unknown path) — fall through to origin.
+          console.log(`[prerender] fallback: Supabase returned non-HTML content-type (${headers.get("content-type") || "none"}), falling back to origin`);
           return fetch(request);
         }
+        console.log(`[prerender] success: returning prerendered HTML for ${pathAndQuery}`);
         return new Response(prerendered.body, {
           status: 200,
           headers,
         });
       }
+      console.log(`[prerender] fallback: Supabase returned non-OK status (${prerendered ? prerendered.status : "no response"}), falling back to origin`);
+      return fetch(request);
     } catch (err) {
-      // Timeout / network / abort — silently fall back.
-      console.log("prerender fallback:", err && err.message);
+      // Timeout / network / abort — log and fall back.
+      console.log(`[prerender] fallback: exception during Supabase fetch (${err && err.message}), falling back to origin`);
+      return fetch(request);
     }
-
-    // Fallback: serve the normal SPA.
-    return fetch(request);
   },
 };
