@@ -5,6 +5,8 @@ import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Upload, Download, ImagePlus, Lock, Unlock, Check, Zap, Shield, Sparkles } from 'lucide-react';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const STRUCTURED_DATA = {
   software: {
@@ -213,6 +215,7 @@ export default function ImageResizer() {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <canvas ref={canvasRef} className="hidden" />
 
@@ -394,6 +397,7 @@ export default function ImageResizer() {
         </Accordion>
       </section>
     </div>
+    <Footer />
     </div>
   );
 }

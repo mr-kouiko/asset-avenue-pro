@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
   Upload, Download, Loader2, Scissors,
   ImagePlus, RotateCcw, Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';
@@ -150,6 +152,7 @@ export default function RemoveBackground() {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
@@ -444,6 +447,7 @@ export default function RemoveBackground() {
         */}
       </section>
     </div>
+    <Footer />
     </div>
   );
 }

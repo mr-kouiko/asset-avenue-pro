@@ -26,6 +26,7 @@ import {
   ScanFace,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Footer } from '@/components/Footer';
 
 const SCALE_OPTIONS = [
   { value: 2, label: '2×' },
@@ -415,6 +416,7 @@ export default function ImageUpscale() {
           </div>
         </div>
       </main>
+    <Footer />
     </div>
   );
 }

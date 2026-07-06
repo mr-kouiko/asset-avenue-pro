@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSEO } from "@/hooks/useSEO";
+import { Footer } from '@/components/Footer';
 
 type AspectRatio = "16:9" | "9:16";
 type Resolution = 720 | 1080;
@@ -557,6 +558,7 @@ export default function TextToVideoAI() {
         - "Marketing team using AI video creation tool to produce social media ads"
         - "Storyboard of scenes generated from a single text prompt with VisuStock VideoAI"
       */}
+    <Footer />
     </div>
   );
 }

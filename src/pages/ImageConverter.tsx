@@ -6,6 +6,8 @@ import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
   Upload, Download, RefreshCw, ImagePlus, FileType, ArrowRightLeft, Check,
   Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';
@@ -232,6 +234,7 @@ export default function ImageConverter() {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <canvas ref={canvasRef} className="hidden" />
       
@@ -552,6 +555,7 @@ export default function ImageConverter() {
         */}
       </section>
     </div>
+    <Footer />
     </div>
   );
 }

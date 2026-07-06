@@ -12,6 +12,7 @@ import {
 import { useSEO } from '@/hooks/useSEO';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Footer } from '@/components/Footer';
 
 const STRUCTURED_DATA = {
   software: {
@@ -739,6 +740,7 @@ export default function ReframeVideo() {
           - "Side-by-side preview of original and reframed AI video"
         */}
       </section>
+    <Footer />
     </div>
   );
 }

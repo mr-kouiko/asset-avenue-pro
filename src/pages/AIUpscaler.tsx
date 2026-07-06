@@ -14,6 +14,8 @@ import {
   Shield, Sparkles, Image as ImageIcon, Video, Scissors, Wand2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const STRUCTURED_DATA = {
   software: {
@@ -187,6 +189,7 @@ export default function AIUpscaler() {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(220 20% 7%)' }}>
+      <Header />
       <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}
       <header
@@ -649,6 +652,7 @@ export default function AIUpscaler() {
           - "AI image enhancer recovering detail in a portrait photo"
         */}
       </section>
+    <Footer />
     </div>
   );
 }
