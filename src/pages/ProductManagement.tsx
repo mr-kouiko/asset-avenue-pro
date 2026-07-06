@@ -1398,27 +1398,27 @@ const ProductManagement = () => {
             onClick={closePreview}
           >
             <div 
-              className="bg-background rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-auto"
+              className="bg-background rounded-lg p-4 sm:p-6 w-full max-w-[95vw] max-h-[95vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Preview - {previewFile.name}</h3>
+              <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                <h3 className="text-lg font-semibold truncate pr-4">Preview - {previewFile.name}</h3>
                 <Button variant="ghost" size="sm" onClick={closePreview}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
               
-              <div className="flex justify-center">
+              <div className="flex justify-center items-center flex-1 min-h-0 overflow-hidden">
                 {previewFile.type.startsWith('image/') && (
                   <img 
                     src={previewFile.url} 
                     alt={previewFile.name}
-                    className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                    className="max-w-full max-h-full object-contain rounded-lg"
                   />
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
-                  <div className="max-w-full max-h-[60vh] bg-black rounded-lg overflow-hidden">
+                  <div className="w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-auto [&_video]:h-auto [&_video]:object-contain">
                     <MediaPlayer 
                       src={(() => {
                         // For CDN URLs, proxy through edge function to ensure playback
@@ -1457,7 +1457,7 @@ const ProductManagement = () => {
                 )}
               </div>
               
-              <div className="mt-4 p-4 bg-muted rounded-lg">
+              <div className="mt-4 p-3 bg-muted rounded-lg flex-shrink-0">
                 <p className="text-sm text-muted-foreground">
                   Size: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
                 </p>
@@ -1465,6 +1465,7 @@ const ProductManagement = () => {
             </div>
           </div>
         )}
+
       </div>
     </ProtectedRoute>
   );
