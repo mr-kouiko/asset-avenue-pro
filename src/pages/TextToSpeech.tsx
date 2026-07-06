@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
@@ -222,6 +224,7 @@ export default function TextToSpeech() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
       {/* Top bar */}
       <header
         className="h-12 flex items-center justify-between px-4 shrink-0 z-20"
@@ -664,6 +667,7 @@ export default function TextToSpeech() {
           </p>
         </div>
       </section>
+    <Footer />
     </div>
   );
 }

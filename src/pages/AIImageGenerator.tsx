@@ -13,6 +13,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const STRUCTURED_DATA = {
   software: {
@@ -322,6 +324,7 @@ export default function AIImageGenerator() {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--editor-text-bright))' }}>
@@ -711,6 +714,7 @@ export default function AIImageGenerator() {
         */}
       </section>
     </div>
+    <Footer />
     </div>
   );
 }

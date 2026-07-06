@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useSEO } from "@/hooks/useSEO";
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 type UpscaleOption = "2x" | "4x";
 
@@ -185,6 +187,7 @@ const VideoUpscale = () => {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
     <div className="flex flex-col" style={{ height: '100vh', background: 'hsl(var(--editor-bg))' }}>
       {/* Top bar */}
       <header
@@ -535,6 +538,7 @@ const VideoUpscale = () => {
           - "AI video quality enhancer settings panel with 2x and 4x options"
         */}
       </section>
+    <Footer />
     </div>
   );
 };

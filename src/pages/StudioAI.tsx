@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useSEO } from '@/hooks/useSEO';
 import { useNavigate } from 'react-router-dom';
 import { 
+import { Footer } from '@/components/Footer';
   Sparkles, 
   Video, 
   Image as ImageIcon, 
@@ -456,6 +457,7 @@ export default function StudioAI() {
           </div>
         </section>
       </main>
+    <Footer />
     </div>
   );
 }

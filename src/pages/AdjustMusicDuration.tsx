@@ -6,6 +6,7 @@ import { useSEO } from '@/hooks/useSEO';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { WaveformEditor } from '@/components/audio/WaveformEditor';
+import { Footer } from '@/components/Footer';
 // Link imported above
 
 type SelectionMode = 'manual' | 'duration';
@@ -838,6 +839,7 @@ export default function AdjustMusicDuration() {
           </p>
         </div>
       </section>
+    <Footer />
     </div>
   );
 }

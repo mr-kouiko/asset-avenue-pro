@@ -7,6 +7,8 @@ import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useSEO } from "@/hooks/useSEO";
 import { supabase } from "@/integrations/supabase/client";
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const ImageToVideo = () => {
   const { toast } = useToast();
@@ -142,6 +144,7 @@ const ImageToVideo = () => {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+      <Header />
       <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}
       <header
@@ -429,6 +432,7 @@ const ImageToVideo = () => {
           - "Landscape photo animated with parallax depth using VisuStock image animation AI"
         */}
       </section>
+    <Footer />
     </div>
   );
 };
