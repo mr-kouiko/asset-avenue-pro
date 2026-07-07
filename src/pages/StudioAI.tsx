@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSEO } from '@/hooks/useSEO';
 import { useNavigate } from 'react-router-dom';
-import { 
 import { Footer } from '@/components/Footer';
+import { 
   Sparkles, 
   Video, 
   Image as ImageIcon, 

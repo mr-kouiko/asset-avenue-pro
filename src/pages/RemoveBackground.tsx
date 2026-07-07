@@ -5,9 +5,9 @@ import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import {
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import {
   Upload, Download, Loader2, Scissors,
   ImagePlus, RotateCcw, Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';

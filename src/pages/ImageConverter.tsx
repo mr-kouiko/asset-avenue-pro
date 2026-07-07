@@ -5,9 +5,9 @@ import { Slider } from '@/components/ui/slider';
 import { useSEO } from '@/hooks/useSEO';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import {
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import {
   Upload, Download, RefreshCw, ImagePlus, FileType, ArrowRightLeft, Check,
   Zap, Shield, Sparkles, Image as ImageIcon, Video, Wand2
 } from 'lucide-react';
