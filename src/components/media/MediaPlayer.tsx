@@ -493,7 +493,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     <div
       ref={containerRef}
       className={`${className} relative ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
-        compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[200px]' : 'min-h-[140px]'
+        compact ? 'min-h-[80px]' : type === 'video' ? (fitToContainer ? 'min-h-0' : 'min-h-[200px]') : 'min-h-[140px]'
       }`}
       style={containerStyle}
       role="group"
