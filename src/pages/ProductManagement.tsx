@@ -1394,14 +1394,14 @@ const ProductManagement = () => {
         {/* Preview Modal */}
         {isPreviewOpen && previewFile && (
           <div 
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4"
             onClick={closePreview}
           >
             <div 
-              className="bg-background rounded-lg p-4 sm:p-6 w-full max-w-[95vw] max-h-[95vh] flex flex-col"
+              className="bg-background rounded-lg p-3 sm:p-4 w-full max-w-[95vw] max-h-[95vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-4 flex-shrink-0">
+              <div className="flex justify-between items-center mb-3 flex-shrink-0">
                 <h3 className="text-lg font-semibold truncate pr-4">Preview - {previewFile.name}</h3>
                 <Button variant="ghost" size="sm" onClick={closePreview}>
                   <X className="h-4 w-4" />
@@ -1418,7 +1418,7 @@ const ProductManagement = () => {
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
-                  <div className="w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-auto [&_video]:h-auto [&_video]:object-contain">
+                  <div className="w-full h-[calc(95vh-8rem)] flex-1 min-h-0 max-h-[calc(95vh-8rem)] flex items-center justify-center overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-full [&_video]:h-full [&_video]:object-contain">
                     <MediaPlayer 
                       src={(() => {
                         // For CDN URLs, proxy through edge function to ensure playback
@@ -1432,6 +1432,8 @@ const ProductManagement = () => {
                       title={previewFile.name}
                       controls={true}
                       watermarkSize="normal"
+                      fitToContainer
+                      className="w-auto h-auto max-w-full max-h-full min-h-0"
                     />
                   </div>
                 )}
@@ -1457,7 +1459,7 @@ const ProductManagement = () => {
                 )}
               </div>
               
-              <div className="mt-4 p-3 bg-muted rounded-lg flex-shrink-0">
+              <div className="mt-3 p-3 bg-muted rounded-lg flex-shrink-0">
                 <p className="text-sm text-muted-foreground">
                   Size: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
                 </p>

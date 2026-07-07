@@ -20,6 +20,7 @@ interface MediaPlayerProps {
   watermarkSize?: 'normal' | 'large' | 'thumbnail';
   contentId?: string;
   previewPath?: string;    // Pre-generated preview path (if available)
+  fitToContainer?: boolean;
 }
 
 /** Utility: deduce MIME type from file extension */
@@ -63,6 +64,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   watermarkSize = 'normal',
   contentId,
   previewPath: existingPreviewPath,
+  fitToContainer = false,
 }) => {
   const deviceInfo = useDeviceDetection();
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
@@ -79,6 +81,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [canPlay, setCanPlay] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+  const [fitBox, setFitBox] = useState<{ width: number; height: number } | null>(null);
 
   const { toast } = useToast();
 
@@ -206,7 +210,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!media) return;
     const d = Number.isFinite(media.duration) ? media.duration : 0;
     setDuration(d);
-  }, []);
+    if (type === 'video') {
+      const video = media as HTMLVideoElement;
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        setVideoAspectRatio(video.videoWidth / video.videoHeight);
+      }
+    }
+  }, [type]);
 
   const handleDurationChange = useCallback(() => {
     const media = mediaRef.current;
@@ -298,10 +308,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setDuration(0);
         setCurrentTime(0);
         setIsPlaying(false);
+        setVideoAspectRatio(null);
+        setFitBox(null);
       } else {
         setIsLoading(false);
         setHasError(false);
         setCanPlay(false);
+        setVideoAspectRatio(null);
+        setFitBox(null);
       }
     }
   }, [src]);
@@ -433,6 +447,55 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setTimeout(() => setRetryCount((p) => p + 1), 0);
   }, []);
 
+  const updateFitBox = useCallback(() => {
+    if (!fitToContainer || type !== 'video' || !videoAspectRatio || !containerRef.current?.parentElement) {
+      setFitBox(null);
+      return;
+    }
+
+    const { width: maxWidth, height: maxHeight } = containerRef.current.parentElement.getBoundingClientRect();
+    if (maxWidth <= 0 || maxHeight <= 0) return;
+
+    let width = maxWidth;
+    let height = width / videoAspectRatio;
+
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * videoAspectRatio;
+    }
+
+    setFitBox({ width, height });
+  }, [fitToContainer, type, videoAspectRatio]);
+
+  useEffect(() => {
+    if (!fitToContainer || type !== 'video') return;
+
+    updateFitBox();
+    const parent = containerRef.current?.parentElement;
+    if (!parent || typeof ResizeObserver === 'undefined') return;
+
+    const resizeObserver = new ResizeObserver(updateFitBox);
+    resizeObserver.observe(parent);
+    window.addEventListener('resize', updateFitBox);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateFitBox);
+    };
+  }, [fitToContainer, type, updateFitBox]);
+
+  const containerStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (!fitToContainer || type !== 'video') return undefined;
+
+    return {
+      aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : undefined,
+      width: fitBox ? `${fitBox.width}px` : '100%',
+      height: fitBox ? `${fitBox.height}px` : '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
+    };
+  }, [fitToContainer, type, videoAspectRatio, fitBox]);
+
   // Loading state
   if (!src) {
     return (
@@ -473,9 +536,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`${className} relative ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
-        compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[200px]' : 'min-h-[140px]'
+      className={`${className} relative ${fitToContainer && type === 'video' ? 'inline-flex items-center justify-center' : ''} ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
+        compact ? 'min-h-[80px]' : type === 'video' ? (fitToContainer ? 'min-h-0' : 'min-h-[200px]') : 'min-h-[140px]'
       }`}
+      style={containerStyle}
       role="group"
       aria-label={title}
       onContextMenu={(e) => e.preventDefault()}
