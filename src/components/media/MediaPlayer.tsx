@@ -20,6 +20,7 @@ interface MediaPlayerProps {
   watermarkSize?: 'normal' | 'large' | 'thumbnail';
   contentId?: string;
   previewPath?: string;    // Pre-generated preview path (if available)
+  fitToContainer?: boolean;
 }
 
 /** Utility: deduce MIME type from file extension */
@@ -63,6 +64,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   watermarkSize = 'normal',
   contentId,
   previewPath: existingPreviewPath,
+  fitToContainer = false,
 }) => {
   const deviceInfo = useDeviceDetection();
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
@@ -79,6 +81,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [canPlay, setCanPlay] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
 
   const { toast } = useToast();
 
@@ -206,7 +209,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     if (!media) return;
     const d = Number.isFinite(media.duration) ? media.duration : 0;
     setDuration(d);
-  }, []);
+    if (type === 'video') {
+      const video = media as HTMLVideoElement;
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        setVideoAspectRatio(video.videoWidth / video.videoHeight);
+      }
+    }
+  }, [type]);
 
   const handleDurationChange = useCallback(() => {
     const media = mediaRef.current;
@@ -298,10 +307,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setDuration(0);
         setCurrentTime(0);
         setIsPlaying(false);
+        setVideoAspectRatio(null);
       } else {
         setIsLoading(false);
         setHasError(false);
         setCanPlay(false);
+        setVideoAspectRatio(null);
       }
     }
   }, [src]);
@@ -433,6 +444,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setTimeout(() => setRetryCount((p) => p + 1), 0);
   }, []);
 
+  const containerStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (!fitToContainer || type !== 'video') return undefined;
+
+    return {
+      aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : undefined,
+    };
+  }, [fitToContainer, type, videoAspectRatio]);
+
   // Loading state
   if (!src) {
     return (
@@ -476,6 +495,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       className={`${className} relative ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
         compact ? 'min-h-[80px]' : type === 'video' ? 'min-h-[200px]' : 'min-h-[140px]'
       }`}
+      style={containerStyle}
       role="group"
       aria-label={title}
       onContextMenu={(e) => e.preventDefault()}
