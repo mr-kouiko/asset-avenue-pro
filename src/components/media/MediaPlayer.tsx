@@ -450,7 +450,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     return {
       aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : undefined,
       width: videoAspectRatio && videoAspectRatio < 1 ? 'auto' : '100%',
-      height: videoAspectRatio && videoAspectRatio < 1 ? '100%' : 'auto',
+      height: videoAspectRatio ? (videoAspectRatio < 1 ? '100%' : 'auto') : '100%',
       maxWidth: '100%',
       maxHeight: '100%',
     };
