@@ -82,6 +82,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+  const [fitBox, setFitBox] = useState<{ width: number; height: number } | null>(null);
 
   const { toast } = useToast();
 
@@ -308,11 +309,13 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
         setCurrentTime(0);
         setIsPlaying(false);
         setVideoAspectRatio(null);
+        setFitBox(null);
       } else {
         setIsLoading(false);
         setHasError(false);
         setCanPlay(false);
         setVideoAspectRatio(null);
+        setFitBox(null);
       }
     }
   }, [src]);
@@ -444,17 +447,54 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
     setTimeout(() => setRetryCount((p) => p + 1), 0);
   }, []);
 
+  const updateFitBox = useCallback(() => {
+    if (!fitToContainer || type !== 'video' || !videoAspectRatio || !containerRef.current?.parentElement) {
+      setFitBox(null);
+      return;
+    }
+
+    const { width: maxWidth, height: maxHeight } = containerRef.current.parentElement.getBoundingClientRect();
+    if (maxWidth <= 0 || maxHeight <= 0) return;
+
+    let width = maxWidth;
+    let height = width / videoAspectRatio;
+
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * videoAspectRatio;
+    }
+
+    setFitBox({ width, height });
+  }, [fitToContainer, type, videoAspectRatio]);
+
+  useEffect(() => {
+    if (!fitToContainer || type !== 'video') return;
+
+    updateFitBox();
+    const parent = containerRef.current?.parentElement;
+    if (!parent || typeof ResizeObserver === 'undefined') return;
+
+    const resizeObserver = new ResizeObserver(updateFitBox);
+    resizeObserver.observe(parent);
+    window.addEventListener('resize', updateFitBox);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateFitBox);
+    };
+  }, [fitToContainer, type, updateFitBox]);
+
   const containerStyle = useMemo<React.CSSProperties | undefined>(() => {
     if (!fitToContainer || type !== 'video') return undefined;
 
     return {
       aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : undefined,
-      width: videoAspectRatio && videoAspectRatio < 1 ? 'auto' : '100%',
-      height: videoAspectRatio ? (videoAspectRatio < 1 ? '100%' : 'auto') : '100%',
+      width: fitBox ? `${fitBox.width}px` : '100%',
+      height: fitBox ? `${fitBox.height}px` : '100%',
       maxWidth: '100%',
       maxHeight: '100%',
     };
-  }, [fitToContainer, type, videoAspectRatio]);
+  }, [fitToContainer, type, videoAspectRatio, fitBox]);
 
   // Loading state
   if (!src) {
