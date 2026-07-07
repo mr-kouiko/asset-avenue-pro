@@ -1418,7 +1418,7 @@ const ProductManagement = () => {
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
-                  <div className="w-full h-[calc(95vh-8rem)] flex-1 min-h-0 max-h-[calc(95vh-8rem)] flex items-center justify-center bg-black rounded-lg overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-full [&_video]:h-full [&_video]:object-contain">
+                  <div className="w-full h-[calc(95vh-8rem)] flex-1 min-h-0 max-h-[calc(95vh-8rem)] flex items-center justify-center overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-full [&_video]:h-full [&_video]:object-contain">
                     <MediaPlayer 
                       src={(() => {
                         // For CDN URLs, proxy through edge function to ensure playback
