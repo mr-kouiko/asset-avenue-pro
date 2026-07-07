@@ -449,6 +449,10 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
     return {
       aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : undefined,
+      width: videoAspectRatio && videoAspectRatio < 1 ? 'auto' : '100%',
+      height: videoAspectRatio && videoAspectRatio < 1 ? '100%' : 'auto',
+      maxWidth: '100%',
+      maxHeight: '100%',
     };
   }, [fitToContainer, type, videoAspectRatio]);
 
@@ -492,7 +496,7 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`${className} relative ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
+      className={`${className} relative ${fitToContainer && type === 'video' ? 'inline-flex items-center justify-center' : ''} ${type === 'video' ? 'bg-black' : 'bg-gradient-to-br from-primary/5 to-primary/10'} rounded-lg border border-border overflow-hidden ${
         compact ? 'min-h-[80px]' : type === 'video' ? (fitToContainer ? 'min-h-0' : 'min-h-[200px]') : 'min-h-[140px]'
       }`}
       style={containerStyle}
