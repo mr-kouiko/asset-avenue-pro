@@ -233,7 +233,7 @@ export default function ImageConverter() {
   const showQuality = outputFormat === 'jpeg' || outputFormat === 'webp';
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--image min-h-screen">
       <Header />
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <canvas ref={canvasRef} className="hidden" />
@@ -310,7 +310,7 @@ export default function ImageConverter() {
           <Button
             onClick={handleConvert}
             disabled={!originalImage}
-            className="w-full gap-2"
+            className="sai-cta w-full gap-2"
             style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
           >
             <RefreshCw className="w-4 h-4" /> Convert

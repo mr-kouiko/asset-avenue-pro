@@ -273,7 +273,7 @@ export default function AdjustMusicDuration() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--audio min-h-screen">
       <Header />
 
       <div className="flex min-h-[calc(100vh-64px)]">
@@ -419,7 +419,7 @@ export default function AdjustMusicDuration() {
                 <div className="flex items-center gap-3">
                   <Button
                     size="sm"
-                    className="bg-[hsl(var(--editor-accent))] hover:bg-[hsl(var(--editor-accent-soft))] text-white px-5"
+                    className="sai-cta bg-[hsl(var(--editor-accent))] hover:bg-[hsl(var(--editor-accent-soft))] text-white px-5"
                     onClick={handleGenerate}
                     disabled={!audioFile || isProcessing}
                   >

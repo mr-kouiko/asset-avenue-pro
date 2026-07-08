@@ -188,7 +188,7 @@ export default function AIUpscaler() {
       : 0;
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(220 20% 7%)' }}>
+    <div className="studio-ai studio-ai--image min-h-screen">
       <Header />
       <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}
@@ -243,7 +243,7 @@ export default function AIUpscaler() {
 
             {/* Upscale button */}
             <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              className="sai-cta w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleUpscale}
               disabled={!originalImage || isProcessing}
               style={{

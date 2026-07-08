@@ -143,7 +143,7 @@ const ImageToVideo = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--video min-h-screen flex flex-col">
       <Header />
       <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}
@@ -231,7 +231,7 @@ const ImageToVideo = () => {
 
             {/* Generate button */}
             <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              className="sai-cta w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleGenerate}
               disabled={!selectedImage || isGenerating}
               style={{

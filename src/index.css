@@ -201,3 +201,216 @@ All colors MUST be HSL.
     -webkit-tap-highlight-color: hsl(var(--primary) / 0.1);
   }
 }
+
+/* ============================================================
+   Studio AI — Obsidian navy + aurora design system
+   Scoped strictly to .studio-ai wrappers so it does NOT leak
+   into the rest of the marketplace.
+   ============================================================ */
+.studio-ai {
+  /* Raw design tokens */
+  --sai-bg-base: #0A0E1A;
+  --sai-bg-elevated: #0E1424;
+  --sai-surface: #12172A;
+  --sai-border-hairline: rgba(255, 255, 255, 0.08);
+  --sai-border-strong: rgba(255, 255, 255, 0.16);
+  --sai-text-primary: #F3F4F8;
+  --sai-text-secondary: #8B92A8;
+  --sai-text-muted: #5B6178;
+  --sai-accent-violet: #6D5EF5;
+  --sai-accent-cyan: #00D9FF;
+  --sai-accent-magenta: #C084FC;
+  --sai-gradient-cta: linear-gradient(135deg, #6D5EF5 0%, #8B5CF6 45%, #00D9FF 100%);
+  --sai-aurora-a: 109, 94, 245;   /* violet */
+  --sai-aurora-b: 0, 217, 255;    /* cyan */
+
+  /* Override shadcn HSL tokens inside this scope so every
+     shadcn component (Textarea, Button, Card, etc.) inherits
+     the Studio AI palette automatically. */
+  --background: 224 44% 7%;
+  --foreground: 225 20% 96%;
+  --card: 228 41% 12%;
+  --card-foreground: 225 20% 96%;
+  --popover: 228 41% 12%;
+  --popover-foreground: 225 20% 96%;
+  --primary: 247 89% 66%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 30% 16%;
+  --secondary-foreground: 225 20% 96%;
+  --muted: 225 25% 14%;
+  --muted-foreground: 224 15% 60%;
+  --accent: 247 89% 66%;
+  --accent-foreground: 0 0% 100%;
+  --border: 225 20% 22%;
+  --input: 225 20% 22%;
+  --ring: 247 89% 66%;
+
+  background: var(--sai-bg-base);
+  color: var(--sai-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+  isolation: isolate;
+}
+
+.studio-ai--image {
+  --sai-aurora-a: 192, 132, 252;  /* magenta */
+  --sai-aurora-b: 109, 94, 245;   /* violet */
+}
+.studio-ai--audio {
+  --sai-aurora-a: 0, 217, 255;    /* cyan */
+  --sai-aurora-b: 20, 184, 166;   /* teal */
+}
+
+/* Tool-title / heading font. Body still uses Inter. */
+.studio-ai h1,
+.studio-ai h2,
+.studio-ai .sai-heading {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Ambient aurora — a blurred radial glow behind the page content */
+.studio-ai::before {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 1400px;
+  height: 700px;
+  background:
+    radial-gradient(closest-side, rgba(var(--sai-aurora-a), 0.22), transparent 70%),
+    radial-gradient(closest-side, rgba(var(--sai-aurora-b), 0.18), transparent 70%);
+  background-position: 30% 40%, 70% 60%;
+  background-repeat: no-repeat;
+  background-size: 60% 80%, 60% 80%;
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+.studio-ai > * { position: relative; z-index: 1; }
+/* Header/Footer sit above the aurora too */
+.studio-ai header, .studio-ai footer { z-index: 2; }
+
+/* -------- Shared primitives -------- */
+
+.sai-panel {
+  background: rgba(20, 26, 46, 0.55);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--sai-border-hairline);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.sai-textarea,
+.studio-ai textarea {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--sai-border-hairline);
+  border-radius: 12px;
+  color: var(--sai-text-primary);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.sai-textarea::placeholder,
+.studio-ai textarea::placeholder {
+  color: var(--sai-text-muted);
+}
+.sai-textarea:focus,
+.sai-textarea:focus-visible,
+.studio-ai textarea:focus,
+.studio-ai textarea:focus-visible {
+  outline: none;
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(109, 94, 245, 0.15);
+}
+
+.sai-pill-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sai-text-muted);
+  font-weight: 600;
+}
+
+.sai-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--sai-border-hairline);
+  color: var(--sai-text-secondary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+.sai-pill:hover {
+  border-color: var(--sai-border-strong);
+  color: var(--sai-text-primary);
+}
+.sai-pill[data-active='true'],
+.sai-pill.is-active {
+  background: linear-gradient(135deg, rgba(109, 94, 245, 0.25), rgba(0, 217, 255, 0.18));
+  border-color: rgba(139, 92, 246, 0.6);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(109, 94, 245, 0.25);
+}
+.sai-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sai-cta {
+  background: var(--sai-gradient-cta) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 10px 24px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 8px 24px -6px rgba(109, 94, 245, 0.55) !important;
+  transition: transform 160ms ease, box-shadow 160ms ease !important;
+}
+.sai-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 32px -6px rgba(109, 94, 245, 0.7) !important;
+}
+.sai-cta:disabled {
+  opacity: 0.6;
+  box-shadow: none !important;
+  transform: none;
+}
+
+.sai-ghost {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid var(--sai-border-hairline) !important;
+  color: var(--sai-text-primary) !important;
+}
+.sai-ghost:hover:not(:disabled) {
+  border-color: var(--sai-border-strong) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.sai-surface {
+  background: var(--sai-surface);
+  border: 1px solid var(--sai-border-hairline);
+  border-radius: 12px;
+}
+
+.sai-empty {
+  background: transparent;
+  border: 1px dashed var(--sai-border-strong);
+  border-radius: 12px;
+  color: var(--sai-text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+}

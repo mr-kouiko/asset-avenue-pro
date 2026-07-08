@@ -151,7 +151,7 @@ export default function RemoveBackground() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--image min-h-screen">
       <Header />
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8 text-center">
@@ -182,7 +182,7 @@ export default function RemoveBackground() {
             <Button
               onClick={handleRemoveBackground}
               disabled={!originalImage || isProcessing}
-              className="w-full mt-4 gap-2"
+              className="sai-cta w-full mt-4 gap-2"
               style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
             >
               {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Scissors className="w-4 h-4" /> Remove Background</>}

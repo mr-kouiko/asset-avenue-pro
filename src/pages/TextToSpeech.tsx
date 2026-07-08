@@ -223,7 +223,7 @@ export default function TextToSpeech() {
   const selectedVoiceInfo = VOICES.find(v => v.id === selectedVoice);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--audio min-h-screen flex flex-col">
       <Header />
       {/* Top bar */}
       <header
@@ -354,7 +354,7 @@ export default function TextToSpeech() {
 
             {/* Generate button */}
             <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              className="sai-cta w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleGenerate}
               disabled={isGenerating || !text.trim()}
               style={{
