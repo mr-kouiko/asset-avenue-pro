@@ -233,7 +233,7 @@ export default function ImageConverter() {
   const showQuality = outputFormat === 'jpeg' || outputFormat === 'webp';
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--image min-h-screen">
       <Header />
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <canvas ref={canvasRef} className="hidden" />

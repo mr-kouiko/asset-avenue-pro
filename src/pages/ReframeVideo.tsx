@@ -328,7 +328,7 @@ export default function ReframeVideo() {
   }, [videoUrl, resultUrl]);
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--video min-h-screen">
       <Header />
 
       <div className="flex min-h-[calc(100vh-64px)]">

@@ -143,7 +143,7 @@ const ImageToVideo = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--video min-h-screen flex flex-col">
       <Header />
       <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}

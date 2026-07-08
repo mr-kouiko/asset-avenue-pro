@@ -186,7 +186,7 @@ const VideoUpscale = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--video min-h-screen">
       <Header />
     <div className="flex flex-col" style={{ height: '100vh', background: 'hsl(var(--editor-bg))' }}>
       {/* Top bar */}

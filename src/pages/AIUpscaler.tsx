@@ -188,7 +188,7 @@ export default function AIUpscaler() {
       : 0;
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(220 20% 7%)' }}>
+    <div className="studio-ai studio-ai--image min-h-screen">
       <Header />
       <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}

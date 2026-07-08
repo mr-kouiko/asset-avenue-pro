@@ -273,7 +273,7 @@ export default function AdjustMusicDuration() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--audio min-h-screen">
       <Header />
 
       <div className="flex min-h-[calc(100vh-64px)]">

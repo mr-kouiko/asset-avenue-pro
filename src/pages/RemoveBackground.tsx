@@ -151,7 +151,7 @@ export default function RemoveBackground() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--editor-bg))' }}>
+    <div className="studio-ai studio-ai--image min-h-screen">
       <Header />
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8 text-center">
