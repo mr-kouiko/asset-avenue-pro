@@ -1,66 +1,85 @@
-# Google Merchant Center Integration
+# Studio AI — New Visual System Rollout
 
-Live sync of VisuStock's premium products to Google Merchant Center using the **Content API for Shopping**, enabling free product listings across Google Surfaces (Search, Images, Shopping tab).
+Apply the "Obsidian navy + aurora" design language across every Studio AI tool page (12 pages) through a small set of shared, reusable components. Header, footer, and all business logic (API calls, generation, upload flow, model calls) are strictly untouched.
 
-## Prerequisites (you handle these in Google)
+## Scope
 
-1. **Google Merchant Center account** at https://merchants.google.com — create one and note the **Merchant ID** (numeric, e.g. `123456789`).
-2. Verify and claim `visustock.com` in Merchant Center (DNS or HTML tag method — same flow as Search Console).
-3. Opt in to **"Free product listings"** under Growth → Manage programs.
-4. In **Google Cloud Console** (https://console.cloud.google.com):
-   - Create/select a project, enable the **Content API for Shopping**.
-   - Create a **Service Account**, generate a **JSON key** (download it).
-   - Copy the service account email (looks like `xxx@yyy.iam.gserviceaccount.com`).
-5. In Merchant Center → Settings → Users, **add the service account email** with **Standard** access. This authorizes the API.
+**In scope (visual only):**
+- Page background + ambient aurora glow
+- Tool identity section (title / subtitle / icon)
+- Control panel (prompt textarea + filter selectors + primary CTA)
+- Output/results grid + empty states
+- Typography (Inter for UI, Space Grotesk for tool titles)
 
-Once you have the Merchant ID + service account JSON, I'll request them via secrets.
+**Out of scope:**
+- `Header`, `Footer`, navbar, credits badge, search bar, account menu
+- Any hook, API call, edge function call, upload logic, generation logic
+- Route definitions, data shapes, filter values
 
-## What I'll build
+## Design tokens (added to `src/index.css`)
 
-### 1. Secrets
-- `GOOGLE_MERCHANT_ID` — your numeric merchant ID
-- `GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON` — full JSON key file contents
+New CSS variables scoped under a `.studio-ai` wrapper class so they don't leak into the rest of the site:
 
-### 2. Edge function: `sync-google-merchant`
-- Auth: admin-only (verify JWT, check `has_role(auth.uid(), 'admin')`).
-- Modes:
-  - `mode: "full"` — paginate all `approved` premium products (price > 0, exclude any Pexels-sourced rows) and `products.insert` them in batches of 1000 via Content API batch endpoint.
-  - `mode: "single"`, `submissionId` — push one product (used by auto-sync trigger).
-  - `mode: "delete"`, `submissionId` — `products.delete` on unpublish/delete.
-- Builds Google product payload per submission:
-  - `offerId` = submission UUID, `targetCountry` = "US", `contentLanguage` = "en", `channel` = "online"
-  - `title` (≤150 chars), `description` (≤5000 chars), `link` = `https://visustock.com/products/{slug}`
-  - `imageLink` = thumbnail from `content_files`
-  - `price` = `{ value, currency: "USD" }`
-  - `availability` = "in stock", `condition` = "new"
-  - `identifierExists` = false (digital goods, no GTIN/MPN/brand)
-  - `productTypes` = [category name], `googleProductCategory` = mapped Google taxonomy ID (photos/video → "Arts & Entertainment > Hobbies & Creative Arts")
-- OAuth: mint a JWT from the service account key, exchange for an access token (Google token endpoint), cache in function memory per cold start.
-- Returns counts: `{ uploaded, failed, errors[] }`.
+```
+--sai-bg-base: #0A0E1A
+--sai-bg-elevated: #0E1424
+--sai-surface: #12172A
+--sai-border-hairline: rgba(255,255,255,0.08)
+--sai-border-strong: rgba(255,255,255,0.16)
+--sai-text-primary: #F3F4F8
+--sai-text-secondary: #8B92A8
+--sai-text-muted: #5B6178
+--sai-accent-violet: #6D5EF5
+--sai-accent-cyan: #00D9FF
+--sai-accent-magenta: #C084FC
+--sai-gradient-cta: linear-gradient(135deg, #6D5EF5 0%, #8B5CF6 45%, #00D9FF 100%)
+```
 
-### 3. Auto-sync on approval/changes
-A Postgres trigger on `content_submissions` calls a small `notify-merchant-sync` edge function (via `pg_net` or by a lightweight queue table) whenever:
-- `status` transitions to `approved` AND `price > 0` → push single product
-- `status` leaves `approved` OR row deleted → delete product
+Fonts loaded via Google Fonts link in `index.html`: Inter (400/500/600) + Space Grotesk (500/600/700).
 
-If `pg_net` isn't available, fall back to a `merchant_sync_queue` table the function drains on each admin run.
+## Shared components (new)
 
-### 4. Admin UI
-New panel in `src/components/admin/AdminSettings.tsx` (or new `AdminGoogleMerchant.tsx`):
-- **Status card** — shows merchant ID configured / last sync timestamp / total products synced.
-- **"Sync all products now"** button → calls function with `mode: full`, shows progress + result toast.
-- **Error log table** — last 50 sync errors from a new `google_merchant_sync_log` table (id, submission_id, action, status, error, created_at).
+Created under `src/components/studio-ai/`:
 
-### 5. Migration
-- `google_merchant_sync_log` table + RLS (admin read only) + GRANTs.
-- Trigger function `notify_google_merchant_sync()` on `content_submissions` insert/update/delete.
+1. **`StudioPage.tsx`** — wraps a tool page: renders `<Header/>`, dark background, aurora glow (violet/cyan | magenta/violet | cyan/teal based on `category` prop), children, `<Footer/>`. Accepts `title`, `subtitle`, `icon`, `category`.
+2. **`ControlPanel.tsx`** — glassmorphism card container for the left-side controls. Just a styled wrapper — children stay owned by each page.
+3. **`PromptTextarea.tsx`** — styled textarea with focus ring.
+4. **`PillGroup.tsx`** — labeled group (uppercase muted label + horizontal wrap of children).
+5. **`Pill.tsx`** — selectable option with `active` prop; renders the exact active/inactive styling from the spec.
+6. **`GenerateButton.tsx`** — the gradient CTA. Only one per page.
+7. **`OutputGrid.tsx`** + **`OutputCard.tsx`** + **`EmptyStateCard.tsx`** — results grid with configurable aspect ratio (`video` | `square` | `audio`).
 
-## Out of scope (can add later)
-- Multi-country / multi-currency feeds.
-- Shopping Ads (paid) — requires Google Ads linkage.
-- Pexels free items (excluded per your choice).
-- Translated product listings per language (would need one feed per `contentLanguage`).
+All components use the `--sai-*` tokens; no hard-coded colors in tool pages.
 
-## Next step after you approve
+## Per-page rollout
 
-I'll first ask you for the **Merchant ID** and the **service account JSON**, then build everything above.
+Each tool page is edited to:
+1. Replace the outer background wrapper + Header/Footer with `<StudioPage category=… title=… subtitle=… icon=…>`.
+2. Wrap the existing controls column in `<ControlPanel>`; swap the prompt `<textarea>` for `<PromptTextarea>`; swap each existing filter row (aspect / resolution / duration / voice / etc.) for `<PillGroup label=…><Pill active=…/></PillGroup>`.
+3. Swap the primary "Generate / Enhance / Convert / Resize" button for `<GenerateButton>` (secondary buttons remain ghost/outline via existing shadcn `variant="outline"`).
+4. Wrap the results/preview column in `<OutputGrid aspect=…>` with `<EmptyStateCard>` for the empty state.
+
+**Category → aurora hue map:**
+- Video (ImageToVideo, TextToVideoAI, VideoUpscale, ReframeVideo) → `violet-cyan`
+- Image (AIImageGenerator, AIUpscaler, FaceEnhancer, RemoveBackground, ImageConverter, ImageResizer) → `magenta-violet`
+- Audio (TextToSpeech, AdjustMusicDuration) → `cyan-teal`
+
+**Output aspect map:**
+- Video pages → `video` (16:9)
+- Image pages → `square`
+- Audio pages → `audio` (compact waveform placeholder card)
+
+No page's state, effects, handlers, or generation calls are modified — only JSX wrappers and className/style values.
+
+## Verification
+
+After each batch, run the dev build and open the tool in the preview via Playwright to confirm:
+- No console errors
+- Prompt input, pills, generate button render with the new styling
+- Existing generation flow still triggers (button click reaches the same handler)
+
+## File list
+
+New: `src/components/studio-ai/{StudioPage,ControlPanel,PromptTextarea,PillGroup,Pill,GenerateButton,OutputGrid,OutputCard,EmptyStateCard}.tsx`, plus token additions to `src/index.css` and a Google Fonts `<link>` in `index.html`.
+
+Edited (JSX/styling only): the 12 tool pages listed in the request.
