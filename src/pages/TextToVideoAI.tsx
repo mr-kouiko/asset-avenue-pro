@@ -306,7 +306,7 @@ export default function TextToVideoAI() {
               <div className="text-xs text-muted-foreground">
                 Cost: <span className="font-semibold text-foreground">{cost} credits</span> · {prompt.length}/500
               </div>
-              <Button onClick={handleGenerate} disabled={isGenerating} className="gap-2">
+              <Button onClick={handleGenerate} disabled={isGenerating} className="sai-cta gap-2">
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" /> Generating…

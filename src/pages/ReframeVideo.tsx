@@ -420,7 +420,7 @@ export default function ReframeVideo() {
           {/* Generate button */}
           <div className="p-4 mt-auto">
             <Button
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white gap-2"
+              className="sai-cta w-full bg-blue-600 hover:bg-blue-500 text-white gap-2"
               onClick={handleGenerate}
               disabled={!videoFile || isProcessing}
             >

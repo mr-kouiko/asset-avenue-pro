@@ -460,7 +460,7 @@ export default function AIImageGenerator() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim() || aiErrorCode === 'quota_exceeded'}
-              className="w-full gap-2"
+              className="sai-cta w-full gap-2"
               style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
             >
               {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> {t.generating}</> : <><Wand2 className="w-4 h-4" /> {t.generate}</>}

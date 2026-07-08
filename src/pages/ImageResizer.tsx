@@ -296,7 +296,7 @@ export default function ImageResizer() {
           <Button
             onClick={handleResize}
             disabled={!originalImage || !width || !height}
-            className="w-full"
+            className="sai-cta w-full"
             style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
           >
             Resize Image

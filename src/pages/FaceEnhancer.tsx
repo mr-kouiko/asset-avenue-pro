@@ -203,7 +203,7 @@ export default function FaceEnhancer() {
 
             {/* Enhance button */}
             <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              className="sai-cta w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleEnhance}
               disabled={!originalImage || ai.isProcessing || ai.backend === 'canvas-only'}
               style={{

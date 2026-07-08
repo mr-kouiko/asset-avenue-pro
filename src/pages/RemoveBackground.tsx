@@ -182,7 +182,7 @@ export default function RemoveBackground() {
             <Button
               onClick={handleRemoveBackground}
               disabled={!originalImage || isProcessing}
-              className="w-full mt-4 gap-2"
+              className="sai-cta w-full mt-4 gap-2"
               style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
             >
               {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Scissors className="w-4 h-4" /> Remove Background</>}

@@ -419,7 +419,7 @@ export default function AdjustMusicDuration() {
                 <div className="flex items-center gap-3">
                   <Button
                     size="sm"
-                    className="bg-[hsl(var(--editor-accent))] hover:bg-[hsl(var(--editor-accent-soft))] text-white px-5"
+                    className="sai-cta bg-[hsl(var(--editor-accent))] hover:bg-[hsl(var(--editor-accent-soft))] text-white px-5"
                     onClick={handleGenerate}
                     disabled={!audioFile || isProcessing}
                   >

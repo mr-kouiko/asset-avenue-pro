@@ -310,7 +310,7 @@ export default function ImageConverter() {
           <Button
             onClick={handleConvert}
             disabled={!originalImage}
-            className="w-full gap-2"
+            className="sai-cta w-full gap-2"
             style={{ background: 'hsl(var(--editor-accent))', color: '#fff' }}
           >
             <RefreshCw className="w-4 h-4" /> Convert

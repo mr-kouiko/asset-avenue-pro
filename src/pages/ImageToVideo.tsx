@@ -231,7 +231,7 @@ const ImageToVideo = () => {
 
             {/* Generate button */}
             <Button
-              className="w-full h-10 rounded-lg font-medium text-sm gap-2"
+              className="sai-cta w-full h-10 rounded-lg font-medium text-sm gap-2"
               onClick={handleGenerate}
               disabled={!selectedImage || isGenerating}
               style={{
