@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     { path: "/support", priority: "0.5", changefreq: "monthly" },
     { path: "/blog", priority: "0.7", changefreq: "weekly" },
     { path: "/free-stock-library", priority: "0.8", changefreq: "weekly" },
+    { path: "/business", priority: "0.8", changefreq: "monthly" },
   ];
 
   // English-only legal pages (kept at root + /en)

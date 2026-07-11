@@ -854,6 +854,16 @@ Deno.serve(async (req) => {
       "/ai-image-generator": { title: "AI Image Generator - VisuStock", desc: "Generate unique images with AI", h1: "AI Image Generator" },
       "/buy-credits": { title: "Buy Credits - VisuStock", desc: "Purchase credits for downloads", h1: "Buy Credits" },
       "/support": { title: "Support - VisuStock", desc: "Get help and support", h1: "Support" },
+      "/business": {
+        title: "Business Plans — Enterprise Solutions for Companies | VisuStock",
+        desc: "Custom business packages for companies and organizations. Premium photos, videos, vectors, and audio for professional and commercial use.",
+        h1: "Power Your Business With Premium Creative Content",
+      },
+      "/en/business": {
+        title: "Business Plans — Enterprise Solutions for Companies | VisuStock",
+        desc: "Custom business packages for companies and organizations. Premium photos, videos, vectors, and audio for professional and commercial use.",
+        h1: "Power Your Business With Premium Creative Content",
+      },
     };
 
     const page = staticPages[path];
