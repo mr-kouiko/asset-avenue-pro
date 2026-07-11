@@ -1,85 +1,34 @@
-# Studio AI — New Visual System Rollout
+## Plan: Business & Enterprise Solutions page (/business)
 
-Apply the "Obsidian navy + aurora" design language across every Studio AI tool page (12 pages) through a small set of shared, reusable components. Header, footer, and all business logic (API calls, generation, upload flow, model calls) are strictly untouched.
+### 1. New page: `src/pages/Business.tsx`
+Wrapped in existing `Header` + `Footer`. Uses site design tokens (semantic classes from `index.css`, shadcn components). Uses `useSEO` hook for meta tags (title, description, OG). All 5 sections in exact order specified.
 
-## Scope
+**Sections:**
+- **Hero**: h1 headline, sub, primary CTA button that smooth-scrolls to `#contact-form`. Right-side illustration (generated placeholder image saved to `src/assets/business-hero.jpg`).
+- **What We Offer**: shadcn `Tabs` component with 5 tabs (Photos, Videos, Vectors, Audio, AI-Generated). Each panel has a spec line, 5-bullet list, and a Lucide icon.
+- **Why Choose**: 4-card grid (Lucide icons: Users, ShieldCheck, FileCheck, Headset).
+- **Trusted By**: placeholder horizontal strip with 5 empty logo slots (commented for future population).
+- **Contact form** (`#contact-form`): controlled React form with the exact fields listed. On submit, calls `submit-support-ticket` edge function (already exists — reused with a `business_inquiry` category tag). Success/error via existing `toast`. Legal disclaimer with `Link`s to `/terms`, `/privacy-policy`, `/license-agreement`.
 
-**In scope (visual only):**
-- Page background + ambient aurora glow
-- Tool identity section (title / subtitle / icon)
-- Control panel (prompt textarea + filter selectors + primary CTA)
-- Output/results grid + empty states
-- Typography (Inter for UI, Space Grotesk for tool titles)
+### 2. Routing: `src/App.tsx`
+Add lazy import `const Business = lazy(() => import("./pages/Business"))` and `<Route path="/business" element={<Business />} />` inside `AppRoutes` (so it's picked up for all language prefixes).
 
-**Out of scope:**
-- `Header`, `Footer`, navbar, credits badge, search bar, account menu
-- Any hook, API call, edge function call, upload logic, generation logic
-- Route definitions, data shapes, filter values
+### 3. Footer link: `src/components/Footer.tsx`
+Add new "Enterprise" column (or add under existing Company column) with a `<Link to="/business">Business & Enterprise</Link>` entry.
 
-## Design tokens (added to `src/index.css`)
+### 4. SEO indexability
+- Add `/business` to `supabase/functions/sitemap-static/index.ts` static routes list so it's included in the sitemap index already referenced by `public/sitemap.xml`.
+- Add `/business` handling to `supabase/functions/prerender/index.ts` with a hard-coded HTML template (title, meta description, OG tags, `<h1>`, section headings, tab bullet content) so crawlers hitting the Cloudflare Worker get fully rendered HTML — matches the existing prerender pattern used for other static routes.
 
-New CSS variables scoped under a `.studio-ai` wrapper class so they don't leak into the rest of the site:
+### 5. Meta/OG
+`useSEO({ title: "Business Plans — Enterprise Solutions for Companies", description: "Custom business packages for companies and organizations. Premium photos, videos, vectors, and audio for professional and commercial use.", type: "website", url: "https://visustock.com/business" })`.
 
-```
---sai-bg-base: #0A0E1A
---sai-bg-elevated: #0E1424
---sai-surface: #12172A
---sai-border-hairline: rgba(255,255,255,0.08)
---sai-border-strong: rgba(255,255,255,0.16)
---sai-text-primary: #F3F4F8
---sai-text-secondary: #8B92A8
---sai-text-muted: #5B6178
---sai-accent-violet: #6D5EF5
---sai-accent-cyan: #00D9FF
---sai-accent-magenta: #C084FC
---sai-gradient-cta: linear-gradient(135deg, #6D5EF5 0%, #8B5CF6 45%, #00D9FF 100%)
-```
+### Technical notes
+- Form submission uses the existing `submit-support-ticket` Supabase edge function (no new backend). If the user prefers a dedicated `business_inquiries` table, that can be added in a follow-up.
+- Placeholder hero image generated via `imagegen` (abstract corporate/creative visual, no text).
+- No new dependencies; all UI from existing shadcn primitives (`Tabs`, `Card`, `Button`, `Input`, `Textarea`, `Select`, `Label`).
+- Tailwind responsive breakpoints (`md:`, `lg:`) matching patterns in `HeroSection.tsx` and `Marketplace.tsx`.
 
-Fonts loaded via Google Fonts link in `index.html`: Inter (400/500/600) + Space Grotesk (500/600/700).
-
-## Shared components (new)
-
-Created under `src/components/studio-ai/`:
-
-1. **`StudioPage.tsx`** — wraps a tool page: renders `<Header/>`, dark background, aurora glow (violet/cyan | magenta/violet | cyan/teal based on `category` prop), children, `<Footer/>`. Accepts `title`, `subtitle`, `icon`, `category`.
-2. **`ControlPanel.tsx`** — glassmorphism card container for the left-side controls. Just a styled wrapper — children stay owned by each page.
-3. **`PromptTextarea.tsx`** — styled textarea with focus ring.
-4. **`PillGroup.tsx`** — labeled group (uppercase muted label + horizontal wrap of children).
-5. **`Pill.tsx`** — selectable option with `active` prop; renders the exact active/inactive styling from the spec.
-6. **`GenerateButton.tsx`** — the gradient CTA. Only one per page.
-7. **`OutputGrid.tsx`** + **`OutputCard.tsx`** + **`EmptyStateCard.tsx`** — results grid with configurable aspect ratio (`video` | `square` | `audio`).
-
-All components use the `--sai-*` tokens; no hard-coded colors in tool pages.
-
-## Per-page rollout
-
-Each tool page is edited to:
-1. Replace the outer background wrapper + Header/Footer with `<StudioPage category=… title=… subtitle=… icon=…>`.
-2. Wrap the existing controls column in `<ControlPanel>`; swap the prompt `<textarea>` for `<PromptTextarea>`; swap each existing filter row (aspect / resolution / duration / voice / etc.) for `<PillGroup label=…><Pill active=…/></PillGroup>`.
-3. Swap the primary "Generate / Enhance / Convert / Resize" button for `<GenerateButton>` (secondary buttons remain ghost/outline via existing shadcn `variant="outline"`).
-4. Wrap the results/preview column in `<OutputGrid aspect=…>` with `<EmptyStateCard>` for the empty state.
-
-**Category → aurora hue map:**
-- Video (ImageToVideo, TextToVideoAI, VideoUpscale, ReframeVideo) → `violet-cyan`
-- Image (AIImageGenerator, AIUpscaler, FaceEnhancer, RemoveBackground, ImageConverter, ImageResizer) → `magenta-violet`
-- Audio (TextToSpeech, AdjustMusicDuration) → `cyan-teal`
-
-**Output aspect map:**
-- Video pages → `video` (16:9)
-- Image pages → `square`
-- Audio pages → `audio` (compact waveform placeholder card)
-
-No page's state, effects, handlers, or generation calls are modified — only JSX wrappers and className/style values.
-
-## Verification
-
-After each batch, run the dev build and open the tool in the preview via Playwright to confirm:
-- No console errors
-- Prompt input, pills, generate button render with the new styling
-- Existing generation flow still triggers (button click reaches the same handler)
-
-## File list
-
-New: `src/components/studio-ai/{StudioPage,ControlPanel,PromptTextarea,PillGroup,Pill,GenerateButton,OutputGrid,OutputCard,EmptyStateCard}.tsx`, plus token additions to `src/index.css` and a Google Fonts `<link>` in `index.html`.
-
-Edited (JSX/styling only): the 12 tool pages listed in the request.
+### Files touched
+- **New**: `src/pages/Business.tsx`, `src/assets/business-hero.jpg`
+- **Edit**: `src/App.tsx`, `src/components/Footer.tsx`, `supabase/functions/sitemap-static/index.ts`, `supabase/functions/prerender/index.ts`

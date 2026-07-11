@@ -88,6 +88,7 @@ const BlogEN = lazy(() => import("./pages/en/BlogEN"));
 const BlogArticleEN = lazy(() => import("./pages/en/BlogArticleEN"));
 const Collections = lazy(() => import("./pages/Collections"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail"));
+const Business = lazy(() => import("./pages/Business"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,6 +157,7 @@ const AppRoutes = () => (
     <Route path="/infinity" element={<InfinityEN />} />
     <Route path="/packages-pricing" element={<PackagesPricing />} />
     <Route path="/about" element={<AboutEN />} />
+    <Route path="/business" element={<Business />} />
     <Route path="/blog" element={<BlogEN />} />
     <Route path="/blog/:slug" element={<BlogArticleEN />} />
     <Route path="/collections" element={<Collections />} />
