@@ -235,7 +235,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
       <div className="p-2.5 md:p-3 space-y-1.5 md:space-y-2">
         <div>
           <h3 className="font-medium text-sm text-stock-dark leading-tight line-clamp-2 min-h-[2.5rem]">
-            {title}
+            {displayTitle}
           </h3>
           <p className="text-xs text-stock-dark/60 mt-1 font-medium truncate">{author}</p>
         </div>
