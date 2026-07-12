@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
@@ -1166,6 +1167,7 @@ const ProductDetailInner = () => {
           </ReportModal>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
