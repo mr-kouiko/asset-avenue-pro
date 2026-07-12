@@ -84,7 +84,9 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
-  
+  const { title: translatedTitle } = useProductTranslation(id, { title });
+  const displayTitle = translatedTitle || title;
+
   const userHasLiked = hasUserLiked(id);
 
   const getTypeColor = (type: string) => {
