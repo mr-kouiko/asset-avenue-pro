@@ -199,7 +199,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="font-medium text-sm md:text-[15px] text-stock-dark leading-tight truncate">
-              {title}
+              {displayTitle}
             </h3>
             <p className="text-xs text-stock-dark/60 mt-0.5 truncate">{author}</p>
           </div>
