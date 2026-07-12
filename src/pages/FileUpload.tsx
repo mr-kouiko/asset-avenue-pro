@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SimpleFileUpload } from "@/components/SimpleFileUpload";
@@ -439,6 +440,7 @@ const FileUpload = () => {
             </>
           )}
         </div>
+        <Footer />
       </div>
     </ProtectedRoute>
   );
