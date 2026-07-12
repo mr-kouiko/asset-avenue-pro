@@ -7,6 +7,7 @@ import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { useAudioWatermark } from "@/hooks/useAudioWatermark";
+import { useProductTranslation } from "@/hooks/useProductTranslation";
 import WaveSurfer from "wavesurfer.js";
 
 interface AudioContentCardProps {
