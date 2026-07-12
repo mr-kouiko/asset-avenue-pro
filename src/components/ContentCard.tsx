@@ -154,7 +154,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
         {type === 'video' || (type === 'vfx' && videoUrl) ? (
           <WatermarkedVideoThumbnail 
             thumbnail={thumbnail} 
-            title={title}
+            title={displayTitle}
             videoUrl={videoUrl}
             className="w-full h-full"
           />
