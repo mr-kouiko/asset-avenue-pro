@@ -248,12 +248,6 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
               {downloads}
             </span>
           </div>
-          <div className="font-bold text-sm text-stock-dark">
-            {type === 'video' || type === 'vfx'
-              ? (price !== null && price > 0 ? `$${price}` : `$20+`)
-              : (price === null || price === 0 ? 'Free' : `$${price}`)
-            }
-          </div>
         </div>
       </div>
     </Card>
