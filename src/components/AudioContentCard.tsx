@@ -7,6 +7,7 @@ import { useDirectPurchase } from "@/hooks/useDirectPurchase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { useAudioWatermark } from "@/hooks/useAudioWatermark";
+import { useProductTranslation } from "@/hooks/useProductTranslation";
 import WaveSurfer from "wavesurfer.js";
 
 interface AudioContentCardProps {
@@ -49,6 +50,8 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   const [volume, setVolume] = useState(1);
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const { title: translatedTitle } = useProductTranslation(id, { title });
+  const displayTitle = translatedTitle || title;
 
   const playing = isPlaying(id);
   const isCurrentlyPlaying = playing && currentPlayingId === id;
@@ -196,7 +199,7 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="font-medium text-sm md:text-[15px] text-stock-dark leading-tight truncate">
-              {title}
+              {displayTitle}
             </h3>
             <p className="text-xs text-stock-dark/60 mt-0.5 truncate">{author}</p>
           </div>

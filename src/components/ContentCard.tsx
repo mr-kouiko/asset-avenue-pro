@@ -11,6 +11,7 @@ import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useProductTranslation } from "@/hooks/useProductTranslation";
 import { AudioContentCard } from "./AudioContentCard";
 import { toast } from "sonner";
 
@@ -83,7 +84,9 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
-  
+  const { title: translatedTitle } = useProductTranslation(id, { title });
+  const displayTitle = translatedTitle || title;
+
   const userHasLiked = hasUserLiked(id);
 
   const getTypeColor = (type: string) => {
@@ -151,14 +154,14 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
         {type === 'video' || (type === 'vfx' && videoUrl) ? (
           <WatermarkedVideoThumbnail 
             thumbnail={thumbnail} 
-            title={title}
+            title={displayTitle}
             videoUrl={videoUrl}
             className="w-full h-full"
           />
         ) : (
           <LazyImage
             src={thumbnail}
-            alt={title}
+            alt={displayTitle}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             priority={priority}
           />
@@ -232,7 +235,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
       <div className="p-2.5 md:p-3 space-y-1.5 md:space-y-2">
         <div>
           <h3 className="font-medium text-sm text-stock-dark leading-tight line-clamp-2 min-h-[2.5rem]">
-            {title}
+            {displayTitle}
           </h3>
           <p className="text-xs text-stock-dark/60 mt-1 font-medium truncate">{author}</p>
         </div>
