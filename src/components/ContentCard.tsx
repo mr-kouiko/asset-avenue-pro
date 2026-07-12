@@ -11,6 +11,7 @@ import { MediaPlayer } from "./media/MediaPlayer";
 import { LazyImage } from "./LazyImage";
 import { WatermarkedVideoThumbnail } from "./WatermarkedVideoThumbnail";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useProductTranslation } from "@/hooks/useProductTranslation";
 import { AudioContentCard } from "./AudioContentCard";
 import { toast } from "sonner";
 
