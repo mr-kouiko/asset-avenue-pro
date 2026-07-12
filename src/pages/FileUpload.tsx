@@ -440,6 +440,7 @@ const FileUpload = () => {
             </>
           )}
         </div>
+        <Footer />
       </div>
     </ProtectedRoute>
   );
