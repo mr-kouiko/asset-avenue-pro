@@ -161,7 +161,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
         ) : (
           <LazyImage
             src={thumbnail}
-            alt={title}
+            alt={displayTitle}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             priority={priority}
           />
