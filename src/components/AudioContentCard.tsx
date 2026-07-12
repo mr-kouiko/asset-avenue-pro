@@ -50,6 +50,8 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   const [volume, setVolume] = useState(1);
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const { title: translatedTitle } = useProductTranslation(id, { title });
+  const displayTitle = translatedTitle || title;
 
   const playing = isPlaying(id);
   const isCurrentlyPlaying = playing && currentPlayingId === id;
