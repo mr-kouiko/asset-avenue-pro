@@ -220,9 +220,6 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
 
       {/* Right: price + cart */}
       <div className="shrink-0 flex flex-col items-end gap-2">
-        <div className="font-bold text-sm md:text-base text-stock-dark whitespace-nowrap">
-          {price === null || price === 0 ? 'Free' : `$${price}`}
-        </div>
         <Button
           variant="outline"
           size="sm"
