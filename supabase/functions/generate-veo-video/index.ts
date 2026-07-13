@@ -178,7 +178,7 @@ serve(async (req) => {
       return json(500, { error: "config_error" });
     }
 
-    const veoModel = params.model === "veo-3" ? "veo-3.0-generate-preview" : "veo-3.0-fast-generate-preview";
+    const veoModel = params.model === "veo-3" ? "veo-3.1-generate-preview" : "veo-3.1-fast-generate-preview";
     console.log(`[gen ${genRow.id}] Calling Veo (${veoModel}) cost=${cost}`);
 
     const startResp = await fetch(
