@@ -293,6 +293,41 @@ All colors MUST be HSL.
 /* Header/Footer sit above the aurora too */
 .studio-ai header, .studio-ai footer { z-index: 2; }
 
+/* Restore the global marketplace look for the shared Header/Footer
+   inside Studio AI pages so the chrome matches the Studio AI homepage
+   (which is NOT wrapped in .studio-ai). Reverts the shadcn token
+   overrides declared above only within header/footer subtrees. */
+.studio-ai > header,
+.studio-ai > footer,
+.studio-ai header[class*="sticky"],
+.studio-ai footer {
+  --background: 0 0% 100%;
+  --foreground: 215 20% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 20% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 20% 15%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 215 20% 15%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 215 10% 55%;
+  --accent: 262 83% 58%;
+  --accent-foreground: 0 0% 100%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 262 83% 58%;
+  color: hsl(var(--foreground));
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.studio-ai > header a,
+.studio-ai > footer a,
+.studio-ai > header button,
+.studio-ai > footer button {
+  font-family: inherit;
+}
+
 /* -------- Shared primitives -------- */
 
 .sai-panel {
