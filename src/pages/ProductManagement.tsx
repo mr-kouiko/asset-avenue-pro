@@ -920,7 +920,7 @@ const ProductManagement = () => {
             <h1 className="text-3xl font-bold mb-2">{t('sd.pm.title')}</h1>
             <p className="text-muted-foreground">
               Configure each product individually with its metadata. 
-              Progress: {completedProducts}/{uploadedFiles.length} products configured
+              {t('sd.pm.progress').replace('{done}', String(completedProducts)).replace('{total}', String(uploadedFiles.length))}
             </p>
           </div>
 
@@ -931,10 +931,10 @@ const ProductManagement = () => {
                 <div className="flex items-center gap-2">
                   <Layers className="h-5 w-5 text-primary" />
                   <span className="font-medium">
-                    Draft {currentDraftIndex + 1} of {allDrafts.length}
+                    {t('sd.pm.draftNav').replace('{i}', String(currentDraftIndex + 1)).replace('{n}', String(allDrafts.length))}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    — Navigate between your pending drafts
+                    {t('sd.pm.draftNavHint')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -945,7 +945,7 @@ const ProductManagement = () => {
                     disabled={currentDraftIndex === 0}
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
+                    {t('sd.pm.previous')}
                   </Button>
                   <Select
                     value={currentDraftId || ''}
@@ -971,7 +971,7 @@ const ProductManagement = () => {
                     onClick={goToNextDraft}
                     disabled={currentDraftIndex === allDrafts.length - 1}
                   >
-                    Next
+                    {t('sd.pm.next')}
                     <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
@@ -983,7 +983,7 @@ const ProductManagement = () => {
             {/* Left Panel - File List */}
             <Card className="lg:col-span-1 p-4">
               <h3 className="font-semibold mb-4">
-                Uploaded Files ({uploadedFiles.length})
+                {t('sd.pm.uploadedFiles')} ({uploadedFiles.length})
               </h3>
               
               <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -1120,7 +1120,7 @@ const ProductManagement = () => {
                         )}
                         <div>
                           <h3 className="text-xl font-semibold">
-                            Product Configuration
+                            {t('sd.pm.productConfig')}
                           </h3>
                           <p className="text-sm text-muted-foreground">
                             {selectedFile.name} • {formatFileSize(selectedFile.size)}
@@ -1175,7 +1175,7 @@ const ProductManagement = () => {
                           </Select>
                           {selectedProductData.category && (
                             <p className="text-xs text-muted-foreground">
-                              {isEditMode ? 'You can change the category' : 'Auto-detected from file type'}
+                              {isEditMode ? t('sd.pm.field.category.hint.edit') : t('sd.pm.field.category.hint.auto')}
                             </p>
                           )}
                         </div>
@@ -1231,9 +1231,9 @@ const ProductManagement = () => {
                             <div className="flex items-center gap-2">
                               <Bot className="h-5 w-5 text-primary" />
                               <div>
-                                <Label className="text-sm font-medium">AI Content Declaration *</Label>
+                                <Label className="text-sm font-medium">{t('sd.pm.ai.title')} *</Label>
                                 <p className="text-xs text-muted-foreground">
-                                  Required: Declare if this content was created with AI assistance
+                                  {t('sd.pm.ai.desc')}
                                 </p>
                               </div>
                             </div>
@@ -1249,28 +1249,28 @@ const ProductManagement = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="no_ai_used">
-                                  <span className="flex items-center gap-2">🎨 No AI Used — 100% human-made</span>
+                                  <span className="flex items-center gap-2">{t('sd.pm.ai.none')}</span>
                                 </SelectItem>
                                 <SelectItem value="ai_assisted">
-                                  <span className="flex items-center gap-2">🤝 AI Assisted — AI tools used partially</span>
+                                  <span className="flex items-center gap-2">{t('sd.pm.ai.assisted')}</span>
                                 </SelectItem>
                                 <SelectItem value="fully_ai_generated">
-                                  <span className="flex items-center gap-2">🤖 Fully AI Generated</span>
+                                  <span className="flex items-center gap-2">{t('sd.pm.ai.full')}</span>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
                             {!selectedProductData.aiDeclaration && (
-                              <p className="text-xs text-destructive">⚠️ AI declaration is required before publishing</p>
+                              <p className="text-xs text-destructive">{t('sd.pm.ai.required')}</p>
                             )}
                             {selectedProductData.aiDeclaration && (
                               <p className="text-xs text-muted-foreground">
-                                Your content will be automatically scanned after submission. Mismatches between your declaration and detected AI usage may flag your content for review.
+                                {t('sd.pm.ai.notice')}
                               </p>
                             )}
                           </div>
                         </div>
 
-                        {/* Free Content Toggle */}
+                        {/* {t('sd.pm.free.title')} Toggle */}
                         <div className="md:col-span-2">
                           <div className={`flex items-center justify-between p-4 rounded-lg border ${
                             selectedProductData.isFreeContent 
@@ -1284,7 +1284,7 @@ const ProductManagement = () => {
                                   Free Content
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                  Make this content available for free download
+                                  {t('sd.pm.free.desc')}
                                 </p>
                               </div>
                             </div>
@@ -1296,7 +1296,7 @@ const ProductManagement = () => {
                           {selectedProductData.isFreeContent && (
                             <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                               <Gift className="h-3 w-3" />
-                              This content will be offered for free to all users
+                              {t('sd.pm.free.notice')}
                             </p>
                           )}
                         </div>
@@ -1310,7 +1310,7 @@ const ProductManagement = () => {
                           disabled={loading}
                         >
                           <Save className="h-4 w-4 mr-2" />
-                          Save draft
+                          {t('sd.pm.saveDraft')}
                         </Button>
                         
                         <Button 
@@ -1328,12 +1328,12 @@ const ProductManagement = () => {
                           {isEditMode ? (
                             <>
                               <Save className="h-4 w-4 mr-2" />
-                              Update product
+                              {t('sd.pm.update')}
                             </>
                           ) : (
                             <>
                               <Eye className="h-4 w-4 mr-2" />
-                              Publish this product
+                              {t('sd.pm.publish')}
                             </>
                           )}
                         </Button>
@@ -1345,7 +1345,7 @@ const ProductManagement = () => {
                 <div className="text-center py-12">
                   <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Select a file to configure the product
+                    {t('sd.pm.selectFile')}
                   </p>
                 </div>
               )}
@@ -1358,7 +1358,7 @@ const ProductManagement = () => {
               <div className="space-y-1">
                 <h3 className="font-semibold">{t('sd.pm.global')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {readyToPublish} product(s) ready to publish
+                  {t('sd.pm.ready').replace('{n}', String(readyToPublish))}
                 </p>
               </div>
               
@@ -1371,7 +1371,7 @@ const ProductManagement = () => {
                   }}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {isEditMode ? 'Cancel changes' : 'Back to uploads'}
+                  {isEditMode ? t('sd.pm.cancelChanges') : t('sd.pm.back')}
                 </Button>
                 
                 {!isEditMode && (
@@ -1381,7 +1381,7 @@ const ProductManagement = () => {
                     size="lg"
                   >
                     <Upload className="h-4 w-4 mr-2" />
-                    Publish all ready products ({readyToPublish})
+                    {t('sd.pm.publishAll')} ({readyToPublish})
                   </Button>
                 )}
                 
@@ -1404,7 +1404,7 @@ const ProductManagement = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                <h3 className="text-lg font-semibold truncate pr-4">Preview - {previewFile.name}</h3>
+                <h3 className="text-lg font-semibold truncate pr-4">{t('sd.pm.previewTitle')} - {previewFile.name}</h3>
                 <Button variant="ghost" size="sm" onClick={closePreview}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -1463,7 +1463,7 @@ const ProductManagement = () => {
               
               <div className="mt-3 p-3 bg-muted rounded-lg flex-shrink-0">
                 <p className="text-sm text-muted-foreground">
-                  Size: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
+                  {t('sd.pm.previewSizeType').replace('{size}', formatFileSize(previewFile.size)).replace('{type}', previewFile.type)}
                 </p>
               </div>
             </div>
