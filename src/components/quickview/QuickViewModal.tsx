@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useQuickView } from './QuickViewContext';
@@ -39,72 +39,63 @@ export const QuickViewModal = () => {
   };
 
   if (!current) return null;
-
   const canPrev = index > 0;
   const canNext = index < items.length - 1;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) close(); }}>
-      <DialogContent
-        className="p-0 gap-0 border bg-background w-[96vw] max-w-[1400px] h-[92vh] sm:h-[90vh] rounded-xl overflow-hidden [&>button]:hidden"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <DialogTitle className="sr-only">{current.title}</DialogTitle>
-        <DialogDescription className="sr-only">
-          Quick preview of {current.title} by {current.author}
-        </DialogDescription>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(o) => { if (!o) close(); }}>
+      <DialogPrimitive.Portal>
+        {/* Light, subtle overlay — not a dark scrim */}
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 z-50 bg-background/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        />
+        <DialogPrimitive.Content
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[96vw] max-w-[1400px] h-[92vh] sm:h-[90vh] bg-background border rounded-xl shadow-2xl overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200"
+        >
+          <DialogPrimitive.Title className="sr-only">{current.title}</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">
+            Quick preview of {current.title} by {current.author}
+          </DialogPrimitive.Description>
 
-        {/* Prev / Next / Close controls */}
-        <div className="absolute top-3 right-3 z-30 flex gap-2">
+          <div className="absolute top-3 right-3 z-30">
+            <Button variant="secondary" size="icon" aria-label="Close" onClick={close} className="h-9 w-9 rounded-full shadow">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
           <Button
-            variant="secondary"
-            size="icon"
-            aria-label="Close"
-            onClick={close}
-            className="h-9 w-9 rounded-full shadow"
+            variant="secondary" size="icon" aria-label="Previous asset"
+            disabled={!canPrev} onClick={prev}
+            className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full shadow disabled:opacity-40"
           >
-            <X className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </Button>
-        </div>
-        <Button
-          variant="secondary"
-          size="icon"
-          aria-label="Previous asset"
-          disabled={!canPrev}
-          onClick={prev}
-          className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full shadow disabled:opacity-40"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          aria-label="Next asset"
-          disabled={!canNext}
-          onClick={next}
-          className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full shadow disabled:opacity-40"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+          <Button
+            variant="secondary" size="icon" aria-label="Next asset"
+            disabled={!canNext} onClick={next}
+            className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full shadow disabled:opacity-40"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
 
-        <div className="h-full p-3 md:p-5 overflow-hidden">
-          <QuickViewBody key={current.id} item={current} />
-        </div>
+          <div className="h-full p-3 md:p-5 overflow-hidden">
+            <QuickViewBody key={current.id} item={current} />
+          </div>
 
-        {/* Mobile nav bar */}
-        <div className="md:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex gap-2 bg-background/90 backdrop-blur rounded-full px-2 py-1 border shadow">
-          <Button variant="ghost" size="icon" onClick={prev} disabled={!canPrev} aria-label="Previous">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs self-center px-2 tabular-nums text-muted-foreground">
-            {index + 1} / {items.length}
-          </span>
-          <Button variant="ghost" size="icon" onClick={next} disabled={!canNext} aria-label="Next">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="md:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex gap-2 bg-background/95 backdrop-blur rounded-full px-2 py-1 border shadow">
+            <Button variant="ghost" size="icon" onClick={prev} disabled={!canPrev} aria-label="Previous">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs self-center px-2 tabular-nums text-muted-foreground">
+              {index + 1} / {items.length}
+            </span>
+            <Button variant="ghost" size="icon" onClick={next} disabled={!canNext} aria-label="Next">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
