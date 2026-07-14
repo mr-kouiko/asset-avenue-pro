@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Clock, CheckCircle2, Wallet, TrendingUp, RefreshCw, Send, Hourglass } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { RequestPayoutDialog } from "./RequestPayoutDialog";
 
 type Summary = {
