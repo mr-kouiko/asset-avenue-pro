@@ -58,6 +58,7 @@ interface ProductData {
 
 const ProductManagement = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { categories } = useSellerDashboard();
   const { 
     saveProductDraft, 
