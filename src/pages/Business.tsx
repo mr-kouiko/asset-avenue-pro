@@ -30,98 +30,26 @@ import {
 import { useSEO } from "@/hooks/useSEO";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocalizedPath } from "@/hooks/useLocalizedPath";
 import heroImg from "@/assets/business-hero.jpg";
 
-const OFFERINGS = [
-  {
-    key: "photos",
-    label: "Photos",
-    icon: ImageIcon,
-    spec: "High-resolution JPGs up to 300 DPI, print-ready and cleared for commercial use.",
-    items: [
-      "Advertising imagery",
-      "Cutout / isolated people",
-      "Design & background assets",
-      "Landmark & city photography",
-      "Event & editorial photography",
-    ],
-  },
-  {
-    key: "videos",
-    label: "Videos",
-    icon: Video,
-    spec: "MP4 up to 8K, up to 120fps, delivered in H.264/H.265 with source-quality masters.",
-    items: [
-      "Cinematic B-roll",
-      "Corporate & lifestyle footage",
-      "Aerial & drone shots",
-      "Motion graphics & transitions",
-      "Loopable backgrounds",
-    ],
-  },
-  {
-    key: "vectors",
-    label: "Vectors",
-    icon: Shapes,
-    spec: "Vector EPS and SVG files, fully editable and scalable without quality loss.",
-    items: [
-      "Icons & UI kits",
-      "Illustrations & characters",
-      "Logos & brand marks",
-      "Infographics & charts",
-      "Patterns & backgrounds",
-    ],
-  },
-  {
-    key: "audio",
-    label: "Audio",
-    icon: Music,
-    spec: "High-quality MP3 and WAV audio, mastered for broadcast, ads, and digital use.",
-    items: [
-      "Royalty-free music tracks",
-      "Sound effects library",
-      "Cinematic scores",
-      "Ambient loops",
-      "Voiceover & jingles",
-    ],
-  },
-  {
-    key: "ai",
-    label: "AI-Generated",
-    icon: Sparkles,
-    spec: "Generate custom images, graphics, and videos with built-in AI tools — commercial rights included.",
-    items: [
-      "Text-to-image generation",
-      "Text-to-video generation",
-      "Image-to-video motion",
-      "AI upscaling & face enhancement",
-      "Background removal & reframing",
-    ],
-  },
-];
+const OFFERING_KEYS = ["photos", "videos", "vectors", "audio", "ai"] as const;
+const OFFERING_ICONS: Record<(typeof OFFERING_KEYS)[number], any> = {
+  photos: ImageIcon,
+  videos: Video,
+  vectors: Shapes,
+  audio: Music,
+  ai: Sparkles,
+};
 
-const BENEFITS = [
-  {
-    icon: Users,
-    title: "Volume-matched plans",
-    desc: "Higher download volumes scaled to your company size and content velocity.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Multi-seat accounts",
-    desc: "Individual accounts per employee with centralized usage tracking and reporting.",
-  },
-  {
-    icon: FileCheck,
-    title: "Extended commercial license",
-    desc: "Enhanced legal coverage for advertising, resale, and large-audience distribution.",
-  },
-  {
-    icon: Headset,
-    title: "Dedicated support",
-    desc: "Named account manager with licensing and legal assistance whenever you need it.",
-  },
-];
+const BENEFIT_KEYS = ["b1", "b2", "b3", "b4"] as const;
+const BENEFIT_ICONS: Record<(typeof BENEFIT_KEYS)[number], any> = {
+  b1: Users,
+  b2: ShieldCheck,
+  b3: FileCheck,
+  b4: Headset,
+};
 
 const scrollToForm = () => {
   const el = document.getElementById("contact-form");
@@ -129,6 +57,9 @@ const scrollToForm = () => {
 };
 
 export default function Business() {
+  const { t } = useLanguage();
+  const lp = useLocalizedPath();
+
   useSEO({
     title: "Business Plans — Enterprise Solutions for Companies",
     description:
@@ -154,8 +85,8 @@ export default function Business() {
     e.preventDefault();
     if (!form.fullName || !form.company || !form.email || !form.message) {
       toast({
-        title: "Missing information",
-        description: "Please fill in all required fields.",
+        title: t("biz.form.missing"),
+        description: t("biz.form.missingDesc"),
         variant: "destructive",
       });
       return;
@@ -181,8 +112,8 @@ export default function Business() {
       if (error) throw error;
 
       toast({
-        title: "Request sent",
-        description: "Our team will get back to you within one business day.",
+        title: t("biz.form.sent"),
+        description: t("biz.form.sentDesc"),
       });
       setForm({
         fullName: "",
@@ -194,8 +125,8 @@ export default function Business() {
       });
     } catch (err: any) {
       toast({
-        title: "Could not send request",
-        description: err?.message ?? "Please try again in a moment.",
+        title: t("biz.form.sendFail"),
+        description: err?.message ?? t("biz.form.sendFailDesc"),
         variant: "destructive",
       });
     } finally {
@@ -213,22 +144,20 @@ export default function Business() {
           <div className="container grid gap-10 py-16 md:py-24 lg:grid-cols-2 lg:items-center">
             <div>
               <span className="inline-flex items-center rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                Business & Enterprise
+                {t("biz.badge")}
               </span>
               <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-                Power Your Business With Premium Creative Content
+                {t("biz.hero.title")}
               </h1>
               <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-                Tailored licensing solutions for companies, agencies, and
-                government entities that need high-volume or custom access to
-                photos, videos, vectors, audio, and AI-generated assets.
+                {t("biz.hero.desc")}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button size="lg" onClick={scrollToForm}>
-                  Request a Business Package
+                  {t("biz.hero.cta1")}
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link to="/marketplace">Explore the library</Link>
+                  <Link to={lp("/marketplace")}>{t("biz.hero.cta2")}</Link>
                 </Button>
               </div>
             </div>
@@ -250,51 +179,43 @@ export default function Business() {
           <div className="container">
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Everything Your Team Needs, In One Place
+                {t("biz.offer.title")}
               </h2>
-              <p className="mt-4 text-muted-foreground">
-                A full creative library covering advertising, marketing, and
-                production needs across every format.
-              </p>
+              <p className="mt-4 text-muted-foreground">{t("biz.offer.subtitle")}</p>
             </div>
 
             <Tabs defaultValue="photos" className="mt-10">
               <TabsList className="mx-auto flex h-auto w-full max-w-3xl flex-wrap justify-center gap-2 bg-muted p-2">
-                {OFFERINGS.map((o) => {
-                  const Icon = o.icon;
+                {OFFERING_KEYS.map((k) => {
+                  const Icon = OFFERING_ICONS[k];
                   return (
-                    <TabsTrigger
-                      key={o.key}
-                      value={o.key}
-                      className="flex items-center gap-2"
-                    >
+                    <TabsTrigger key={k} value={k} className="flex items-center gap-2">
                       <Icon className="h-4 w-4" />
-                      {o.label}
+                      {t(`biz.offer.${k}`)}
                     </TabsTrigger>
                   );
                 })}
               </TabsList>
 
-              {OFFERINGS.map((o) => {
-                const Icon = o.icon;
+              {OFFERING_KEYS.map((k) => {
+                const Icon = OFFERING_ICONS[k];
                 return (
-                  <TabsContent key={o.key} value={o.key} className="mt-8">
+                  <TabsContent key={k} value={k} className="mt-8">
                     <Card>
                       <CardContent className="grid gap-8 p-8 md:grid-cols-[auto_1fr] md:items-start">
                         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                           <Icon className="h-8 w-8" />
                         </div>
                         <div>
-                          <h3 className="text-2xl font-semibold">{o.label}</h3>
-                          <p className="mt-2 text-muted-foreground">{o.spec}</p>
+                          <h3 className="text-2xl font-semibold">{t(`biz.offer.${k}`)}</h3>
+                          <p className="mt-2 text-muted-foreground">
+                            {t(`biz.offer.${k}.spec`)}
+                          </p>
                           <ul className="mt-6 grid gap-2 sm:grid-cols-2">
-                            {o.items.map((item) => (
-                              <li
-                                key={item}
-                                className="flex items-start gap-2 text-sm"
-                              >
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
                                 <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                                <span>{item}</span>
+                                <span>{t(`biz.offer.${k}.i${i}`)}</span>
                               </li>
                             ))}
                           </ul>
@@ -313,26 +234,23 @@ export default function Business() {
           <div className="container">
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Built for Teams, Not Just Individuals
+                {t("biz.why.title")}
               </h2>
-              <p className="mt-4 text-muted-foreground">
-                Every business plan is engineered for the scale, governance,
-                and legal safety enterprise workflows demand.
-              </p>
+              <p className="mt-4 text-muted-foreground">{t("biz.why.subtitle")}</p>
             </div>
 
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {BENEFITS.map((b) => {
-                const Icon = b.icon;
+              {BENEFIT_KEYS.map((k) => {
+                const Icon = BENEFIT_ICONS[k];
                 return (
-                  <Card key={b.title} className="h-full">
+                  <Card key={k} className="h-full">
                     <CardContent className="p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <Icon className="h-6 w-6" />
                       </div>
-                      <h3 className="mt-4 font-semibold">{b.title}</h3>
+                      <h3 className="mt-4 font-semibold">{t(`biz.why.${k}.title`)}</h3>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        {b.desc}
+                        {t(`biz.why.${k}.desc`)}
                       </p>
                     </CardContent>
                   </Card>
@@ -346,10 +264,9 @@ export default function Business() {
         <section className="border-b py-12">
           <div className="container">
             <p className="text-center text-sm font-medium uppercase tracking-wider text-muted-foreground">
-              Trusted by teams at
+              {t("biz.trusted")}
             </p>
             <div className="mt-6 grid grid-cols-2 items-center gap-6 opacity-60 sm:grid-cols-3 md:grid-cols-5">
-              {/* TODO: populate with real client logos */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
@@ -367,12 +284,9 @@ export default function Business() {
           <div className="container max-w-3xl">
             <div className="text-center">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Get a Custom Business Package
+                {t("biz.contact.title")}
               </h2>
-              <p className="mt-4 text-muted-foreground">
-                Tell us about your needs and our team will get back to you with
-                a tailored plan.
-              </p>
+              <p className="mt-4 text-muted-foreground">{t("biz.contact.subtitle")}</p>
             </div>
 
             <Card className="mt-10">
@@ -380,7 +294,7 @@ export default function Business() {
                 <form onSubmit={handleSubmit} className="grid gap-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label htmlFor="fullName">Full name *</Label>
+                      <Label htmlFor="fullName">{t("biz.form.fullName")}</Label>
                       <Input
                         id="fullName"
                         value={form.fullName}
@@ -389,7 +303,7 @@ export default function Business() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="company">Company name *</Label>
+                      <Label htmlFor="company">{t("biz.form.company")}</Label>
                       <Input
                         id="company"
                         value={form.company}
@@ -401,7 +315,7 @@ export default function Business() {
 
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label htmlFor="email">Work email *</Label>
+                      <Label htmlFor="email">{t("biz.form.email")}</Label>
                       <Input
                         id="email"
                         type="email"
@@ -411,7 +325,7 @@ export default function Business() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="phone">Phone (optional)</Label>
+                      <Label htmlFor="phone">{t("biz.form.phone")}</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -422,13 +336,13 @@ export default function Business() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="companySize">Company size</Label>
+                    <Label htmlFor="companySize">{t("biz.form.companySize")}</Label>
                     <Select
                       value={form.companySize}
                       onValueChange={(v) => update("companySize", v)}
                     >
                       <SelectTrigger id="companySize">
-                        <SelectValue placeholder="Select company size" />
+                        <SelectValue placeholder={t("biz.form.sizePlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1-10">1–10</SelectItem>
@@ -440,7 +354,7 @@ export default function Business() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="message">Message / requirements *</Label>
+                    <Label htmlFor="message">{t("biz.form.message")}</Label>
                     <Textarea
                       id="message"
                       rows={5}
@@ -451,27 +365,27 @@ export default function Business() {
                   </div>
 
                   <Button type="submit" size="lg" disabled={submitting}>
-                    {submitting ? "Sending…" : "Send Request"}
+                    {submitting ? t("biz.form.sending") : t("biz.form.submit")}
                   </Button>
 
                   <p className="text-xs text-muted-foreground">
-                    By submitting this form you agree to our{" "}
-                    <Link to="/terms" className="underline hover:text-foreground">
-                      Terms of Service
+                    {t("biz.form.legal")}{" "}
+                    <Link to={lp("/terms")} className="underline hover:text-foreground">
+                      {t("biz.form.terms")}
                     </Link>
                     ,{" "}
                     <Link
-                      to="/privacy-policy"
+                      to={lp("/privacy-policy")}
                       className="underline hover:text-foreground"
                     >
-                      Privacy Policy
+                      {t("biz.form.privacy")}
                     </Link>
-                    , and{" "}
+                    ,{" "}
                     <Link
-                      to="/license-agreement"
+                      to={lp("/license-agreement")}
                       className="underline hover:text-foreground"
                     >
-                      License Agreement
+                      {t("biz.form.license")}
                     </Link>
                     .
                   </p>
