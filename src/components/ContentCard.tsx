@@ -35,7 +35,10 @@ interface ContentCardProps {
   /** True only for real vector assets (SVG). */
   isVector?: boolean;
   priority?: boolean; // For above-the-fold content
+  /** Optional: intercept card click to open Quick View instead of navigating. */
+  onQuickView?: () => void;
 }
+
 
 
 export const ContentCard: React.FC<ContentCardProps> = memo(({
@@ -57,9 +60,29 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   isAiGenerated = false,
   isVector = false,
   priority = false,
+  onQuickView,
 }) => {
   // Use specialized AudioContentCard for audio content
   if (type === 'audio') {
+    return (
+      <AudioContentCard
+        id={id}
+        slug={slug}
+        title={title}
+        author={author}
+        price={price}
+        thumbnail={thumbnail}
+        audioUrl={audioUrl}
+        likes={likes}
+        downloads={downloads}
+        isLiked={isLiked}
+        duration={duration}
+        bpm={bpm}
+        onQuickView={onQuickView}
+      />
+    );
+  }
+
     return (
       <AudioContentCard
         id={id}
