@@ -46,6 +46,8 @@ import {
   videoFiltersFromParams,
   VIDEO_FILTER_PARAM_KEYS,
 } from "@/utils/videoFiltersUrl";
+import { useQuickView, QuickViewItem } from "@/components/quickview/QuickViewContext";
+
 
 // ── Section Header ────────────────────────────────────────────
 const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
@@ -75,6 +77,8 @@ const Marketplace = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { open: openQuickView } = useQuickView();
+
 
   // Redirect ?price=free to the unified Free Stock Library page
   useEffect(() => {
