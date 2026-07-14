@@ -83,23 +83,6 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
     );
   }
 
-    return (
-      <AudioContentCard
-        id={id}
-        slug={slug}
-        title={title}
-        author={author}
-        price={price}
-        thumbnail={thumbnail}
-        audioUrl={audioUrl}
-        likes={likes}
-        downloads={downloads}
-        isLiked={isLiked}
-        duration={duration}
-        bpm={bpm}
-      />
-    );
-  }
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
   const { hasUserLiked, toggleLike } = useLikes();
