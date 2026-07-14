@@ -84,4 +84,3 @@ export const pt = {
   'vf.plat.instagram': 'Instagram',
   'vf.plat.youtube': 'YouTube',
   'vf.plat.ads': 'Anúncios',
-};
