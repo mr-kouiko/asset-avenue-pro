@@ -11,7 +11,10 @@ import { SearchProvider } from "@/hooks/useSearch";
 import { LanguageRedirect } from "@/components/LanguageRedirect";
 import { RouteTitleFallback } from "@/components/RouteTitleFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { QuickViewProvider } from "@/components/quickview/QuickViewContext";
+import { QuickViewModal } from "@/components/quickview/QuickViewModal";
 import { lazy, Suspense } from "react";
+
 
 
 
@@ -193,19 +196,22 @@ const App = () => (
                   <Toaster />
                   <Sonner />
                   <SearchProvider>
-                    <LanguageRedirect />
-                    <RouteTitleFallback />
-                    <Suspense fallback={<PageLoader />}>
-                      <Routes>
-                        {/* Explicit non-English language prefixes */}
-                        <Route path="/fr/*" element={<AppRoutes />} />
-                        <Route path="/es/*" element={<AppRoutes />} />
-                        <Route path="/de/*" element={<AppRoutes />} />
-                        <Route path="/pt/*" element={<AppRoutes />} />
-                        {/* Default English routes (root) */}
-                        <Route path="/*" element={<AppRoutes />} />
-                      </Routes>
-                    </Suspense>
+                    <QuickViewProvider>
+                      <LanguageRedirect />
+                      <RouteTitleFallback />
+                      <Suspense fallback={<PageLoader />}>
+                        <Routes>
+                          {/* Explicit non-English language prefixes */}
+                          <Route path="/fr/*" element={<AppRoutes />} />
+                          <Route path="/es/*" element={<AppRoutes />} />
+                          <Route path="/de/*" element={<AppRoutes />} />
+                          <Route path="/pt/*" element={<AppRoutes />} />
+                          {/* Default English routes (root) */}
+                          <Route path="/*" element={<AppRoutes />} />
+                        </Routes>
+                      </Suspense>
+                      <QuickViewModal />
+                    </QuickViewProvider>
                   </SearchProvider>
                 </LanguageProvider>
               </BrowserRouter>
