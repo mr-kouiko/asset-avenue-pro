@@ -381,6 +381,17 @@ const Marketplace = () => {
     const hasFreeCreator = freeCreatorContent.length > 0;
     const showSectionHeaders = hasPremium && hasFreeCreator;
 
+    const orderedList: QuickViewItem[] = [...premiumContent, ...freeCreatorContent].map((c) => ({
+      id: c.id,
+      slug: (c as any).slug,
+      title: c.title,
+      type: c.type as QuickViewItem['type'],
+      thumbnail: c.thumbnail,
+      author: c.author,
+    }));
+
+    const openAt = (id: string) => openQuickView(orderedList, id);
+
     return (
       <>
         {/* Premium Marketplace Assets */}
@@ -391,7 +402,7 @@ const Marketplace = () => {
             )}
             <div className={gridClass}>
               {premiumContent.map((content) => (
-                <ContentCard key={content.id} {...content} />
+                <ContentCard key={content.id} {...content} onQuickView={() => openAt(content.id)} />
               ))}
             </div>
           </div>
@@ -405,7 +416,7 @@ const Marketplace = () => {
             )}
             <div className={gridClass}>
               {freeCreatorContent.map((content) => (
-                <ContentCard key={content.id} {...content} />
+                <ContentCard key={content.id} {...content} onQuickView={() => openAt(content.id)} />
               ))}
             </div>
           </div>
@@ -413,6 +424,7 @@ const Marketplace = () => {
       </>
     );
   };
+
 
   // ── Pagination ──────────────────────────────────────────────
   const renderPagination = () => {
