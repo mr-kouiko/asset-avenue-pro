@@ -23,6 +23,7 @@ import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { EbookForm } from "@/components/EbookForm";
 import { VFXPreviewUpload } from "@/components/VFXPreviewUpload";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface UploadedFileData {
   id: string;
@@ -57,6 +58,7 @@ interface ProductData {
 
 const ProductManagement = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { categories } = useSellerDashboard();
   const { 
     saveProductDraft, 
@@ -160,7 +162,7 @@ const ProductManagement = () => {
       setCurrentDraftIndex(idx);
     }
     
-    toast.info(`Switched to: ${draft.title}`);
+    toast.info(t('sd.pm.toast.switched').replace('{title}', draft.title));
   }, [allDrafts]);
 
   // Navigate to previous draft
@@ -192,7 +194,7 @@ const ProductManagement = () => {
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
     
     if (!storedFiles) {
-      toast.error("No files found. Please upload your files first.");
+      toast.error(t('sd.pm.toast.noFiles'));
       navigate('/file-upload');
       return;
     }
@@ -423,7 +425,7 @@ const ProductManagement = () => {
     if (!productData || !file) return;
 
     if (!productData.title.trim()) {
-      toast.error("Title is required to save");
+      toast.error(t('sd.pm.toast.titleRequired'));
       return;
     }
 
@@ -517,7 +519,7 @@ const ProductManagement = () => {
     // Resolve a draft id that is actually owned by the current user (protects against stale sessionStorage)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('You must be logged in');
+      toast.error(t('sd.pm.toast.loginRequired'));
       return;
     }
 
@@ -536,25 +538,25 @@ const ProductManagement = () => {
       sessionStorage.removeItem('editingSubmission');
       sessionStorage.removeItem('pendingUploadedFiles');
       sessionStorage.removeItem('currentDraftId');
-      toast.error("No draft found to publish. Please upload your files again.");
+      toast.error(t('sd.pm.toast.noDraftPublish'));
       navigate('/file-upload');
       return;
     }
 
     if (!productData.title.trim() || !productData.description.trim()) {
-      toast.error("Title and description are required to publish");
+      toast.error(t('sd.pm.toast.titleDescRequired'));
       return;
     }
 
     if (!productData.aiDeclaration) {
-      toast.error("AI declaration is required before publishing");
+      toast.error(t('sd.pm.toast.aiRequired'));
       return;
     }
 
     // For ebooks, check if cover is present
     const isPDF = file.type === 'application/pdf';
     if (isPDF && !productData.coverUrl) {
-      toast.error("A cover image is required to publish an ebook");
+      toast.error(t('sd.pm.toast.coverRequired'));
       return;
     }
 
@@ -562,7 +564,7 @@ const ProductManagement = () => {
     const isArchive = file.type.includes('rar') || file.type.includes('zip') || 
                       file.name.toLowerCase().endsWith('.rar') || file.name.toLowerCase().endsWith('.zip');
     if (isArchive && !productData.previewImageUrl) {
-      toast.error("A preview image is required to publish VFX products");
+      toast.error(t('sd.pm.toast.vfxPreviewRequired'));
       return;
     }
 
@@ -605,7 +607,7 @@ const ProductManagement = () => {
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('currentDraftId');
-        toast.success("All products have been published! Redirecting to your portfolio...");
+        toast.success(t('sd.pm.toast.allPublished'));
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
         // Select the first remaining file
@@ -621,19 +623,19 @@ const ProductManagement = () => {
     try {
       const productData = productsData[fileId];
       if (!productData) {
-        toast.error('No product data to save');
+        toast.error(t('sd.pm.toast.noProductData'));
         return;
       }
 
       if (!productData.title.trim() || !productData.description.trim()) {
-        toast.error("Title and description are required");
+        toast.error(t('sd.pm.toast.titleDescReq'));
         return;
       }
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('You must be logged in');
+        toast.error(t('sd.pm.toast.loginRequired'));
         return;
       }
 
@@ -647,7 +649,7 @@ const ProductManagement = () => {
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('currentDraftId');
-        toast.error("No draft found to update. Please try again from your Dashboard.");
+        toast.error(t('sd.pm.toast.noDraftUpdate'));
         navigate('/dashboard');
         return;
       }
@@ -674,7 +676,7 @@ const ProductManagement = () => {
       if (error) {
         console.error('❌ Update error:', error);
         if (error.code === 'PGRST116') {
-          toast.error('Product not found or you do not have permission to edit it');
+          toast.error(t('sd.pm.toast.notFoundOrNoPerm'));
         } else {
           toast.error(`Error: ${error.message}`);
         }
@@ -682,13 +684,13 @@ const ProductManagement = () => {
       }
 
       console.log('✅ Submission updated successfully:', data);
-      toast.success('Product updated successfully');
+      toast.success(t('sd.pm.toast.updated'));
       sessionStorage.removeItem('editingSubmission');
       sessionStorage.removeItem('pendingUploadedFiles');
       navigate('/dashboard');
     } catch (error) {
       console.error('💥 Error updating submission:', error);
-      toast.error('Error updating product');
+      toast.error(t('sd.pm.toast.updateError'));
     }
   };
 
@@ -698,7 +700,7 @@ const ProductManagement = () => {
     );
     
     if (validProducts.length === 0) {
-      toast.error("No products ready to publish. Check titles and descriptions.");
+      toast.error(t('sd.pm.toast.nonePublishable'));
       return;
     }
 
@@ -752,7 +754,7 @@ const ProductManagement = () => {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} product(s) published successfully!`);
+      toast.success(t('sd.pm.toast.publishedCount').replace('{n}', String(successCount)));
       
       // Remove all published files from the list
       const updatedFiles = uploadedFiles.filter(f => !publishedFileIds.includes(f.id));
@@ -773,7 +775,7 @@ const ProductManagement = () => {
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('currentDraftId');
-        toast.success("All products have been published! Redirecting to your portfolio...");
+        toast.success(t('sd.pm.toast.allPublished'));
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
         // Select the first remaining file
@@ -813,7 +815,7 @@ const ProductManagement = () => {
           
           if (error) {
             console.error('Error generating signed URL:', error);
-            toast.error('Error generating preview URL');
+            toast.error(t('sd.pm.toast.previewUrlErr'));
           } else if (data?.signedUrl) {
             console.log('✅ Signed URL generated:', data.signedUrl);
             setPreviewFile({ ...file, previewUrl: data.signedUrl });
@@ -864,7 +866,7 @@ const ProductManagement = () => {
     // Update sessionStorage
     if (updatedFiles.length === 0) {
       sessionStorage.removeItem('pendingUploadedFiles');
-      toast.success("All files have been removed");
+      toast.success(t('sd.pm.toast.allRemoved'));
       navigate('/file-upload');
     } else {
       sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
@@ -879,7 +881,7 @@ const ProductManagement = () => {
         setSelectedFileId(updatedFiles[0].id);
       }
       
-      toast.success("File removed permanently");
+      toast.success(t('sd.pm.toast.fileRemoved'));
     }
   };
 
@@ -894,7 +896,7 @@ const ProductManagement = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="This page is reserved for sellers."
+      fallbackMessage={t('sd.pm.forbiddenSellers')}
     >
       <div className="min-h-screen bg-background">
         <Header />
@@ -908,17 +910,17 @@ const ProductManagement = () => {
                 className="flex items-center space-x-1 hover:text-primary transition-colors"
               >
                 <span className="px-3 py-1 rounded-full bg-muted">1</span>
-                <span>File Upload</span>
+                <span>{t('sd.upload.step1')}</span>
               </Link>
               <ArrowRight className="h-4 w-4" />
               <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">2</span>
-              <span>Product Management</span>
+              <span>{t('sd.upload.step2')}</span>
             </div>
             
-            <h1 className="text-3xl font-bold mb-2">Manage your products</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('sd.pm.title')}</h1>
             <p className="text-muted-foreground">
               Configure each product individually with its metadata. 
-              Progress: {completedProducts}/{uploadedFiles.length} products configured
+              {t('sd.pm.progress').replace('{done}', String(completedProducts)).replace('{total}', String(uploadedFiles.length))}
             </p>
           </div>
 
@@ -929,10 +931,10 @@ const ProductManagement = () => {
                 <div className="flex items-center gap-2">
                   <Layers className="h-5 w-5 text-primary" />
                   <span className="font-medium">
-                    Draft {currentDraftIndex + 1} of {allDrafts.length}
+                    {t('sd.pm.draftNav').replace('{i}', String(currentDraftIndex + 1)).replace('{n}', String(allDrafts.length))}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    — Navigate between your pending drafts
+                    {t('sd.pm.draftNavHint')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -943,7 +945,7 @@ const ProductManagement = () => {
                     disabled={currentDraftIndex === 0}
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
+                    {t('sd.pm.previous')}
                   </Button>
                   <Select
                     value={currentDraftId || ''}
@@ -953,7 +955,7 @@ const ProductManagement = () => {
                     }}
                   >
                     <SelectTrigger className="w-[250px]">
-                      <SelectValue placeholder="Select a draft" />
+                      <SelectValue placeholder={t('sd.pm.selectDraft')} />
                     </SelectTrigger>
                     <SelectContent>
                       {allDrafts.map((draft, idx) => (
@@ -969,7 +971,7 @@ const ProductManagement = () => {
                     onClick={goToNextDraft}
                     disabled={currentDraftIndex === allDrafts.length - 1}
                   >
-                    Next
+                    {t('sd.pm.next')}
                     <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
@@ -981,7 +983,7 @@ const ProductManagement = () => {
             {/* Left Panel - File List */}
             <Card className="lg:col-span-1 p-4">
               <h3 className="font-semibold mb-4">
-                Uploaded Files ({uploadedFiles.length})
+                {t('sd.pm.uploadedFiles')} ({uploadedFiles.length})
               </h3>
               
               <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -1048,7 +1050,7 @@ const ProductManagement = () => {
                                openPreview(file);
                              }}
                              className="h-8 w-8 p-0 hover:bg-primary/10"
-                             title="Preview"
+                             title={t('sd.pm.preview')}
                            >
                              <Eye className="h-4 w-4" />
                            </Button>
@@ -1062,17 +1064,17 @@ const ProductManagement = () => {
                                handleDeleteFile(file.id);
                              }}
                              className="h-8 w-8 p-0 hover:bg-destructive/10 text-destructive hover:text-destructive"
-                             title="Delete file"
+                             title={t('sd.pm.deleteFile')}
                            >
                              <Trash2 className="h-4 w-4" />
                            </Button>
                            
                             <div className="flex flex-col items-end space-y-1">
                               {productData?.status === 'published' && (
-                                <Badge className="text-xs">Published</Badge>
+                                <Badge className="text-xs">{t('sd.status.published')}</Badge>
                               )}
                               {productData?.status === 'draft' && productData.title && (
-                                <Badge variant="outline" className="text-xs">Draft</Badge>
+                                <Badge variant="outline" className="text-xs">{t('sd.status.draft')}</Badge>
                               )}
                             </div>
                          </div>
@@ -1118,7 +1120,7 @@ const ProductManagement = () => {
                         )}
                         <div>
                           <h3 className="text-xl font-semibold">
-                            Product Configuration
+                            {t('sd.pm.productConfig')}
                           </h3>
                           <p className="text-sm text-muted-foreground">
                             {selectedFile.name} • {formatFileSize(selectedFile.size)}
@@ -1142,24 +1144,24 @@ const ProductManagement = () => {
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="title">Title *</Label>
+                          <Label htmlFor="title">{t('sd.pm.field.title')} *</Label>
                           <Input
                             id="title"
                             value={selectedProductData.title}
                             onChange={(e) => updateProductData(selectedFileId!, { title: e.target.value })}
-                            placeholder="Title of your creation"
+                            placeholder={t('sd.pm.field.title.placeholder')}
                             required
                           />
                         </div>
                        
                         <div className="space-y-2">
-                          <Label htmlFor="category">Category</Label>
+                          <Label htmlFor="category">{t('sd.pm.field.category')}</Label>
                           <Select
                             value={selectedProductData.category || ''}
                             onValueChange={(value) => updateProductData(selectedFileId!, { category: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
+                              <SelectValue placeholder={t('sd.pm.field.category.placeholder')} />
                             </SelectTrigger>
                             <SelectContent>
                               {categories
@@ -1173,30 +1175,30 @@ const ProductManagement = () => {
                           </Select>
                           {selectedProductData.category && (
                             <p className="text-xs text-muted-foreground">
-                              {isEditMode ? 'You can change the category' : 'Auto-detected from file type'}
+                              {isEditMode ? t('sd.pm.field.category.hint.edit') : t('sd.pm.field.category.hint.auto')}
                             </p>
                           )}
                         </div>
                         
                         <div className="md:col-span-2 space-y-2">
-                          <Label htmlFor="description">Description *</Label>
+                          <Label htmlFor="description">{t('sd.pm.field.description')} *</Label>
                           <Textarea 
                             id="description"
                             value={selectedProductData.description}
                             onChange={(e) => updateProductData(selectedFileId!, { description: e.target.value })}
-                            placeholder="Describe your creation..."
+                            placeholder={t('sd.pm.field.description.placeholder')}
                             rows={4}
                             required
                           />
                         </div>
                        
                         <div className="md:col-span-2">
-                          <Label>Tags</Label>
+                          <Label>{t('sd.pm.field.tags')}</Label>
                           <div className="flex space-x-2">
                             <Input 
                               value={selectedProductData.currentTag}
                               onChange={(e) => handleTagInputChange(selectedFileId!, e.target.value)}
-                              placeholder="Separate tags by comma, semicolon or Enter"
+                              placeholder={t('sd.pm.field.tags.placeholder')}
                               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(selectedFileId!))}
                             />
                             <Button 
@@ -1229,9 +1231,9 @@ const ProductManagement = () => {
                             <div className="flex items-center gap-2">
                               <Bot className="h-5 w-5 text-primary" />
                               <div>
-                                <Label className="text-sm font-medium">AI Content Declaration *</Label>
+                                <Label className="text-sm font-medium">{t('sd.pm.ai.title')} *</Label>
                                 <p className="text-xs text-muted-foreground">
-                                  Required: Declare if this content was created with AI assistance
+                                  {t('sd.pm.ai.desc')}
                                 </p>
                               </div>
                             </div>
@@ -1243,32 +1245,32 @@ const ProductManagement = () => {
                               })}
                             >
                               <SelectTrigger className={!selectedProductData.aiDeclaration ? 'border-destructive' : ''}>
-                                <SelectValue placeholder="Select AI usage level..." />
+                                <SelectValue placeholder={t('sd.pm.ai.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="no_ai_used">
-                                  <span className="flex items-center gap-2">🎨 No AI Used — 100% human-made</span>
+                                  <span className="flex items-center gap-2">{t('sd.pm.ai.none')}</span>
                                 </SelectItem>
                                 <SelectItem value="ai_assisted">
-                                  <span className="flex items-center gap-2">🤝 AI Assisted — AI tools used partially</span>
+                                  <span className="flex items-center gap-2">{t('sd.pm.ai.assisted')}</span>
                                 </SelectItem>
                                 <SelectItem value="fully_ai_generated">
-                                  <span className="flex items-center gap-2">🤖 Fully AI Generated</span>
+                                  <span className="flex items-center gap-2">{t('sd.pm.ai.full')}</span>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
                             {!selectedProductData.aiDeclaration && (
-                              <p className="text-xs text-destructive">⚠️ AI declaration is required before publishing</p>
+                              <p className="text-xs text-destructive">{t('sd.pm.ai.required')}</p>
                             )}
                             {selectedProductData.aiDeclaration && (
                               <p className="text-xs text-muted-foreground">
-                                Your content will be automatically scanned after submission. Mismatches between your declaration and detected AI usage may flag your content for review.
+                                {t('sd.pm.ai.notice')}
                               </p>
                             )}
                           </div>
                         </div>
 
-                        {/* Free Content Toggle */}
+                        {/* {t('sd.pm.free.title')} Toggle */}
                         <div className="md:col-span-2">
                           <div className={`flex items-center justify-between p-4 rounded-lg border ${
                             selectedProductData.isFreeContent 
@@ -1282,7 +1284,7 @@ const ProductManagement = () => {
                                   Free Content
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                  Make this content available for free download
+                                  {t('sd.pm.free.desc')}
                                 </p>
                               </div>
                             </div>
@@ -1294,7 +1296,7 @@ const ProductManagement = () => {
                           {selectedProductData.isFreeContent && (
                             <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                               <Gift className="h-3 w-3" />
-                              This content will be offered for free to all users
+                              {t('sd.pm.free.notice')}
                             </p>
                           )}
                         </div>
@@ -1308,7 +1310,7 @@ const ProductManagement = () => {
                           disabled={loading}
                         >
                           <Save className="h-4 w-4 mr-2" />
-                          Save draft
+                          {t('sd.pm.saveDraft')}
                         </Button>
                         
                         <Button 
@@ -1326,12 +1328,12 @@ const ProductManagement = () => {
                           {isEditMode ? (
                             <>
                               <Save className="h-4 w-4 mr-2" />
-                              Update product
+                              {t('sd.pm.update')}
                             </>
                           ) : (
                             <>
                               <Eye className="h-4 w-4 mr-2" />
-                              Publish this product
+                              {t('sd.pm.publish')}
                             </>
                           )}
                         </Button>
@@ -1343,7 +1345,7 @@ const ProductManagement = () => {
                 <div className="text-center py-12">
                   <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Select a file to configure the product
+                    {t('sd.pm.selectFile')}
                   </p>
                 </div>
               )}
@@ -1354,9 +1356,9 @@ const ProductManagement = () => {
           <Card className="mt-6 p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="font-semibold">Global Actions</h3>
+                <h3 className="font-semibold">{t('sd.pm.global')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {readyToPublish} product(s) ready to publish
+                  {t('sd.pm.ready').replace('{n}', String(readyToPublish))}
                 </p>
               </div>
               
@@ -1369,7 +1371,7 @@ const ProductManagement = () => {
                   }}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {isEditMode ? 'Cancel changes' : 'Back to uploads'}
+                  {isEditMode ? t('sd.pm.cancelChanges') : t('sd.pm.back')}
                 </Button>
                 
                 {!isEditMode && (
@@ -1379,12 +1381,12 @@ const ProductManagement = () => {
                     size="lg"
                   >
                     <Upload className="h-4 w-4 mr-2" />
-                    Publish all ready products ({readyToPublish})
+                    {t('sd.pm.publishAll')} ({readyToPublish})
                   </Button>
                 )}
                 
                 <Button variant="outline" asChild>
-                  <Link to="/seller-dashboard">Go to dashboard</Link>
+                  <Link to="/seller-dashboard">{t('sd.pm.goDashboard')}</Link>
                 </Button>
               </div>
             </div>
@@ -1402,7 +1404,7 @@ const ProductManagement = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                <h3 className="text-lg font-semibold truncate pr-4">Preview - {previewFile.name}</h3>
+                <h3 className="text-lg font-semibold truncate pr-4">{t('sd.pm.previewTitle')} - {previewFile.name}</h3>
                 <Button variant="ghost" size="sm" onClick={closePreview}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -1461,7 +1463,7 @@ const ProductManagement = () => {
               
               <div className="mt-3 p-3 bg-muted rounded-lg flex-shrink-0">
                 <p className="text-sm text-muted-foreground">
-                  Size: {formatFileSize(previewFile.size)} • Type: {previewFile.type}
+                  {t('sd.pm.previewSizeType').replace('{size}', formatFileSize(previewFile.size)).replace('{type}', previewFile.type)}
                 </p>
               </div>
             </div>
