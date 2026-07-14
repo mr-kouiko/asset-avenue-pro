@@ -46,6 +46,8 @@ import {
   videoFiltersFromParams,
   VIDEO_FILTER_PARAM_KEYS,
 } from "@/utils/videoFiltersUrl";
+import { useQuickView, QuickViewItem } from "@/components/quickview/QuickViewContext";
+
 
 // ── Section Header ────────────────────────────────────────────
 const SectionHeader = ({ icon: Icon, title, count, variant = "default" }: {
@@ -75,6 +77,8 @@ const Marketplace = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { open: openQuickView } = useQuickView();
+
 
   // Redirect ?price=free to the unified Free Stock Library page
   useEffect(() => {
@@ -377,6 +381,24 @@ const Marketplace = () => {
     const hasFreeCreator = freeCreatorContent.length > 0;
     const showSectionHeaders = hasPremium && hasFreeCreator;
 
+    const orderedList: QuickViewItem[] = [...premiumContent, ...freeCreatorContent].map((c: any) => ({
+      id: c.id,
+      slug: c.slug,
+      title: c.title,
+      type: c.type,
+      thumbnail: c.thumbnail,
+      author: c.author,
+      price: Number(c.price) || 0,
+      videoUrl: c.videoUrl,
+      audioUrl: c.audioUrl,
+    }));
+
+    const openAt = (id: string) => {
+      const idx = orderedList.findIndex(it => it.id === id);
+      openQuickView(orderedList, idx >= 0 ? idx : 0);
+    };
+
+
     return (
       <>
         {/* Premium Marketplace Assets */}
@@ -387,7 +409,7 @@ const Marketplace = () => {
             )}
             <div className={gridClass}>
               {premiumContent.map((content) => (
-                <ContentCard key={content.id} {...content} />
+                <ContentCard key={content.id} {...content} onQuickView={() => openAt(content.id)} />
               ))}
             </div>
           </div>
@@ -401,7 +423,7 @@ const Marketplace = () => {
             )}
             <div className={gridClass}>
               {freeCreatorContent.map((content) => (
-                <ContentCard key={content.id} {...content} />
+                <ContentCard key={content.id} {...content} onQuickView={() => openAt(content.id)} />
               ))}
             </div>
           </div>
@@ -409,6 +431,7 @@ const Marketplace = () => {
       </>
     );
   };
+
 
   // ── Pagination ──────────────────────────────────────────────
   const renderPagination = () => {

@@ -35,7 +35,10 @@ interface ContentCardProps {
   /** True only for real vector assets (SVG). */
   isVector?: boolean;
   priority?: boolean; // For above-the-fold content
+  /** Optional: intercept card click to open Quick View instead of navigating. */
+  onQuickView?: () => void;
 }
+
 
 
 export const ContentCard: React.FC<ContentCardProps> = memo(({
@@ -57,6 +60,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   isAiGenerated = false,
   isVector = false,
   priority = false,
+  onQuickView,
 }) => {
   // Use specialized AudioContentCard for audio content
   if (type === 'audio') {
@@ -74,9 +78,11 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
         isLiked={isLiked}
         duration={duration}
         bpm={bpm}
+        onQuickView={onQuickView}
       />
     );
   }
+
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
   const { hasUserLiked, toggleLike } = useLikes();
@@ -136,9 +142,17 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
   //   console.log('ContentCard - Video item:', title, 'Video URL:', videoUrl, 'Thumbnail:', thumbnail);
   // }
 
-  const handleCardClick = () => {
-    // Use SEO-friendly slug URL, with UUID fallback for legacy links
+  const handleCardClick = (e: React.MouseEvent) => {
     const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
+    // Cmd/Ctrl/Middle click → open standalone product page in new tab
+    if (onQuickView && !e.metaKey && !e.ctrlKey && e.button === 0) {
+      onQuickView();
+      return;
+    }
+    if (e.metaKey || e.ctrlKey) {
+      window.open(urlPath, '_blank', 'noopener');
+      return;
+    }
     navigate(urlPath);
   };
 
@@ -148,6 +162,7 @@ export const ContentCard: React.FC<ContentCardProps> = memo(({
           onMouseLeave={() => setIsHovered(false)}
           onClick={handleCardClick}
           style={{ boxShadow: 'var(--card-shadow)' }}>
+
       
       {/* Fixed Aspect Ratio Container - Adobe Stock Style */}
       <div className="relative bg-stock-gray overflow-hidden" style={{ aspectRatio: 'var(--thumbnail-aspect)' }}>

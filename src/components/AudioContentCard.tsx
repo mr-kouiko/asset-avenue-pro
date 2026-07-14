@@ -23,7 +23,9 @@ interface AudioContentCardProps {
   isLiked?: boolean;
   duration?: string;
   bpm?: number;
+  onQuickView?: () => void;
 }
+
 
 export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   id,
@@ -38,7 +40,9 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
   isLiked = false,
   duration,
   bpm,
+  onQuickView,
 }) => {
+
   const { addToCart } = useCart();
   const { createDirectPayment, loading: directPurchaseLoading } = useDirectPurchase();
   const { language } = useLanguage();
@@ -164,10 +168,19 @@ export const AudioContentCard: React.FC<AudioContentCardProps> = ({
     });
   };
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
     const urlPath = slug?.trim() ? `/products/${slug}` : `/product/${id}`;
+    if (onQuickView && !e.metaKey && !e.ctrlKey && e.button === 0) {
+      onQuickView();
+      return;
+    }
+    if (e.metaKey || e.ctrlKey) {
+      window.open(urlPath, '_blank', 'noopener');
+      return;
+    }
     navigate(urlPath);
   };
+
 
   return (
     <div
