@@ -162,7 +162,7 @@ const ProductManagement = () => {
       setCurrentDraftIndex(idx);
     }
     
-    toast.info(`Switched to: ${draft.title}`);
+    toast.info(t('sd.pm.toast.switched').replace('{title}', draft.title));
   }, [allDrafts]);
 
   // Navigate to previous draft
@@ -194,7 +194,7 @@ const ProductManagement = () => {
     const storedFiles = sessionStorage.getItem('pendingUploadedFiles');
     
     if (!storedFiles) {
-      toast.error("No files found. Please upload your files first.");
+      toast.error(t('sd.pm.toast.noFiles'));
       navigate('/file-upload');
       return;
     }
@@ -425,7 +425,7 @@ const ProductManagement = () => {
     if (!productData || !file) return;
 
     if (!productData.title.trim()) {
-      toast.error("Title is required to save");
+      toast.error(t('sd.pm.toast.titleRequired'));
       return;
     }
 
@@ -519,7 +519,7 @@ const ProductManagement = () => {
     // Resolve a draft id that is actually owned by the current user (protects against stale sessionStorage)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('You must be logged in');
+      toast.error(t('sd.pm.toast.loginRequired'));
       return;
     }
 
@@ -538,25 +538,25 @@ const ProductManagement = () => {
       sessionStorage.removeItem('editingSubmission');
       sessionStorage.removeItem('pendingUploadedFiles');
       sessionStorage.removeItem('currentDraftId');
-      toast.error("No draft found to publish. Please upload your files again.");
+      toast.error(t('sd.pm.toast.noDraftPublish'));
       navigate('/file-upload');
       return;
     }
 
     if (!productData.title.trim() || !productData.description.trim()) {
-      toast.error("Title and description are required to publish");
+      toast.error(t('sd.pm.toast.titleDescRequired'));
       return;
     }
 
     if (!productData.aiDeclaration) {
-      toast.error("AI declaration is required before publishing");
+      toast.error(t('sd.pm.toast.aiRequired'));
       return;
     }
 
     // For ebooks, check if cover is present
     const isPDF = file.type === 'application/pdf';
     if (isPDF && !productData.coverUrl) {
-      toast.error("A cover image is required to publish an ebook");
+      toast.error(t('sd.pm.toast.coverRequired'));
       return;
     }
 
@@ -564,7 +564,7 @@ const ProductManagement = () => {
     const isArchive = file.type.includes('rar') || file.type.includes('zip') || 
                       file.name.toLowerCase().endsWith('.rar') || file.name.toLowerCase().endsWith('.zip');
     if (isArchive && !productData.previewImageUrl) {
-      toast.error("A preview image is required to publish VFX products");
+      toast.error(t('sd.pm.toast.vfxPreviewRequired'));
       return;
     }
 
@@ -607,7 +607,7 @@ const ProductManagement = () => {
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('currentDraftId');
-        toast.success("All products have been published! Redirecting to your portfolio...");
+        toast.success(t('sd.pm.toast.allPublished'));
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
         // Select the first remaining file
@@ -623,19 +623,19 @@ const ProductManagement = () => {
     try {
       const productData = productsData[fileId];
       if (!productData) {
-        toast.error('No product data to save');
+        toast.error(t('sd.pm.toast.noProductData'));
         return;
       }
 
       if (!productData.title.trim() || !productData.description.trim()) {
-        toast.error("Title and description are required");
+        toast.error(t('sd.pm.toast.titleDescReq'));
         return;
       }
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('You must be logged in');
+        toast.error(t('sd.pm.toast.loginRequired'));
         return;
       }
 
@@ -649,7 +649,7 @@ const ProductManagement = () => {
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('currentDraftId');
-        toast.error("No draft found to update. Please try again from your Dashboard.");
+        toast.error(t('sd.pm.toast.noDraftUpdate'));
         navigate('/dashboard');
         return;
       }
@@ -676,7 +676,7 @@ const ProductManagement = () => {
       if (error) {
         console.error('❌ Update error:', error);
         if (error.code === 'PGRST116') {
-          toast.error('Product not found or you do not have permission to edit it');
+          toast.error(t('sd.pm.toast.notFoundOrNoPerm'));
         } else {
           toast.error(`Error: ${error.message}`);
         }
@@ -684,13 +684,13 @@ const ProductManagement = () => {
       }
 
       console.log('✅ Submission updated successfully:', data);
-      toast.success('Product updated successfully');
+      toast.success(t('sd.pm.toast.updated'));
       sessionStorage.removeItem('editingSubmission');
       sessionStorage.removeItem('pendingUploadedFiles');
       navigate('/dashboard');
     } catch (error) {
       console.error('💥 Error updating submission:', error);
-      toast.error('Error updating product');
+      toast.error(t('sd.pm.toast.updateError'));
     }
   };
 
@@ -700,7 +700,7 @@ const ProductManagement = () => {
     );
     
     if (validProducts.length === 0) {
-      toast.error("No products ready to publish. Check titles and descriptions.");
+      toast.error(t('sd.pm.toast.nonePublishable'));
       return;
     }
 
@@ -754,7 +754,7 @@ const ProductManagement = () => {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} product(s) published successfully!`);
+      toast.success(t('sd.pm.toast.publishedCount').replace('{n}', String(successCount)));
       
       // Remove all published files from the list
       const updatedFiles = uploadedFiles.filter(f => !publishedFileIds.includes(f.id));
@@ -775,7 +775,7 @@ const ProductManagement = () => {
         sessionStorage.removeItem('pendingUploadedFiles');
         sessionStorage.removeItem('editingSubmission');
         sessionStorage.removeItem('currentDraftId');
-        toast.success("All products have been published! Redirecting to your portfolio...");
+        toast.success(t('sd.pm.toast.allPublished'));
         setTimeout(() => navigate('/portfolio'), 1500);
       } else {
         // Select the first remaining file
@@ -815,7 +815,7 @@ const ProductManagement = () => {
           
           if (error) {
             console.error('Error generating signed URL:', error);
-            toast.error('Error generating preview URL');
+            toast.error(t('sd.pm.toast.previewUrlErr'));
           } else if (data?.signedUrl) {
             console.log('✅ Signed URL generated:', data.signedUrl);
             setPreviewFile({ ...file, previewUrl: data.signedUrl });
@@ -866,7 +866,7 @@ const ProductManagement = () => {
     // Update sessionStorage
     if (updatedFiles.length === 0) {
       sessionStorage.removeItem('pendingUploadedFiles');
-      toast.success("All files have been removed");
+      toast.success(t('sd.pm.toast.allRemoved'));
       navigate('/file-upload');
     } else {
       sessionStorage.setItem('pendingUploadedFiles', JSON.stringify(updatedFiles));
@@ -881,7 +881,7 @@ const ProductManagement = () => {
         setSelectedFileId(updatedFiles[0].id);
       }
       
-      toast.success("File removed permanently");
+      toast.success(t('sd.pm.toast.fileRemoved'));
     }
   };
 
@@ -910,14 +910,14 @@ const ProductManagement = () => {
                 className="flex items-center space-x-1 hover:text-primary transition-colors"
               >
                 <span className="px-3 py-1 rounded-full bg-muted">1</span>
-                <span>File Upload</span>
+                <span>{t('sd.upload.step1')}</span>
               </Link>
               <ArrowRight className="h-4 w-4" />
               <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">2</span>
-              <span>Product Management</span>
+              <span>{t('sd.upload.step2')}</span>
             </div>
             
-            <h1 className="text-3xl font-bold mb-2">Manage your products</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('sd.pm.title')}</h1>
             <p className="text-muted-foreground">
               Configure each product individually with its metadata. 
               Progress: {completedProducts}/{uploadedFiles.length} products configured
@@ -955,7 +955,7 @@ const ProductManagement = () => {
                     }}
                   >
                     <SelectTrigger className="w-[250px]">
-                      <SelectValue placeholder="Select a draft" />
+                      <SelectValue placeholder={t('sd.pm.selectDraft')} />
                     </SelectTrigger>
                     <SelectContent>
                       {allDrafts.map((draft, idx) => (
@@ -1050,7 +1050,7 @@ const ProductManagement = () => {
                                openPreview(file);
                              }}
                              className="h-8 w-8 p-0 hover:bg-primary/10"
-                             title="Preview"
+                             title={t('sd.pm.preview')}
                            >
                              <Eye className="h-4 w-4" />
                            </Button>
@@ -1064,17 +1064,17 @@ const ProductManagement = () => {
                                handleDeleteFile(file.id);
                              }}
                              className="h-8 w-8 p-0 hover:bg-destructive/10 text-destructive hover:text-destructive"
-                             title="Delete file"
+                             title={t('sd.pm.deleteFile')}
                            >
                              <Trash2 className="h-4 w-4" />
                            </Button>
                            
                             <div className="flex flex-col items-end space-y-1">
                               {productData?.status === 'published' && (
-                                <Badge className="text-xs">Published</Badge>
+                                <Badge className="text-xs">{t('sd.status.published')}</Badge>
                               )}
                               {productData?.status === 'draft' && productData.title && (
-                                <Badge variant="outline" className="text-xs">Draft</Badge>
+                                <Badge variant="outline" className="text-xs">{t('sd.status.draft')}</Badge>
                               )}
                             </div>
                          </div>
@@ -1144,24 +1144,24 @@ const ProductManagement = () => {
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="title">Title *</Label>
+                          <Label htmlFor="title">{t('sd.pm.field.title')} *</Label>
                           <Input
                             id="title"
                             value={selectedProductData.title}
                             onChange={(e) => updateProductData(selectedFileId!, { title: e.target.value })}
-                            placeholder="Title of your creation"
+                            placeholder={t('sd.pm.field.title.placeholder')}
                             required
                           />
                         </div>
                        
                         <div className="space-y-2">
-                          <Label htmlFor="category">Category</Label>
+                          <Label htmlFor="category">{t('sd.pm.field.category')}</Label>
                           <Select
                             value={selectedProductData.category || ''}
                             onValueChange={(value) => updateProductData(selectedFileId!, { category: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
+                              <SelectValue placeholder={t('sd.pm.field.category.placeholder')} />
                             </SelectTrigger>
                             <SelectContent>
                               {categories
@@ -1181,24 +1181,24 @@ const ProductManagement = () => {
                         </div>
                         
                         <div className="md:col-span-2 space-y-2">
-                          <Label htmlFor="description">Description *</Label>
+                          <Label htmlFor="description">{t('sd.pm.field.description')} *</Label>
                           <Textarea 
                             id="description"
                             value={selectedProductData.description}
                             onChange={(e) => updateProductData(selectedFileId!, { description: e.target.value })}
-                            placeholder="Describe your creation..."
+                            placeholder={t('sd.pm.field.description.placeholder')}
                             rows={4}
                             required
                           />
                         </div>
                        
                         <div className="md:col-span-2">
-                          <Label>Tags</Label>
+                          <Label>{t('sd.pm.field.tags')}</Label>
                           <div className="flex space-x-2">
                             <Input 
                               value={selectedProductData.currentTag}
                               onChange={(e) => handleTagInputChange(selectedFileId!, e.target.value)}
-                              placeholder="Separate tags by comma, semicolon or Enter"
+                              placeholder={t('sd.pm.field.tags.placeholder')}
                               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(selectedFileId!))}
                             />
                             <Button 
@@ -1245,7 +1245,7 @@ const ProductManagement = () => {
                               })}
                             >
                               <SelectTrigger className={!selectedProductData.aiDeclaration ? 'border-destructive' : ''}>
-                                <SelectValue placeholder="Select AI usage level..." />
+                                <SelectValue placeholder={t('sd.pm.ai.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="no_ai_used">
@@ -1356,7 +1356,7 @@ const ProductManagement = () => {
           <Card className="mt-6 p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="font-semibold">Global Actions</h3>
+                <h3 className="font-semibold">{t('sd.pm.global')}</h3>
                 <p className="text-sm text-muted-foreground">
                   {readyToPublish} product(s) ready to publish
                 </p>
@@ -1386,7 +1386,7 @@ const ProductManagement = () => {
                 )}
                 
                 <Button variant="outline" asChild>
-                  <Link to="/seller-dashboard">Go to dashboard</Link>
+                  <Link to="/seller-dashboard">{t('sd.pm.goDashboard')}</Link>
                 </Button>
               </div>
             </div>
