@@ -23,6 +23,7 @@ import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { EbookForm } from "@/components/EbookForm";
 import { VFXPreviewUpload } from "@/components/VFXPreviewUpload";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface UploadedFileData {
   id: string;
