@@ -896,7 +896,7 @@ const ProductManagement = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="This page is reserved for sellers."
+      fallbackMessage={t('sd.pm.forbiddenSellers')}
     >
       <div className="min-h-screen bg-background">
         <Header />
