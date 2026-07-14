@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useDraftManager, DraftProduct, DraftFile } from "@/hooks/useDraftManager";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface UploadedFileData {
   id: string;
@@ -29,6 +30,7 @@ interface UploadedFileData {
 
 const FileUpload = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { 
     loading: draftLoading, 
     drafts, 
