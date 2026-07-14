@@ -6,34 +6,28 @@ import { Label } from "@/components/ui/label";
 import { Store, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 export const StoreSettingsCard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [storeName, setStoreName] = useState("");
   const [originalStoreName, setOriginalStoreName] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchStoreName();
-    }
+    if (user) fetchStoreName();
   }, [user]);
 
   const fetchStoreName = async () => {
     if (!user) return;
-    
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("store_name")
-        .eq("user_id", user.id)
-        .single();
-
+        .from("profiles").select("store_name").eq("user_id", user.id).single();
       if (error) throw error;
-      
       const name = data?.store_name || "";
       setStoreName(name);
       setOriginalStoreName(name);
@@ -46,26 +40,20 @@ export const StoreSettingsCard = () => {
 
   const handleSave = async () => {
     if (!user) return;
-    
     if (storeName.trim() === originalStoreName) {
-      toast.info("No changes to save");
+      toast.info(t('sd.store.noChanges'));
       return;
     }
-
     setSaving(true);
     try {
       const { error } = await supabase
-        .from("profiles")
-        .update({ store_name: storeName.trim() })
-        .eq("user_id", user.id);
-
+        .from("profiles").update({ store_name: storeName.trim() }).eq("user_id", user.id);
       if (error) throw error;
-
       setOriginalStoreName(storeName.trim());
-      toast.success("Store name updated successfully");
+      toast.success(t('sd.store.saved'));
     } catch (error) {
       console.error("Error updating store name:", error);
-      toast.error("Failed to update store name");
+      toast.error(t('sd.store.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -78,11 +66,9 @@ export const StoreSettingsCard = () => {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Store className="h-5 w-5 text-primary" />
-          <CardTitle>Store Settings</CardTitle>
+          <CardTitle>{t('sd.store.title')}</CardTitle>
         </div>
-        <CardDescription>
-          Customize your store name that appears on your products
-        </CardDescription>
+        <CardDescription>{t('sd.store.desc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -92,34 +78,21 @@ export const StoreSettingsCard = () => {
         ) : (
           <>
             <div className="space-y-2">
-              <Label htmlFor="store-name">Store Name</Label>
+              <Label htmlFor="store-name">{t('sd.store.name')}</Label>
               <Input
                 id="store-name"
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
-                placeholder="Enter your store name"
+                placeholder={t('sd.store.placeholder')}
                 maxLength={100}
               />
-              <p className="text-xs text-muted-foreground">
-                This name will be displayed on your products in the marketplace
-              </p>
+              <p className="text-xs text-muted-foreground">{t('sd.store.help')}</p>
             </div>
-
-            <Button 
-              onClick={handleSave} 
-              disabled={saving || !hasChanges}
-              className="w-full sm:w-auto"
-            >
+            <Button onClick={handleSave} disabled={saving || !hasChanges} className="w-full sm:w-auto">
               {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('sd.store.saving')}</>
               ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
+                <><Save className="h-4 w-4 mr-2" />{t('sd.store.save')}</>
               )}
             </Button>
           </>

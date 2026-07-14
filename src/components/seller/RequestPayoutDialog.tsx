@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ interface Props {
 
 export const RequestPayoutDialog = ({ open, onOpenChange, availableAmount, onSuccess }: Props) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [paypalEmail, setPaypalEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,11 +45,11 @@ export const RequestPayoutDialog = ({ open, onOpenChange, availableAmount, onSuc
 
   const submit = async () => {
     if (!paypalEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypalEmail)) {
-      toast.error("Please enter a valid PayPal email");
+      toast.error(t('sd.payout.invalidEmail'));
       return;
     }
     if (availableAmount < MIN_PAYOUT) {
-      toast.error(`Minimum payout is $${MIN_PAYOUT}`);
+      toast.error(t('sd.payout.minError').replace('{min}', String(MIN_PAYOUT)));
       return;
     }
 
@@ -63,55 +65,54 @@ export const RequestPayoutDialog = ({ open, onOpenChange, availableAmount, onSuc
       return;
     }
 
-    // Save PayPal email for next time
     if (user) {
       await supabase.from("profiles").update({ paypal_email: paypalEmail }).eq("user_id", user.id);
     }
 
-    toast.success("Payout request submitted! We'll process it within 3-5 business days.");
+    toast.success(t('sd.payout.submitted'));
     onOpenChange(false);
     onSuccess();
   };
+
+  const amountStr = `$${availableAmount.toFixed(2)}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Request payout</DialogTitle>
+          <DialogTitle>{t('sd.payout.title')}</DialogTitle>
           <DialogDescription>
-            Withdraw your available earnings to your PayPal account. Minimum payout: ${MIN_PAYOUT}.
+            {t('sd.payout.desc').replace('{min}', String(MIN_PAYOUT))}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="rounded-lg bg-muted p-4">
-            <div className="text-sm text-muted-foreground">Available to withdraw</div>
-            <div className="text-2xl font-bold">${availableAmount.toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground">{t('sd.payout.available')}</div>
+            <div className="text-2xl font-bold">{amountStr}</div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="paypal-email">PayPal email</Label>
+            <Label htmlFor="paypal-email">{t('sd.payout.email')}</Label>
             <Input
               id="paypal-email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('sd.payout.emailPlaceholder')}
               value={paypalEmail}
               onChange={(e) => setPaypalEmail(e.target.value)}
               disabled={submitting}
             />
-            <p className="text-xs text-muted-foreground">
-              Make sure this email is associated with an active PayPal account.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('sd.payout.emailHelp')}</p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
+            {t('sd.payout.cancel')}
           </Button>
           <Button onClick={submit} disabled={submitting || availableAmount < MIN_PAYOUT}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Request ${availableAmount.toFixed(2)}
+            {t('sd.payout.request').replace('{amount}', amountStr)}
           </Button>
         </DialogFooter>
       </DialogContent>
