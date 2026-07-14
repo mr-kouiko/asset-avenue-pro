@@ -83,7 +83,7 @@ export const en = {
   'vf.plat.tiktok': 'TikTok',
   'vf.plat.instagram': 'Instagram',
   'vf.plat.youtube': 'YouTube',
-  'vf.plat.ads': 'Ads',,
+  'vf.plat.ads': 'Ads',
 
   // === Seller Dashboard ===
   'sd.title': 'Seller Dashboard',
