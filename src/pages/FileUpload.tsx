@@ -85,7 +85,7 @@ const FileUpload = () => {
         const recoveredFiles = await recoverOrphanedUploads();
         
         if (recoveredFiles.length > 0) {
-          toast.info(`🔄 Recovered ${recoveredFiles.length} file(s) from previous session`);
+          toast.info(t('sd.upload.recovered').replace('{n}', String(recoveredFiles.length)));
           // Reload drafts to include the newly created recovery draft
           existingDrafts = await loadDrafts();
         }
@@ -165,7 +165,7 @@ const FileUpload = () => {
       // CRITICAL: Ensure draft exists BEFORE processing files
       const draftId = await ensureDraftExists();
       if (!draftId) {
-        toast.error("Failed to create draft. Please try again.");
+        toast.error(t('sd.upload.linkFailed'));
         return;
       }
       
@@ -174,7 +174,7 @@ const FileUpload = () => {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.warning("Files uploaded but not linked - please login");
+        toast.warning(t('sd.upload.notLinked'));
         return;
       }
 
@@ -201,10 +201,10 @@ const FileUpload = () => {
       }
 
       console.log('✅ Files linked to draft:', draftId);
-      toast.success(`${files.length} file(s) uploaded and linked to draft`);
+      toast.success(t('sd.upload.linkedSuccess').replace('{n}', String(files.length)));
     } catch (error) {
       console.error('Error in handleFilesUploaded:', error);
-      toast.warning("Files ready - you can continue despite the error");
+      toast.warning(t('sd.upload.canContinue'));
     } finally {
       // Allow state updates again once upload handling is complete
       isUploadingRef.current = false;
@@ -213,7 +213,7 @@ const FileUpload = () => {
 
   const handleContinueToProducts = () => {
     if (uploadedFiles.length === 0 && !currentDraftId) {
-      toast.error("Please upload at least one file before continuing");
+      toast.error(t('sd.upload.mustUpload'));
       return;
     }
 
@@ -244,7 +244,7 @@ const FileUpload = () => {
   };
 
   const handleDeleteDraft = async (draftId: string) => {
-    if (window.confirm('Are you sure you want to delete this draft and all its files?')) {
+    if (window.confirm(t('sd.upload.confirmDeleteDraft'))) {
       await deleteDraft(draftId);
       await loadDrafts();
     }
@@ -264,7 +264,7 @@ const FileUpload = () => {
   return (
     <ProtectedRoute 
       allowedRoles={['creator', 'admin']}
-      fallbackMessage="This page is reserved for sellers. Only creators can upload content."
+      fallbackMessage={t('sd.upload.forbiddenSellers')}
     >
       <div className="min-h-screen bg-background">
         <Header />
@@ -275,7 +275,7 @@ const FileUpload = () => {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading your drafts...</p>
+                <p className="text-muted-foreground">{t('sd.upload.loadingDrafts')}</p>
               </div>
             </div>
           ) : (
@@ -283,15 +283,15 @@ const FileUpload = () => {
               <div className="mb-8">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
                   <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
-                  <span>File Upload</span>
+                  <span>{t('sd.upload.step1')}</span>
                   <ArrowRight className="h-4 w-4" />
                   <span className="px-3 py-1 rounded-full bg-muted">2</span>
-                  <span>Product Management</span>
+                  <span>{t('sd.upload.step2')}</span>
                 </div>
                 
-                <h1 className="text-3xl font-bold mb-2">Upload Your Files</h1>
+                <h1 className="text-3xl font-bold mb-2">{t('sd.upload.title')}</h1>
                 <p className="text-muted-foreground">
-                  Start by uploading all your digital files. Your uploads are automatically saved as drafts.
+                  {t('sd.upload.descDraft')}
                 </p>
               </div>
 
@@ -301,7 +301,7 @@ const FileUpload = () => {
                   <div className="flex items-center gap-2 mb-4">
                     <AlertCircle className="h-5 w-5 text-amber-600" />
                     <h3 className="font-semibold text-amber-800 dark:text-amber-200">
-                      You have {draftsWithFiles.length} draft(s) with pending files
+                      {t('sd.upload.pendingDrafts').replace('{n}', String(draftsWithFiles.length))}
                     </h3>
                   </div>
                   
@@ -314,7 +314,7 @@ const FileUpload = () => {
                         <div className="flex-1">
                           <p className="font-medium">{draft.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            {draft.files.length} file(s) • Created {new Date(draft.created_at).toLocaleDateString()}
+                            {t('sd.recent.files').replace('{n}', String(draft.files.length))} • {new Date(draft.created_at).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -324,7 +324,7 @@ const FileUpload = () => {
                             onClick={() => handleEditDraft(draft)}
                           >
                             <FileEdit className="h-4 w-4 mr-1" />
-                            Continue
+                            {t('sd.upload.continueDraft')}
                           </Button>
                           <Button 
                             size="sm" 
@@ -347,11 +347,11 @@ const FileUpload = () => {
                   <div className="mb-6">
                     <div className="flex items-center space-x-2 mb-2">
                       <UploadIcon className="h-5 w-5 text-primary" />
-                      <h2 className="text-xl font-semibold">Upload Zone</h2>
+                      <h2 className="text-xl font-semibold">{t('sd.upload.zone')}</h2>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Drop or select your files. Images will be automatically watermarked. 
-                      <strong className="text-foreground"> Files are saved instantly as drafts.</strong>
+                      {t('sd.upload.zoneDescDraft')}{' '}
+                      <strong className="text-foreground">{t('sd.upload.filesSaved')}</strong>
                     </p>
                   </div>
                   
@@ -369,11 +369,11 @@ const FileUpload = () => {
                     <div className="flex items-center space-x-2 mb-4">
                       <Check className="h-5 w-5 text-green-500" />
                       <h3 className="text-lg font-semibold">
-                        Uploaded Files ({uploadedFiles.length})
+                        {t('sd.upload.uploaded')} ({uploadedFiles.length})
                       </h3>
                       {currentDraftId && (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                          Draft saved
+                          {t('sd.upload.draftSaved')}
                         </span>
                       )}
                     </div>
@@ -411,7 +411,7 @@ const FileUpload = () => {
                       {uploadedFiles.length > 6 && (
                         <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg">
                           <p className="text-sm text-muted-foreground">
-                            +{uploadedFiles.length - 6} more files
+                            {t('sd.upload.moreFiles').replace('{n}', String(uploadedFiles.length - 6))}
                           </p>
                         </div>
                       )}
@@ -423,19 +423,19 @@ const FileUpload = () => {
                       className="w-full"
                     >
                       <ArrowRight className="h-4 w-4 mr-2" />
-                      Continue to Product Management
+                      {t('sd.upload.continue')}
                     </Button>
                   </Card>
                 )}
 
                 {/* Instructions */}
                 <Card className="p-6 bg-muted/50">
-                  <h3 className="font-semibold mb-2">✨ Draft-First System</h3>
+                  <h3 className="font-semibold mb-2">✨ {t('sd.upload.draftSystem')}</h3>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Your files are saved as drafts <strong>immediately</strong> after upload</li>
-                    <li>• If you refresh or leave, your uploads will be waiting for you</li>
-                    <li>• Continue from any draft at any time</li>
-                    <li>• Complete product details when you're ready to publish</li>
+                    <li>• {t('sd.upload.draft.saved')}</li>
+                    <li>• {t('sd.upload.draft.leave')}</li>
+                    <li>• {t('sd.upload.draft.continue')}</li>
+                    <li>• {t('sd.upload.draft.publish')}</li>
                   </ul>
                 </Card>
               </div>
