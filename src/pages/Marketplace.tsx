@@ -381,16 +381,23 @@ const Marketplace = () => {
     const hasFreeCreator = freeCreatorContent.length > 0;
     const showSectionHeaders = hasPremium && hasFreeCreator;
 
-    const orderedList: QuickViewItem[] = [...premiumContent, ...freeCreatorContent].map((c) => ({
+    const orderedList: QuickViewItem[] = [...premiumContent, ...freeCreatorContent].map((c: any) => ({
       id: c.id,
-      slug: (c as any).slug,
+      slug: c.slug,
       title: c.title,
-      type: c.type as QuickViewItem['type'],
+      type: c.type,
       thumbnail: c.thumbnail,
       author: c.author,
+      price: Number(c.price) || 0,
+      videoUrl: c.videoUrl,
+      audioUrl: c.audioUrl,
     }));
 
-    const openAt = (id: string) => openQuickView(orderedList, id);
+    const openAt = (id: string) => {
+      const idx = orderedList.findIndex(it => it.id === id);
+      openQuickView(orderedList, idx >= 0 ? idx : 0);
+    };
+
 
     return (
       <>
