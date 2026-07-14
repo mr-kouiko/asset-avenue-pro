@@ -55,6 +55,7 @@ const statusVariant: Record<string, string> = {
 
 export const SellerEarningsCard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<EarningRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
