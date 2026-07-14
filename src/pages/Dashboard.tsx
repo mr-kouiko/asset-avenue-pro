@@ -35,6 +35,7 @@ import {
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { SimpleFileUpload } from "@/components/SimpleFileUpload";
