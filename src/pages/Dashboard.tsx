@@ -51,6 +51,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
+  const { t } = useLanguage();
   const { 
     loading, 
     stats, 
