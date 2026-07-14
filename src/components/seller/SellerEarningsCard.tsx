@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Clock, CheckCircle2, Wallet, TrendingUp, RefreshCw, Send, Hourglass } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { RequestPayoutDialog } from "./RequestPayoutDialog";
 
 type Summary = {
@@ -54,6 +55,7 @@ const statusVariant: Record<string, string> = {
 
 export const SellerEarningsCard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<EarningRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
@@ -113,16 +115,16 @@ export const SellerEarningsCard = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-primary" />
-              Earnings
+              {t('sd.earn.title')}
             </CardTitle>
             <CardDescription>
-              Your share of every sale (60% to you, 40% platform fee). Pending earnings become available after 14 days.
+              {t('sd.earn.desc')}
             </CardDescription>
           </div>
           <button
             onClick={load}
             className="text-muted-foreground hover:text-foreground transition"
-            aria-label="Refresh earnings"
+            aria-label={t('sd.earn.refresh')}
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -130,40 +132,40 @@ export const SellerEarningsCard = () => {
         <CardContent className="space-y-6">
           {/* Summary tiles */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <Tile icon={<Clock className="h-4 w-4" />} label="Pending" value={fmt(summary?.pending_amount ?? 0)} tone="yellow" />
-            <Tile icon={<CheckCircle2 className="h-4 w-4" />} label="Available" value={fmt(available)} tone="blue" />
-            <Tile icon={<Hourglass className="h-4 w-4" />} label="Requested" value={fmt(summary?.requested_amount ?? 0)} tone="purple" />
-            <Tile icon={<DollarSign className="h-4 w-4" />} label="Paid out" value={fmt(summary?.paid_amount ?? 0)} tone="green" />
-            <Tile icon={<TrendingUp className="h-4 w-4" />} label="Lifetime" value={fmt(summary?.lifetime_gross ?? 0)} tone="muted" />
+            <Tile icon={<Clock className="h-4 w-4" />} label={t('sd.earn.tile.pending')} value={fmt(summary?.pending_amount ?? 0)} tone="yellow" />
+            <Tile icon={<CheckCircle2 className="h-4 w-4" />} label={t('sd.earn.tile.available')} value={fmt(available)} tone="blue" />
+            <Tile icon={<Hourglass className="h-4 w-4" />} label={t('sd.earn.tile.requested')} value={fmt(summary?.requested_amount ?? 0)} tone="purple" />
+            <Tile icon={<DollarSign className="h-4 w-4" />} label={t('sd.earn.tile.paid')} value={fmt(summary?.paid_amount ?? 0)} tone="green" />
+            <Tile icon={<TrendingUp className="h-4 w-4" />} label={t('sd.earn.tile.lifetime')} value={fmt(summary?.lifetime_gross ?? 0)} tone="muted" />
           </div>
 
           {/* Payout CTA */}
           <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 p-4">
             <div className="text-sm">
-              <div className="font-medium">Ready to withdraw?</div>
+              <div className="font-medium">{t('sd.earn.ready')}</div>
               <div className="text-muted-foreground">
                 {canRequestPayout
-                  ? `You have ${fmt(available)} available for payout.`
-                  : `Minimum payout is $50. You need ${fmt(50 - available)} more.`}
+                  ? t('sd.earn.readyYes').replace('{amount}', fmt(available))
+                  : t('sd.earn.readyNo').replace('{amount}', fmt(50 - available))}
               </div>
             </div>
             <Button onClick={() => setPayoutOpen(true)} disabled={!canRequestPayout}>
               <Send className="h-4 w-4 mr-2" />
-              Request payout
+              {t('sd.earn.request')}
             </Button>
           </div>
 
           {/* Payout history */}
           {payouts.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold mb-3">Payout history</h4>
+              <h4 className="text-sm font-semibold mb-3">{t('sd.earn.history')}</h4>
               <div className="border rounded-md divide-y">
                 {payouts.map((p) => (
                   <div key={p.id} className="flex items-center justify-between gap-3 p-3 text-sm">
                     <div className="flex flex-col min-w-0">
                       <span className="font-medium">{fmt(p.amount)}</span>
                       <span className="text-xs text-muted-foreground truncate">
-                        to {p.paypal_email} · {new Date(p.created_at).toLocaleDateString("en-US")}
+                        {t('sd.earn.to')} {p.paypal_email} · {new Date(p.created_at).toLocaleDateString()}
                         {p.rejection_reason ? ` · ${p.rejection_reason}` : ""}
                       </span>
                     </div>
@@ -178,10 +180,10 @@ export const SellerEarningsCard = () => {
 
           {/* Recent earnings */}
           <div>
-            <h4 className="text-sm font-semibold mb-3">Recent sales</h4>
+            <h4 className="text-sm font-semibold mb-3">{t('sd.earn.recent')}</h4>
             {recent.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center border border-dashed rounded-md">
-                No sales yet. Once buyers purchase your content, your earnings will appear here.
+                {t('sd.earn.noSales')}
               </p>
             ) : (
               <div className="border rounded-md divide-y">
@@ -191,11 +193,11 @@ export const SellerEarningsCard = () => {
                       <span className="font-medium">
                         {fmt(r.net_amount)}{" "}
                         <span className="text-xs text-muted-foreground font-normal">
-                          net (gross {fmt(r.gross_amount)} − fee {fmt(r.commission_amount)})
+                          {t('sd.earn.netLine').replace('{gross}', fmt(r.gross_amount)).replace('{fee}', fmt(r.commission_amount))}
                         </span>
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(r.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                        {new Date(r.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                       </span>
                     </div>
                     <Badge className={statusVariant[r.status] ?? ""} variant="secondary">
@@ -208,7 +210,7 @@ export const SellerEarningsCard = () => {
           </div>
 
           {summary && summary.refunded_amount > 0 && (
-            <p className="text-xs text-muted-foreground">Refunded to date: {fmt(summary.refunded_amount)}</p>
+            <p className="text-xs text-muted-foreground">{t('sd.earn.refundedToDate').replace('{amount}', fmt(summary.refunded_amount))}</p>
           )}
         </CardContent>
       </Card>

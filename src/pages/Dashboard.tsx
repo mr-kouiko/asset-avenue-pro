@@ -35,6 +35,7 @@ import {
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { SimpleFileUpload } from "@/components/SimpleFileUpload";
@@ -50,6 +51,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
+  const { t } = useLanguage();
   const { 
     loading, 
     stats, 
@@ -241,12 +243,12 @@ const Dashboard = () => {
         <Header />
         <div className="container py-16 text-center">
           <AlertCircle className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
-          <h1 className="text-3xl font-bold mb-4">Unauthorized Access</h1>
+          <h1 className="text-3xl font-bold mb-4">{t('sd.unauthorized')}</h1>
           <p className="text-muted-foreground mb-8">
-            You must be logged in to access the seller dashboard
+            {t('sd.mustLogin')}
           </p>
           <Button size="lg" asChild>
-            <Link to="/auth">Sign In</Link>
+            <Link to="/auth">{t('sd.signIn')}</Link>
           </Button>
         </div>
       </div>
@@ -269,13 +271,13 @@ const Dashboard = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'Approved';
+        return t('sd.status.approved');
       case 'pending':
-        return 'Pending';
+        return t('sd.status.pending');
       case 'rejected':
-        return 'Rejected';
+        return t('sd.status.rejected');
       default:
-        return 'Unknown';
+        return t('sd.status.unknown');
     }
   };
 
@@ -290,12 +292,12 @@ const Dashboard = () => {
     previewUrl?: string;
   }>) => {
     setUploadedFiles(prev => [...prev, ...files]);
-    toast.success(`${files.length} file(s) uploaded successfully`);
+    toast.success(t('sd.upload.uploadedSuccess').replace('{n}', String(files.length)));
   };
 
   const handleContinueToProducts = () => {
     if (uploadedFiles.length === 0) {
-      toast.error("Please upload at least one file before continuing");
+      toast.error(t('sd.upload.mustUpload'));
       return;
     }
 
@@ -327,7 +329,7 @@ const Dashboard = () => {
         
         if (error) {
           console.error('Error generating signed URL:', error);
-          toast.error('Error generating preview URL');
+          toast.error(t('sd.pm.toast.previewUrlErr'));
           return;
         } else if (data?.signedUrl) {
           console.log('✅ Signed URL generated:', data.signedUrl);
@@ -361,9 +363,9 @@ const Dashboard = () => {
       <div className="container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Seller Dashboard</h1>
+            <h1 className="text-3xl font-bold">{t('sd.title')}</h1>
             <p className="text-muted-foreground">
-              Manage your content and track your performance
+              {t('sd.subtitle')}
             </p>
           </div>
           <Button 
@@ -372,20 +374,20 @@ const Dashboard = () => {
           >
             <Link to="/file-upload">
               <Plus className="h-4 w-4" />
-              Add Content
+              {t('sd.addContent')}
             </Link>
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="content">My Content</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="upload">Upload</TabsTrigger>
+            <TabsTrigger value="overview">{t('sd.tab.overview')}</TabsTrigger>
+            <TabsTrigger value="content">{t('sd.tab.content')}</TabsTrigger>
+            <TabsTrigger value="analytics">{t('sd.tab.analytics')}</TabsTrigger>
+            <TabsTrigger value="upload">{t('sd.tab.upload')}</TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="h-4 w-4 mr-1" />
-              Settings
+              {t('sd.tab.settings')}
             </TabsTrigger>
           </TabsList>
 
@@ -396,52 +398,52 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('sd.stats.revenue')}</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">${stats.totalRevenue?.toFixed(2) || '0.00'}</div>
                   <p className="text-xs text-muted-foreground">
-                    Earnings from completed sales
+                    {t('sd.stats.revenue.desc')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Downloads</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('sd.stats.downloads')}</CardTitle>
                   <Download className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalDownloads || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Content downloaded by buyers
+                    {t('sd.stats.downloads.desc')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Approved Content</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('sd.stats.approved')}</CardTitle>
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.approvedSubmissions || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Out of {stats.totalSubmissions || 0} submitted
+                    {t('sd.stats.approved.desc').replace('{n}', String(stats.totalSubmissions || 0))}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('sd.stats.pending')}</CardTitle>
                   <Clock className="h-4 w-4 text-yellow-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.pendingSubmissions || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Content under review
+                    {t('sd.stats.pending.desc')}
                   </p>
                 </CardContent>
               </Card>
@@ -453,25 +455,25 @@ const Dashboard = () => {
             {/* Recent Activity */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Content</CardTitle>
+                <CardTitle>{t('sd.recent.title')}</CardTitle>
                 <CardDescription>
-                  Your latest uploads and their status
+                  {t('sd.recent.desc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-muted-foreground mt-2">Loading...</p>
+                    <p className="text-muted-foreground mt-2">{t('sd.loading')}</p>
                   </div>
                 ) : submissions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="mb-4">No content uploaded yet</p>
+                    <p className="mb-4">{t('sd.recent.empty')}</p>
                     <Button asChild>
                       <Link to="/file-upload">
                         <Plus className="h-4 w-4 mr-2" />
-                        Upload Your First Content
+                        {t('sd.recent.uploadFirst')}
                       </Link>
                     </Button>
                   </div>
@@ -482,13 +484,13 @@ const Dashboard = () => {
                         <div className="flex-1">
                           <h4 className="font-medium">{submission.title}</h4>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                            <span>{submission.content_files?.length || 0} file(s)</span>
-                            <span>{submission.price ? `$${submission.price}` : 'Free'}</span>
+                          <span>{t('sd.recent.files').replace('{n}', String(submission.content_files?.length || 0))}</span>
+                            <span>{submission.price ? `$${submission.price}` : t('sd.free')}</span>
                             <span>{new Date(submission.created_at).toLocaleDateString()}</span>
                           </div>
                           {submission.rejection_reason && (
                             <p className="text-sm text-red-600 mt-1">
-                              Rejection reason: {submission.rejection_reason}
+                              {t('sd.recent.rejectionReason')}: {submission.rejection_reason}
                             </p>
                           )}
                         </div>
@@ -519,10 +521,10 @@ const Dashboard = () => {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-yellow-500" />
-                    <CardTitle>Unsubmitted Files ({unsubmittedFiles.length})</CardTitle>
+                    <CardTitle>{t('sd.unsubmitted.title')} ({unsubmittedFiles.length})</CardTitle>
                   </div>
                   <CardDescription>
-                    These files have been uploaded but not yet submitted for validation
+                    {t('sd.unsubmitted.desc')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -552,7 +554,7 @@ const Dashboard = () => {
                             variant="ghost"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={async () => {
-                              if (confirm(`Delete "${file.file_name}"? This cannot be undone.`)) {
+                              if (confirm(t('sd.unsubmitted.confirmDelete').replace('{name}', file.file_name))) {
                                 await deleteUploadedFile(file.id);
                               }
                             }}
@@ -578,7 +580,7 @@ const Dashboard = () => {
                             }}
                           >
                             <ArrowRight className="h-4 w-4 mr-1" />
-                            Submit
+                            {t('sd.unsubmitted.submit')}
                           </Button>
                         </div>
                       </div>
@@ -604,7 +606,7 @@ const Dashboard = () => {
                         }}
                       >
                         <Check className="h-4 w-4 mr-2" />
-                        Submit All Files ({unsubmittedFiles.length})
+                        {t('sd.unsubmitted.submitAll')} ({unsubmittedFiles.length})
                       </Button>
                     </div>
                   </div>
@@ -616,15 +618,15 @@ const Dashboard = () => {
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Submitted Content</CardTitle>
+                  <CardTitle>{t('sd.submitted.title')}</CardTitle>
                   <CardDescription>
-                    Manage your creations and track their status
+                    {t('sd.submitted.desc')}
                   </CardDescription>
                 </div>
                 <Button asChild>
                   <Link to="/file-upload">
                     <Plus className="h-4 w-4 mr-2" />
-                    New Content
+                    {t('sd.submitted.new')}
                   </Link>
                 </Button>
               </CardHeader>
@@ -632,24 +634,24 @@ const Dashboard = () => {
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-muted-foreground mt-2">Loading...</p>
+                    <p className="text-muted-foreground mt-2">{t('sd.loading')}</p>
                   </div>
                 ) : submissions.length === 0 && (!unsubmittedFiles || unsubmittedFiles.length === 0) ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Upload className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-medium mb-2">No Content</h3>
-                    <p className="mb-4">Start by creating your first content</p>
+                    <h3 className="text-lg font-medium mb-2">{t('sd.submitted.empty.title')}</h3>
+                    <p className="mb-4">{t('sd.submitted.empty.desc')}</p>
                     <Button asChild>
                       <Link to="/file-upload">
                         <Plus className="h-4 w-4 mr-2" />
-                        Create Content
+                        {t('sd.submitted.empty.cta')}
                       </Link>
                     </Button>
                   </div>
                 ) : submissions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No submitted content yet</p>
-                    <p className="text-sm mt-2">Submit the files above to see them here</p>
+                    <p>{t('sd.submitted.emptyAfter')}</p>
+                    <p className="text-sm mt-2">{t('sd.submitted.emptyAfter.desc')}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -671,9 +673,9 @@ const Dashboard = () => {
                             </div>
                             <p className="text-muted-foreground mb-2">{submission.description}</p>
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{submission.content_files?.length || 0} file(s)</span>
-                              <span>{submission.price ? `$${submission.price}` : 'Free'}</span>
-                              <span>Created on {new Date(submission.created_at).toLocaleDateString()}</span>
+                              <span>{t('sd.recent.files').replace('{n}', String(submission.content_files?.length || 0))}</span>
+                              <span>{submission.price ? `$${submission.price}` : t('sd.free')}</span>
+                              <span>{t('sd.submitted.createdOn').replace('{date}', new Date(submission.created_at).toLocaleDateString())}</span>
                             </div>
                             {submission.tags && submission.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
@@ -686,7 +688,7 @@ const Dashboard = () => {
                             )}
                             {submission.rejection_reason && (
                               <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                                <p className="text-sm text-destructive font-medium">Rejection reason:</p>
+                                <p className="text-sm text-destructive font-medium">{t('sd.recent.rejectionReason')}:</p>
                                 <p className="text-sm text-destructive">{submission.rejection_reason}</p>
                               </div>
                             )}
@@ -695,7 +697,7 @@ const Dashboard = () => {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
+                                <span className="sr-only">{t('sd.submitted.openMenu')}</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -710,23 +712,23 @@ const Dashboard = () => {
                                   }
                                 }}>
                                   <Eye className="h-4 w-4 mr-2" />
-                                  View on Marketplace
+                                  {t('sd.submitted.viewMarketplace')}
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem onClick={() => handleEditSubmission(submission.id)}>
                                 <Edit className="h-4 w-4 mr-2" />
-                                Edit
+                                {t('sd.submitted.edit')}
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={async () => {
-                                  if (window.confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
+                                  if (window.confirm(t('sd.submitted.confirmDelete'))) {
                                     await deleteSubmission(submission.id);
                                   }
                                 }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                {t('sd.submitted.delete')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -735,7 +737,7 @@ const Dashboard = () => {
                         {/* Files Grid */}
                         {submission.content_files && submission.content_files.length > 0 && (
                           <div className="border-t pt-4">
-                            <h5 className="font-medium mb-3">Associated Files ({submission.content_files.length})</h5>
+                            <h5 className="font-medium mb-3">{t('sd.submitted.associatedFiles')} ({submission.content_files.length})</h5>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {submission.content_files.slice(0, 4).map((file) => (
                                 <div key={file.id} className="relative bg-muted rounded-lg p-3 group">
@@ -766,7 +768,7 @@ const Dashboard = () => {
                                   <div className="text-center">
                                     <Plus className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
                                     <p className="text-xs text-muted-foreground">
-                                      +{submission.content_files.length - 4} more
+                                      {t('sd.submitted.moreFiles').replace('{n}', String(submission.content_files.length - 4))}
                                     </p>
                                   </div>
                                 </div>
@@ -789,12 +791,12 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <TrendingUp className="h-5 w-5 mr-2" />
-                    Overall Performance
+                    {t('sd.analytics.performance')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Approval Rate</span>
+                    <span className="text-sm text-muted-foreground">{t('sd.analytics.approvalRate')}</span>
                     <span className="font-medium">
                       {stats.totalSubmissions > 0 
                         ? `${((stats.approvedSubmissions / stats.totalSubmissions) * 100).toFixed(1)}%`
@@ -803,7 +805,7 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Revenue per Content</span>
+                    <span className="text-sm text-muted-foreground">{t('sd.analytics.revenuePerContent')}</span>
                     <span className="font-medium">
                       {stats.approvedSubmissions > 0 
                         ? `$${(stats.totalRevenue / stats.approvedSubmissions).toFixed(2)}`
@@ -818,12 +820,12 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Eye className="h-5 w-5 mr-2" />
-                    Popularity
+                    {t('sd.analytics.popularity')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Downloads per Content</span>
+                    <span className="text-sm text-muted-foreground">{t('sd.analytics.downloadsPerContent')}</span>
                     <span className="font-medium">
                       {stats.approvedSubmissions > 0 
                         ? `${Math.round(stats.totalDownloads / stats.approvedSubmissions)}`
@@ -842,15 +844,15 @@ const Dashboard = () => {
             <div className="mb-6">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
                 <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">1</span>
-                <span>File Upload</span>
+                <span>{t('sd.upload.step1')}</span>
                 <ArrowRight className="h-4 w-4" />
                 <span className="px-3 py-1 rounded-full bg-muted">2</span>
-                <span>Product Management</span>
+                <span>{t('sd.upload.step2')}</span>
               </div>
               
-              <h2 className="text-2xl font-bold mb-2">Upload Your Files</h2>
+              <h2 className="text-2xl font-bold mb-2">{t('sd.upload.title')}</h2>
               <p className="text-muted-foreground">
-                Start by uploading all your digital files. You can then configure each product individually.
+                {t('sd.upload.desc')}
               </p>
             </div>
 
@@ -859,10 +861,10 @@ const Dashboard = () => {
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <Upload className="h-5 w-5 text-primary" />
-                  <h3 className="text-xl font-semibold">Upload Zone</h3>
+                  <h3 className="text-xl font-semibold">{t('sd.upload.zone')}</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Drop or select your files. Images will be automatically watermarked for the marketplace.
+                  {t('sd.upload.zoneDesc')}
                 </p>
               </div>
               
@@ -879,7 +881,7 @@ const Dashboard = () => {
                 <div className="flex items-center space-x-2 mb-4">
                   <Check className="h-5 w-5 text-green-500" />
                   <h3 className="text-lg font-semibold">
-                    Uploaded Files ({uploadedFiles.length})
+                    {t('sd.upload.uploaded')} ({uploadedFiles.length})
                   </h3>
                 </div>
                 
@@ -909,7 +911,7 @@ const Dashboard = () => {
                   {uploadedFiles.length > 6 && (
                     <div className="flex items-center justify-center p-3 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">
-                        +{uploadedFiles.length - 6} more files
+                        {t('sd.upload.moreFiles').replace('{n}', String(uploadedFiles.length - 6))}
                       </p>
                     </div>
                   )}
@@ -922,7 +924,7 @@ const Dashboard = () => {
                     className="flex-1"
                   >
                     <ArrowRight className="h-4 w-4 mr-2" />
-                    Continue to Product Management
+                    {t('sd.upload.continue')}
                   </Button>
                   
                   <Button 
@@ -930,7 +932,7 @@ const Dashboard = () => {
                     size="lg"
                     onClick={() => setUploadedFiles([])}
                   >
-                    Cancel
+                    {t('sd.upload.cancel')}
                   </Button>
                 </div>
               </Card>
@@ -938,12 +940,12 @@ const Dashboard = () => {
 
             {/* Instructions */}
             <Card className="p-6 bg-muted/50">
-              <h3 className="font-semibold mb-2">Next Steps</h3>
+              <h3 className="font-semibold mb-2">{t('sd.upload.nextSteps')}</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Upload all your files at once</li>
-                <li>• Then proceed to the product configuration step</li>
-                <li>• Each file will have its own metadata form</li>
-                <li>• You can save as draft or publish directly</li>
+                <li>• {t('sd.upload.step.uploadAll')}</li>
+                <li>• {t('sd.upload.step.thenConfig')}</li>
+                <li>• {t('sd.upload.step.eachForm')}</li>
+                <li>• {t('sd.upload.step.saveOrPublish')}</li>
               </ul>
             </Card>
           </TabsContent>
