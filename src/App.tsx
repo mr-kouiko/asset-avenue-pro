@@ -22,6 +22,7 @@ import { lazy, Suspense } from "react";
 import IndexEN from "./pages/en/IndexEN";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SiteLayout } from "@/components/SiteLayout";
 
 // Loading fallback for lazy components
 const PageLoader = () => (
