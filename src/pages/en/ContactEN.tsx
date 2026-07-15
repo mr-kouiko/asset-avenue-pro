@@ -1,4 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { z } from "zod";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -15,6 +18,53 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const ContactEN = () => {
   const { t } = useLanguage();
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", subject: "", message: "" });
+
+  const schemaVal = z.object({
+    firstName: z.string().trim().min(1).max(100),
+    lastName: z.string().trim().min(1).max(100),
+    email: z.string().trim().email().max(255),
+    subject: z.string().min(1),
+    message: z.string().trim().min(1).max(5000),
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = schemaVal.safeParse(form);
+    if (!parsed.success) {
+      toast.error(t('ct.form.invalid') || "Please complete all fields correctly.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const subjectLabels: Record<string, string> = {
+        support: "Technical Support",
+        billing: "Billing",
+        partnership: "Partnership",
+        legal: "Legal",
+        other: "Other",
+      };
+      const subjectLabel = subjectLabels[form.subject] || form.subject;
+      const { error } = await supabase.functions.invoke('submit-support-ticket', {
+        body: {
+          email: form.email,
+          subject: `${subjectLabel} - ${form.firstName} ${form.lastName}`,
+          message: form.message,
+          userId: user?.id,
+        },
+      });
+      if (error) throw error;
+      toast.success(t('ct.form.success') || "Message sent! We'll get back to you soon.");
+      setForm({ firstName: "", lastName: "", email: "", subject: "", message: "" });
+    } catch (err: any) {
+      console.error('Contact form error:', err);
+      toast.error(t('ct.form.error') || "Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useSEO({
     title: t('ct.title'),
@@ -85,26 +135,26 @@ const ContactEN = () => {
           <Card className="p-8">
             <h2 className="text-2xl font-semibold mb-6">{t('ct.form.title')}</h2>
 
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">{t('ct.form.firstName')}</Label>
-                  <Input id="firstName" placeholder={t('ct.form.firstNamePh')} required />
+                  <Input id="firstName" placeholder={t('ct.form.firstNamePh')} required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} maxLength={100} />
                 </div>
                 <div>
                   <Label htmlFor="lastName">{t('ct.form.lastName')}</Label>
-                  <Input id="lastName" placeholder={t('ct.form.lastNamePh')} required />
+                  <Input id="lastName" placeholder={t('ct.form.lastNamePh')} required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} maxLength={100} />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="email">{t('ct.form.email')}</Label>
-                <Input id="email" type="email" placeholder="your@email.com" required />
+                <Input id="email" type="email" placeholder="your@email.com" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={255} />
               </div>
 
               <div>
                 <Label htmlFor="subject">{t('ct.form.subject')}</Label>
-                <Select required>
+                <Select required value={form.subject} onValueChange={(v) => setForm({ ...form, subject: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('ct.form.subjectPh')} />
                   </SelectTrigger>
@@ -125,11 +175,14 @@ const ContactEN = () => {
                   placeholder={t('ct.form.messagePh')}
                   rows={6}
                   required
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  maxLength={5000}
                 />
               </div>
 
-              <Button size="lg" className="w-full">
-                {t('ct.form.send')}
+              <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+                {submitting ? "..." : t('ct.form.send')}
               </Button>
             </form>
           </Card>

@@ -65,7 +65,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             from: 'VisuStock Support <noreply@visustock.com>',
-            to: ['admin@visustock.com'],
+            to: ['contact@visustock.com'],
+            reply_to: email,
             subject: `[Support Ticket] ${subject}`,
             html: `
               <h2>New Support Ticket</h2>
