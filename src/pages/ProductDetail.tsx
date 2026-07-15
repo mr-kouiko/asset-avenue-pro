@@ -315,6 +315,22 @@ const ProductDetailInner = () => {
   const productImage = activeProduct?.thumbnail || activeProduct?.previewUrl || '';
   const productPrice = isVideo ? basePrice : (activeProduct?.price || 0);
   
+  // Image products get extra Google-required ImageObject metadata.
+  const isImageProduct = activeProduct?.type === 'photo' || activeProduct?.type === 'illustration';
+  const productCanonicalUrl = activeProduct?.slug
+    ? `https://visustock.com/products/${activeProduct.slug}`
+    : `https://visustock.com/products/${activeProduct?.id ?? ''}`;
+  const imageCreator = activeProduct?.author?.trim() || 'VisuStock';
+  const imageMetadata = isImageProduct && productImage
+    ? {
+        creator: imageCreator,
+        creatorType: 'Person' as const,
+        creditText: `${imageCreator} / VisuStock`,
+        copyrightNotice: `Copyright © ${imageCreator}`,
+        acquireLicensePage: productCanonicalUrl,
+      }
+    : undefined;
+
   useSEO({
     title: activeProduct?.title || 'Product',
     description: activeProduct?.description || 'View product details',
@@ -324,8 +340,10 @@ const ProductDetailInner = () => {
     publishedTime: activeProduct?.uploadDate,
     tags: activeProduct?.tags || [],
     price: productPrice,
-    currency: isVideo ? 'USD' : 'EUR'
+    currency: isVideo ? 'USD' : 'EUR',
+    imageMetadata,
   });
+
 
   // Protection contre le téléchargement et l'inspection
   useEffect(() => {
