@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, ExternalLink, Loader2, ZoomIn, Maximize2, Minimize2 } from 'lucide-react';
+import { Heart, ShoppingCart, ExternalLink, Loader2, ZoomIn, Maximize2, Minimize2, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useProductDetail } from '@/hooks/useProductDetail';
@@ -21,31 +21,34 @@ const formatBytes = (bytes?: number) => {
 
 const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => {
   const [zoomed, setZoomed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFs, setIsFs] = useState(false);
+  const [muted, setMuted] = useState(false);
 
   const preview = product?.previewUrl;
   const primaryFile = product?.files?.[0];
   const mediaType = product?.type || item.type;
 
+  useEffect(() => {
+    const onChange = () => {
+      const fsEl =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement;
+      setIsFs(fsEl === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange as any);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange as any);
+    };
+  }, []);
+
   if (mediaType === 'video' || mediaType === 'vfx') {
     const src = preview || item.videoUrl || primaryFile?.file_path;
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [isFs, setIsFs] = useState(false);
-
-    useEffect(() => {
-      const onChange = () => {
-        const fsEl =
-          document.fullscreenElement ||
-          (document as any).webkitFullscreenElement ||
-          (document as any).msFullscreenElement;
-        setIsFs(fsEl === containerRef.current);
-      };
-      document.addEventListener('fullscreenchange', onChange);
-      document.addEventListener('webkitfullscreenchange', onChange as any);
-      return () => {
-        document.removeEventListener('fullscreenchange', onChange);
-        document.removeEventListener('webkitfullscreenchange', onChange as any);
-      };
-    }, []);
 
     const toggleFullscreen = () => {
       const el = containerRef.current as any;
@@ -69,6 +72,23 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
       }
     };
 
+    const toggleMute = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.muted = !video.muted;
+      setMuted(video.muted);
+    };
+
+    const togglePlay = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      if (video.paused) {
+        void video.play();
+      } else {
+        video.pause();
+      }
+    };
+
     return (
       <div
         ref={containerRef}
@@ -77,27 +97,41 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
         {src ? (
           <>
             <video
+              ref={videoRef}
               key={src}
               src={src}
-              controls
+              controls={false}
               controlsList="nodownload noplaybackrate nofullscreen"
               disablePictureInPicture
               onContextMenu={(e) => e.preventDefault()}
+              onClick={togglePlay}
+              onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
               autoPlay={false}
               playsInline
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full object-contain cursor-pointer"
               poster={item.thumbnail}
             />
             <VideoWatermark size="large" />
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              aria-label={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
-              title={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
-              className="absolute bottom-3 right-3 z-30 bg-black/70 hover:bg-black text-white rounded-md p-2 backdrop-blur transition shadow-lg"
-            >
-              {isFs ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </button>
+            <div className="absolute bottom-3 right-3 z-30 flex items-center gap-1 rounded-md border border-border bg-background/85 p-1 shadow-lg backdrop-blur">
+              <button
+                type="button"
+                onClick={toggleMute}
+                aria-label={muted ? 'Unmute video' : 'Mute video'}
+                title={muted ? 'Unmute video' : 'Mute video'}
+                className="rounded-sm p-2 text-foreground transition hover:bg-muted"
+              >
+                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                aria-label={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
+                title={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
+                className="rounded-sm p-2 text-foreground transition hover:bg-muted"
+              >
+                {isFs ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+            </div>
           </>
         ) : (
           <img src={item.thumbnail} alt={item.title} className="max-w-full max-h-full object-contain" />
