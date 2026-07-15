@@ -51,8 +51,10 @@ export const useSEO = (config: SEOConfig) => {
       tags = [],
       price,
       currency = 'EUR',
-      noindex = false
+      noindex = false,
+      imageMetadata,
     } = config;
+
 
     // GUARD: Only proceed if essential fields are present and valid
     if (!title || !description || title.trim().length === 0 || description.trim().length === 0) {
