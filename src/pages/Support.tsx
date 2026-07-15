@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,12 +70,12 @@ const Support = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <Navigation />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
-      <div className="container py-8">
+      <div className="container py-8 flex-1">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">{t('sp.title')}</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">{t('sp.subtitle')}</p>
@@ -140,6 +141,7 @@ const Support = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
