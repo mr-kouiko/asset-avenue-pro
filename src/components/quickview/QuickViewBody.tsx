@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, ExternalLink, Loader2, ZoomIn, Maximize2 } from 'lucide-react';
+import { Heart, ShoppingCart, ExternalLink, Loader2, ZoomIn, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useProductDetail } from '@/hooks/useProductDetail';
@@ -29,12 +29,46 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
   if (mediaType === 'video' || mediaType === 'vfx') {
     const src = preview || item.videoUrl || primaryFile?.file_path;
     const containerRef = useRef<HTMLDivElement>(null);
-    const requestFullscreen = () => {
+    const [isFs, setIsFs] = useState(false);
+
+    useEffect(() => {
+      const onChange = () => {
+        const fsEl =
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).msFullscreenElement;
+        setIsFs(fsEl === containerRef.current);
+      };
+      document.addEventListener('fullscreenchange', onChange);
+      document.addEventListener('webkitfullscreenchange', onChange as any);
+      return () => {
+        document.removeEventListener('fullscreenchange', onChange);
+        document.removeEventListener('webkitfullscreenchange', onChange as any);
+      };
+    }, []);
+
+    const toggleFullscreen = () => {
       const el = containerRef.current as any;
       if (!el) return;
-      const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-      if (fn) fn.call(el);
+      const fsEl =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement;
+      if (fsEl) {
+        const exit =
+          document.exitFullscreen ||
+          (document as any).webkitExitFullscreen ||
+          (document as any).msExitFullscreen;
+        if (exit) exit.call(document);
+      } else {
+        const req =
+          el.requestFullscreen ||
+          el.webkitRequestFullscreen ||
+          el.msRequestFullscreen;
+        if (req) req.call(el);
+      }
     };
+
     return (
       <div
         ref={containerRef}
@@ -57,12 +91,12 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
             <VideoWatermark size="large" />
             <button
               type="button"
-              onClick={requestFullscreen}
-              aria-label="Fullscreen"
-              title="Fullscreen"
+              onClick={toggleFullscreen}
+              aria-label={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
+              title={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
               className="absolute bottom-3 right-3 z-30 bg-black/70 hover:bg-black text-white rounded-md p-2 backdrop-blur transition shadow-lg"
             >
-              <Maximize2 className="h-4 w-4" />
+              {isFs ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
           </>
         ) : (
