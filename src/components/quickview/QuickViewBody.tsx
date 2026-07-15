@@ -59,7 +59,8 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
               type="button"
               onClick={requestFullscreen}
               aria-label="Fullscreen"
-              className="absolute top-3 right-3 z-30 bg-background/70 hover:bg-background text-foreground rounded-md p-2 backdrop-blur transition"
+              title="Fullscreen"
+              className="absolute bottom-3 right-3 z-30 bg-black/70 hover:bg-black text-white rounded-md p-2 backdrop-blur transition shadow-lg"
             >
               <Maximize2 className="h-4 w-4" />
             </button>
