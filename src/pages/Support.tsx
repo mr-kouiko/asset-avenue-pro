@@ -73,9 +73,12 @@ const Support = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <Navigation />
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <Navigation />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
-      <div className="container py-8">
+      <div className="container py-8 flex-1">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">{t('sp.title')}</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">{t('sp.subtitle')}</p>
