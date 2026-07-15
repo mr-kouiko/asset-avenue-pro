@@ -144,6 +144,7 @@ const Support = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
