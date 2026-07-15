@@ -63,7 +63,7 @@ export const useSEO = (config: SEOConfig) => {
     }
 
     // GUARD: Prevent re-execution if config hasn't meaningfully changed
-    const configHash = JSON.stringify({ title, description, image, type, price, location: location.pathname, language });
+    const configHash = JSON.stringify({ title, description, image, type, price, imageMetadata, location: location.pathname, language });
     if (configHash === lastConfigRef.current) {
       return;
     }
