@@ -30,6 +30,23 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
   const primaryFile = product?.files?.[0];
   const mediaType = product?.type || item.type;
 
+  useEffect(() => {
+    const onChange = () => {
+      const fsEl =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement;
+      setIsFs(fsEl === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange as any);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange as any);
+    };
+  }, []);
+
   if (mediaType === 'video' || mediaType === 'vfx') {
     const src = preview || item.videoUrl || primaryFile?.file_path;
 
