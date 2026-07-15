@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Search, Camera, Video, Download, ExternalLink, Loader2, User, Music, FileText } from 'lucide-react';
 import { LazyImage } from '@/components/LazyImage';
+import { ContentCard } from '@/components/ContentCard';
+import { PexelsCard } from '@/components/PexelsCard';
+import type { PexelsItem } from '@/hooks/usePexelsSearch';
 import { useSEO } from '@/hooks/useSEO';
 import { useFreeContent, FreeItem } from '@/hooks/useFreeContent';
 import { useNavigate } from 'react-router-dom';
@@ -424,55 +427,71 @@ const FreeStockLibrary = () => {
         </div>
 
         {/* Unified Grid */}
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-          {unifiedItems.map((item) => (
-            <div
-              key={item.id}
-              className="break-inside-avoid group relative cursor-pointer rounded-lg overflow-hidden border border-border"
-              onClick={() => handleItemClick(item)}
-            >
-              <div className={item.type === 'video' ? 'aspect-video' : ''} style={
-                item.pexelsPhoto ? { aspectRatio: `${item.pexelsPhoto.width}/${item.pexelsPhoto.height}` } : 
-                item.type !== 'video' ? { aspectRatio: '4/3' } : undefined
-              }>
-                <LazyImage
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+          {unifiedItems.map((item) => {
+            if (item.source === 'visustock' && item.visustockItem) {
+              const vs = item.visustockItem;
+              return (
+                <ContentCard
+                  key={item.id}
+                  id={vs.id}
+                  title={vs.title}
+                  author={vs.author}
+                  price={vs.price}
+                  type={vs.type}
+                  thumbnail={vs.thumbnail}
+                  videoUrl={vs.videoUrl}
+                  likes={vs.likes}
+                  downloads={vs.downloads}
+                  isLiked={vs.isLiked}
                 />
-              </div>
+              );
+            }
 
-              {/* Source & Type badges */}
-              <div className="absolute top-2 left-2 flex gap-1.5">
-                <Badge className={`text-[10px] border-0 ${
-                  item.source === 'visustock'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-black/60 text-white'
-                }`}>
-                  {item.source === 'visustock' ? 'VisuStock' : 'Pexels'}
-                </Badge>
-                {item.type !== 'photo' && (
-                  <Badge className="bg-black/60 text-white border-0 text-[10px] gap-1">
-                    {getTypeIcon(item.type)}
-                    {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <User className="h-3.5 w-3.5 text-white shrink-0" />
-                      <span className="text-white text-xs truncate">{item.author}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+            // Pexels item — normalize to PexelsItem for shared PexelsCard
+            if (item.pexelsPhoto) {
+              const p = item.pexelsPhoto;
+              const pxItem: PexelsItem = {
+                id: `pexels-photo-${p.id}`,
+                numericId: p.id,
+                title: p.alt || 'Pexels Photo',
+                photographer: p.photographer,
+                photographerUrl: p.photographer_url,
+                thumbnail: p.src.medium,
+                largeThumbnail: p.src.large2x,
+                originalUrl: p.src.original,
+                pexelsUrl: p.url,
+                type: 'photo',
+                width: p.width,
+                height: p.height,
+                alt: p.alt,
+              };
+              return <PexelsCard key={item.id} item={pxItem} />;
+            }
+            if (item.pexelsVideo) {
+              const v = item.pexelsVideo;
+              const hd = v.video_files.find(f => f.quality === 'hd') || v.video_files[0];
+              const pxItem: PexelsItem = {
+                id: `pexels-video-${v.id}`,
+                numericId: v.id,
+                title: `Video by ${v.user.name}`,
+                photographer: v.user.name,
+                photographerUrl: v.user.url,
+                thumbnail: v.image,
+                largeThumbnail: v.image,
+                originalUrl: hd?.link || '',
+                pexelsUrl: v.url,
+                type: 'video',
+                width: v.width,
+                height: v.height,
+                videoUrl: hd?.link,
+              };
+              return <PexelsCard key={item.id} item={pxItem} />;
+            }
+            return null;
+          })}
         </div>
+
 
         {/* Loading / Load more trigger */}
         {(loading || visustockLoading) && (
