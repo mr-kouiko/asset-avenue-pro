@@ -135,26 +135,26 @@ const ContactEN = () => {
           <Card className="p-8">
             <h2 className="text-2xl font-semibold mb-6">{t('ct.form.title')}</h2>
 
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">{t('ct.form.firstName')}</Label>
-                  <Input id="firstName" placeholder={t('ct.form.firstNamePh')} required />
+                  <Input id="firstName" placeholder={t('ct.form.firstNamePh')} required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} maxLength={100} />
                 </div>
                 <div>
                   <Label htmlFor="lastName">{t('ct.form.lastName')}</Label>
-                  <Input id="lastName" placeholder={t('ct.form.lastNamePh')} required />
+                  <Input id="lastName" placeholder={t('ct.form.lastNamePh')} required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} maxLength={100} />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="email">{t('ct.form.email')}</Label>
-                <Input id="email" type="email" placeholder="your@email.com" required />
+                <Input id="email" type="email" placeholder="your@email.com" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={255} />
               </div>
 
               <div>
                 <Label htmlFor="subject">{t('ct.form.subject')}</Label>
-                <Select required>
+                <Select required value={form.subject} onValueChange={(v) => setForm({ ...form, subject: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('ct.form.subjectPh')} />
                   </SelectTrigger>
@@ -175,11 +175,14 @@ const ContactEN = () => {
                   placeholder={t('ct.form.messagePh')}
                   rows={6}
                   required
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  maxLength={5000}
                 />
               </div>
 
-              <Button size="lg" className="w-full">
-                {t('ct.form.send')}
+              <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+                {submitting ? "..." : t('ct.form.send')}
               </Button>
             </form>
           </Card>
