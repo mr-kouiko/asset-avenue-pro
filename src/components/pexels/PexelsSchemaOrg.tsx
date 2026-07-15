@@ -47,11 +47,15 @@ export const PexelsSchemaOrg = ({ item, isVideo, slug, productStyle, seoContent 
         width: item.width,
         height: item.height,
         author: { "@type": "Person", name: item.photographer, url: item.photographerUrl },
+        creator: { "@type": "Person", name: item.photographer, url: item.photographerUrl },
+        creditText: `Photo by ${item.photographer}`,
+        acquireLicensePage: pageUrl,
         publisher: { "@type": "Organization", name: "VisuStock", url: "https://visustock.com" },
         url: pageUrl,
         license: "https://www.pexels.com/license/",
         ...(seoContent?.keywords?.length ? { keywords: seoContent.keywords.join(", ") } : {}),
       };
+
 
   return (
     <script

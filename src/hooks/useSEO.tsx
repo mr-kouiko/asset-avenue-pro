@@ -2,6 +2,19 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+interface ImageMetadata {
+  /** Name of the image's creator (photographer, illustrator, seller). */
+  creator: string;
+  /** Schema.org type for the creator. Defaults to Person. */
+  creatorType?: 'Person' | 'Organization';
+  /** Short attribution string, e.g. "{creator} / VisuStock" or "Photo by {creator}". */
+  creditText: string;
+  /** Copyright notice. Leave empty/undefined for third-party assets we don't own. */
+  copyrightNotice?: string;
+  /** Canonical URL where the license can be acquired (i.e. this product page). */
+  acquireLicensePage: string;
+}
+
 interface SEOConfig {
   title: string;
   description: string;
@@ -13,7 +26,10 @@ interface SEOConfig {
   price?: number;
   currency?: string;
   noindex?: boolean;
+  /** When set on an image product, enriches the Product's `image` with ImageObject metadata for Google Images. */
+  imageMetadata?: ImageMetadata;
 }
+
 
 const DEFAULT_IMAGE = 'https://visustock.com/__l5e/assets-v1/3d772d83-288d-4e75-b369-f849731fa339/og-image.jpg';
 const SITE_NAME = 'VisuStock';
@@ -35,8 +51,10 @@ export const useSEO = (config: SEOConfig) => {
       tags = [],
       price,
       currency = 'EUR',
-      noindex = false
+      noindex = false,
+      imageMetadata,
     } = config;
+
 
     // GUARD: Only proceed if essential fields are present and valid
     if (!title || !description || title.trim().length === 0 || description.trim().length === 0) {
@@ -45,7 +63,7 @@ export const useSEO = (config: SEOConfig) => {
     }
 
     // GUARD: Prevent re-execution if config hasn't meaningfully changed
-    const configHash = JSON.stringify({ title, description, image, type, price, location: location.pathname, language });
+    const configHash = JSON.stringify({ title, description, image, type, price, imageMetadata, location: location.pathname, language });
     if (configHash === lastConfigRef.current) {
       return;
     }
@@ -155,12 +173,32 @@ export const useSEO = (config: SEOConfig) => {
 
     // Product specific - Schema.org structured data
     if (type === 'product' && price !== undefined) {
+      // If we have per-image metadata, emit `image` as a full ImageObject so Google Images
+      // sees creator / creditText / copyrightNotice / acquireLicensePage.
+      const imageNode: unknown = imageMetadata
+        ? {
+            "@type": "ImageObject",
+            "contentUrl": image,
+            "url": image,
+            "creator": {
+              "@type": imageMetadata.creatorType ?? "Person",
+              "name": imageMetadata.creator,
+            },
+            "creditText": imageMetadata.creditText,
+            ...(imageMetadata.copyrightNotice
+              ? { "copyrightNotice": imageMetadata.copyrightNotice }
+              : {}),
+            "acquireLicensePage": imageMetadata.acquireLicensePage,
+            "license": imageMetadata.acquireLicensePage,
+          }
+        : image;
+
       const structuredData = {
         "@context": "https://schema.org",
         "@type": "Product",
         "name": title,
         "description": description,
-        "image": image,
+        "image": imageNode,
         "url": fullUrl,
         "brand": {
           "@type": "Brand",
@@ -183,6 +221,7 @@ export const useSEO = (config: SEOConfig) => {
           "keywords": tags.join(', ')
         })
       };
+
 
       // Remove only previously-injected dynamic structured data (preserve sitewide Organization schema from index.html)
       const existingScript = document.querySelector('script[type="application/ld+json"][data-seo-dynamic="true"]');
