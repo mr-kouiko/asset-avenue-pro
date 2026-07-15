@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +69,6 @@ const Support = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
       <Navigation />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
@@ -141,7 +138,6 @@ const Support = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

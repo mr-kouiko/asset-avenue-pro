@@ -1,4 +1,3 @@
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { useSEO } from "@/hooks/useSEO";
@@ -10,7 +9,6 @@ const LicenseAgreementEN = () => {
   });
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <div className="container py-8 max-w-4xl">

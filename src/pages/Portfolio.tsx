@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
@@ -69,7 +68,6 @@ const Portfolio = () => {
       fallbackMessage="This page is reserved for sellers."
     >
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         
         <div className="container py-8">

@@ -1,4 +1,3 @@
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { CollectionsGrid } from "@/components/CollectionsGrid";
 import { useSEO } from "@/hooks/useSEO";
@@ -11,7 +10,6 @@ const Collections = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <main className="container py-12">

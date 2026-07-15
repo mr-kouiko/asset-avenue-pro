@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SimpleFileUpload } from "@/components/SimpleFileUpload";
@@ -267,7 +265,6 @@ const FileUpload = () => {
       fallbackMessage={t('sd.upload.forbiddenSellers')}
     >
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         
         <div className="container py-8 max-w-4xl">
@@ -442,7 +439,6 @@ const FileUpload = () => {
             </>
           )}
         </div>
-        <Footer />
       </div>
     </ProtectedRoute>
   );

@@ -1,6 +1,5 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -183,7 +182,6 @@ const CollectionDetail = () => {
   if (!collection) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         <main className="container py-12 text-center">
           <h1 className="text-3xl font-bold mb-4">Collection Not Found</h1>
@@ -212,7 +210,6 @@ const CollectionDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />

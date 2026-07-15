@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +117,6 @@ const ContactEN = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
       <Navigation />
 
       <div className="container py-8 flex-1">
@@ -249,7 +246,6 @@ const ContactEN = () => {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 };

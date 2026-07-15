@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, CreditCard, Loader2, Store, Upload, Wallet, Crown, Gift } from "lucide-react";
@@ -92,7 +91,6 @@ const BecomeSeller = () => {
   if (isCreator || isAdmin) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <div className="container py-16 flex items-center justify-center">
           <Card className="max-w-md w-full">
             <CardHeader className="text-center">
@@ -115,7 +113,6 @@ const BecomeSeller = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <div className="container py-16">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">

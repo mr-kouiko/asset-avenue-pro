@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
@@ -533,7 +532,6 @@ const Marketplace = () => {
       {marketplaceContent.length > 0 && (
         <JsonLd id="ld-marketplace-itemlist" data={itemListSchema} />
       )}
-      <Header />
       <Navigation />
 
       <div className="container py-8">
