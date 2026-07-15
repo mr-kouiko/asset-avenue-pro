@@ -28,15 +28,25 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
 
   if (mediaType === 'video' || mediaType === 'vfx') {
     const src = preview || item.videoUrl || primaryFile?.file_path;
+    const containerRef = useRef<HTMLDivElement>(null);
+    const requestFullscreen = () => {
+      const el = containerRef.current as any;
+      if (!el) return;
+      const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (fn) fn.call(el);
+    };
     return (
-      <div className="relative w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden">
+      <div
+        ref={containerRef}
+        className="relative w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden group"
+      >
         {src ? (
           <>
             <video
               key={src}
               src={src}
               controls
-              controlsList="nodownload noplaybackrate"
+              controlsList="nodownload noplaybackrate nofullscreen"
               disablePictureInPicture
               onContextMenu={(e) => e.preventDefault()}
               autoPlay={false}
@@ -45,6 +55,14 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
               poster={item.thumbnail}
             />
             <VideoWatermark size="large" />
+            <button
+              type="button"
+              onClick={requestFullscreen}
+              aria-label="Fullscreen"
+              className="absolute top-3 right-3 z-30 bg-background/70 hover:bg-background text-foreground rounded-md p-2 backdrop-blur transition"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
           </>
         ) : (
           <img src={item.thumbnail} alt={item.title} className="max-w-full max-h-full object-contain" />
