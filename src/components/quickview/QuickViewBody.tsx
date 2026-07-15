@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, ExternalLink, Loader2, ZoomIn } from 'lucide-react';
+import { Heart, ShoppingCart, ExternalLink, Loader2, ZoomIn, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useProductDetail } from '@/hooks/useProductDetail';
