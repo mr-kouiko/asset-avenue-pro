@@ -18,6 +18,53 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const ContactEN = () => {
   const { t } = useLanguage();
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", subject: "", message: "" });
+
+  const schemaVal = z.object({
+    firstName: z.string().trim().min(1).max(100),
+    lastName: z.string().trim().min(1).max(100),
+    email: z.string().trim().email().max(255),
+    subject: z.string().min(1),
+    message: z.string().trim().min(1).max(5000),
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = schemaVal.safeParse(form);
+    if (!parsed.success) {
+      toast.error(t('ct.form.invalid') || "Please complete all fields correctly.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const subjectLabels: Record<string, string> = {
+        support: "Technical Support",
+        billing: "Billing",
+        partnership: "Partnership",
+        legal: "Legal",
+        other: "Other",
+      };
+      const subjectLabel = subjectLabels[form.subject] || form.subject;
+      const { error } = await supabase.functions.invoke('submit-support-ticket', {
+        body: {
+          email: form.email,
+          subject: `${subjectLabel} - ${form.firstName} ${form.lastName}`,
+          message: form.message,
+          userId: user?.id,
+        },
+      });
+      if (error) throw error;
+      toast.success(t('ct.form.success') || "Message sent! We'll get back to you soon.");
+      setForm({ firstName: "", lastName: "", email: "", subject: "", message: "" });
+    } catch (err: any) {
+      console.error('Contact form error:', err);
+      toast.error(t('ct.form.error') || "Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useSEO({
     title: t('ct.title'),
