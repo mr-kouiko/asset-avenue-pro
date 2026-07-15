@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Header } from '@/components/Header';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,7 +88,6 @@ const PaymentSuccess = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         
         <div className="container py-16">
@@ -108,7 +106,6 @@ const PaymentSuccess = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         
         <div className="container py-16">
@@ -152,7 +149,6 @@ const PaymentSuccess = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <div className="container py-16">

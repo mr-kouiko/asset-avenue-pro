@@ -24,7 +24,6 @@ const renderInline = (text: string): React.ReactNode[] => {
   return parts;
 };
 import { useSEO } from "@/hooks/useSEO";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1335,7 +1334,6 @@ const BlogArticleEN = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         <main className="container py-12 max-w-4xl">
           <Skeleton className="h-8 w-32 mb-6" />
@@ -1351,7 +1349,6 @@ const BlogArticleEN = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <main className="container py-8">

@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Header } from '@/components/Header';
 import { Navigation } from '@/components/Navigation';
-import { Footer } from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -355,7 +353,6 @@ const FreeStockLibrary = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
 
       <main className="container py-8">
@@ -586,7 +583,6 @@ const FreeStockLibrary = () => {
         </DialogContent>
       </Dialog>
 
-      <Footer />
 
       <AuthModal
         isOpen={showAuthModal}

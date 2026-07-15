@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, Users, Camera, Image, Loader2 } from "lucide-react";
-import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { usePayPalSubscription } from "@/hooks/usePayPalSubscription";
 import { useAuth } from "@/hooks/useAuth";
@@ -80,7 +79,6 @@ const InfinityEN = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       
       {/* Hero Section with Pricing Card - Mobile optimized with controlled height */}
       <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">

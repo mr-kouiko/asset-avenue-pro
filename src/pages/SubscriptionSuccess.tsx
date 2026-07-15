@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Header } from '@/components/Header';
 import { CheckCircle, Loader2, XCircle, Infinity, Sparkles } from 'lucide-react';
 import { usePayPalSubscription, SUBSCRIPTION_PLANS } from '@/hooks/usePayPalSubscription';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -102,7 +101,6 @@ const SubscriptionSuccess = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       
       <div className="container max-w-2xl mx-auto py-20 px-4">
         <Card className="shadow-lg">

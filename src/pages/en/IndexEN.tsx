@@ -1,4 +1,3 @@
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
 import { HomepageTabs } from "@/components/HomepageTabs";
@@ -12,7 +11,6 @@ import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart, ArrowRight }
 import { Link } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
 import { seoCollections } from "@/data/seoCollections";
-import { Footer } from "@/components/Footer";
 
 const IndexEN = () => {
   const { stats } = useContentStats();
@@ -21,7 +19,6 @@ const IndexEN = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <main>
@@ -142,7 +139,6 @@ const IndexEN = () => {
           </div>
         </section>
 
-        <Footer />
       </main>
     </div>
   );

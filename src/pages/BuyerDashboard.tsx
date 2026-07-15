@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -364,7 +363,6 @@ const BuyerDashboard = () => {
   return (
     <ProtectedRoute allowedRoles={['client', 'admin']}>
       <div className="min-h-screen bg-background">
-        <Header />
         
         <div className="container py-8">
           <div className="flex items-center justify-between mb-8">

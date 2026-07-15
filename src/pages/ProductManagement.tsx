@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -899,7 +898,6 @@ const ProductManagement = () => {
       fallbackMessage={t('sd.pm.forbiddenSellers')}
     >
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         
         <div className="container py-8 max-w-7xl">

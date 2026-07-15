@@ -22,6 +22,7 @@ import { lazy, Suspense } from "react";
 import IndexEN from "./pages/en/IndexEN";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SiteLayout } from "@/components/SiteLayout";
 
 // Loading fallback for lazy components
 const PageLoader = () => (
@@ -107,31 +108,10 @@ const queryClient = new QueryClient({
 // Shared route table — rendered both at root (English) and under /:lang/*
 const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={<IndexEN />} />
-    <Route path="/marketplace" element={<Marketplace />} />
-    <Route path="/videos/:searchQuery" element={<Marketplace />} />
-    <Route path="/photos/:searchQuery" element={<Marketplace />} />
-    <Route path="/audio/:searchQuery" element={<Marketplace />} />
-    <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
-    <Route path="/products/:slug" element={<ProductDetail />} />
-    <Route path="/product/:id" element={<ProductDetail />} />
+    {/* Routes WITHOUT the global site chrome (own layout or bare) */}
     <Route path="/auth" element={<Auth />} />
     <Route path="/auth/seller" element={<Auth />} />
     <Route path="/auth/callback" element={<AuthCallback />} />
-    <Route path="/dashboard" element={<DashboardRouter />} />
-    <Route path="/seller-dashboard" element={<SellerDashboard />} />
-    <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
-    <Route path="/portfolio" element={<Portfolio />} />
-    <Route path="/seller/:storeSlug" element={<SellerPortfolio />} />
-    <Route path="/cart" element={<Cart />} />
-    <Route path="/checkout" element={<Checkout />} />
-    <Route path="/payment-success" element={<PaymentSuccess />} />
-    <Route path="/payment-cancelled" element={<PaymentCancelled />} />
-    <Route path="/file-upload" element={<FileUpload />} />
-    <Route path="/product-management" element={<ProductManagement />} />
-    <Route path="/become-seller" element={<BecomeSeller />} />
-    <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
-    <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
     <Route path="/ai-image-generator" element={<AIImageGenerator />} />
     <Route path="/studio-ai" element={<StudioAI />} />
     <Route path="/studio-ai/remove-background" element={<RemoveBackground />} />
@@ -146,28 +126,6 @@ const AppRoutes = () => (
     <Route path="/ai-upscaler" element={<AIUpscaler />} />
     <Route path="/face-enhancer" element={<FaceEnhancer />} />
     <Route path="/studio-ai/reframe-video" element={<ReframeVideo />} />
-    <Route path="/free-stock-library" element={<FreeStockLibrary />} />
-    <Route path="/pexels/:slug" element={<PexelsAssetDetail />} />
-    <Route path="/free-photo/:pexelsId" element={<PexelsAssetDetail />} />
-    <Route path="/free-video/:pexelsId" element={<PexelsAssetDetail />} />
-    <Route path="/support" element={<Support />} />
-    <Route path="/contact" element={<ContactEN />} />
-    <Route path="/licenses" element={<Licenses />} />
-    <Route path="/terms" element={<TermsEN />} />
-    <Route path="/cookie-policy" element={<CookiePolicyEN />} />
-    <Route path="/privacy-policy" element={<PrivacyPolicyEN />} />
-    <Route path="/license-agreement" element={<LicenseAgreementEN />} />
-    <Route path="/infinity" element={<InfinityEN />} />
-    <Route path="/packages-pricing" element={<PackagesPricing />} />
-    <Route path="/about" element={<AboutEN />} />
-    <Route path="/business" element={<Business />} />
-    <Route path="/blog" element={<BlogEN />} />
-    <Route path="/blog/:slug" element={<BlogArticleEN />} />
-    <Route path="/collections" element={<Collections />} />
-    <Route path="/collections/:slug" element={<CollectionDetail />} />
-    <Route path="/buy-credits" element={<BuyCredits />} />
-    <Route path="/test-accounts" element={<TestAccounts />} />
-    <Route path="/subscription-success" element={<SubscriptionSuccess />} />
     <Route path="/admin" element={
       <ProtectedRoute allowedRoles={['admin']} fallbackMessage="Only administrators can access this page.">
         <AdminDashboard />
@@ -178,7 +136,55 @@ const AppRoutes = () => (
         <CreateTestAccounts />
       </ProtectedRoute>
     } />
-    <Route path="*" element={<NotFound />} />
+
+    {/* Routes WITH the global site chrome (Header + Footer via SiteLayout) */}
+    <Route element={<SiteLayout />}>
+      <Route path="/" element={<IndexEN />} />
+      <Route path="/marketplace" element={<Marketplace />} />
+      <Route path="/videos/:searchQuery" element={<Marketplace />} />
+      <Route path="/photos/:searchQuery" element={<Marketplace />} />
+      <Route path="/audio/:searchQuery" element={<Marketplace />} />
+      <Route path="/ebooks/:searchQuery" element={<Marketplace />} />
+      <Route path="/products/:slug" element={<ProductDetail />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
+      <Route path="/dashboard" element={<DashboardRouter />} />
+      <Route path="/seller-dashboard" element={<SellerDashboard />} />
+      <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+      <Route path="/portfolio" element={<Portfolio />} />
+      <Route path="/seller/:storeSlug" element={<SellerPortfolio />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+      <Route path="/file-upload" element={<FileUpload />} />
+      <Route path="/product-management" element={<ProductManagement />} />
+      <Route path="/become-seller" element={<BecomeSeller />} />
+      <Route path="/seller-registration-success" element={<SellerRegistrationSuccess />} />
+      <Route path="/seller-registration-cancelled" element={<SellerRegistrationCancelled />} />
+      <Route path="/free-stock-library" element={<FreeStockLibrary />} />
+      <Route path="/pexels/:slug" element={<PexelsAssetDetail />} />
+      <Route path="/free-photo/:pexelsId" element={<PexelsAssetDetail />} />
+      <Route path="/free-video/:pexelsId" element={<PexelsAssetDetail />} />
+      <Route path="/support" element={<Support />} />
+      <Route path="/contact" element={<ContactEN />} />
+      <Route path="/licenses" element={<Licenses />} />
+      <Route path="/terms" element={<TermsEN />} />
+      <Route path="/cookie-policy" element={<CookiePolicyEN />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyEN />} />
+      <Route path="/license-agreement" element={<LicenseAgreementEN />} />
+      <Route path="/infinity" element={<InfinityEN />} />
+      <Route path="/packages-pricing" element={<PackagesPricing />} />
+      <Route path="/about" element={<AboutEN />} />
+      <Route path="/business" element={<Business />} />
+      <Route path="/blog" element={<BlogEN />} />
+      <Route path="/blog/:slug" element={<BlogArticleEN />} />
+      <Route path="/collections" element={<Collections />} />
+      <Route path="/collections/:slug" element={<CollectionDetail />} />
+      <Route path="/buy-credits" element={<BuyCredits />} />
+      <Route path="/test-accounts" element={<TestAccounts />} />
+      <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+      <Route path="*" element={<NotFound />} />
+    </Route>
   </Routes>
 );
 

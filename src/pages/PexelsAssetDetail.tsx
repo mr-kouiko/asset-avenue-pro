@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -71,7 +70,7 @@ const PexelsAssetDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header /><Navigation />
+        <Navigation />
         <div className="container py-8 max-w-6xl">
           <Skeleton className="h-8 w-48 mb-6" />
           <Skeleton className="aspect-video w-full rounded-xl mb-6" />
@@ -85,7 +84,7 @@ const PexelsAssetDetail = () => {
   if (error || !item) {
     return (
       <div className="min-h-screen bg-background">
-        <Header /><Navigation />
+        <Navigation />
         <div className="container py-16 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Asset Not Found</h1>
           <p className="text-muted-foreground mb-6">{error || 'This asset could not be loaded.'}</p>
@@ -99,7 +98,7 @@ const PexelsAssetDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header /><Navigation />
+      <Navigation />
       <PexelsSchemaOrg item={item} isVideo={isVideo} slug={pageSlug} productStyle seoContent={seoContent} />
 
       <article className="container py-8 max-w-6xl">

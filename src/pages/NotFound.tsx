@@ -1,6 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Home, Search, ArrowLeft } from "lucide-react";
@@ -55,7 +54,6 @@ const NotFound = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <div className="container py-16 flex flex-col items-center justify-center text-center">

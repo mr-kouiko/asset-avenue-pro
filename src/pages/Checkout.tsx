@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Header } from '@/components/Header';
 import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,7 +109,6 @@ const Checkout = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         <div className="container py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Connexion requise</h1>
@@ -128,7 +126,6 @@ const Checkout = () => {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         <div className="container py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Panier vide</h1>
@@ -142,7 +139,6 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <div className="container py-8 max-w-2xl">

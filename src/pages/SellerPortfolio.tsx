@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { slugifyStoreName } from "@/utils/slugGenerator";
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -223,7 +222,6 @@ const SellerPortfolio = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         <div className="container py-8 flex items-center justify-center">
           <div className="flex items-center gap-3">
@@ -238,7 +236,6 @@ const SellerPortfolio = () => {
   if (error || !seller) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         <div className="container py-8 text-center">
           <Store className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -296,7 +293,6 @@ const SellerPortfolio = () => {
       {sellerProducts.length > 0 && (
         <JsonLd id="ld-seller-itemlist" data={itemListSchema} />
       )}
-      <Header />
       <Navigation />
       
       

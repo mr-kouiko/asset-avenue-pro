@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Header } from '@/components/Header';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,6 @@ import { XCircle, ArrowLeft, RefreshCw, HelpCircle } from 'lucide-react';
 const PaymentCancelled = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <div className="container py-16">

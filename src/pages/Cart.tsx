@@ -1,4 +1,3 @@
-import { Header } from "@/components/Header";
 import { Navigation } from "@/components/Navigation";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ const Cart = () => {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <Navigation />
         
         <div className="container py-16">
@@ -33,7 +31,6 @@ const Cart = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Navigation />
       
       <div className="container py-8">
