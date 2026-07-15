@@ -173,12 +173,32 @@ export const useSEO = (config: SEOConfig) => {
 
     // Product specific - Schema.org structured data
     if (type === 'product' && price !== undefined) {
+      // If we have per-image metadata, emit `image` as a full ImageObject so Google Images
+      // sees creator / creditText / copyrightNotice / acquireLicensePage.
+      const imageNode: unknown = imageMetadata
+        ? {
+            "@type": "ImageObject",
+            "contentUrl": image,
+            "url": image,
+            "creator": {
+              "@type": imageMetadata.creatorType ?? "Person",
+              "name": imageMetadata.creator,
+            },
+            "creditText": imageMetadata.creditText,
+            ...(imageMetadata.copyrightNotice
+              ? { "copyrightNotice": imageMetadata.copyrightNotice }
+              : {}),
+            "acquireLicensePage": imageMetadata.acquireLicensePage,
+            "license": imageMetadata.acquireLicensePage,
+          }
+        : image;
+
       const structuredData = {
         "@context": "https://schema.org",
         "@type": "Product",
         "name": title,
         "description": description,
-        "image": image,
+        "image": imageNode,
         "url": fullUrl,
         "brand": {
           "@type": "Brand",
@@ -201,6 +221,7 @@ export const useSEO = (config: SEOConfig) => {
           "keywords": tags.join(', ')
         })
       };
+
 
       // Remove only previously-injected dynamic structured data (preserve sitewide Organization schema from index.html)
       const existingScript = document.querySelector('script[type="application/ld+json"][data-seo-dynamic="true"]');
