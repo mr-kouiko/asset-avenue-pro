@@ -2,6 +2,19 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+interface ImageMetadata {
+  /** Name of the image's creator (photographer, illustrator, seller). */
+  creator: string;
+  /** Schema.org type for the creator. Defaults to Person. */
+  creatorType?: 'Person' | 'Organization';
+  /** Short attribution string, e.g. "{creator} / VisuStock" or "Photo by {creator}". */
+  creditText: string;
+  /** Copyright notice. Leave empty/undefined for third-party assets we don't own. */
+  copyrightNotice?: string;
+  /** Canonical URL where the license can be acquired (i.e. this product page). */
+  acquireLicensePage: string;
+}
+
 interface SEOConfig {
   title: string;
   description: string;
@@ -13,7 +26,10 @@ interface SEOConfig {
   price?: number;
   currency?: string;
   noindex?: boolean;
+  /** When set on an image product, enriches the Product's `image` with ImageObject metadata for Google Images. */
+  imageMetadata?: ImageMetadata;
 }
+
 
 const DEFAULT_IMAGE = 'https://visustock.com/__l5e/assets-v1/3d772d83-288d-4e75-b369-f849731fa339/og-image.jpg';
 const SITE_NAME = 'VisuStock';
