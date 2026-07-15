@@ -11,12 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, MapPin, Clock, Code } from "lucide-react";
 
 import { useSEO } from "@/hooks/useSEO";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ContactEN = () => {
+  const { t } = useLanguage();
+
   useSEO({
-    title: "Contact Us",
-    description: "Get in touch with the VisuStock team for support, billing, partnerships or legal inquiries. We typically reply within one business day.",
+    title: t('ct.title'),
+    description: t('ct.subtitle'),
   });
+
   useEffect(() => {
     const schema = {
       "@context": "https://schema.org",
@@ -67,65 +71,65 @@ const ContactEN = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <Navigation />
-      
+
       <div className="container py-8 flex-1">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
+          <h1 className="text-4xl font-bold mb-4">{t('ct.title')}</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Our team is here to help you. Feel free to contact us.
+            {t('ct.subtitle')}
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Contact Form */}
           <Card className="p-8">
-            <h2 className="text-2xl font-semibold mb-6">Send us a message</h2>
-            
+            <h2 className="text-2xl font-semibold mb-6">{t('ct.form.title')}</h2>
+
             <form className="space-y-6">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input id="firstName" placeholder="Your first name" required />
+                  <Label htmlFor="firstName">{t('ct.form.firstName')}</Label>
+                  <Input id="firstName" placeholder={t('ct.form.firstNamePh')} required />
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input id="lastName" placeholder="Your last name" required />
+                  <Label htmlFor="lastName">{t('ct.form.lastName')}</Label>
+                  <Input id="lastName" placeholder={t('ct.form.lastNamePh')} required />
                 </div>
               </div>
-              
+
               <div>
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">{t('ct.form.email')}</Label>
                 <Input id="email" type="email" placeholder="your@email.com" required />
               </div>
-              
+
               <div>
-                <Label htmlFor="subject">Subject *</Label>
+                <Label htmlFor="subject">{t('ct.form.subject')}</Label>
                 <Select required>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a subject" />
+                    <SelectValue placeholder={t('ct.form.subjectPh')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="support">Technical Support</SelectItem>
-                    <SelectItem value="billing">Billing</SelectItem>
-                    <SelectItem value="partnership">Partnership</SelectItem>
-                    <SelectItem value="legal">Legal Questions</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="support">{t('ct.form.subject.support')}</SelectItem>
+                    <SelectItem value="billing">{t('ct.form.subject.billing')}</SelectItem>
+                    <SelectItem value="partnership">{t('ct.form.subject.partnership')}</SelectItem>
+                    <SelectItem value="legal">{t('ct.form.subject.legal')}</SelectItem>
+                    <SelectItem value="other">{t('ct.form.subject.other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <Label htmlFor="message">Message *</Label>
-                <Textarea 
-                  id="message" 
-                  placeholder="Describe your request in detail..."
+                <Label htmlFor="message">{t('ct.form.message')}</Label>
+                <Textarea
+                  id="message"
+                  placeholder={t('ct.form.messagePh')}
                   rows={6}
                   required
                 />
               </div>
-              
+
               <Button size="lg" className="w-full">
-                Send Message
+                {t('ct.form.send')}
               </Button>
             </form>
           </Card>
@@ -133,35 +137,35 @@ const ContactEN = () => {
           {/* Contact Information */}
           <div className="space-y-6">
             <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
-              
+              <h3 className="text-xl font-semibold mb-4">{t('ct.info.title')}</h3>
+
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <Mail className="h-5 w-5 text-primary mt-1" />
                   <div>
-                    <p className="font-medium">Support Email</p>
+                    <p className="font-medium">{t('ct.info.email')}</p>
                     <p className="text-muted-foreground">contact@visustock.com</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <MapPin className="h-5 w-5 text-primary mt-1" />
                   <div>
-                    <p className="font-medium">Address</p>
+                    <p className="font-medium">{t('ct.info.address')}</p>
                     <p className="text-muted-foreground">
                       27 Place de la Madeleine<br />
                       75008 Paris, France
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <Clock className="h-5 w-5 text-primary mt-1" />
                   <div>
-                    <p className="font-medium">Hours</p>
+                    <p className="font-medium">{t('ct.info.hours')}</p>
                     <p className="text-muted-foreground">
-                      Mon – Fri: 9:00 AM – 6:00 PM (CET)<br />
-                      Sat: 10:00 AM – 4:00 PM (CET)
+                      {t('ct.info.hoursMonFri')}<br />
+                      {t('ct.info.hoursSat')}
                     </p>
                   </div>
                 </div>
@@ -172,21 +176,21 @@ const ContactEN = () => {
               <div className="flex items-start space-x-3">
                 <Code className="h-5 w-5 text-primary mt-1" />
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Developer Contact</h3>
+                  <h3 className="text-xl font-semibold mb-2">{t('ct.dev.title')}</h3>
                   <p className="text-muted-foreground mb-2">
-                    For technical inquiries, API questions, or integration support:
+                    {t('ct.dev.desc')}
                   </p>
-                  <p className="text-muted-foreground"><strong>Email:</strong> contact@visustock.com</p>
+                  <p className="text-muted-foreground"><strong>{t('ct.dev.emailLabel')}</strong> contact@visustock.com</p>
                 </div>
               </div>
             </Card>
 
             <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Legal Inquiries</h3>
+              <h3 className="text-xl font-semibold mb-4">{t('ct.legal.title')}</h3>
               <p className="text-muted-foreground mb-2">
-                For GDPR requests, data deletion, or legal matters:
+                {t('ct.legal.desc')}
               </p>
-              <p className="text-muted-foreground"><strong>Email:</strong> contact@visustock.com</p>
+              <p className="text-muted-foreground"><strong>{t('ct.dev.emailLabel')}</strong> contact@visustock.com</p>
             </Card>
           </div>
         </div>
