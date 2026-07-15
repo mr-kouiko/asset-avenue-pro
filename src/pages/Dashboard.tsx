@@ -240,7 +240,8 @@ const Dashboard = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+
+
         <div className="container py-16 text-center">
           <AlertCircle className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
           <h1 className="text-3xl font-bold mb-4">{t('sd.unauthorized')}</h1>
