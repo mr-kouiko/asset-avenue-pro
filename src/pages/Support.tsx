@@ -70,9 +70,6 @@ const Support = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <Navigation />
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <Navigation />
