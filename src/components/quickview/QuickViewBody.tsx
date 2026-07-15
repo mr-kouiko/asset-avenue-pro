@@ -36,6 +36,9 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
               key={src}
               src={src}
               controls
+              controlsList="nodownload noplaybackrate"
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
               autoPlay={false}
               playsInline
               className="max-w-full max-h-full object-contain"
