@@ -1408,12 +1408,20 @@ const ProductManagement = () => {
                 </Button>
               </div>
               
-              <div className="flex justify-center items-center flex-1 min-h-0 overflow-hidden">
+              <div className="relative flex justify-center items-center flex-1 min-h-0 min-w-0 overflow-hidden">
                 {previewFile.type.startsWith('image/') && (
-                  <img 
-                    src={previewFile.url} 
+                  <img
+                    src={previewFile.url}
                     alt={previewFile.name}
-                    className="max-w-full max-h-full object-contain rounded-lg"
+                    decoding="async"
+                    className="block rounded-lg"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                    }}
                   />
                 )}
                 
