@@ -317,9 +317,11 @@ const ProductDetailInner = () => {
   
   // Image products get extra Google-required ImageObject metadata.
   const isImageProduct = activeProduct?.type === 'photo' || activeProduct?.type === 'illustration';
-  const productCanonicalUrl = activeProduct?.slug
-    ? `https://visustock.com/products/${activeProduct.slug}`
+  const productSlug = (activeProduct as { slug?: string } | null)?.slug;
+  const productCanonicalUrl = productSlug
+    ? `https://visustock.com/products/${productSlug}`
     : `https://visustock.com/products/${activeProduct?.id ?? ''}`;
+
   const imageCreator = activeProduct?.author?.trim() || 'VisuStock';
   const imageMetadata = isImageProduct && productImage
     ? {
