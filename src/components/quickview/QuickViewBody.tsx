@@ -108,7 +108,7 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
               onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
               autoPlay={false}
               playsInline
-              className="max-w-full max-h-full object-contain cursor-pointer"
+              className="w-full h-full object-contain cursor-pointer"
               poster={item.thumbnail}
             />
             <VideoWatermark size="large" />
