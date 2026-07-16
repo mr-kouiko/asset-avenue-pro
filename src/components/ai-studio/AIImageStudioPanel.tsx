@@ -221,6 +221,8 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
 interface TriggerProps {
   imageUrl: string;
   filenameBase?: string;
+  source?: Source;
+  productId?: string;
   className?: string;
   size?: "sm" | "default" | "lg";
   variant?: "default" | "outline" | "secondary" | "ghost";
@@ -230,6 +232,8 @@ interface TriggerProps {
 export function AIImageStudioTrigger({
   imageUrl,
   filenameBase,
+  source = "internal",
+  productId,
   className,
   size = "sm",
   variant = "secondary",
@@ -253,6 +257,8 @@ export function AIImageStudioTrigger({
           onOpenChange={setOpen}
           imageUrl={imageUrl}
           filenameBase={filenameBase}
+          source={source}
+          productId={productId}
         />
       )}
     </>
