@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Loader2, Download, ImageIcon, Wand2, Scissors, Maximize2, Palette, Sun, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,12 +10,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { applyImageWatermark, triggerDownload } from "@/utils/imageWatermark";
 
 type Action = "prompt" | "remove-bg" | "expand" | "change-bg" | "change-mood" | "change-color";
+type Source = "pexels" | "internal";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   imageUrl: string;
   filenameBase?: string;
+  source?: Source;
+  productId?: string;
 }
 
 const ACTIONS: { id: Action; label: string; icon: any; needsPrompt: boolean; placeholder?: string }[] = [
