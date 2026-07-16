@@ -336,6 +336,12 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
                     Download original
                   </Button>
                 )}
+                {shouldWatermark && productId && productInfo && (
+                  <Button onClick={() => setPurchaseOpen(true)} className="w-full gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Purchase license to download unwatermarked
+                  </Button>
+                )}
               </div>
             )}
 
