@@ -1393,9 +1393,9 @@ const ProductManagement = () => {
         </div>
 
         {/* Preview Modal */}
-        {isPreviewOpen && previewFile && (
+        {isPreviewOpen && previewFile && createPortal(
           <div 
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4"
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-2 sm:p-4"
             onClick={closePreview}
           >
             <div 
@@ -1415,22 +1415,14 @@ const ProductManagement = () => {
                     src={previewFile.url}
                     alt={previewFile.name}
                     decoding="async"
-                    className="block rounded-lg"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: 'auto',
-                      height: 'auto',
-                      objectFit: 'contain',
-                    }}
+                    className="block rounded-lg max-w-full max-h-full w-auto h-auto object-contain"
                   />
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
-                  <div className="w-full h-[calc(95vh-8rem)] flex-1 min-h-0 max-h-[calc(95vh-8rem)] flex items-center justify-center overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-full [&_video]:h-full [&_video]:object-contain">
+                  <div className="w-full h-full flex-1 min-h-0 flex items-center justify-center overflow-hidden [&_video]:max-h-full [&_video]:max-w-full [&_video]:w-full [&_video]:h-full [&_video]:object-contain">
                     <MediaPlayer 
                       src={(() => {
-                        // For CDN URLs, proxy through edge function to ensure playback
                         const url = previewFile.url;
                         if (url && url.includes('cdn.visustock.com')) {
                           return `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/proxy-video?url=${encodeURIComponent(url)}`;
@@ -1474,7 +1466,8 @@ const ProductManagement = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>
