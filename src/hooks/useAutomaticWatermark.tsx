@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { generateThumbnail, addWatermarkToImage, createWebPreviewWithWatermark } from '@/utils/watermark';
 import { StreamingUploadHandler } from '@/components/media/StreamingUploadHandler';
 import { getProxiedVideoUrl } from '@/utils/videoProxy';
+import { buildSanitizedSvgFile, MAX_SVG_BYTES } from '@/utils/svgUtils';
 interface ProcessedFile {
   id: string;
   originalFile: File;
