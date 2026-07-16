@@ -712,7 +712,7 @@ const ProductDetailInner = () => {
             {product.type === 'photo' && (
               <div className="absolute top-4 left-4 z-10">
                 <AIImageStudioTrigger
-                  imageUrl={watermarkedUrl || product.thumbnail}
+                  imageUrl={product.thumbnail}
                   filenameBase={product.slug || product.id}
                   source="internal"
                   productId={product.id}
