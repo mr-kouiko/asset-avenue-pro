@@ -1399,7 +1399,7 @@ const ProductManagement = () => {
             onClick={closePreview}
           >
             <div 
-              className="bg-background rounded-lg p-3 sm:p-4 w-full max-w-[95vw] max-h-[95vh] flex flex-col overflow-hidden"
+              className="bg-background rounded-lg p-3 sm:p-4 w-full max-w-[95vw] h-[calc(100dvh-1rem)] sm:h-[calc(100dvh-2rem)] max-h-[95dvh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-3 flex-shrink-0">
@@ -1411,7 +1411,7 @@ const ProductManagement = () => {
               
               <div className="relative flex justify-center items-center flex-1 min-h-0 min-w-0 overflow-hidden">
                 {previewFile.type.startsWith('image/') && (
-                  <div className="w-full h-full flex-1 min-h-0 flex items-center justify-center overflow-hidden [&_img]:max-h-full [&_img]:max-w-full [&_img]:w-full [&_img]:h-full [&_img]:object-contain">
+                  <div className="w-full h-full flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden [&_img]:max-h-full [&_img]:max-w-full [&_img]:w-full [&_img]:h-full [&_img]:object-contain">
                     <img
                       src={previewFile.url}
                       alt={previewFile.name}
