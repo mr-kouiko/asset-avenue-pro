@@ -102,6 +102,45 @@ serve(async (req) => {
     }
 
     const finalPrompt = buildPrompt(action, prompt);
+
+    // Resolve the CLEAN original image when a productId is supplied. The public
+    // thumbnail may have a burned-in watermark; feeding that to Gemini would make
+    // the AI edit inherit the watermark. Load the original from the private
+    // bucket via the service role and hand a fresh signed URL to the model.
+    let sourceImageUrl = imageUrl;
+    if (productId) {
+      try {
+        const { data: files } = await serviceClient
+          .from("content_files")
+          .select("file_path, metadata, is_original, file_type")
+          .eq("submission_id", productId);
+        const original = (files || []).find((f: any) =>
+          f.is_original && String(f.file_type || "").toLowerCase().includes("image")
+        ) || (files || []).find((f: any) => f.is_original);
+        if (original?.file_path) {
+          let bucket = (original as any).metadata?.bucket || "content-uploads";
+          let relativePath: string = original.file_path;
+          if (relativePath.startsWith("http")) {
+            const u = new URL(relativePath);
+            const parts = u.pathname.split("/");
+            const idx = parts.indexOf("storage");
+            if (idx !== -1 && parts.length > idx + 4) {
+              bucket = parts[idx + 4];
+              relativePath = parts.slice(idx + 5).join("/");
+            }
+          }
+          const { data: signed } = await serviceClient
+            .storage.from(bucket).createSignedUrl(relativePath, 300);
+          if (signed?.signedUrl) {
+            sourceImageUrl = signed.signedUrl;
+            console.log(`[ai-edit-image] using clean original for product ${productId}`);
+          }
+        }
+      } catch (e) {
+        console.warn("[ai-edit-image] clean-original lookup failed", e);
+      }
+    }
+
     console.log(`[ai-edit-image] user=${user.id} action=${action}`);
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
