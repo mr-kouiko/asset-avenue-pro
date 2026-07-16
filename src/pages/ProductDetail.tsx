@@ -35,6 +35,7 @@ import { useInfinityAccess } from "@/hooks/useInfinityAccess";
 import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { useLikes } from "@/hooks/useLikes";
 import { SocialShareLazy } from "@/components/SocialShareLazy";
+import { AIImageStudioTrigger } from "@/components/ai-studio/AIImageStudioPanel";
 import { useSEO } from "@/hooks/useSEO";
 import { ReportModal } from "@/components/ReportModal";
 import { ProductReviews } from "@/components/product/ProductReviews";
@@ -706,6 +707,14 @@ const ProductDetailInner = () => {
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   <span className="text-sm">Applying protection watermark...</span>
                 </div>
+              </div>
+            )}
+            {product.type === 'photo' && (
+              <div className="absolute top-4 left-4 z-10">
+                <AIImageStudioTrigger
+                  imageUrl={watermarkedUrl || product.thumbnail}
+                  filenameBase={product.slug || product.id}
+                />
               </div>
             )}
           </div>

@@ -15,6 +15,7 @@ import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
 import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
 import { PexelsSEOSections } from "@/components/pexels/PexelsSEOSections";
 import { VideoWatermark } from "@/components/VideoWatermark";
+import { AIImageStudioTrigger } from "@/components/ai-studio/AIImageStudioPanel";
 
 const PexelsAssetDetail = () => {
   const { slug, pexelsId } = useParams<{ slug?: string; pexelsId?: string }>();
@@ -125,6 +126,12 @@ const PexelsAssetDetail = () => {
                 <div className="relative">
                   <LazyImage src={item.largeThumbnail || item.thumbnail} alt={item.alt || item.title} className="w-full object-contain" />
                   <VideoWatermark size="large" />
+                  <div className="absolute top-3 left-3 z-10">
+                    <AIImageStudioTrigger
+                      imageUrl={item.largeThumbnail || item.thumbnail}
+                      filenameBase={`pexels-${item.id}`}
+                    />
+                  </div>
                 </div>
               )}
             </div>

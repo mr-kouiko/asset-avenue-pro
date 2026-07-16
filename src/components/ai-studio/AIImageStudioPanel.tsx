@@ -1,0 +1,219 @@
+import { useState } from "react";
+import { Sparkles, Loader2, Download, ImageIcon, Wand2, Scissors, Maximize2, Palette, Sun, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { applyImageWatermark, triggerDownload } from "@/utils/imageWatermark";
+
+type Action = "prompt" | "remove-bg" | "expand" | "change-bg" | "change-mood" | "change-color";
+
+interface Props {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  imageUrl: string;
+  filenameBase?: string;
+}
+
+const ACTIONS: { id: Action; label: string; icon: any; needsPrompt: boolean; placeholder?: string }[] = [
+  { id: "prompt", label: "Type to edit", icon: Wand2, needsPrompt: true, placeholder: "Describe the edit — e.g. 'add a rainbow in the sky'" },
+  { id: "remove-bg", label: "Remove background", icon: Scissors, needsPrompt: false },
+  { id: "expand", label: "Expand image", icon: Maximize2, needsPrompt: false },
+  { id: "change-bg", label: "Change background", icon: ImageIcon, needsPrompt: true, placeholder: "New background — e.g. 'a sunlit beach at golden hour'" },
+  { id: "change-mood", label: "Change mood", icon: Sun, needsPrompt: true, placeholder: "New mood — e.g. 'moody cinematic night, neon lights'" },
+  { id: "change-color", label: "Change color", icon: Palette, needsPrompt: true, placeholder: "New palette — e.g. 'warm autumn tones' or 'teal & orange'" },
+];
+
+export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase = "visustock-edit" }: Props) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [action, setAction] = useState<Action>("prompt");
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
+
+  const current = ACTIONS.find((a) => a.id === action)!;
+
+  const run = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to use AI editing.", variant: "destructive" });
+      return;
+    }
+    if (current.needsPrompt && !prompt.trim() && action === "prompt") {
+      toast({ title: "Prompt required", description: "Describe the edit you want.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-edit-image", {
+        body: { action, imageUrl, prompt: prompt.trim() || undefined },
+      });
+      if (error) throw error;
+      if (!data?.imageUrl) throw new Error("No image returned");
+      setResult(data.imageUrl);
+      if (typeof data.creditsRemaining === "number") setCreditsLeft(data.creditsRemaining);
+      toast({ title: "Edit ready", description: "Preview your AI-edited image below." });
+    } catch (e: any) {
+      const msg = e?.message || "AI edit failed";
+      toast({ title: "Edit failed", description: msg, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const download = async () => {
+    if (!result) return;
+    setDownloading(true);
+    try {
+      const blob = await applyImageWatermark(result);
+      triggerDownload(blob, `${filenameBase}-${Date.now()}.png`);
+    } catch (e: any) {
+      toast({ title: "Download failed", description: e?.message || "Could not prepare file", variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const reset = () => {
+    setResult(null);
+    setPrompt("");
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" /> AI Image Studio
+          </SheetTitle>
+          <SheetDescription>
+            Edit this image with AI. Each edit costs 1 credit.
+            {creditsLeft !== null && ` • ${creditsLeft} credits remaining`}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Original</div>
+              <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border">
+                <img src={imageUrl} alt="Original" className="w-full h-full object-contain" crossOrigin="anonymous" />
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Result</div>
+              <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border flex items-center justify-center">
+                {loading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : result ? (
+                  <img src={result} alt="Result" className="w-full h-full object-contain" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">Preview</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Tabs value={action} onValueChange={(v) => { setAction(v as Action); setResult(null); }}>
+            <TabsList className="grid grid-cols-3 h-auto">
+              {ACTIONS.slice(0, 3).map((a) => (
+                <TabsTrigger key={a.id} value={a.id} className="text-xs gap-1 py-2">
+                  <a.icon className="h-3.5 w-3.5" /> {a.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <TabsList className="grid grid-cols-3 h-auto mt-1">
+              {ACTIONS.slice(3).map((a) => (
+                <TabsTrigger key={a.id} value={a.id} className="text-xs gap-1 py-2">
+                  <a.icon className="h-3.5 w-3.5" /> {a.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {ACTIONS.map((a) => (
+              <TabsContent key={a.id} value={a.id} className="mt-4 space-y-3">
+                {a.needsPrompt && (
+                  <Textarea
+                    placeholder={a.placeholder}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    rows={3}
+                  />
+                )}
+                <div className="flex gap-2">
+                  <Button onClick={run} disabled={loading} className="flex-1 gap-2">
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {loading ? "Generating…" : "Generate (1 credit)"}
+                  </Button>
+                  {result && (
+                    <Button variant="outline" onClick={reset} title="Reset">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+
+          {result && (
+            <Button onClick={download} disabled={downloading} variant="secondary" className="w-full gap-2">
+              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Download watermarked
+            </Button>
+          )}
+
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark, purchase the original license.
+          </p>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+interface TriggerProps {
+  imageUrl: string;
+  filenameBase?: string;
+  className?: string;
+  size?: "sm" | "default" | "lg";
+  variant?: "default" | "outline" | "secondary" | "ghost";
+  label?: string;
+}
+
+export function AIImageStudioTrigger({
+  imageUrl,
+  filenameBase,
+  className,
+  size = "sm",
+  variant = "secondary",
+  label = "Edit with AI",
+}: TriggerProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        type="button"
+        size={size}
+        variant={variant}
+        className={`gap-2 ${className || ""}`}
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+      >
+        <Sparkles className="h-4 w-4" /> {label}
+      </Button>
+      {open && (
+        <AIImageStudioPanel
+          open={open}
+          onOpenChange={setOpen}
+          imageUrl={imageUrl}
+          filenameBase={filenameBase}
+        />
+      )}
+    </>
+  );
+}

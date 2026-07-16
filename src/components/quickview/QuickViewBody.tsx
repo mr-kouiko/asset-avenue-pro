@@ -10,6 +10,7 @@ import { LazyImage } from '@/components/LazyImage';
 import { VideoWatermark } from '@/components/VideoWatermark';
 import { SocialShare } from '@/components/SocialShare';
 import { QuickViewItem, useQuickView } from './QuickViewContext';
+import { AIImageStudioTrigger } from '@/components/ai-studio/AIImageStudioPanel';
 
 interface Props { item: QuickViewItem; }
 
@@ -172,6 +173,7 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
 
   // photo / vector / fallback
   const src = preview || item.thumbnail;
+  const isEditable = item.type === 'photo';
   return (
     <div
       className="relative w-full h-full flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden cursor-zoom-in"
@@ -182,6 +184,11 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
         alt={item.title}
         className={`transition-transform duration-200 ${zoomed ? 'scale-150 cursor-zoom-out' : 'max-w-full max-h-full object-contain'}`}
       />
+      {isEditable && (
+        <div className="absolute top-3 left-3" onClick={(e) => e.stopPropagation()}>
+          <AIImageStudioTrigger imageUrl={src} filenameBase={item.slug || item.id} />
+        </div>
+      )}
       <div className="absolute bottom-3 right-3 bg-background/80 backdrop-blur px-2 py-1 rounded text-xs flex items-center gap-1 pointer-events-none">
         <ZoomIn className="h-3 w-3" /> Click to {zoomed ? 'reset' : 'zoom'}
       </div>
