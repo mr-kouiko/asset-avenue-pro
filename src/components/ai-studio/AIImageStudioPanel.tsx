@@ -203,13 +203,25 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
           {result && (
             <Button onClick={download} disabled={downloading} variant="secondary" className="w-full gap-2">
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {shouldWatermark ? "Download watermarked" : "Download"}
+              {shouldWatermark ? "Download watermarked" : "Download unwatermarked"}
             </Button>
           )}
 
           {shouldWatermark && (
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark, purchase the original license.
+              Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark,{" "}
+              {productId ? (
+                <a
+                  href={`/product/${productId}`}
+                  className="underline text-primary hover:opacity-80"
+                  onClick={() => onOpenChange(false)}
+                >
+                  purchase the original license
+                </a>
+              ) : (
+                "purchase the original license"
+              )}
+              .
             </p>
           )}
         </div>
