@@ -235,26 +235,58 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
           </SheetHeader>
 
           <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Original</div>
-                <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border">
-                  <img src={imageUrl} alt="Original" className="w-full h-full object-contain" crossOrigin="anonymous" />
+            {(() => {
+              const needsWatermark = source === "internal" && !licenseOwned;
+              const noSave = {
+                onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+                onDragStart: (e: React.DragEvent) => e.preventDefault(),
+                draggable: false,
+                style: { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as React.CSSProperties,
+              };
+              const wmOverlay = needsWatermark ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(-30deg, transparent 0 60px, rgba(255,255,255,0.18) 60px 61px)",
+                  }}
+                >
+                  <span
+                    className="text-white/40 font-bold tracking-[0.3em] text-xl -rotate-30 select-none"
+                    style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)", transform: "rotate(-30deg)" }}
+                  >
+                    VISUSTOCK · PREVIEW
+                  </span>
                 </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Result</div>
-                <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border flex items-center justify-center">
-                  {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  ) : result ? (
-                    <img src={result} alt="Result" className="w-full h-full object-contain" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Preview</span>
-                  )}
+              ) : null;
+              return (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Original</div>
+                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted/30 border">
+                      <img src={imageUrl} alt="Original" className="w-full h-full object-contain" crossOrigin="anonymous" {...noSave} />
+                      {wmOverlay}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Result</div>
+                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted/30 border flex items-center justify-center">
+                      {loading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      ) : result ? (
+                        <>
+                          <img src={result} alt="Result" className="w-full h-full object-contain" {...noSave} />
+                          {wmOverlay}
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Preview</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             <Tabs value={action} onValueChange={(v) => { setAction(v as Action); setResult(null); }}>
               <TabsList className="grid grid-cols-3 h-auto">
