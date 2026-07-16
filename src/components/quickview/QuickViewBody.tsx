@@ -187,7 +187,7 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
       {isEditable && (
         <div className="absolute top-3 left-3" onClick={(e) => e.stopPropagation()}>
           <AIImageStudioTrigger
-            imageUrl={src}
+            imageUrl={item.thumbnail}
             filenameBase={item.slug || item.id}
             source={item.source || 'internal'}
             productId={item.id}
