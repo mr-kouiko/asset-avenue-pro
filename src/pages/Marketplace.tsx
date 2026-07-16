@@ -390,6 +390,7 @@ const Marketplace = () => {
       price: Number(c.price) || 0,
       videoUrl: c.videoUrl,
       audioUrl: c.audioUrl,
+      source: 'internal',
     }));
 
     const openAt = (id: string) => {
