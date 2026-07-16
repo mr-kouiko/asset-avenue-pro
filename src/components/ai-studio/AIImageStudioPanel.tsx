@@ -66,6 +66,16 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
   const { secureDownload, isProcessing: downloadingOriginal } = useSecureDownload();
 
   const current = ACTIONS.find((a) => a.id === action)!;
+  const fallbackProductInfo: ProductInfo | null = productId
+    ? {
+        title: filenameBase.replace(/[-_]/g, " ") || "VisuStock image",
+        author: "Creator",
+        price: null,
+        type: "photo",
+        thumbnail: imageUrl,
+      }
+    : null;
+  const resolvedProductInfo = productInfo ?? fallbackProductInfo;
 
   const refreshLicense = useCallback(async () => {
     if (source !== "internal" || !user || !productId) {
@@ -95,26 +105,34 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
     }
     let cancelled = false;
     (async () => {
-      const [subRes, fileRes] = await Promise.all([
-        supabase.from("content_submissions").select("title, price, content_type, thumbnail_url, user_id").eq("id", productId).maybeSingle(),
-        supabase.from("content_files").select("id").eq("submission_id", productId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+      const [subRes, filesRes] = await Promise.all([
+        supabase.from("content_submissions").select("title, price, creator_id").eq("id", productId).maybeSingle(),
+        supabase.from("content_files").select("id, file_type, thumbnail_path, is_original").eq("submission_id", productId),
       ]);
       if (cancelled) return;
       const sub: any = subRes.data;
+      const files = (filesRes.data || []) as Array<{ id: string; file_type?: string | null; thumbnail_path?: string | null; is_original?: boolean | null }>;
+      const originalFile = files.find((file) => file.is_original) || files[0];
       if (sub) {
         let author = "Creator";
-        if (sub.user_id) {
-          const { data: profile } = await supabase.from("profiles").select("display_name, store_name").eq("user_id", sub.user_id).maybeSingle();
+        if (sub.creator_id) {
+          const { data: profile } = await supabase.from("profiles").select("display_name, store_name").eq("user_id", sub.creator_id).maybeSingle();
           author = profile?.display_name || profile?.store_name || "Creator";
         }
+        const fileType = String(originalFile?.file_type || "").toLowerCase();
+        const type = fileType.includes("svg") || fileType.includes("vector")
+          ? "vector"
+          : fileType.includes("image")
+            ? "photo"
+            : fileType || "photo";
         if (!cancelled) {
           setProductInfo({
             title: sub.title,
             author,
             price: sub.price,
-            type: sub.content_type,
-            thumbnail: sub.thumbnail_url,
-            contentFileId: fileRes.data?.id,
+            type,
+            thumbnail: originalFile?.thumbnail_path || imageUrl,
+            contentFileId: originalFile?.id,
           });
         }
       }
@@ -187,28 +205,34 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
 
   // Purchase flow
   const buildItem = () => {
-    if (!productInfo || !productId) return null;
+    if (!resolvedProductInfo || !productId) return null;
     return {
       submission_id: productId,
-      title: productInfo.title,
-      author: productInfo.author,
-      price: productInfo.price,
+      title: resolvedProductInfo.title,
+      author: resolvedProductInfo.author,
+      price: resolvedProductInfo.price,
       license_id: selectedLicense,
-      type: productInfo.type,
-      thumbnail: productInfo.thumbnail,
+      type: resolvedProductInfo.type,
+      thumbnail: resolvedProductInfo.thumbnail,
     };
   };
 
   const handlePayPal = async () => {
     const item = buildItem();
-    if (!item) return;
+    if (!item) {
+      toast({ title: "Purchase unavailable", description: "Could not identify this product.", variant: "destructive" });
+      return;
+    }
     // PayPal redirects the browser — user returns via /payment-success
     await createDirectPayment(item, selectedLicense);
   };
 
   const handleCredits = async () => {
     const item = buildItem();
-    if (!item) return;
+    if (!item) {
+      toast({ title: "Purchase unavailable", description: "Could not identify this product.", variant: "destructive" });
+      return;
+    }
     const result = await payWithCredits(item, selectedLicense);
     if (result?.success) {
       setPurchaseOpen(false);
@@ -217,8 +241,9 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
     }
   };
 
-  const total = productInfo ? getItemTotal(buildItem()!, selectedLicense) : 0;
-  const canCredits = productInfo ? canPayWithCreditsForItem(buildItem()!, selectedLicense) : false;
+  const purchaseItem = buildItem();
+  const total = purchaseItem ? getItemTotal(purchaseItem, selectedLicense) : 0;
+  const canCredits = purchaseItem ? canPayWithCreditsForItem(purchaseItem, selectedLicense) : false;
 
   return (
     <>
@@ -336,19 +361,33 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
                     Download original
                   </Button>
                 )}
-                {shouldWatermark && productId && productInfo && (
+                {shouldWatermark && productId && (
                   <Button onClick={() => setPurchaseOpen(true)} className="w-full gap-2">
                     <ShoppingCart className="h-4 w-4" />
-                    Purchase license to download unwatermarked
+                    Buy license & download
                   </Button>
                 )}
               </div>
             )}
 
+            {!result && !shouldWatermark && source === "internal" && productInfo?.contentFileId && (
+              <Button onClick={downloadOriginal} disabled={downloadingOriginal} variant="outline" className="w-full gap-2">
+                {downloadingOriginal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Download original
+              </Button>
+            )}
+
+            {!result && shouldWatermark && productId && (
+              <Button onClick={() => setPurchaseOpen(true)} className="w-full gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Buy license & download
+              </Button>
+            )}
+
             {shouldWatermark && (
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark,{" "}
-                {productId && productInfo ? (
+                {productId ? (
                   <button
                     type="button"
                     onClick={() => setPurchaseOpen(true)}
@@ -372,7 +411,7 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
           <DialogHeader>
             <DialogTitle>Purchase license</DialogTitle>
             <DialogDescription>
-              {productInfo?.title ? `Choose a license for "${productInfo.title}".` : "Choose a license."}
+              {resolvedProductInfo?.title ? `Choose a license for "${resolvedProductInfo.title}".` : "Choose a license."}
             </DialogDescription>
           </DialogHeader>
 
@@ -397,7 +436,7 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
             ))}
           </div>
 
-          {productInfo && (
+          {purchaseItem && (
             <div className="flex items-center justify-between text-sm border-t pt-3">
               <span className="text-muted-foreground">Total</span>
               <span className="font-semibold">${total}</span>

@@ -432,6 +432,7 @@ serve(async (req) => {
     } else {
       // ============ MARKETPLACE PURCHASE ============
       const cartItems = customData.cart_items || [];
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       
       for (const item of cartItems) {
         const { data: existingDownload } = await supabaseAdmin
@@ -442,12 +443,34 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existingDownload) {
-          await supabaseAdmin.from('downloads').insert({
+          let licenseUuid = null;
+          if (item.license_id) {
+            if (uuidPattern.test(String(item.license_id))) {
+              licenseUuid = item.license_id;
+            } else {
+              const { data: licenseData, error: licenseError } = await supabaseAdmin
+                .from('licenses')
+                .select('id')
+                .eq('type', item.license_id)
+                .maybeSingle();
+              if (licenseError) {
+                console.error('License lookup failed:', licenseError);
+              }
+              licenseUuid = licenseData?.id || null;
+            }
+          }
+
+          const { error: downloadInsertError } = await supabaseAdmin.from('downloads').insert({
             user_id: user.id,
             submission_id: item.submission_id,
-            license_id: item.license_id,
+            license_id: licenseUuid,
             expires_at: null,
           });
+
+          if (downloadInsertError) {
+            console.error('Failed to create download record:', downloadInsertError);
+            throw new Error('Failed to create download access');
+          }
         }
       }
 
