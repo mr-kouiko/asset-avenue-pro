@@ -246,19 +246,14 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
               const wmOverlay = needsWatermark ? (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+                  className="pointer-events-none absolute inset-0 overflow-hidden"
                   style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(-30deg, transparent 0 60px, rgba(255,255,255,0.18) 60px 61px)",
+                    backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(
+                      `<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><defs><pattern id='vs' patternUnits='userSpaceOnUse' width='220' height='110' patternTransform='rotate(-30 110 55)'><text x='0' y='70' fill='rgba(255,255,255,0.38)' font-family='system-ui,-apple-system,sans-serif' font-size='20' font-weight='700' letter-spacing='0.12em' style='text-shadow:0 1px 3px rgba(0,0,0,0.45)'>VISUSTOCK</text></pattern></defs><rect width='100%' height='100%' fill='url(%23vs)'/></svg>`
+                    )}")`,
+                    backgroundSize: "220px 220px",
                   }}
-                >
-                  <span
-                    className="text-white/40 font-bold tracking-[0.3em] text-xl -rotate-30 select-none"
-                    style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)", transform: "rotate(-30deg)" }}
-                  >
-                    VISUSTOCK · PREVIEW
-                  </span>
-                </div>
+                />
               ) : null;
               return (
                 <div className="grid grid-cols-2 gap-3">
