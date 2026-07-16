@@ -10,6 +10,7 @@ import { LazyImage } from '@/components/LazyImage';
 import { VideoWatermark } from '@/components/VideoWatermark';
 import { SocialShare } from '@/components/SocialShare';
 import { QuickViewItem, useQuickView } from './QuickViewContext';
+import { AIImageStudioTrigger } from '@/components/ai-studio/AIImageStudioPanel';
 
 interface Props { item: QuickViewItem; }
 
