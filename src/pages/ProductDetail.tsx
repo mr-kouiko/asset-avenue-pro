@@ -714,6 +714,8 @@ const ProductDetailInner = () => {
                 <AIImageStudioTrigger
                   imageUrl={watermarkedUrl || product.thumbnail}
                   filenameBase={product.slug || product.id}
+                  source="internal"
+                  productId={product.id}
                 />
               </div>
             )}

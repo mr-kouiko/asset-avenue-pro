@@ -11,6 +11,7 @@ export interface QuickViewItem {
   thumbnail: string;
   videoUrl?: string;
   audioUrl?: string;
+  source?: 'pexels' | 'internal';
 }
 
 interface QuickViewCtx {

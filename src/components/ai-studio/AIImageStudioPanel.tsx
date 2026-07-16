@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Loader2, Download, ImageIcon, Wand2, Scissors, Maximize2, Palette, Sun, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,12 +10,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { applyImageWatermark, triggerDownload } from "@/utils/imageWatermark";
 
 type Action = "prompt" | "remove-bg" | "expand" | "change-bg" | "change-mood" | "change-color";
+type Source = "pexels" | "internal";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   imageUrl: string;
   filenameBase?: string;
+  source?: Source;
+  productId?: string;
 }
 
 const ACTIONS: { id: Action; label: string; icon: any; needsPrompt: boolean; placeholder?: string }[] = [
@@ -27,7 +30,7 @@ const ACTIONS: { id: Action; label: string; icon: any; needsPrompt: boolean; pla
   { id: "change-color", label: "Change color", icon: Palette, needsPrompt: true, placeholder: "New palette — e.g. 'warm autumn tones' or 'teal & orange'" },
 ];
 
-export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase = "visustock-edit" }: Props) {
+export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase = "visustock-edit", source = "internal", productId }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [action, setAction] = useState<Action>("prompt");
@@ -36,8 +39,37 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
   const [result, setResult] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
+  const [licenseOwned, setLicenseOwned] = useState(false);
 
   const current = ACTIONS.find((a) => a.id === action)!;
+
+  // For internal assets, check whether the current user has already purchased/downloaded
+  // a license for the original asset. If yes, the AI-edited result can be unwatermarked.
+  useEffect(() => {
+    if (!open || source !== "internal" || !user || !productId) {
+      setLicenseOwned(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("downloads")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("submission_id", productId)
+        .limit(1);
+      if (cancelled) return;
+      if (error) {
+        console.warn("License ownership check failed:", error);
+        setLicenseOwned(false);
+        return;
+      }
+      setLicenseOwned((data?.length ?? 0) > 0);
+    })();
+    return () => { cancelled = true; };
+  }, [open, source, user, productId]);
+
+  const shouldWatermark = source === "internal" && !licenseOwned;
 
   const run = async () => {
     if (!user) {
@@ -71,7 +103,14 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
     if (!result) return;
     setDownloading(true);
     try {
-      const blob = await applyImageWatermark(result);
+      let blob: Blob;
+      if (shouldWatermark) {
+        blob = await applyImageWatermark(result);
+      } else {
+        const res = await fetch(result, { credentials: "omit" });
+        if (!res.ok) throw new Error("Could not fetch edited image");
+        blob = await res.blob();
+      }
       triggerDownload(blob, `${filenameBase}-${Date.now()}.png`);
     } catch (e: any) {
       toast({ title: "Download failed", description: e?.message || "Could not prepare file", variant: "destructive" });
@@ -164,13 +203,15 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
           {result && (
             <Button onClick={download} disabled={downloading} variant="secondary" className="w-full gap-2">
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Download watermarked
+              {shouldWatermark ? "Download watermarked" : "Download"}
             </Button>
           )}
 
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark, purchase the original license.
-          </p>
+          {shouldWatermark && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark, purchase the original license.
+            </p>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -180,6 +221,8 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
 interface TriggerProps {
   imageUrl: string;
   filenameBase?: string;
+  source?: Source;
+  productId?: string;
   className?: string;
   size?: "sm" | "default" | "lg";
   variant?: "default" | "outline" | "secondary" | "ghost";
@@ -189,6 +232,8 @@ interface TriggerProps {
 export function AIImageStudioTrigger({
   imageUrl,
   filenameBase,
+  source = "internal",
+  productId,
   className,
   size = "sm",
   variant = "secondary",
@@ -212,6 +257,8 @@ export function AIImageStudioTrigger({
           onOpenChange={setOpen}
           imageUrl={imageUrl}
           filenameBase={filenameBase}
+          source={source}
+          productId={productId}
         />
       )}
     </>
