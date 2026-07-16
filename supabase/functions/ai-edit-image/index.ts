@@ -37,10 +37,11 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, imageUrl, prompt } = body as {
+    const { action, imageUrl, prompt, productId } = body as {
       action: Action;
       imageUrl: string;
       prompt?: string;
+      productId?: string;
     };
 
     if (!action || !imageUrl) {
