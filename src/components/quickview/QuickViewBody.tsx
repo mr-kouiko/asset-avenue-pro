@@ -186,7 +186,12 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
       />
       {isEditable && (
         <div className="absolute top-3 left-3" onClick={(e) => e.stopPropagation()}>
-          <AIImageStudioTrigger imageUrl={src} filenameBase={item.slug || item.id} />
+          <AIImageStudioTrigger
+            imageUrl={src}
+            filenameBase={item.slug || item.id}
+            source={item.source || 'internal'}
+            productId={item.id}
+          />
         </div>
       )}
       <div className="absolute bottom-3 right-3 bg-background/80 backdrop-blur px-2 py-1 rounded text-xs flex items-center gap-1 pointer-events-none">
