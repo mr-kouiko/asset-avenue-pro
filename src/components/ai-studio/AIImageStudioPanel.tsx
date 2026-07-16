@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
-import { Sparkles, Loader2, Download, ImageIcon, Wand2, Scissors, Maximize2, Palette, Sun, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Sparkles, Loader2, Download, ImageIcon, Wand2, Scissors, Maximize2, Palette, Sun, RefreshCw, ShoppingCart, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { applyImageWatermark, triggerDownload } from "@/utils/imageWatermark";
+import { useDirectPurchase } from "@/hooks/useDirectPurchase";
+import { useSecureDownload } from "@/hooks/useSecureDownload";
 
 type Action = "prompt" | "remove-bg" | "expand" | "change-bg" | "change-mood" | "change-color";
 type Source = "pexels" | "internal";
@@ -30,6 +33,21 @@ const ACTIONS: { id: Action; label: string; icon: any; needsPrompt: boolean; pla
   { id: "change-color", label: "Change color", icon: Palette, needsPrompt: true, placeholder: "New palette — e.g. 'warm autumn tones' or 'teal & orange'" },
 ];
 
+const LICENSES = [
+  { id: "standard", name: "Standard", price: 15, desc: "Web & social use" },
+  { id: "extended", name: "Extended", price: 45, desc: "Commercial products" },
+  { id: "exclusive", name: "Exclusive", price: 299, desc: "Exclusive rights" },
+];
+
+interface ProductInfo {
+  title: string;
+  author: string;
+  price: number | null;
+  type: string;
+  thumbnail?: string;
+  contentFileId?: string;
+}
+
 export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase = "visustock-edit", source = "internal", productId }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -40,34 +58,70 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
   const [downloading, setDownloading] = useState(false);
   const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
   const [licenseOwned, setLicenseOwned] = useState(false);
+  const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [selectedLicense, setSelectedLicense] = useState("standard");
+
+  const { createDirectPayment, payWithCredits, canPayWithCreditsForItem, getItemTotal, userCredits, loading: purchaseLoading } = useDirectPurchase();
+  const { secureDownload, isProcessing: downloadingOriginal } = useSecureDownload();
 
   const current = ACTIONS.find((a) => a.id === action)!;
 
-  // For internal assets, check whether the current user has already purchased/downloaded
-  // a license for the original asset. If yes, the AI-edited result can be unwatermarked.
+  const refreshLicense = useCallback(async () => {
+    if (source !== "internal" || !user || !productId) {
+      setLicenseOwned(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("downloads")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("submission_id", productId)
+      .limit(1);
+    if (error) {
+      console.warn("License ownership check failed:", error);
+      setLicenseOwned(false);
+      return;
+    }
+    setLicenseOwned((data?.length ?? 0) > 0);
+  }, [source, user, productId]);
+
+  // Load product info + license ownership when panel opens (internal only)
   useEffect(() => {
-    if (!open || source !== "internal" || !user || !productId) {
+    if (!open || source !== "internal" || !productId) {
+      setProductInfo(null);
       setLicenseOwned(false);
       return;
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("downloads")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("submission_id", productId)
-        .limit(1);
+      const [subRes, fileRes] = await Promise.all([
+        supabase.from("content_submissions").select("title, price, content_type, thumbnail_url, user_id").eq("id", productId).maybeSingle(),
+        supabase.from("content_files").select("id").eq("submission_id", productId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+      ]);
       if (cancelled) return;
-      if (error) {
-        console.warn("License ownership check failed:", error);
-        setLicenseOwned(false);
-        return;
+      const sub: any = subRes.data;
+      if (sub) {
+        let author = "Creator";
+        if (sub.user_id) {
+          const { data: profile } = await supabase.from("profiles").select("display_name, store_name").eq("user_id", sub.user_id).maybeSingle();
+          author = profile?.display_name || profile?.store_name || "Creator";
+        }
+        if (!cancelled) {
+          setProductInfo({
+            title: sub.title,
+            author,
+            price: sub.price,
+            type: sub.content_type,
+            thumbnail: sub.thumbnail_url,
+            contentFileId: fileRes.data?.id,
+          });
+        }
       }
-      setLicenseOwned((data?.length ?? 0) > 0);
+      await refreshLicense();
     })();
     return () => { cancelled = true; };
-  }, [open, source, user, productId]);
+  }, [open, source, productId, refreshLicense]);
 
   const shouldWatermark = source === "internal" && !licenseOwned;
 
@@ -92,8 +146,7 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
       if (typeof data.creditsRemaining === "number") setCreditsLeft(data.creditsRemaining);
       toast({ title: "Edit ready", description: "Preview your AI-edited image below." });
     } catch (e: any) {
-      const msg = e?.message || "AI edit failed";
-      toast({ title: "Edit failed", description: msg, variant: "destructive" });
+      toast({ title: "Edit failed", description: e?.message || "AI edit failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -119,114 +172,220 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
     }
   };
 
+  const downloadOriginal = async () => {
+    if (!productInfo?.contentFileId) {
+      toast({ title: "Original unavailable", description: "Could not locate the original file.", variant: "destructive" });
+      return;
+    }
+    await secureDownload(productInfo.contentFileId, productInfo.title);
+  };
+
   const reset = () => {
     setResult(null);
     setPrompt("");
   };
 
+  // Purchase flow
+  const buildItem = () => {
+    if (!productInfo || !productId) return null;
+    return {
+      submission_id: productId,
+      title: productInfo.title,
+      author: productInfo.author,
+      price: productInfo.price,
+      license_id: selectedLicense,
+      type: productInfo.type,
+      thumbnail: productInfo.thumbnail,
+    };
+  };
+
+  const handlePayPal = async () => {
+    const item = buildItem();
+    if (!item) return;
+    // PayPal redirects the browser — user returns via /payment-success
+    await createDirectPayment(item, selectedLicense);
+  };
+
+  const handleCredits = async () => {
+    const item = buildItem();
+    if (!item) return;
+    const result = await payWithCredits(item, selectedLicense);
+    if (result?.success) {
+      setPurchaseOpen(false);
+      // Refresh license ownership so the download section updates immediately
+      await refreshLicense();
+    }
+  };
+
+  const total = productInfo ? getItemTotal(buildItem()!, selectedLicense) : 0;
+  const canCredits = productInfo ? canPayWithCreditsForItem(buildItem()!, selectedLicense) : false;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" /> Studio AI image
-          </SheetTitle>
-          <SheetDescription>
-            Edit this image with AI. Each edit costs 1 credit.
-            {creditsLeft !== null && ` • ${creditsLeft} credits remaining`}
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" /> Studio AI image
+            </SheetTitle>
+            <SheetDescription>
+              Edit this image with AI. Each edit costs 1 credit.
+              {creditsLeft !== null && ` • ${creditsLeft} credits remaining`}
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Original</div>
-              <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border">
-                <img src={imageUrl} alt="Original" className="w-full h-full object-contain" crossOrigin="anonymous" />
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Original</div>
+                <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border">
+                  <img src={imageUrl} alt="Original" className="w-full h-full object-contain" crossOrigin="anonymous" />
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Result</div>
-              <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border flex items-center justify-center">
-                {loading ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                ) : result ? (
-                  <img src={result} alt="Result" className="w-full h-full object-contain" />
-                ) : (
-                  <span className="text-xs text-muted-foreground">Preview</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <Tabs value={action} onValueChange={(v) => { setAction(v as Action); setResult(null); }}>
-            <TabsList className="grid grid-cols-3 h-auto">
-              {ACTIONS.slice(0, 3).map((a) => (
-                <TabsTrigger key={a.id} value={a.id} className="text-xs gap-1 py-2">
-                  <a.icon className="h-3.5 w-3.5" /> {a.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <TabsList className="grid grid-cols-3 h-auto mt-1">
-              {ACTIONS.slice(3).map((a) => (
-                <TabsTrigger key={a.id} value={a.id} className="text-xs gap-1 py-2">
-                  <a.icon className="h-3.5 w-3.5" /> {a.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {ACTIONS.map((a) => (
-              <TabsContent key={a.id} value={a.id} className="mt-4 space-y-3">
-                {a.needsPrompt && (
-                  <Textarea
-                    placeholder={a.placeholder}
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={3}
-                  />
-                )}
-                <div className="flex gap-2">
-                  <Button onClick={run} disabled={loading} className="flex-1 gap-2">
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    {loading ? "Generating…" : "Generate (1 credit)"}
-                  </Button>
-                  {result && (
-                    <Button variant="outline" onClick={reset} title="Reset">
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Result</div>
+                <div className="aspect-square rounded-md overflow-hidden bg-muted/30 border flex items-center justify-center">
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : result ? (
+                    <img src={result} alt="Result" className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Preview</span>
                   )}
                 </div>
-              </TabsContent>
+              </div>
+            </div>
+
+            <Tabs value={action} onValueChange={(v) => { setAction(v as Action); setResult(null); }}>
+              <TabsList className="grid grid-cols-3 h-auto">
+                {ACTIONS.slice(0, 3).map((a) => (
+                  <TabsTrigger key={a.id} value={a.id} className="text-xs gap-1 py-2">
+                    <a.icon className="h-3.5 w-3.5" /> {a.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <TabsList className="grid grid-cols-3 h-auto mt-1">
+                {ACTIONS.slice(3).map((a) => (
+                  <TabsTrigger key={a.id} value={a.id} className="text-xs gap-1 py-2">
+                    <a.icon className="h-3.5 w-3.5" /> {a.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {ACTIONS.map((a) => (
+                <TabsContent key={a.id} value={a.id} className="mt-4 space-y-3">
+                  {a.needsPrompt && (
+                    <Textarea
+                      placeholder={a.placeholder}
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      rows={3}
+                    />
+                  )}
+                  <div className="flex gap-2">
+                    <Button onClick={run} disabled={loading} className="flex-1 gap-2">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {loading ? "Generating…" : "Generate (1 credit)"}
+                    </Button>
+                    {result && (
+                      <Button variant="outline" onClick={reset} title="Reset">
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+
+            {result && (
+              <div className="space-y-2">
+                <Button onClick={download} disabled={downloading} variant="secondary" className="w-full gap-2">
+                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {shouldWatermark ? "Download watermarked remix" : "Download unwatermarked remix"}
+                </Button>
+                {!shouldWatermark && source === "internal" && productInfo?.contentFileId && (
+                  <Button onClick={downloadOriginal} disabled={downloadingOriginal} variant="outline" className="w-full gap-2">
+                    {downloadingOriginal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    Download original
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {shouldWatermark && (
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark,{" "}
+                {productId && productInfo ? (
+                  <button
+                    type="button"
+                    onClick={() => setPurchaseOpen(true)}
+                    className="underline text-primary hover:opacity-80"
+                  >
+                    purchase the original license
+                  </button>
+                ) : (
+                  "purchase the original license"
+                )}
+                .
+              </p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* License purchase dialog — opens on top of the panel */}
+      <Dialog open={purchaseOpen} onOpenChange={setPurchaseOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Purchase license</DialogTitle>
+            <DialogDescription>
+              {productInfo?.title ? `Choose a license for "${productInfo.title}".` : "Choose a license."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {LICENSES.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => setSelectedLicense(l.id)}
+                className={`w-full text-left rounded-md border p-3 transition ${
+                  selectedLicense === l.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">{l.name}</div>
+                    <div className="text-xs text-muted-foreground">{l.desc}</div>
+                  </div>
+                  <div className="text-sm font-semibold">${l.price}</div>
+                </div>
+              </button>
             ))}
-          </Tabs>
+          </div>
 
-          {result && (
-            <Button onClick={download} disabled={downloading} variant="secondary" className="w-full gap-2">
-              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {shouldWatermark ? "Download watermarked" : "Download unwatermarked"}
+          {productInfo && (
+            <div className="flex items-center justify-between text-sm border-t pt-3">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-semibold">${total}</span>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            {canCredits && (
+              <Button onClick={handleCredits} disabled={purchaseLoading} className="w-full gap-2" variant="secondary">
+                {purchaseLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Pay with credits ({userCredits} available)
+              </Button>
+            )}
+            <Button onClick={handlePayPal} disabled={purchaseLoading} className="w-full gap-2">
+              {purchaseLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+              Pay ${total} with PayPal
             </Button>
-          )}
-
-          {shouldWatermark && (
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark,{" "}
-              {productId ? (
-                <a
-                  href={`/product/${productId}`}
-                  className="underline text-primary hover:opacity-80"
-                  onClick={() => onOpenChange(false)}
-                >
-                  purchase the original license
-                </a>
-              ) : (
-                "purchase the original license"
-              )}
-              .
-            </p>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
