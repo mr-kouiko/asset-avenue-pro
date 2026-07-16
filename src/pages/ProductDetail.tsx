@@ -709,6 +709,14 @@ const ProductDetailInner = () => {
                 </div>
               </div>
             )}
+            {product.type === 'photo' && (
+              <div className="absolute top-4 left-4 z-10">
+                <AIImageStudioTrigger
+                  imageUrl={watermarkedUrl || product.thumbnail}
+                  filenameBase={product.slug || product.id}
+                />
+              </div>
+            )}
           </div>
         )}
         <div className="absolute top-4 right-4 flex gap-2">
