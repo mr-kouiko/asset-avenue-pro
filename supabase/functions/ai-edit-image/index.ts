@@ -156,7 +156,7 @@ serve(async (req) => {
             role: "user",
             content: [
               { type: "text", text: finalPrompt },
-              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "image_url", image_url: { url: sourceImageUrl } },
             ],
           },
         ],
