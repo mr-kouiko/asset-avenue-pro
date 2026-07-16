@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateSlug, ensureUniqueSlug, generateSlugifiedFileName } from '@/utils/slugGenerator';
-import { getImageDimensions, getVideoDimensions } from '@/utils/mediaDimensions';
+import { getImageDimensions, getVideoDimensions, getSvgDimensions } from '@/utils/mediaDimensions';
+import { detectProductType, type DetectedProductType } from '@/utils/contentTypeDetector';
 
 async function buildFileMetadata(file: { type: string; url: string; previewUrl?: string; name: string; isWatermarked?: boolean }): Promise<Record<string, any>> {
   const meta: Record<string, any> = {
@@ -11,15 +12,34 @@ async function buildFileMetadata(file: { type: string; url: string; previewUrl?:
   };
   try {
     const isVideo = file.type.startsWith('video/');
+    const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
     const isImage = file.type.startsWith('image/');
     let dims = null;
-    if (isVideo && file.previewUrl) dims = await getVideoDimensions(file.previewUrl);
+    if (isSvg) dims = await getSvgDimensions(file.url);
+    else if (isVideo && file.previewUrl) dims = await getVideoDimensions(file.previewUrl);
     else if (isImage) dims = await getImageDimensions(file.previewUrl || file.url);
     if (dims) { meta.width = dims.width; meta.height = dims.height; }
   } catch (e) {
     console.warn('[useContentManagement] dimension detection failed:', e);
   }
   return meta;
+}
+
+// Resolve a `content_files.file_type` value from a raw MIME + filename using the
+// centralized detector. Falls back to the MIME prefix if detection is uncertain.
+// Returns one of: 'image' | 'video' | 'audio' | 'vector' | 'vfx' | 'ebook' | 'other'.
+async function resolveFileType(file: { type: string; name: string }): Promise<string> {
+  try {
+    // detectProductType expects a File; build a stub with .name and .type only —
+    // it uses .size only for zip inspection, which isn't relevant for direct
+    // MIME/extension classification.
+    const stub = new File([new Uint8Array()], file.name, { type: file.type });
+    const detection = await detectProductType(stub);
+    if (detection.type && detection.type !== 'other') return detection.type;
+  } catch (e) {
+    console.warn('[useContentManagement] file_type detection failed:', e);
+  }
+  return file.type.split('/')[0] || 'other';
 }
 
 interface ContentData {
@@ -108,7 +128,7 @@ export const useContentManagement = () => {
             submission_id: submissionData.id,
             file_name: slugifiedFileName, // Use slugified name
             file_path: file.url, // Keep original file_path unchanged
-            file_type: file.type.split('/')[0], // 'image', 'video', etc.
+            file_type: await resolveFileType(file), // 'image'|'video'|'audio'|'vector'|'vfx'|'ebook'|'other'
             file_format: file.type,
             file_size: file.size,
             is_original: true,
@@ -194,7 +214,7 @@ export const useContentManagement = () => {
             submission_id: submissionData.id,
             file_name: slugifiedFileName, // Use slugified name
             file_path: file.url, // Keep original file_path unchanged
-            file_type: file.type.split('/')[0], // 'image', 'video', etc.
+            file_type: await resolveFileType(file), // 'image'|'video'|'audio'|'vector'|'vfx'|'ebook'|'other'
             file_format: file.type,
             file_size: file.size,
             is_original: true,

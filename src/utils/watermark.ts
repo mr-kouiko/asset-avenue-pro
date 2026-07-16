@@ -843,6 +843,75 @@ export const generateFallbackThumbnail = async (
   });
 };
 
+// Rasterize an SVG onto a canvas at a resolution derived from its viewBox,
+// scaled to at least 800px on the longest side, then apply the diagonal
+// watermark used for other image previews. The SVG is sanitized first.
+export const generateVectorThumbnail = async (
+  svgFile: File,
+  options: ThumbnailOptions = {}
+): Promise<Blob> => {
+  const { quality = 0.9, format = 'image/png' } = options;
+  const { readAndSanitizeSvg, parseSvgDimensionsFromString } = await import('./svgUtils');
+
+  const cleanSvg = await readAndSanitizeSvg(svgFile);
+  const dims = parseSvgDimensionsFromString(cleanSvg) || { width: 800, height: 800 };
+
+  const blob = new Blob([cleanSvg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img: HTMLImageElement = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('SVG rasterization failed'));
+      el.src = url;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = dims.width;
+    canvas.height = dims.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D unavailable');
+
+    // White backdrop for transparent SVGs so watermark stays visible.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Same diagonal text watermark used elsewhere.
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    const fontSize = Math.max(24, Math.round(canvas.width / 22));
+    ctx.lineWidth = Math.max(1, fontSize / 20);
+    ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((-30 * Math.PI) / 180);
+    const diag = Math.hypot(canvas.width, canvas.height);
+    const stepX = fontSize * 9;
+    const stepY = fontSize * 3;
+    for (let y = -diag; y < diag; y += stepY) {
+      for (let x = -diag; x < diag; x += stepX) {
+        ctx.strokeText('VISUSTOCK', x, y);
+        ctx.fillText('VISUSTOCK', x, y);
+      }
+    }
+    ctx.restore();
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('Vector thumbnail toBlob failed'))),
+        format,
+        quality,
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
 // Main thumbnail generation function
 export const generateThumbnail = async (
   file: File,
@@ -850,9 +919,11 @@ export const generateThumbnail = async (
 ): Promise<Blob> => {
   const fileType = file.type.toLowerCase();
   const fileName = file.name.toLowerCase();
-  
+
   try {
-    if (fileType.startsWith('video/')) {
+    if (fileType === 'image/svg+xml' || fileName.endsWith('.svg')) {
+      return await generateVectorThumbnail(file, options);
+    } else if (fileType.startsWith('video/')) {
       return await generateVideoThumbnail(file, options);
     } else if (fileType.startsWith('image/')) {
       return await generateImageThumbnail(file, options);

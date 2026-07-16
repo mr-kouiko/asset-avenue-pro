@@ -12,6 +12,8 @@ export interface MediaDimensions {
   height: number;
 }
 
+export { getSvgDimensions } from './svgUtils';
+
 const TIMEOUT_MS = 8000;
 
 export async function getImageDimensions(url: string): Promise<MediaDimensions | null> {
