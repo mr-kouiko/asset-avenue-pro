@@ -156,7 +156,7 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("ai-edit-image", {
-        body: { action, imageUrl, prompt: prompt.trim() || undefined },
+        body: { action, imageUrl, prompt: prompt.trim() || undefined, productId: source === "internal" ? productId : undefined },
       });
       if (error) throw error;
       if (!data?.imageUrl) throw new Error("No image returned");
