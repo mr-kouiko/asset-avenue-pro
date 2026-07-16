@@ -1411,12 +1411,14 @@ const ProductManagement = () => {
               
               <div className="relative flex justify-center items-center flex-1 min-h-0 min-w-0 overflow-hidden">
                 {previewFile.type.startsWith('image/') && (
-                  <img
-                    src={previewFile.url}
-                    alt={previewFile.name}
-                    decoding="async"
-                    className="block rounded-lg max-w-full max-h-full w-auto h-auto object-contain"
-                  />
+                  <div className="w-full h-full flex-1 min-h-0 flex items-center justify-center overflow-hidden [&_img]:max-h-full [&_img]:max-w-full [&_img]:w-full [&_img]:h-full [&_img]:object-contain">
+                    <img
+                      src={previewFile.url}
+                      alt={previewFile.name}
+                      decoding="async"
+                      className="block rounded-lg min-h-0"
+                    />
+                  </div>
                 )}
                 
                 {previewFile.type.startsWith('video/') && (
