@@ -128,7 +128,7 @@ export const useContentManagement = () => {
             submission_id: submissionData.id,
             file_name: slugifiedFileName, // Use slugified name
             file_path: file.url, // Keep original file_path unchanged
-            file_type: file.type.split('/')[0], // 'image', 'video', etc.
+            file_type: await resolveFileType(file), // 'image'|'video'|'audio'|'vector'|'vfx'|'ebook'|'other'
             file_format: file.type,
             file_size: file.size,
             is_original: true,
