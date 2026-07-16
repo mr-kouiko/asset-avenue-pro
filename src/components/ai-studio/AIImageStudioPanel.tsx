@@ -90,7 +90,7 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" /> AI Image Studio
+            <Sparkles className="h-5 w-5 text-primary" /> Studio AI image
           </SheetTitle>
           <SheetDescription>
             Edit this image with AI. Each edit costs 1 credit.
