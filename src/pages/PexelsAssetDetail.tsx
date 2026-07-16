@@ -15,6 +15,7 @@ import { PexelsDetailSidebar } from "@/components/pexels/PexelsDetailSidebar";
 import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlternatives";
 import { PexelsSEOSections } from "@/components/pexels/PexelsSEOSections";
 import { VideoWatermark } from "@/components/VideoWatermark";
+import { AIImageStudioTrigger } from "@/components/ai-studio/AIImageStudioPanel";
 
 const PexelsAssetDetail = () => {
   const { slug, pexelsId } = useParams<{ slug?: string; pexelsId?: string }>();
