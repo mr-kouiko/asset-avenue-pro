@@ -203,13 +203,15 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
           {result && (
             <Button onClick={download} disabled={downloading} variant="secondary" className="w-full gap-2">
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Download watermarked
+              {shouldWatermark ? "Download watermarked" : "Download"}
             </Button>
           )}
 
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark, purchase the original license.
-          </p>
+          {shouldWatermark && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Downloads are watermarked with the VisuStock logo. To use edited assets commercially without watermark, purchase the original license.
+            </p>
+          )}
         </div>
       </SheetContent>
     </Sheet>
