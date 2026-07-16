@@ -370,6 +370,13 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
               </div>
             )}
 
+            {!result && !shouldWatermark && source === "internal" && productInfo?.contentFileId && (
+              <Button onClick={downloadOriginal} disabled={downloadingOriginal} variant="outline" className="w-full gap-2">
+                {downloadingOriginal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Download original
+              </Button>
+            )}
+
             {!result && shouldWatermark && productId && (
               <Button onClick={() => setPurchaseOpen(true)} className="w-full gap-2">
                 <ShoppingCart className="h-4 w-4" />
