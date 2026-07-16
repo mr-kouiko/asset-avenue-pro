@@ -215,9 +215,25 @@ export const useAutomaticWatermark = (): UseAutomaticWatermarkReturn => {
           }
           
           onProgress?.(fileId, 10);
-          
+
+          // SVG hardening: sanitize (strip <script>, on* handlers, external hrefs, foreignObject)
+          // before ANY upload so raw XSS payloads never reach storage.
+          let fileForUpload: File = file;
+          const isSvg = file.type === 'image/svg+xml' || fileExtension === 'svg';
+          if (isSvg) {
+            if (file.size > MAX_SVG_BYTES) {
+              throw new Error(`SVG too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max ${MAX_SVG_BYTES / 1024 / 1024} MB.`);
+            }
+            try {
+              fileForUpload = await buildSanitizedSvgFile(file);
+              console.log(`🧼 [SVG-SANITIZE] ${file.name} sanitized (${file.size} → ${fileForUpload.size} bytes)`);
+            } catch (e) {
+              throw new Error(`SVG sanitization failed: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }
+
           // Upload original file using StreamingUploadHandler (intelligent routing: Supabase < 100MB, R2 >= 100MB)
-          const result = await StreamingUploadHandler.uploadFile(file, (p) => {
+          const result = await StreamingUploadHandler.uploadFile(fileForUpload, (p) => {
             onProgress?.(fileId, Math.min(50, 10 + p * 0.4));
           }, filePath);
           
