@@ -126,6 +126,12 @@ const PexelsAssetDetail = () => {
                 <div className="relative">
                   <LazyImage src={item.largeThumbnail || item.thumbnail} alt={item.alt || item.title} className="w-full object-contain" />
                   <VideoWatermark size="large" />
+                  <div className="absolute top-3 left-3 z-10">
+                    <AIImageStudioTrigger
+                      imageUrl={item.largeThumbnail || item.thumbnail}
+                      filenameBase={`pexels-${item.id}`}
+                    />
+                  </div>
                 </div>
               )}
             </div>
