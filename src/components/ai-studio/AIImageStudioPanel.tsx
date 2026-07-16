@@ -104,8 +104,8 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
       if (sub) {
         let author = "Creator";
         if (sub.user_id) {
-          const { data: profile } = await supabase.from("profiles").select("display_name, username").eq("id", sub.user_id).maybeSingle();
-          author = profile?.display_name || profile?.username || "Creator";
+          const { data: profile } = await supabase.from("profiles").select("display_name, store_name").eq("user_id", sub.user_id).maybeSingle();
+          author = profile?.display_name || profile?.store_name || "Creator";
         }
         if (!cancelled) {
           setProductInfo({
