@@ -1,67 +1,83 @@
-# Quick View Modal — Implementation Plan
-
-Adds a reusable Quick View overlay to marketplace results so users can browse assets without navigating away. Standalone `/products/[slug]` pages remain untouched (SEO, sharing, canonicals preserved).
 
 ## Scope
 
-In: Marketplace grid → Quick View modal for photos, videos, audio, vectors, ebooks. Keyboard + mobile swipe nav. URL sync via `?asset=<slug>`. Prev/Next across current results. Reuse of existing player/pricing/favorite/share components.
+6 image edit tools powered by `google/gemini-3.1-flash-image` via Lovable AI Gateway, exposed on both internal images and Pexels images, in both surfaces (QuickView modal + ProductDetail page). Costs 1 credit / edit. Output is watermarked before download. **Animate is deferred** (separate follow-up once the 6 image tools are shipped).
 
-Out (future-ready hooks only): AI Remix/Upscale/Variations, Comments, Follow, Recently Viewed.
+## Tools shipped
 
-## Architecture
+| Tool | Prompt sent to Gemini |
+|---|---|
+| Type to edit | user's free-text prompt |
+| Remove background | migrated from existing `remove-background` fn to `gemini-3.1-flash-image` |
+| Expand image | "Extend/outpaint this image beyond its borders, seamlessly continuing the scene on all sides. Maintain style, lighting, and perspective." |
+| Change background | "Replace the background of this image with: {userPrompt}. Keep the main subject unchanged with clean edges." |
+| Change mood | "Change the mood/atmosphere/lighting of this image to: {userPrompt}. Preserve subject and composition." |
+| Change color | "Recolor / shift the color palette of this image to: {userPrompt}. Preserve subject, composition, and details." |
 
-```text
-src/components/quickview/
-  QuickViewProvider.tsx     — context: openQuickView(slug, list), close, next, prev
-  QuickViewModal.tsx        — Dialog shell, URL sync, keyboard, focus trap, swipe
-  QuickViewContent.tsx      — fetches product via useProductDetail(slug), routes to viewer
-  viewers/
-    PhotoViewer.tsx         — zoom + wheel (reuse WatermarkedGallery)
-    VideoViewer.tsx         — reuse VideoPlayer + VideoWatermark
-    AudioViewer.tsx         — reuse AudioHeroPlayer (auto-stops via AudioPlayerContext)
-    EbookViewer.tsx         — cover + metadata
-    VectorViewer.tsx        — PhotoViewer variant
-  QuickViewSidebar.tsx      — title, price, license selector, buy/fav/share, keywords, specs, creator
-  QuickViewRelated.tsx      — reuses existing "More from creator" + "Similar" queries, horizontal scroll, click updates modal in place
-  QuickViewNav.tsx          — prev/next buttons
+## Backend
+
+**New edge function `ai-edit-image`** (single endpoint, action-based) — the fan-out avoids 6 near-identical functions:
+
+```
+POST /ai-edit-image
+{ action: 'prompt' | 'remove-bg' | 'expand' | 'change-bg' | 'change-mood' | 'change-color',
+  imageUrl: string (https URL or data:), prompt?: string }
+→ { imageUrl: base64 dataUrl, creditsRemaining: number }
 ```
 
-- `QuickViewProvider` mounted once in `App.tsx` above routes.
-- Marketplace grid cards: intercept click → `openQuickView(slug, orderedSlugs)` instead of `<Link>` navigation. Cmd/Ctrl+click and middle-click still open standalone page.
-- `useProductDetail(slug)` (existing hook) supplies data — no duplicated business logic. React Query caches; provider prefetches prev/next slugs on open.
-- URL: `history.pushState` adds `?asset=<slug>`; close → `history.back()` if entry is ours, else `replaceState` strip. Refresh with `?asset=` re-opens.
-- Modal uses shadcn `Dialog` with a light `bg-background/40` scrim (not dark), rounded panel, 200ms fade+scale.
-- Mobile: full-screen sheet, `react-swipeable` (or lightweight touch handler) for left/right nav + swipe-down close.
-- Focus trap + ARIA labels via Radix Dialog defaults; `aria-label` on nav buttons.
+Flow (mirrors `generate-ai-image`):
+1. Verify JWT → get user
+2. Check `user_credits.credits_balance >= 1` (service role)
+3. Build prompt from action + userPrompt
+4. Call `https://ai.gateway.lovable.dev/v1/chat/completions` with `google/gemini-3.1-flash-image`, `messages` + `image_url` block, `modalities: ["image","text"]`
+5. Handle 429/402/content-policy errors
+6. `deduct_user_credit(user, 1)`
+7. Insert row in `ai_image_generations` for history
+8. Return image + updated balance
 
-## Data flow per asset switch
+Existing `remove-background` fn stays for backward compat but the new UI routes through `ai-edit-image`.
 
-1. `next()` updates internal `currentSlug` state → `useProductDetail` runs against cache (prefetched) → viewer swaps.
-2. Search page never remounts (provider lives above `<Routes>`).
-3. Related items reuse existing queries from `ProductDetail`; clicking calls `openQuickView(slug, relatedSlugs)`.
+**Animate deferred**: no Veo work in this batch. A placeholder "Animate (soon)" button is rendered disabled with a tooltip; wiring will reuse `generate-veo-video` in a follow-up.
 
-## SEO
+## Frontend — shared component
 
-No changes to product routes, sitemap, prerender, canonicals, or JSON-LD. Quick View is client-only; `?asset=` param is not added to sitemap.
+New file `src/components/ai-studio/AIImageStudioPanel.tsx`:
+- Trigger button "✨ Edit with AI" (Studio AI entry point)
+- On click, opens a right-side Sheet (Radix) or overlay panel with:
+  - Live preview of current image (original vs. latest result, before/after slider on result)
+  - 6 tool tabs / pills (Type to edit, Remove BG, Expand, Change BG, Change mood, Change color, Animate-disabled)
+  - Contextual input (textarea for tools that need a user prompt)
+  - "Generate (1 credit)" button — shows current balance
+  - Result preview + "Download watermarked" button (uses existing `applyImageWatermark` util — added if missing, matching video watermark style)
+  - "Try another" resets to original
+- Props: `{ imageUrl: string; alt: string; source: 'internal' | 'pexels'; onClose?: () => void }`
+- Handles: auth gate (prompt to sign in), insufficient-credits state (link to `/buy-credits`), errors, loading.
 
-## Files to add
-- 8 files under `src/components/quickview/`
+Watermark: reuse the existing SVG "VISUSTOCK" diagonal pattern from `VideoWatermark.tsx`, applied to a canvas overlay on export.
 
-## Files to edit
-- `src/App.tsx` — wrap routes in `<QuickViewProvider>` + render `<QuickViewModal/>`
-- `src/pages/Marketplace.tsx` — pass ordered slug list to grid, intercept card click
-- `src/components/ContentCard.tsx`, `AudioContentCard.tsx` — accept optional `onQuickView` handler
-- `src/i18n/{en,fr,es,de,pt}.ts` — add `qv.*` keys (close, next, prev, loading, viewFullPage)
+## Integration points
 
-## Non-goals / preserved
-- Standalone `/products/[slug]` unchanged.
-- Existing hooks (`useProductDetail`, `useFavorites`, `useCart`, pricing, download, share) reused as-is.
-- No new API endpoints, no DB changes.
+1. **QuickView modal** (`src/components/quickview/QuickViewBody.tsx`) — for image assets (internal + Pexels), add a top-right button "Edit with AI" that opens the `AIImageStudioPanel` inline (replaces main image area while open, keeps modal open).
+2. **ProductDetail** (`src/pages/ProductDetail.tsx`) — for image products, add the same button below the main image.
+3. **PexelsAssetDetail** (`src/pages/PexelsAssetDetail.tsx`) — same button. For Pexels, pass the public Pexels image URL directly.
 
-## Test checklist
-- Click card → modal opens, URL gains `?asset=`, grid stays mounted (verify via React DevTools / no scroll jump).
-- Arrow keys + Prev/Next cycle through visible results; audio auto-stops on switch.
-- Esc / back button closes, URL restored, scroll preserved.
-- Cmd+click still opens `/products/slug` in new tab.
-- Mobile: swipe nav + full-screen layout on 375px viewport.
-- Refresh with `?asset=slug` reopens modal on top of results.
+## Credits
+
+Uses existing `user_credits` + `deduct_user_credit` RPC. 1 credit per edit. No new tables.
+
+## Files changed
+
+- **New**: `supabase/functions/ai-edit-image/index.ts`
+- **New**: `src/components/ai-studio/AIImageStudioPanel.tsx`
+- **New**: `src/components/ai-studio/AIImageStudioButton.tsx` (small wrapper trigger)
+- **New**: `src/utils/imageWatermark.ts` (canvas-based export watermark)
+- **Edit**: `src/components/quickview/QuickViewBody.tsx` (mount button for images)
+- **Edit**: `src/pages/ProductDetail.tsx` (mount button for image products)
+- **Edit**: `src/pages/PexelsAssetDetail.tsx` (mount button)
+
+## Out of scope (explicit)
+
+- Animate image (Veo) — deferred; disabled UI placeholder only
+- Saved history / "My AI Edits" gallery — user opted for watermarked download only
+- Batch edits / multi-step chains
+- Editing videos or non-image assets
