@@ -130,6 +130,7 @@ const PexelsAssetDetail = () => {
                     <AIImageStudioTrigger
                       imageUrl={item.largeThumbnail || item.thumbnail}
                       filenameBase={`pexels-${item.id}`}
+                      source="pexels"
                     />
                   </div>
                 </div>
