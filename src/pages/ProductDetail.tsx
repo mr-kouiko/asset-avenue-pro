@@ -35,6 +35,7 @@ import { useInfinityAccess } from "@/hooks/useInfinityAccess";
 import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { useLikes } from "@/hooks/useLikes";
 import { SocialShareLazy } from "@/components/SocialShareLazy";
+import { AIImageStudioTrigger } from "@/components/ai-studio/AIImageStudioPanel";
 import { useSEO } from "@/hooks/useSEO";
 import { ReportModal } from "@/components/ReportModal";
 import { ProductReviews } from "@/components/product/ProductReviews";
