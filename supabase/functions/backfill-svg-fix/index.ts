@@ -115,20 +115,30 @@ Deno.serve(async (req) => {
         });
       if (upErr) { report.push({ ...before, error: `upload svg: ${upErr.message}` }); continue; }
 
-      // Rasterize to small PNG thumbnail (bucket rejects SVG)
-      await ensureWasm();
-      const target = 256;
-      const scale = Math.min(1, target / Math.max(dims.width, dims.height));
-      const thumbW = Math.max(1, Math.round(dims.width * scale));
-      const resvg = new Resvg(clean, { fitTo: { mode: 'width', value: thumbW } });
-      const png = resvg.render().asPng();
-      const thumbPath = `${userId}/thumbnails/backfill-${f.id}.png`;
-      const { error: tErr } = await supabase.storage
-        .from('thumbnails')
-        .upload(thumbPath, png, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
-      if (tErr) { report.push({ ...before, error: `upload thumb: ${tErr.message}` }); continue; }
-      const { data: pub } = supabase.storage.from('thumbnails').getPublicUrl(thumbPath);
-      const thumbnailUrl = pub.publicUrl;
+      // Thumbnail strategy: try PNG rasterization for reasonably-sized SVGs;
+      // fall back to using the sanitized SVG's own URL for very large files
+      // where wasm rasterization would blow the edge CPU budget.
+      let thumbnailUrl = f.file_path; // safe fallback (uploads bucket serves svg)
+      if (clean.length < 2 * 1024 * 1024) {
+        try {
+          await ensureWasm();
+          const target = 256;
+          const scale = Math.min(1, target / Math.max(dims.width, dims.height));
+          const thumbW = Math.max(1, Math.round(dims.width * scale));
+          const resvg = new Resvg(clean, { fitTo: { mode: 'width', value: thumbW } });
+          const png = resvg.render().asPng();
+          const thumbPath = `${userId}/thumbnails/backfill-${f.id}.png`;
+          const { error: tErr } = await supabase.storage
+            .from('thumbnails')
+            .upload(thumbPath, png, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
+          if (!tErr) {
+            const { data: pub } = supabase.storage.from('thumbnails').getPublicUrl(thumbPath);
+            thumbnailUrl = pub.publicUrl;
+          }
+        } catch (e) {
+          console.log('thumbnail rasterize skipped:', String(e));
+        }
+      }
 
       const newMetadata = {
         ...(f.metadata as Record<string, unknown> ?? {}),
