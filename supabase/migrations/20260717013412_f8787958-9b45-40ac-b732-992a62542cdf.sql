@@ -1,0 +1,1 @@
+UPDATE public.content_files SET preview_path = thumbnail_path WHERE id IN ('24960c04-d79a-4d3c-a37d-f803647b9bea','f22f9326-7984-41ed-9424-e618e71aad76');
