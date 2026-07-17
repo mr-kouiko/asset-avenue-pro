@@ -171,9 +171,11 @@ const MediaView = ({ item, product }: { item: QuickViewItem; product: any }) => 
     );
   }
 
-  // photo / vector / fallback
-  const src = preview || item.thumbnail;
-  const isEditable = item.type === 'photo';
+  // photo / vector / illustration / fallback
+  // Never prioritize previewUrl here: for static assets it may point to a clean
+  // lightbox/original rendition. The protected thumbnail is the watermarked preview.
+  const src = product?.thumbnail || item.thumbnail || preview;
+  const isEditable = item.type === 'photo' || mediaType === 'photo';
   return (
     <div
       className="relative w-full h-full flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden cursor-zoom-in"
