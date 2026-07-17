@@ -76,16 +76,12 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { data: rows, error: qErr } = await supabase.rpc('exec_sql' as never, {} as never).then(() => ({ data: null, error: null })).catch(() => ({ data: null, error: null }));
-    // Direct query instead:
-    const { data: userRow, error: uErr } = await supabase
-      .schema('auth' as never)
-      .from('users' as never)
-      .select('id')
-      .eq('email', TARGET_EMAIL)
-      .maybeSingle();
-    if (uErr || !userRow) throw new Error(`User lookup failed: ${uErr?.message}`);
-    const userId = (userRow as { id: string }).id;
+    // Look up user via auth admin API
+    const { data: usersList, error: uErr } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (uErr) throw new Error(`User lookup failed: ${uErr.message}`);
+    const userRow = usersList.users.find((u) => u.email === TARGET_EMAIL);
+    if (!userRow) throw new Error(`User ${TARGET_EMAIL} not found`);
+    const userId = userRow.id;
 
     const { data: files, error: fErr } = await supabase
       .from('content_files')
