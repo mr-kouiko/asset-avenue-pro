@@ -78,11 +78,15 @@ Deno.serve(async (req) => {
   try {
     const userId = 'cdd8956c-9a04-4130-9179-fb01e6b8984b'; // javid.heyrabady@gmail.com (verified)
 
-    const { data: files, error: fErr } = await supabase
+    const url = new URL(req.url);
+    const onlyId = url.searchParams.get('id');
+    let query = supabase
       .from('content_files')
       .select('id, file_path, file_type, metadata, submission_id, content_submissions!inner(creator_id)')
       .eq('file_format', 'image/svg+xml')
       .eq('content_submissions.creator_id', userId);
+    if (onlyId) query = query.eq('id', onlyId);
+    const { data: files, error: fErr } = await query;
     if (fErr) throw new Error(`Files query failed: ${fErr.message}`);
 
     await ensureWasm();
