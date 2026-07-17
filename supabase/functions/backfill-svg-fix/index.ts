@@ -2,7 +2,7 @@
 // from user javid.heyrabady@gmail.com that predate the SVG hardening pipeline.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { Resvg, initWasm } from 'https://esm.sh/@resvg/resvg-wasm@2.6.2';
-import wasm from 'https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm';
+const WASM_URL = 'https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
