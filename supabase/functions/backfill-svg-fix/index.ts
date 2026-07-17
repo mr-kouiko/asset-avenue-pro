@@ -115,14 +115,17 @@ Deno.serve(async (req) => {
         });
       if (upErr) { report.push({ ...before, error: `upload svg: ${upErr.message}` }); continue; }
 
-      // Use the sanitized SVG itself as the thumbnail (vector = infinitely scalable,
-      // no CPU-heavy rasterization needed for a one-off backfill).
-      const thumbPath = `${userId}/thumbnails/backfill-${f.id}.svg`;
+      // Rasterize to small PNG thumbnail (bucket rejects SVG)
+      await ensureWasm();
+      const target = 256;
+      const scale = Math.min(1, target / Math.max(dims.width, dims.height));
+      const thumbW = Math.max(1, Math.round(dims.width * scale));
+      const resvg = new Resvg(clean, { fitTo: { mode: 'width', value: thumbW } });
+      const png = resvg.render().asPng();
+      const thumbPath = `${userId}/thumbnails/backfill-${f.id}.png`;
       const { error: tErr } = await supabase.storage
         .from('thumbnails')
-        .upload(thumbPath, new Blob([clean], { type: 'image/svg+xml' }), {
-          upsert: true, contentType: 'image/svg+xml', cacheControl: '3600',
-        });
+        .upload(thumbPath, png, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
       if (tErr) { report.push({ ...before, error: `upload thumb: ${tErr.message}` }); continue; }
       const { data: pub } = supabase.storage.from('thumbnails').getPublicUrl(thumbPath);
       const thumbnailUrl = pub.publicUrl;
