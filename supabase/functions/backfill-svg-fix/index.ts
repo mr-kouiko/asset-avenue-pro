@@ -14,7 +14,11 @@ const TARGET_EMAIL = 'javid.heyrabady@gmail.com';
 let wasmReady: Promise<void> | null = null;
 async function ensureWasm() {
   if (!wasmReady) {
-    wasmReady = initWasm(wasm as unknown as ArrayBuffer);
+    wasmReady = (async () => {
+      const res = await fetch(WASM_URL);
+      const buf = await res.arrayBuffer();
+      await initWasm(buf);
+    })();
   }
   await wasmReady;
 }
