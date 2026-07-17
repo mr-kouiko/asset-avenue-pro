@@ -76,12 +76,7 @@ Deno.serve(async (req) => {
   );
 
   try {
-    // Look up user via auth admin API
-    const { data: usersList, error: uErr } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-    if (uErr) throw new Error(`User lookup failed: ${uErr.message}`);
-    const userRow = usersList.users.find((u) => u.email === TARGET_EMAIL);
-    if (!userRow) throw new Error(`User ${TARGET_EMAIL} not found`);
-    const userId = userRow.id;
+    const userId = 'cdd8956c-9a04-4130-9179-fb01e6b8984b'; // javid.heyrabady@gmail.com (verified)
 
     const { data: files, error: fErr } = await supabase
       .from('content_files')
