@@ -49,11 +49,14 @@ export const HomepageTabs = memo(({ className }: HomepageTabsProps) => {
       return;
     }
     setPexelsLoading(true);
-    const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    fetch(`https://visustock.com/api/pexels-search?type=photos&per_page=${needed}&page=1`, {
-      headers: { apikey },
-    })
-      .then(r => r.json())
+    import('@/integrations/supabase/client').then(({ supabase }) =>
+      supabase.functions
+        .invoke('pexels-search', { body: { type: 'photos', per_page: String(needed), page: '1' } })
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return data;
+        })
+      )
       .then(data => {
         const photos = data.photos || [];
         const mapped: (FreeItem & { _pexelsSlug?: string })[] = photos.map((p: any) => ({
