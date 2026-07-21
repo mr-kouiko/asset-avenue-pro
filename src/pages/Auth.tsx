@@ -10,12 +10,14 @@ import { Mail, Lock, User, Store, ArrowLeft } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useSEO } from "@/hooks/useSEO";
 
 interface AuthProps {
   userType?: "client" | "seller";
 }
 
 const Auth = ({ userType: defaultUserType }: AuthProps = {}) => {
+  useSEO({ title: "Sign In", description: "Sign in or create your VisuStock account.", noindex: true });
   const [userType, setUserType] = useState<"client" | "seller">(defaultUserType || "client");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({

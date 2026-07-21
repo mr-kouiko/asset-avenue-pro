@@ -1,8 +1,10 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
+import { useSEO } from "@/hooks/useSEO";
 
 const DashboardRouter = () => {
+  useSEO({ title: "Dashboard", description: "Your VisuStock dashboard.", noindex: true });
   const { user, loading, role, roleLoading, isAdmin, isCreator, isClient } = useAuth();
 
   // Wait for auth AND role loading to prevent false "no role" state

@@ -12,6 +12,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Link } from "react-router-dom";
 import { Plus, Upload, TrendingUp, Heart, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSEO } from "@/hooks/useSEO";
 
 interface SellerProfile {
   display_name: string | null;
@@ -20,6 +21,7 @@ interface SellerProfile {
 }
 
 const Portfolio = () => {
+  useSEO({ title: "My Portfolio", description: "Your VisuStock portfolio.", noindex: true });
   const { user } = useAuth();
   const { submissions, stats, loading, refreshData } = useSellerDashboard();
   const [profile, setProfile] = useState<SellerProfile | null>(null);

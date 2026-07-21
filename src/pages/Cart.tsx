@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Trash2, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSEO } from "@/hooks/useSEO";
 
 const Cart = () => {
+  useSEO({ title: "Your Cart", description: "Review the items in your VisuStock cart before checkout.", noindex: true });
   const { items, removeFromCart, getTotalPrice, clearCart } = useCart();
 
   if (items.length === 0) {

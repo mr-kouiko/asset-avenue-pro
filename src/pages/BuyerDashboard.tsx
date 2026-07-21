@@ -36,6 +36,7 @@ import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { ContentCard } from "@/components/ContentCard";
 import { BuyerOrderHistory } from "@/components/buyer/BuyerOrderHistory";
 import { BuyerInvoices } from "@/components/buyer/BuyerInvoices";
+import { useSEO } from "@/hooks/useSEO";
 
 interface Purchase {
   id: string;
@@ -98,6 +99,7 @@ interface Subscription {
 
 // Favorites Tab Component
 const FavoritesTab = () => {
+  useSEO({ title: "Buyer Dashboard", description: "Your VisuStock buyer dashboard: orders, downloads and account.", noindex: true });
   const { getFavoritesWithDetails, loading: favLoading } = useFavorites();
   const [favoritesData, setFavoritesData] = useState<any[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);

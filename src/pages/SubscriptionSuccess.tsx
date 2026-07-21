@@ -5,8 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Loader2, XCircle, Infinity, Sparkles } from 'lucide-react';
 import { usePayPalSubscription, SUBSCRIPTION_PLANS } from '@/hooks/usePayPalSubscription';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSEO } from "@/hooks/useSEO";
 
 const SubscriptionSuccess = () => {
+  useSEO({ title: "Subscription Successful", description: "Your VisuStock Infinity subscription is active.", noindex: true });
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { language } = useLanguage();

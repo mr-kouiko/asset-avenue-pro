@@ -48,10 +48,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useSEO } from "@/hooks/useSEO";
 
 const AUTHORIZED_ADMIN_EMAIL = "info@visitenow.ma";
 
 const AdminDashboard = () => {
+  useSEO({ title: "Admin Dashboard", description: "VisuStock administrator dashboard.", noindex: true });
   const [activeTab, setActiveTab] = useState("overview");
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();

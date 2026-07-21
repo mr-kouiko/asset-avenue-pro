@@ -3,8 +3,10 @@ import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { XCircle, ArrowLeft, RefreshCw, HelpCircle } from 'lucide-react';
+import { useSEO } from "@/hooks/useSEO";
 
 const PaymentCancelled = () => {
+  useSEO({ title: "Payment Cancelled", description: "Your VisuStock payment was cancelled.", noindex: true });
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
