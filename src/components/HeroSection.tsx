@@ -85,7 +85,7 @@ export const HeroSection = () => {
         height={1080}
         className="absolute inset-0 w-full h-[120%] sm:h-full object-cover object-center sm:object-center z-[1] -top-[10%] sm:top-0"
       >
-        <source src="https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/public/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
+        <source src="https://visustock.com/cdn/video%20hero%202/2025_EMEA_Reel.mp4" type="video/mp4" />
       </video>
       
       {/* Gradient Overlay - Stronger on mobile for text readability */}

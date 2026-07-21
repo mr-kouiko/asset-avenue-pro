@@ -3,8 +3,7 @@
 // Used by both AudioHeroPlayer and the ProductDetail download button so
 // the downloaded preview ALWAYS contains the watermark (not just live playback).
 
-const WATERMARK_URL =
-  "https://kdgfpophpoqugtuvfxqx.supabase.co/storage/v1/object/sign/Audio%20VisuStock/ElevenLabs_2025-08-21T17_27_20_David%20-%20ASMR%20Whisper_pvc_sp100_s50_sb75_v3.mp3?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jZTIyNjk0My1iMWRhLTRlZTAtYjk3Yi00MjY2NzQ4M2VhMjAiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJBdWRpbyBWaXN1U3RvY2svRWxldmVuTGFic18yMDI1LTA4LTIxVDE3XzI3XzIwX0RhdmlkIC0gQVNNUiBXaGlzcGVyX3B2Y19zcDEwMF9zNTBfc2I3NV92My5tcDMiLCJpYXQiOjE3NjU0OTc3NzEsImV4cCI6NDkxOTA5Nzc3MX0.NlfXBYByI1CKvSSMF_TfAC-xtggdyr0861jaWq-HV-k";
+const WATERMARK_URL = "https://visustock.com/cdn/audio-watermark.mp3";
 
 const WATERMARK_INTERVAL_SEC = 15;
 const FIRST_WATERMARK_AT_SEC = 2;

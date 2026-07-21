@@ -41,11 +41,10 @@ export const usePexelsSEOContent = (item: PexelsItem | null) => {
     const fetchSEO = async () => {
       setLoading(true);
       try {
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
         const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
         const res = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/generate-pexels-seo`,
+          `https://visustock.com/api/generate-pexels-seo`,
           {
             method: "POST",
             headers: {

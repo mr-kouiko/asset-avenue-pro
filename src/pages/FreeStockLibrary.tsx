@@ -97,7 +97,6 @@ const FreeStockLibrary = () => {
   const fetchPexels = useCallback(async (searchQuery: string, type: 'photos' | 'videos', pageNum: number, append = false) => {
     setLoading(true);
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const params = new URLSearchParams({
         query: searchQuery,
         type,
@@ -106,7 +105,7 @@ const FreeStockLibrary = () => {
       });
 
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/pexels-search?${params}`,
+        `https://visustock.com/api/pexels-search?${params}`,
         { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
       );
 
