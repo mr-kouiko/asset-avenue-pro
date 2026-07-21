@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-const DEFAULT_TITLE = "VisuStock - Creative Content Marketplace";
+const DEFAULT_TITLE = "VisuStock – Stock Photos, Videos, Audio, Vectors & Digital Assets";
 
 /**
  * Ensures the tab title never gets stuck with a stale value (e.g. after visiting a 404).
