@@ -41,6 +41,11 @@ export const SEOHead = ({
   const { language } = useLanguage();
 
   useEffect(() => {
+    // Scrub any leaked backend URL from caller-provided values before we
+    // put them into user-visible <head> tags.
+    const safeImage = image ? publicUrl(image) : undefined;
+    const safeUrl = url ? publicUrl(url) : undefined;
+
     document.title = `${title} | VisuStock`;
 
     const updateMetaTag = (property: string, content: string, useProperty = true) => {
@@ -62,10 +67,10 @@ export const SEOHead = ({
     updateMetaTag('og:description', description);
     updateMetaTag('og:type', type);
 
-    if (url) updateMetaTag('og:url', url);
+    if (safeUrl) updateMetaTag('og:url', safeUrl);
 
-    if (image) {
-      updateMetaTag('og:image', image);
+    if (safeImage) {
+      updateMetaTag('og:image', safeImage);
       updateMetaTag('og:image:alt', title);
       updateMetaTag('og:image:width', '1200');
       updateMetaTag('og:image:height', '630');
@@ -74,7 +79,6 @@ export const SEOHead = ({
     updateMetaTag('og:site_name', 'VisuStock');
     updateMetaTag('og:locale', OG_LOCALES[language] || 'en_US');
 
-    // og:locale:alternate for other languages
     document.querySelectorAll('meta[property="og:locale:alternate"]').forEach((n) => n.remove());
     SUPPORTED_LANGUAGES.filter((l) => l !== language).forEach((l) => {
       const m = document.createElement('meta');
@@ -83,7 +87,6 @@ export const SEOHead = ({
       document.head.appendChild(m);
     });
 
-    // hreflang alternates + canonical
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
     const { rest } = parseLangFromPath(currentPath);
 
@@ -101,21 +104,19 @@ export const SEOHead = ({
     xDefault.setAttribute('href', `${SITE_URL}${rest}`);
     document.head.appendChild(xDefault);
 
-    // canonical
     let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!canonical) {
       canonical = document.createElement('link');
       canonical.setAttribute('rel', 'canonical');
       document.head.appendChild(canonical);
     }
-    canonical.href = url || `${SITE_URL}${localizePath(rest, language)}`;
+    canonical.href = safeUrl || `${SITE_URL}${localizePath(rest, language)}`;
 
-    // Twitter
-    updateMetaTag('twitter:card', image ? 'summary_large_image' : 'summary', false);
+    updateMetaTag('twitter:card', safeImage ? 'summary_large_image' : 'summary', false);
     updateMetaTag('twitter:title', title, false);
     updateMetaTag('twitter:description', description, false);
-    if (image) {
-      updateMetaTag('twitter:image', image, false);
+    if (safeImage) {
+      updateMetaTag('twitter:image', safeImage, false);
       updateMetaTag('twitter:image:alt', title, false);
     }
 
@@ -130,15 +131,15 @@ export const SEOHead = ({
         '@type': 'Product',
         name: title,
         description,
-        image,
-        url,
+        image: safeImage,
+        url: safeUrl,
         brand: { '@type': 'Brand', name: 'VisuStock' },
         offers: {
           '@type': 'Offer',
           price,
           priceCurrency: currency,
           availability: 'https://schema.org/InStock',
-          url,
+          url: safeUrl,
         },
         ...(author && { creator: { '@type': 'Person', name: author } }),
         ...(tags.length > 0 && { keywords: tags.join(', ') }),
