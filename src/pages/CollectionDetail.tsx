@@ -175,8 +175,10 @@ const CollectionDetail = () => {
   );
 
   useSEO({
-    title: collection?.title || 'Collection | VisuStock',
-    description: collection?.description || 'Explore our curated stock media collection.',
+    title: collection?.name ? `${collection.name} | VisuStock` : 'Collection | VisuStock',
+    description: collection?.name
+      ? `Explore the "${collection.name}" collection on VisuStock.`
+      : 'Explore our curated stock media collection on VisuStock.',
   });
 
   if (!collection) {
