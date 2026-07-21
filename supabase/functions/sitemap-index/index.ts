@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 const SITE_URL = "https://visustock.com";
-const FUNCTIONS_URL = "https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -19,23 +18,27 @@ Deno.serve(async (req) => {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>${FUNCTIONS_URL}/sitemap-static</loc>
+    <loc>${SITE_URL}/sitemap-static.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${FUNCTIONS_URL}/sitemap-categories</loc>
+    <loc>${SITE_URL}/sitemap-categories.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${FUNCTIONS_URL}/sitemap-products</loc>
+    <loc>${SITE_URL}/sitemap-products.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${FUNCTIONS_URL}/sitemap-collections</loc>
+    <loc>${SITE_URL}/sitemap-collections.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${FUNCTIONS_URL}/sitemap-pexels</loc>
+    <loc>${SITE_URL}/sitemap-pexels.xml</loc>
+    <lastmod>${now}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${SITE_URL}/sitemap-blog.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
 </sitemapindex>`;
