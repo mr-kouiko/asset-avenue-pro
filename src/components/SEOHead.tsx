@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SUPPORTED_LANGUAGES, parseLangFromPath, localizePath, type Language } from '@/i18n';
+import { publicUrl } from '@/utils/publicUrl';
 
 interface SEOHeadProps {
   title: string;
