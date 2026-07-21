@@ -232,26 +232,20 @@ export const usePexelsSearch = (params: {
     setError(null);
 
     try {
-      const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      const urlParams = new URLSearchParams({
+      const invokeBody: Record<string, string> = {
         type: searchParams.type,
         per_page: String(searchParams.perPage),
         page: String(searchParams.page),
-      });
-      if (searchParams.query) urlParams.set('query', searchParams.query);
-      if (searchParams.orientation) urlParams.set('orientation', searchParams.orientation);
+      };
+      if (searchParams.query) invokeBody.query = searchParams.query;
+      if (searchParams.orientation) invokeBody.orientation = searchParams.orientation;
 
-      const res = await fetch(
-        `https://visustock.com/api/pexels-search?${urlParams}`,
-        { headers: { apikey: apiKey } }
-      );
+      const { data, error: invokeError } = await supabase.functions.invoke('pexels-search', {
+        body: invokeBody,
+      });
 
       if (fetchId !== abortRef.current) return;
-
-      if (!res.ok) throw new Error(`Pexels API error: ${res.status}`);
-
-      const data = await res.json();
+      if (invokeError) throw new Error(invokeError.message || 'Pexels API error');
 
       let normalized: PexelsItem[] = [];
       if (searchParams.type === 'videos' && data.videos) {
