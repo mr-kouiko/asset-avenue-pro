@@ -11,8 +11,14 @@ import { Camera, Video, Music, BookOpen, Zap, Shield, Globe, Heart, ArrowRight }
 import { Link } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
 import { seoCollections } from "@/data/seoCollections";
+import { useSEO } from "@/hooks/useSEO";
 
 const IndexEN = () => {
+  useSEO({
+    title: "VisuStock – Stock Photos, Videos, Audio, Vectors & Digital Assets",
+    description: "Discover millions of stock photos, videos, audio files, vectors, ebooks, AI-generated content and creative assets on VisuStock.",
+    type: "website",
+  });
   const { stats } = useContentStats();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();

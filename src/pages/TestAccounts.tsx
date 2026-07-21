@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Copy, User, Shield, Store } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 const TestAccounts = () => {
+  useSEO({ title: "Test Accounts", description: "Internal test accounts.", noindex: true });
   const { toast } = useToast();
 
   const testAccounts = [

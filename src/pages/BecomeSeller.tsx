@@ -9,6 +9,7 @@ import { useSellerCount } from "@/hooks/useSellerCount";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FoundingMemberBanner } from "@/components/seller/FoundingMemberBanner";
+import { useSEO } from "@/hooks/useSEO";
 
 const BecomeSeller = () => {
   const navigate = useNavigate();
@@ -16,6 +17,12 @@ const BecomeSeller = () => {
   const { isCreator, isAdmin } = useUserRole();
   const { spotsRemaining, limit, isFreeRegistration, isLoading: countLoading, refetch } = useSellerCount();
   const [isLoading, setIsLoading] = useState(false);
+
+  useSEO({
+    title: "Become a Seller – Sell Your Creative Assets on VisuStock",
+    description: "Join VisuStock as a contributor and sell your photos, videos, audio and vectors. Earn 60% royalties on every sale.",
+    type: "website",
+  });
 
   const handleBecomeSeller = async () => {
     if (!user) {

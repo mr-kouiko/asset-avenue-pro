@@ -46,8 +46,10 @@ import { StoreSettingsCard } from '@/components/StoreSettingsCard';
 import { AvatarSettingsCard } from '@/components/AvatarSettingsCard';
 import { PayPalSettingsCard } from '@/components/PayPalSettingsCard';
 import { SellerEarningsCard } from '@/components/seller/SellerEarningsCard';
+import { useSEO } from "@/hooks/useSEO";
 
 const Dashboard = () => {
+  useSEO({ title: "Dashboard", description: "Your VisuStock dashboard.", noindex: true });
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();

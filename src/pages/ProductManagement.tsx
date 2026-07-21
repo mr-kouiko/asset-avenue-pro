@@ -24,6 +24,7 @@ import 'react-h5-audio-player/lib/styles.css';
 import { EbookForm } from "@/components/EbookForm";
 import { VFXPreviewUpload } from "@/components/VFXPreviewUpload";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 interface UploadedFileData {
   id: string;
@@ -57,6 +58,7 @@ interface ProductData {
 }
 
 const ProductManagement = () => {
+  useSEO({ title: "Manage Products", description: "Manage your VisuStock product listings.", noindex: true });
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { categories } = useSellerDashboard();

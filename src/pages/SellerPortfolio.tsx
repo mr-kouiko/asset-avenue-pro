@@ -50,8 +50,8 @@ const SellerPortfolio = () => {
 
   const seoStoreName = seller?.store_name || seller?.display_name || "Creator";
   useSEO({
-    title: `${seoStoreName} — Creator Portfolio`,
-    description: `Discover photos, videos, audio and ebooks by ${seoStoreName} on VisuStock. License premium creator assets for your projects.`,
+    title: `${seoStoreName} | VisuStock Contributor`,
+    description: `Browse creative assets published by ${seoStoreName} on VisuStock.`,
     type: "website",
     image: seller?.avatar_url || undefined,
   });

@@ -2,8 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { XCircle } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const SellerRegistrationCancelled = () => {
+  useSEO({ title: "Seller Registration Cancelled", description: "Your VisuStock seller registration was cancelled.", noindex: true });
   const navigate = useNavigate();
 
   return (

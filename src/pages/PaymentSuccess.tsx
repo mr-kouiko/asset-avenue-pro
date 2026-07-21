@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Download, ArrowRight, Home, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useSEO } from "@/hooks/useSEO";
 
 interface PurchasedItem {
   id: string;
@@ -13,6 +14,7 @@ interface PurchasedItem {
 }
 
 const PaymentSuccess = () => {
+  useSEO({ title: "Payment Successful", description: "Your VisuStock payment was successful.", noindex: true });
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const payerID = searchParams.get('PayerID');

@@ -7,6 +7,7 @@ import { Check, Crown, Infinity as InfinityIcon, Download, Shield, DollarSign, U
 import { useToast } from "@/hooks/use-toast";
 import { usePayPalSubscription } from "@/hooks/usePayPalSubscription";
 import { useAuth } from "@/hooks/useAuth";
+import { useSEO } from "@/hooks/useSEO";
 
 const InfinityEN = () => {
   const [isYearly, setIsYearly] = useState(false);
@@ -14,6 +15,12 @@ const InfinityEN = () => {
   const { toast } = useToast();
   const { createSubscription } = usePayPalSubscription();
   const { user } = useAuth();
+
+  useSEO({
+    title: "VisuStock Infinity – Unlimited Stock Downloads Subscription",
+    description: "Get unlimited access to premium stock photos, vectors and audio with the VisuStock Infinity subscription. One flat rate, unlimited downloads.",
+    type: "website",
+  });
 
   const handleSubscribeInfinity = async () => {
     if (!user) {

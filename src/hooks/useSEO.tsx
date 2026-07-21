@@ -69,8 +69,9 @@ export const useSEO = (config: SEOConfig) => {
     }
     lastConfigRef.current = configHash;
 
-    // Update document title
-    document.title = `${title} | ${SITE_NAME}`;
+    // Update document title (avoid duplicated "| VisuStock" if already present or if title starts with VisuStock)
+    const needsSuffix = !/visustock/i.test(title);
+    document.title = needsSuffix ? `${title} | ${SITE_NAME}` : title;
 
     // Helper function to update or create meta tags
     const updateMetaTag = (property: string, content: string, useProperty = true) => {

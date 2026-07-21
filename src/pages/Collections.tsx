@@ -4,8 +4,8 @@ import { useSEO } from "@/hooks/useSEO";
 
 const Collections = () => {
   useSEO({
-    title: "Stock Media Collections | Curated Themes",
-    description: "Explore our curated thematic collections of stock photos, videos, and audio. Find the perfect media for business, technology, nature, travel, and more.",
+    title: "Curated Creative Collections",
+    description: "Explore curated collections of stock photos, videos and audio on VisuStock — thematic sets hand-picked for creators.",
   });
 
   return (

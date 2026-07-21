@@ -334,9 +334,24 @@ const ProductDetailInner = () => {
       }
     : undefined;
 
+  const categoryLabel = (() => {
+    switch (activeProduct?.type) {
+      case 'photo': return 'stock photos';
+      case 'video': return 'stock videos';
+      case 'audio': return 'royalty-free audio';
+      case 'illustration': return 'vector graphics';
+      case 'ebook': return 'digital ebooks';
+      default: return 'creative assets';
+    }
+  })();
+  const seoProductTitle = activeProduct?.title || 'Product';
+  const seoProductDescription = activeProduct?.title
+    ? `Download ${activeProduct.title}. High-quality ${categoryLabel} available for commercial and personal use on VisuStock.`
+    : (activeProduct?.description || 'View product details on VisuStock.');
+
   useSEO({
-    title: activeProduct?.title || 'Product',
-    description: activeProduct?.description || 'View product details',
+    title: seoProductTitle,
+    description: seoProductDescription,
     image: productImage,
     type: 'product',
     author: activeProduct?.author,

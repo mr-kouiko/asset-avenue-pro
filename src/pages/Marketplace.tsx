@@ -92,9 +92,31 @@ const Marketplace = () => {
     return paramsToCheck.some(param => searchParams.has(param));
   }, [searchParams]);
 
+  const currentCategory = searchParams.get('category') || (() => {
+    const path = location.pathname;
+    if (path.startsWith('/videos')) return 'video';
+    if (path.startsWith('/photos')) return 'photo';
+    if (path.startsWith('/illustrations')) return 'illustration';
+    if (path.startsWith('/audio')) return 'audio';
+    if (path.startsWith('/ebooks')) return 'ebook';
+    return 'all';
+  })();
+  const searchQ = searchParams.get('search')?.trim();
+  const seoByCategory: Record<string, { title: string; description: string }> = {
+    photo: { title: "Royalty-Free Stock Photos", description: "Browse millions of royalty-free stock photos on VisuStock. Download high-resolution images for commercial and personal use." },
+    video: { title: "Stock Videos & Footage", description: "Discover premium stock videos and 4K footage on VisuStock. License high-quality clips for your creative projects." },
+    audio: { title: "Royalty-Free Music & Audio", description: "Explore royalty-free music, sound effects and audio tracks on VisuStock for videos, podcasts and productions." },
+    illustration: { title: "Vector Graphics & Illustrations", description: "Download scalable vector graphics and illustrations on VisuStock for design, branding and print projects." },
+    vfx: { title: "Visual Effects & Motion Graphics", description: "Premium VFX assets and motion graphics on VisuStock — overlays, transitions and animated elements for creators." },
+    ebook: { title: "Digital Ebooks & Guides", description: "Discover digital ebooks and guides on VisuStock — knowledge and inspiration for creators, marketers and entrepreneurs." },
+    all: { title: "Marketplace – Photos, Videos, Audio, Vectors & Ebooks", description: "Browse the VisuStock marketplace: stock photos, videos, audio, vectors and ebooks from creators worldwide." },
+  };
+  const seoBase = seoByCategory[currentCategory] || seoByCategory.all;
+  const seoTitle = searchQ ? `${searchQ} – ${seoBase.title}` : seoBase.title;
+  const seoDesc = searchQ ? `Search results for "${searchQ}" on VisuStock. ${seoBase.description}` : seoBase.description;
   useSEO({
-    title: "Marketplace - Browse Creative Content",
-    description: "Browse thousands of professional photos, videos, audio tracks and illustrations. Find the perfect creative content for your projects.",
+    title: seoTitle,
+    description: seoDesc,
     type: 'website',
     noindex: hasFilterParams,
   });

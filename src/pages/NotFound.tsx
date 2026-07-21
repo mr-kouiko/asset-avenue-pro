@@ -3,8 +3,10 @@ import { useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Home, Search, ArrowLeft } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const NotFound = () => {
+  useSEO({ title: "Page Not Found", description: "The page you're looking for doesn't exist on VisuStock.", noindex: true });
   const location = useLocation();
 
   useEffect(() => {

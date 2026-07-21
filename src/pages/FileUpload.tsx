@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useDraftManager, DraftProduct, DraftFile } from "@/hooks/useDraftManager";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSEO } from "@/hooks/useSEO";
 
 interface UploadedFileData {
   id: string;
@@ -27,6 +28,7 @@ interface UploadedFileData {
 }
 
 const FileUpload = () => {
+  useSEO({ title: "Upload Files", description: "Upload your creative assets to VisuStock.", noindex: true });
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { 

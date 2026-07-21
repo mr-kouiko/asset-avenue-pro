@@ -10,8 +10,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2, ArrowLeft, Shield, AlertTriangle, CheckCircle, Wallet, Gift, Download, Coins, CreditCard } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useSEO } from "@/hooks/useSEO";
 
 const Checkout = () => {
+  useSEO({ title: "Checkout", description: "Complete your VisuStock purchase securely with PayPal.", noindex: true });
   const { user } = useAuth();
   const { items, getTotalPrice } = useCart();
   const { 
