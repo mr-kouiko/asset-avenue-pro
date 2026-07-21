@@ -97,20 +97,16 @@ const FreeStockLibrary = () => {
   const fetchPexels = useCallback(async (searchQuery: string, type: 'photos' | 'videos', pageNum: number, append = false) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        query: searchQuery,
-        type,
-        page: pageNum.toString(),
-        per_page: '30',
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: result, error } = await supabase.functions.invoke('pexels-search', {
+        body: {
+          query: searchQuery,
+          type,
+          page: pageNum.toString(),
+          per_page: '30',
+        },
       });
-
-      const res = await fetch(
-        `https://visustock.com/api/pexels-search?${params}`,
-        { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
-      );
-
-      if (!res.ok) throw new Error('Failed to fetch');
-      const result = await res.json();
+      if (error) throw error;
 
       if (type === 'photos') {
         const newPhotos = result.photos || [];
