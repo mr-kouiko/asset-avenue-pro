@@ -46,7 +46,7 @@ export const JsonLd = ({ data, id }: JsonLdProps) => {
       document.head.appendChild(script);
     }
     try {
-      script.text = JSON.stringify(data);
+      script.text = JSON.stringify(scrubBackendUrls(data));
     } catch {
       // Circular / invalid input — leave previous content in place.
     }
