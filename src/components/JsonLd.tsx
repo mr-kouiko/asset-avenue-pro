@@ -1,4 +1,23 @@
 import { useEffect, useId } from "react";
+import { publicUrl } from "@/utils/publicUrl";
+
+/** Recursively rewrite any string that leaks a Supabase URL. */
+function scrubBackendUrls<T>(value: T): T {
+  if (value == null) return value;
+  if (typeof value === "string") {
+    if (/supabase\.co/i.test(value)) return publicUrl(value) as unknown as T;
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(scrubBackendUrls) as unknown as T;
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = scrubBackendUrls(v);
+    }
+    return out as T;
+  }
+  return value;
+}
 
 interface JsonLdProps {
   /** Any Schema.org object or array of objects. Will be JSON-stringified into a <script type="application/ld+json"> tag in <head>. */
