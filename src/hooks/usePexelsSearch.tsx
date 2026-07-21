@@ -174,19 +174,13 @@ export async function fetchPexelsVideoById(id: number): Promise<PexelsItem | nul
   if (cached && cached.items.length > 0) return cached.items[0];
 
   try {
-    const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    const res = await fetch(
-      `https://visustock.com/api/pexels-search?type=videos&id=${id}`,
-      { headers: { apikey: apiKey } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.id) {
-      const item = normalizeVideo(data as PexelsVideo);
-      setCache(cacheKey, { items: [item], totalResults: 1 });
-      return item;
-    }
-    return null;
+    const { data, error } = await supabase.functions.invoke('pexels-search', {
+      body: { type: 'videos', id: String(id) },
+    });
+    if (error || !data?.id) return null;
+    const item = normalizeVideo(data as PexelsVideo);
+    setCache(cacheKey, { items: [item], totalResults: 1 });
+    return item;
   } catch {
     return null;
   }
