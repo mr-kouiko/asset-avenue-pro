@@ -154,10 +154,9 @@ export async function fetchPexelsPhotoById(id: number): Promise<PexelsItem | nul
   if (cached && cached.items.length > 0) return cached.items[0];
 
   try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/pexels-search?type=photos&id=${id}`,
+      `https://visustock.com/api/pexels-search?type=photos&id=${id}`,
       { headers: { apikey: apiKey } }
     );
     if (!res.ok) return null;
@@ -179,10 +178,9 @@ export async function fetchPexelsVideoById(id: number): Promise<PexelsItem | nul
   if (cached && cached.items.length > 0) return cached.items[0];
 
   try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/pexels-search?type=videos&id=${id}`,
+      `https://visustock.com/api/pexels-search?type=videos&id=${id}`,
       { headers: { apikey: apiKey } }
     );
     if (!res.ok) return null;
@@ -244,7 +242,6 @@ export const usePexelsSearch = (params: {
     setError(null);
 
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       const urlParams = new URLSearchParams({
@@ -256,7 +253,7 @@ export const usePexelsSearch = (params: {
       if (searchParams.orientation) urlParams.set('orientation', searchParams.orientation);
 
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/pexels-search?${urlParams}`,
+        `https://visustock.com/api/pexels-search?${urlParams}`,
         { headers: { apikey: apiKey } }
       );
 

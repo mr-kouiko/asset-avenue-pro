@@ -21,11 +21,10 @@ interface SocialShareProps {
   productSlug?: string; // Optional: for SSR meta tags via edge function
 }
 
-// Get Supabase URL for edge function
-const getOgUrl = (slug: string): string => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ndymiqfyxzypurveutop.supabase.co';
-  return `${supabaseUrl}/functions/v1/og-product?slug=${encodeURIComponent(slug)}`;
-};
+// Public OG endpoint on visustock.com (proxied to the og-product edge function
+// by our Cloudflare Worker). No Supabase URL is ever exposed to social platforms.
+const getOgUrl = (slug: string): string =>
+  `https://visustock.com/og/product/${encodeURIComponent(slug)}.jpg`;
 
 export const SocialShare = ({
   url,

@@ -53,7 +53,7 @@ export const useDraftManager = () => {
         // Promote to creator via Edge Function
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const resp = await fetch('https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/ensure-creator-role', {
+        const resp = await fetch('https://visustock.com/api/ensure-creator-role', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

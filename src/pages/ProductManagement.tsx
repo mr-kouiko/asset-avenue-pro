@@ -1429,7 +1429,7 @@ const ProductManagement = () => {
                       src={(() => {
                         const url = previewFile.url;
                         if (url && url.includes('cdn.visustock.com')) {
-                          return `https://kdgfpophpoqugtuvfxqx.supabase.co/functions/v1/proxy-video?url=${encodeURIComponent(url)}`;
+                          return `https://visustock.com/api/proxy-video?url=${encodeURIComponent(url)}`;
                         }
                         return url;
                       })()}
