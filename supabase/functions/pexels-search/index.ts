@@ -17,12 +17,17 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const query = url.searchParams.get('query') || '';
-    const type = url.searchParams.get('type') || 'photos'; // photos or videos
-    const page = url.searchParams.get('page') || '1';
-    const per_page = url.searchParams.get('per_page') || '30';
-    const orientation = url.searchParams.get('orientation') || '';
-    const id = url.searchParams.get('id') || '';
+    let body: Record<string, string> = {};
+    if (req.method === 'POST') {
+      try { body = await req.json(); } catch { /* ignore */ }
+    }
+    const getParam = (k: string) => (url.searchParams.get(k) ?? body[k] ?? '') as string;
+    const query = getParam('query');
+    const type = getParam('type') || 'photos';
+    const page = getParam('page') || '1';
+    const per_page = getParam('per_page') || '30';
+    const orientation = getParam('orientation');
+    const id = getParam('id');
 
     // ── Single item fetch by ID ───────────────────────────────
     if (id) {
