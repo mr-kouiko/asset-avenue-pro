@@ -235,21 +235,21 @@ Deno.serve(async (req) => {
         .not("slug", "is", null)
         .limit(1)
         .maybeSingle();
-      let tokenOk = false;
-      let tokenError: string | null = null;
-      try { await getAccessToken(); tokenOk = true; } catch (e: any) { tokenError = e?.message ?? String(e); }
+      const tokenDiag = await diagnoseAccessToken();
       const samplePayload = sample
         ? buildProductInput(sample, sample.content_files?.[0]?.thumbnail_path ?? null)
         : null;
       return new Response(JSON.stringify({
         eligible: eligible ?? 0,
-        tokenOk,
-        tokenError,
+        tokenOk: tokenDiag.tokenOk,
+        tokenError: tokenDiag.tokenError,
+        tokenDiag,
         merchantId: MERCHANT_ID,
         dataSource: GOOGLE_MERCHANT_DATA_SOURCE,
         insertUrl: `${MERCHANT_API_BASE}/accounts/${MERCHANT_ID}/productInputs:insert?dataSource=${encodeURIComponent(dataSourceName())}`,
         samplePayload,
       }, null, 2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
     }
 
     const token = await getAccessToken();
