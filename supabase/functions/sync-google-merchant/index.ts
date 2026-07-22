@@ -204,6 +204,9 @@ async function diagnoseAccessToken(): Promise<Record<string, unknown>> {
     diag.tokenError = `${diag.stage}: ${e?.message ?? String(e)}`;
     return diag;
   }
+}
+
+
 
 
 // --- Build Merchant API ProductInput payload ---
