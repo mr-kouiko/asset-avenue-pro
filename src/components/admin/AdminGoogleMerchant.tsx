@@ -36,14 +36,20 @@ export const AdminGoogleMerchant = () => {
   });
 
   const sync = useMutation({
-    mutationFn: async (mode: "full" | "queue") => {
+    mutationFn: async (mode: "full" | "queue" | "dryrun") => {
       setRunning(mode);
       const { data, error } = await supabase.functions.invoke("sync-google-merchant", { body: { mode } });
       if (error) throw error;
-      return data;
+      return { mode, data };
     },
-    onSuccess: (r: any) => {
-      toast.success(`Sync done: ${r.uploaded} uploaded, ${r.deleted} deleted, ${r.failed} failed`);
+    onSuccess: ({ mode, data }: any) => {
+      if (mode === "dryrun") {
+        toast.success(`Dry run: ${data.eligible} eligible • token ${data.tokenOk ? "OK" : "FAIL"}`);
+        console.log("[GMC dryrun]", data);
+      } else {
+        toast.success(`Sync done: considered ${data.considered ?? "?"} • uploaded ${data.uploaded} • deleted ${data.deleted} • failed ${data.failed}`);
+        if (data.errors?.length) console.error("[GMC errors]", data.errors);
+      }
       qc.invalidateQueries({ queryKey: ["gms-log"] });
       qc.invalidateQueries({ queryKey: ["gms-queue"] });
     },
