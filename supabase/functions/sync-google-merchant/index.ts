@@ -109,6 +109,106 @@ async function getAccessToken(): Promise<string> {
   return json.access_token;
 }
 
+// Verbose diagnostic version of the token flow used by the dry-run endpoint.
+// Returns granular stage info WITHOUT leaking the private key or the access token itself.
+async function diagnoseAccessToken(): Promise<Record<string, unknown>> {
+  const diag: Record<string, unknown> = {
+    tokenOk: false,
+    tokenError: null as string | null,
+    stage: "start",
+    serviceAccountEmail: null as string | null,
+    projectId: null as string | null,
+    privateKeyPresent: false,
+    privateKeyLength: 0,
+    privateKeyStartsCorrectly: false,
+    privateKeyEndsCorrectly: false,
+    importKeyOk: false,
+    signOk: false,
+    httpStatus: null as number | null,
+    googleError: null as string | null,
+    googleErrorDescription: null as string | null,
+    googleResponseBody: null as string | null,
+  };
+  try {
+    diag.stage = "load-service-account";
+    const sa = getServiceAccount();
+    diag.serviceAccountEmail = sa.client_email;
+    diag.projectId = sa.project_id;
+    diag.privateKeyPresent = !!sa.private_key;
+    diag.privateKeyLength = sa.private_key?.length ?? 0;
+    diag.privateKeyStartsCorrectly = sa.private_key.startsWith("-----BEGIN PRIVATE KEY-----");
+    diag.privateKeyEndsCorrectly = sa.private_key.endsWith("-----END PRIVATE KEY-----");
+
+    diag.stage = "build-jwt";
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: "RS256", typ: "JWT" };
+    const claim = {
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/content",
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+    };
+    const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claim))}`;
+
+    diag.stage = "import-key";
+    let key: CryptoKey;
+    try {
+      key = await crypto.subtle.importKey(
+        "pkcs8",
+        pemToArrayBuffer(sa.private_key),
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      diag.importKeyOk = true;
+    } catch (e: any) {
+      diag.tokenError = `importKey failed: ${e?.message ?? String(e)}`;
+      return diag;
+    }
+
+    diag.stage = "sign-jwt";
+    let sig: ArrayBuffer;
+    try {
+      sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+      diag.signOk = true;
+    } catch (e: any) {
+      diag.tokenError = `sign failed: ${e?.message ?? String(e)}`;
+      return diag;
+    }
+    const jwt = `${unsigned}.${b64url(sig)}`;
+
+    diag.stage = "exchange-token";
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    });
+    diag.httpStatus = res.status;
+    const text = await res.text();
+    // Truncate any raw body echo to avoid returning huge payloads.
+    diag.googleResponseBody = text.slice(0, 2000);
+    let json: any = null;
+    try { json = JSON.parse(text); } catch { /* keep raw */ }
+    if (json) {
+      diag.googleError = json.error ?? null;
+      diag.googleErrorDescription = json.error_description ?? null;
+    }
+    if (!res.ok) {
+      diag.tokenError = `Google token exchange failed (${res.status}): ${diag.googleErrorDescription ?? diag.googleError ?? text.slice(0, 300)}`;
+      return diag;
+    }
+    diag.tokenOk = true;
+    return diag;
+  } catch (e: any) {
+    diag.tokenError = `${diag.stage}: ${e?.message ?? String(e)}`;
+    return diag;
+  }
+}
+
+
+
+
 // --- Build Merchant API ProductInput payload ---
 // Docs: https://developers.google.com/merchant/api/reference/rest/products_v1beta/accounts.productInputs
 function buildProductInput(sub: any, thumbnail: string | null) {
@@ -235,21 +335,21 @@ Deno.serve(async (req) => {
         .not("slug", "is", null)
         .limit(1)
         .maybeSingle();
-      let tokenOk = false;
-      let tokenError: string | null = null;
-      try { await getAccessToken(); tokenOk = true; } catch (e: any) { tokenError = e?.message ?? String(e); }
+      const tokenDiag = await diagnoseAccessToken();
       const samplePayload = sample
         ? buildProductInput(sample, sample.content_files?.[0]?.thumbnail_path ?? null)
         : null;
       return new Response(JSON.stringify({
         eligible: eligible ?? 0,
-        tokenOk,
-        tokenError,
+        tokenOk: tokenDiag.tokenOk,
+        tokenError: tokenDiag.tokenError,
+        tokenDiag,
         merchantId: MERCHANT_ID,
         dataSource: GOOGLE_MERCHANT_DATA_SOURCE,
         insertUrl: `${MERCHANT_API_BASE}/accounts/${MERCHANT_ID}/productInputs:insert?dataSource=${encodeURIComponent(dataSourceName())}`,
         samplePayload,
       }, null, 2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
     }
 
     const token = await getAccessToken();
