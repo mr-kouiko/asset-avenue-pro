@@ -44,8 +44,13 @@ export const AdminGoogleMerchant = () => {
     },
     onSuccess: ({ mode, data }: any) => {
       if (mode === "dryrun") {
-        toast.success(`Dry run: ${data.eligible} eligible • token ${data.tokenOk ? "OK" : "FAIL"}`);
+        const d = data.tokenDiag ?? {};
+        const detail = data.tokenOk
+          ? "OK"
+          : `FAIL — stage=${d.stage} httpStatus=${d.httpStatus ?? "n/a"} err=${d.googleError ?? "n/a"} desc=${d.googleErrorDescription ?? d.tokenError ?? "n/a"}`;
+        toast.success(`Dry run: ${data.eligible} eligible • token ${detail}`, { duration: 15000 });
         console.log("[GMC dryrun]", data);
+
       } else {
         toast.success(`Sync done: considered ${data.considered ?? "?"} • uploaded ${data.uploaded} • deleted ${data.deleted} • failed ${data.failed}`);
         if (data.errors?.length) console.error("[GMC errors]", data.errors);
