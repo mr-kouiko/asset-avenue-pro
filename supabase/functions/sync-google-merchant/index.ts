@@ -278,9 +278,7 @@ Deno.serve(async (req) => {
   try {
     const missing: string[] = [];
     if (!MERCHANT_ID) missing.push("GOOGLE_MERCHANT_ID");
-    if (!Deno.env.get("GOOGLE_PROJECT_ID")) missing.push("GOOGLE_PROJECT_ID");
-    if (!Deno.env.get("GOOGLE_CLIENT_EMAIL")) missing.push("GOOGLE_CLIENT_EMAIL");
-    if (!Deno.env.get("GOOGLE_PRIVATE_KEY")) missing.push("GOOGLE_PRIVATE_KEY");
+    if (!Deno.env.get("GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON")) missing.push("GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON");
     if (!GOOGLE_MERCHANT_DATA_SOURCE) missing.push("GOOGLE_MERCHANT_DATA_SOURCE");
     if (missing.length) {
       return new Response(JSON.stringify({ error: `Missing secrets: ${missing.join(", ")}` }), {
