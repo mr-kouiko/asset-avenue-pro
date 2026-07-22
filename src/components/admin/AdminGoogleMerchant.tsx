@@ -106,6 +106,15 @@ export const AdminGoogleMerchant = () => {
               {running === "full" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Sync all approved products
             </Button>
+            <Button
+              onClick={() => sync.mutate("dryrun")}
+              disabled={sync.isPending}
+              variant="secondary"
+              className="gap-2"
+            >
+              {running === "dryrun" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+              Dry run (diagnose)
+            </Button>
           </div>
         </CardContent>
       </Card>
