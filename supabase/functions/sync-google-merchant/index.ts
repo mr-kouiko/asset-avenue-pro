@@ -35,39 +35,32 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 }
 
 function getServiceAccount() {
-  const privateKey = Deno.env.get("GOOGLE_PRIVATE_KEY")
-    ?.replace(/\\n/g, "\n")
+  const raw = Deno.env.get("GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON");
+  if (!raw) {
+    throw new Error("Missing secret: GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON");
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e: any) {
+    throw new Error(`GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON is not valid JSON: ${e?.message ?? String(e)}`);
+  }
+
+  const privateKey = String(parsed.private_key ?? "")
+    .replace(/\\n/g, "\n")
     .trim();
+  const clientEmail = parsed.client_email;
+  const projectId = parsed.project_id;
 
-  const rawKey = Deno.env.get("GOOGLE_PRIVATE_KEY");
-  const lines = privateKey?.split("\n") ?? [];
-  console.log("[GMC] GOOGLE_PRIVATE_KEY debug", {
-    exists: !!rawKey,
-    rawLength: rawKey?.length ?? 0,
-    normalizedLength: privateKey?.length ?? 0,
-    lineCount: lines.length,
-    firstLine: lines[0] ?? null,
-    lastLine: lines[lines.length - 1] ?? null,
-    hasKey: !!privateKey,
-    startsCorrectly: privateKey?.startsWith("-----BEGIN PRIVATE KEY-----"),
-    endsCorrectly: privateKey?.endsWith("-----END PRIVATE KEY-----"),
-  });
-
-  const serviceAccount = {
-    project_id: Deno.env.get("GOOGLE_PROJECT_ID"),
-    client_email: Deno.env.get("GOOGLE_CLIENT_EMAIL"),
-    private_key: privateKey,
-  };
-
-  if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
-    throw new Error("Missing Google auth secrets: GOOGLE_PROJECT_ID, GOOGLE_CLIENT_EMAIL, or GOOGLE_PRIVATE_KEY");
+  if (!privateKey || !clientEmail || !projectId) {
+    throw new Error("GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON is missing private_key, client_email, or project_id");
+  }
+  if (!privateKey.startsWith("-----BEGIN PRIVATE KEY-----") || !privateKey.endsWith("-----END PRIVATE KEY-----")) {
+    throw new Error("private_key in GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON is not a valid PKCS#8 PEM");
   }
 
-  if (!serviceAccount.private_key.includes("BEGIN PRIVATE KEY")) {
-    throw new Error("GOOGLE_PRIVATE_KEY does not look like a PEM private key");
-  }
-
-  return serviceAccount;
+  return { project_id: projectId, client_email: clientEmail, private_key: privateKey };
 }
 
 async function getAccessToken(): Promise<string> {
