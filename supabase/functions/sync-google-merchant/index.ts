@@ -219,11 +219,45 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const mode: string = body.mode ?? "queue";
 
+    // Diagnostic: return eligibility + a sample payload without hitting Google.
+    if (mode === "dryrun") {
+      const { count: eligible } = await admin
+        .from("content_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "approved")
+        .gt("price", 0)
+        .not("slug", "is", null);
+      const { data: sample } = await admin
+        .from("content_submissions")
+        .select("id, title, description, price, slug, content_files(thumbnail_path)")
+        .eq("status", "approved")
+        .gt("price", 0)
+        .not("slug", "is", null)
+        .limit(1)
+        .maybeSingle();
+      let tokenOk = false;
+      let tokenError: string | null = null;
+      try { await getAccessToken(); tokenOk = true; } catch (e: any) { tokenError = e?.message ?? String(e); }
+      const samplePayload = sample
+        ? buildProductInput(sample, sample.content_files?.[0]?.thumbnail_path ?? null)
+        : null;
+      return new Response(JSON.stringify({
+        eligible: eligible ?? 0,
+        tokenOk,
+        tokenError,
+        merchantId: MERCHANT_ID,
+        dataSource: GOOGLE_MERCHANT_DATA_SOURCE,
+        insertUrl: `${MERCHANT_API_BASE}/accounts/${MERCHANT_ID}/productInputs:insert?dataSource=${encodeURIComponent(dataSourceName())}`,
+        samplePayload,
+      }, null, 2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const token = await getAccessToken();
-    let uploaded = 0, deleted = 0, failed = 0;
+    let uploaded = 0, deleted = 0, failed = 0, considered = 0;
     const errors: any[] = [];
 
     async function processOne(sub: any, action: "upsert" | "delete") {
+      considered++;
       try {
         if (action === "delete") {
           await gmcDelete(token, sub.id);
@@ -268,6 +302,7 @@ Deno.serve(async (req) => {
           .range(from, from + PAGE - 1);
         if (error) throw error;
         if (!rows || rows.length === 0) break;
+        console.log(`[GMC] full sync page from=${from} rows=${rows.length}`);
         for (const r of rows) await processOne(r, "upsert");
         if (rows.length < PAGE) break;
         from += PAGE;
@@ -287,13 +322,18 @@ Deno.serve(async (req) => {
         .is("processed_at", null)
         .order("created_at", { ascending: true })
         .limit(500);
+      console.log(`[GMC] queue items=${q?.length ?? 0}`);
       for (const item of q ?? []) {
         if (item.action === "upsert") {
           const { data: row } = await admin
             .from("content_submissions")
             .select("id, title, description, price, slug, content_files(thumbnail_path)")
             .eq("id", item.submission_id).maybeSingle();
-          if (row && Number(row.price) > 0) await processOne(row, "upsert");
+          if (row && Number(row.price) > 0 && row.slug) {
+            await processOne(row, "upsert");
+          } else {
+            console.log(`[GMC] queue skip ${item.submission_id} — not eligible`);
+          }
         } else {
           await processOne({ id: item.submission_id }, "delete");
         }
@@ -301,7 +341,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ uploaded, deleted, failed, errors: errors.slice(0, 20) }), {
+    console.log(`[GMC] done considered=${considered} uploaded=${uploaded} deleted=${deleted} failed=${failed}`);
+    return new Response(JSON.stringify({ considered, uploaded, deleted, failed, errors: errors.slice(0, 20) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
