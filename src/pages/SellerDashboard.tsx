@@ -1,5 +1,6 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./Dashboard";
+import { useSEO } from "@/hooks/useSEO";
 
 const SellerDashboard = () => {
   return (
