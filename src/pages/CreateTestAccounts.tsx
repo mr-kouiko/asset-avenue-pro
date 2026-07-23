@@ -5,8 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { User, ShieldCheck, ShoppingCart } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
 
 export const CreateTestAccounts = () => {
+  useSEO({
+    title: "Create Test Accounts",
+    description: "Internal VisuStock utility for provisioning seller, buyer and admin test accounts used during development and QA.",
+    noindex: true,
+  });
   const [creating, setCreating] = useState(false);
 
   const testAccounts = [
