@@ -129,42 +129,13 @@ export const useProductManager = () => {
         throw new Error('Unable to upgrade user role');
       }
 
-      // Determine product price — MUST never be NULL.
-      // Marketplace pricing rules by media type.
-      const mime = (submission.file.type || '').toLowerCase();
-      const name = (submission.file.name || '').toLowerCase();
-      const isArchiveFile = mime.includes('rar') || mime.includes('zip') ||
-        name.endsWith('.rar') || name.endsWith('.zip');
-      const isVectorFile = mime === 'image/svg+xml' || name.endsWith('.svg');
-      const isPdfFile = mime === 'application/pdf' || name.endsWith('.pdf');
-      const isVideoFile = mime.startsWith('video/');
-      const isAudioFile = mime.startsWith('audio/');
-      const isImageFile = mime.startsWith('image/') && !isVectorFile;
-
-      let productPrice: number;
-      if (submission.productData.isFreeContent) {
-        productPrice = 0;
-      } else if (isVideoFile) {
-        productPrice = 20.00;
-      } else if (isArchiveFile) {
-        // VFX archives
-        productPrice = 20.00;
-      } else if (isVectorFile) {
-        productPrice = 4.99;
-      } else if (isAudioFile) {
-        productPrice = 4.99;
-      } else if (isPdfFile) {
-        productPrice = 3.99;
-      } else if (isImageFile) {
-        productPrice = 2.99;
-      } else {
-        productPrice = 2.99;
-      }
-
-      // Safeguard: publishing must never proceed with a NULL/invalid price.
-      if (productPrice === null || productPrice === undefined || Number.isNaN(productPrice)) {
-        throw new Error('Publish blocked: computed price is invalid. Please retry.');
-      }
+      // Determine product price — MUST never be NULL. Uses shared pricing rules.
+      const productPrice = computeProductPrice({
+        mimeType: submission.file.type,
+        fileName: submission.file.name,
+        isFreeContent: submission.productData.isFreeContent,
+      });
+      assertValidPrice(productPrice);
 
       // Generate SEO-friendly slug
       const baseSlug = generateSlug(
