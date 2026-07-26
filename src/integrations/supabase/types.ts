@@ -420,7 +420,7 @@ export type Database = {
           id: string
           license_id: string | null
           original_language: string | null
-          price: number | null
+          price: number
           rejection_reason: string | null
           slug: string | null
           status: string
@@ -442,7 +442,7 @@ export type Database = {
           id?: string
           license_id?: string | null
           original_language?: string | null
-          price?: number | null
+          price: number
           rejection_reason?: string | null
           slug?: string | null
           status?: string
@@ -464,7 +464,7 @@ export type Database = {
           id?: string
           license_id?: string | null
           original_language?: string | null
-          price?: number | null
+          price?: number
           rejection_reason?: string | null
           slug?: string | null
           status?: string
