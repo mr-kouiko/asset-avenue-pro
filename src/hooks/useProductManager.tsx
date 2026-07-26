@@ -99,7 +99,8 @@ export const useProductManager = () => {
             description: submission.productData.description,
             category_id: submission.productData.category_id || null,
             tags: submission.productData.tags,
-            status: 'draft'
+            status: 'draft',
+            price: 0, // placeholder for drafts; recomputed on publish
           });
 
         if (error) throw error;
