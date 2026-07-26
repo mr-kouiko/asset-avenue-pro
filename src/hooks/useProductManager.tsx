@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateSlug, ensureUniqueSlug, generateSlugifiedFileName } from '@/utils/slugGenerator';
 import { getImageDimensions, getVideoDimensions } from '@/utils/mediaDimensions';
+import { computeProductPrice, assertValidPrice } from '@/utils/productPricing';
 
 interface ProductFile {
   id: string;
