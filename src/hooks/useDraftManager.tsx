@@ -76,7 +76,8 @@ export const useDraftManager = () => {
           title: initialTitle || 'Untitled Draft',
           description: '',
           status: 'draft',
-          tags: []
+          tags: [],
+          price: 0, // placeholder for empty drafts; recomputed on publish
         })
         .select()
         .single();
