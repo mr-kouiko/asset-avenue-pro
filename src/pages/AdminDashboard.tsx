@@ -403,6 +403,11 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="analytics">
+            <AdminAnalytics />
+          </TabsContent>
+
+
           <TabsContent value="merchant">
             <AdminGoogleMerchant />
           </TabsContent>
