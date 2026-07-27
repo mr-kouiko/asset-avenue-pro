@@ -164,9 +164,26 @@ serve(async (req) => {
       }),
     });
 
+    const logFailure = async (reason: string) => {
+      try {
+        await serviceClient.from("ai_image_generations").insert({
+          user_id: user.id,
+          prompt: `[${action}] ${finalPrompt}`.slice(0, 2000),
+          image_url: null,
+          source_image_url: imageUrl?.slice(0, 2000) ?? null,
+          action,
+          status: "failure",
+          error_message: reason.slice(0, 1000),
+        });
+      } catch (e) {
+        console.warn("[ai-edit-image] failure log error", e);
+      }
+    };
+
     if (!aiRes.ok) {
       const txt = await aiRes.text();
       console.error("[ai-edit-image] gateway error", aiRes.status, txt);
+      await logFailure(`gateway_${aiRes.status}: ${txt.slice(0, 300)}`);
       if (aiRes.status === 429) {
         return new Response(
           JSON.stringify({ error: "rate_limited", message: "Too many requests. Try again in a moment." }),
@@ -190,11 +207,13 @@ serve(async (req) => {
       data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     if (!resultUrl || !resultUrl.startsWith("data:")) {
       console.error("[ai-edit-image] no image in response", JSON.stringify(data).slice(0, 400));
+      await logFailure("no_image_in_response");
       return new Response(JSON.stringify({ error: "no_image", message: "The AI did not return an image" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Deduct credit
     const { error: deductErr } = await serviceClient.rpc("deduct_user_credit", {
