@@ -36,6 +36,7 @@ import { SecureDownloadButton } from "@/components/SecureDownloadButton";
 import { useLikes } from "@/hooks/useLikes";
 import { SocialShareLazy } from "@/components/SocialShareLazy";
 import { AIImageStudioTrigger } from "@/components/ai-studio/AIImageStudioPanel";
+import { PreviewTemplateButton } from "@/components/preview-template/PreviewTemplateButton";
 import { useSEO } from "@/hooks/useSEO";
 import { ReportModal } from "@/components/ReportModal";
 import { ProductReviews } from "@/components/product/ProductReviews";
