@@ -737,7 +737,21 @@ const ProductDetailInner = () => {
             )}
           </div>
         )}
-        <div className="absolute top-4 right-4 flex gap-2">
+        <div className="absolute top-4 right-4 flex gap-2 z-10">
+          {(product.type === 'photo' || product.type === 'video' || product.type === 'vfx') && (
+            <PreviewTemplateButton
+              assetUrl={
+                (product.type === 'video' || product.type === 'vfx')
+                  ? (product.previewUrl || product.thumbnail)
+                  : (product.thumbnail)
+              }
+              assetType={(product.type === 'video' || product.type === 'vfx') ? 'video' : 'image'}
+              title={product.title}
+              variant="secondary"
+              size="sm"
+              className="hidden sm:inline-flex h-9 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm text-xs"
+            />
+          )}
           <Button
             variant="secondary"
             size="sm"
