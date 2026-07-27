@@ -749,7 +749,8 @@ const ProductDetailInner = () => {
               title={product.title}
               variant="secondary"
               size="sm"
-              className="hidden sm:inline-flex h-9 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm text-xs"
+              className="h-9 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm text-xs"
+              label="Preview"
             />
           )}
           <Button
