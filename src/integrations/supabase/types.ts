@@ -16,24 +16,36 @@ export type Database = {
     Tables: {
       ai_image_generations: {
         Row: {
+          action: string | null
           created_at: string
+          error_message: string | null
           id: string
           image_url: string | null
           prompt: string
+          source_image_url: string | null
+          status: string
           user_id: string
         }
         Insert: {
+          action?: string | null
           created_at?: string
+          error_message?: string | null
           id?: string
           image_url?: string | null
           prompt: string
+          source_image_url?: string | null
+          status?: string
           user_id: string
         }
         Update: {
+          action?: string | null
           created_at?: string
+          error_message?: string | null
           id?: string
           image_url?: string | null
           prompt?: string
+          source_image_url?: string | null
+          status?: string
           user_id?: string
         }
         Relationships: []
