@@ -231,10 +231,14 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-12 mb-6">
+          <TabsList className="grid w-full grid-cols-13 mb-6" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
@@ -285,6 +289,7 @@ const AdminDashboard = () => {
               <span className="hidden sm:inline">Google Shop</span>
             </TabsTrigger>
           </TabsList>
+
 
 
           {/* Overview Tab */}
