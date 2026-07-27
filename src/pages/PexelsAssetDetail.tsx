@@ -16,6 +16,7 @@ import { PexelsPremiumAlternatives } from "@/components/pexels/PexelsPremiumAlte
 import { PexelsSEOSections } from "@/components/pexels/PexelsSEOSections";
 import { VideoWatermark } from "@/components/VideoWatermark";
 import { AIImageStudioTrigger } from "@/components/ai-studio/AIImageStudioPanel";
+import { PreviewTemplateButton } from "@/components/preview-template/PreviewTemplateButton";
 
 const PexelsAssetDetail = () => {
   const { slug, pexelsId } = useParams<{ slug?: string; pexelsId?: string }>();
@@ -135,6 +136,17 @@ const PexelsAssetDetail = () => {
                   </div>
                 </div>
               )}
+              <div className="absolute top-3 right-3 z-10">
+                <PreviewTemplateButton
+                  assetUrl={isVideo ? (item.videoUrl || item.largeThumbnail || item.thumbnail) : (item.largeThumbnail || item.thumbnail)}
+                  assetType={isVideo ? 'video' : 'image'}
+                  title={item.alt || item.title}
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 backdrop-blur-sm bg-white/90 hover:bg-white border border-white/20 shadow-sm text-xs"
+                  label="Preview"
+                />
+              </div>
             </div>
 
             {/* Attribution */}
