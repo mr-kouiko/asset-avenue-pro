@@ -708,6 +708,7 @@ const ProductManagement = () => {
 
     let successCount = 0;
     const publishedFileIds: string[] = [];
+    let sharedDraftUsed = false; // Only the first published file may reuse the shared draft submission
     
     for (const productData of validProducts) {
       const file = uploadedFiles.find(f => f.id === productData.fileId);
@@ -728,6 +729,16 @@ const ProductManagement = () => {
           continue;
         }
         
+        // Per-file submissionId always wins. Otherwise reuse the shared draft only once —
+        // subsequent files must create their own submission or they overwrite the same row.
+        const perFileSubmissionId = file.submissionId;
+        const sharedDraft = currentDraftId || editingSubmissionId || undefined;
+        let effectiveDraftId: string | undefined = perFileSubmissionId;
+        if (!effectiveDraftId && sharedDraft && !sharedDraftUsed) {
+          effectiveDraftId = sharedDraft;
+          sharedDraftUsed = true;
+        }
+
         const success = await publishProduct({
           file: {
             ...file,
@@ -745,8 +756,9 @@ const ProductManagement = () => {
             tags: productData.tags,
             isFreeContent: productData.isFreeContent || false
           },
-          draftId: file.submissionId || currentDraftId || editingSubmissionId || undefined // Prefer per-file submissionId
+          draftId: effectiveDraftId
         });
+
 
         if (success) {
           successCount++;
