@@ -342,6 +342,14 @@ const Portfolio = () => {
                                 Edit
                               </Link>
                             </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteOne(submission.id, submission.title)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </Card>
