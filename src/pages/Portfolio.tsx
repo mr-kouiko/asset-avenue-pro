@@ -24,8 +24,34 @@ interface SellerProfile {
 const Portfolio = () => {
   useSEO({ title: "My Portfolio", description: "Your VisuStock portfolio.", noindex: true });
   const { user } = useAuth();
-  const { submissions, stats, loading, refreshData } = useSellerDashboard();
+  const { submissions, stats, loading, refreshData, deleteSubmission } = useSellerDashboard();
   const [profile, setProfile] = useState<SellerProfile | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
+
+  const handleDeleteRejected = async () => {
+    if (rejectedSubmissions.length === 0) return;
+    if (!confirm(`Delete ${rejectedSubmissions.length} rejected item(s)? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    let ok = 0;
+    for (const s of rejectedSubmissions) {
+      const success = await deleteSubmission(s.id);
+      if (success) ok++;
+    }
+    setBulkDeleting(false);
+    toast.success(`Deleted ${ok} rejected item(s)`);
+    refreshData();
+  };
+
+  const handleDeleteOne = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const success = await deleteSubmission(id);
+    if (success) {
+      toast.success('Deleted');
+      refreshData();
+    }
+  };
 
   // Fetch fresh profile data from database
   const fetchProfile = useCallback(async () => {
