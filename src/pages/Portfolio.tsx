@@ -10,7 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Link } from "react-router-dom";
-import { Plus, Upload, TrendingUp, Heart, Download } from "lucide-react";
+import { Plus, Upload, TrendingUp, Heart, Download, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 
