@@ -190,10 +190,23 @@ const Portfolio = () => {
 
           {/* Contents */}
           <Tabs defaultValue="published" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="published">Published contents ({approvedSubmissions.length})</TabsTrigger>
-              <TabsTrigger value="all">All my contents ({submissions.length})</TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <TabsList>
+                <TabsTrigger value="published">Published contents ({approvedSubmissions.length})</TabsTrigger>
+                <TabsTrigger value="all">All my contents ({submissions.length})</TabsTrigger>
+              </TabsList>
+              {rejectedSubmissions.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteRejected}
+                  disabled={bulkDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {bulkDeleting ? 'Deleting…' : `Delete rejected (${rejectedSubmissions.length})`}
+                </Button>
+              )}
+            </div>
 
             <TabsContent value="published" className="space-y-6">
               {loading ? (
