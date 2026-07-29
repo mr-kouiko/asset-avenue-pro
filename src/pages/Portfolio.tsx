@@ -10,7 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSellerDashboard } from "@/hooks/useSellerDashboard";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Link } from "react-router-dom";
-import { Plus, Upload, TrendingUp, Heart, Download } from "lucide-react";
+import { Plus, Upload, TrendingUp, Heart, Download, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 
@@ -23,8 +24,34 @@ interface SellerProfile {
 const Portfolio = () => {
   useSEO({ title: "My Portfolio", description: "Your VisuStock portfolio.", noindex: true });
   const { user } = useAuth();
-  const { submissions, stats, loading, refreshData } = useSellerDashboard();
+  const { submissions, stats, loading, refreshData, deleteSubmission } = useSellerDashboard();
   const [profile, setProfile] = useState<SellerProfile | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
+
+  const handleDeleteRejected = async () => {
+    if (rejectedSubmissions.length === 0) return;
+    if (!confirm(`Delete ${rejectedSubmissions.length} rejected item(s)? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    let ok = 0;
+    for (const s of rejectedSubmissions) {
+      const success = await deleteSubmission(s.id);
+      if (success) ok++;
+    }
+    setBulkDeleting(false);
+    toast.success(`Deleted ${ok} rejected item(s)`);
+    refreshData();
+  };
+
+  const handleDeleteOne = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const success = await deleteSubmission(id);
+    if (success) {
+      toast.success('Deleted');
+      refreshData();
+    }
+  };
 
   // Fetch fresh profile data from database
   const fetchProfile = useCallback(async () => {
@@ -163,10 +190,23 @@ const Portfolio = () => {
 
           {/* Contents */}
           <Tabs defaultValue="published" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="published">Published contents ({approvedSubmissions.length})</TabsTrigger>
-              <TabsTrigger value="all">All my contents ({submissions.length})</TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <TabsList>
+                <TabsTrigger value="published">Published contents ({approvedSubmissions.length})</TabsTrigger>
+                <TabsTrigger value="all">All my contents ({submissions.length})</TabsTrigger>
+              </TabsList>
+              {rejectedSubmissions.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteRejected}
+                  disabled={bulkDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {bulkDeleting ? 'Deleting…' : `Delete rejected (${rejectedSubmissions.length})`}
+                </Button>
+              )}
+            </div>
 
             <TabsContent value="published" className="space-y-6">
               {loading ? (
@@ -301,6 +341,14 @@ const Portfolio = () => {
                               <Link to={`/seller-dashboard?tab=content`}>
                                 Edit
                               </Link>
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteOne(submission.id, submission.title)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
