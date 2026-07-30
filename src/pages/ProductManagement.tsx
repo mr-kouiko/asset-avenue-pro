@@ -599,10 +599,12 @@ const ProductManagement = () => {
         tags: productData.tags,
         isFreeContent: productData.isFreeContent || false
       },
-      draftId: ownedDraftId // Always use a draft that belongs to the current user
+      draftId: ownedDraftId || undefined // Reuse an owned draft, else create a new submission
     });
 
     if (success) {
+      if (ownedDraftId) consumedDraftIdsRef.current.add(ownedDraftId);
+
       // Remove the published file from the list
       const updatedFiles = uploadedFiles.filter(f => f.id !== fileId);
       setUploadedFiles(updatedFiles);
