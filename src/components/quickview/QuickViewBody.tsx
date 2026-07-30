@@ -346,52 +346,29 @@ export const QuickViewBody = ({ item }: Props) => {
         </div>
 
         {/* Similar content (AI visual similarity) */}
-        {(similarLoading || similar.length > 0) && (
-          <div className="border-t pt-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              Similar Content
-            </h3>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {similarLoading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="shrink-0 w-20 h-20 rounded bg-muted animate-pulse" />
-                  ))
-                : similar.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() =>
-                        open(
-                          [
-                            {
-                              id: s.id,
-                              slug: s.slug || undefined,
-                              title: s.title || 'Untitled',
-                              author: '',
-                              price: s.price ?? 0,
-                              type: (s.file_type || '').toLowerCase().startsWith('video')
-                                ? 'video'
-                                : 'photo',
-                              thumbnail: s.thumbnail_path || '/placeholder.svg',
-                            } as any,
-                          ],
-                          0
-                        )
-                      }
-                      className="shrink-0 w-20 h-20 rounded overflow-hidden border-2 border-transparent hover:border-border"
-                      aria-label={s.title || 'Similar asset'}
-                    >
-                      <img
-                        src={s.thumbnail_path || '/placeholder.svg'}
-                        alt={s.title || 'Similar asset'}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-            </div>
-          </div>
-        )}
+        <SimilarContent
+          className="border-t pt-3"
+          variant="strip"
+          submissionId={item.id}
+          enabled={item.source !== 'pexels'}
+          onSelect={(s) =>
+            open(
+              [
+                {
+                  id: s.id,
+                  slug: s.slug || undefined,
+                  title: s.title || 'Untitled',
+                  author: '',
+                  price: s.price ?? 0,
+                  type: (s.file_type || '').toLowerCase().startsWith('video') ? 'video' : 'photo',
+                  thumbnail: s.thumbnail_path || '/placeholder.svg',
+                } as any,
+              ],
+              0
+            )
+          }
+        />
+
 
       </aside>
     </div>
