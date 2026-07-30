@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
+import { SimilarContent } from "@/components/SimilarContent";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
