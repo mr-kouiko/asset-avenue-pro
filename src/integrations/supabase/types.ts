@@ -2703,22 +2703,43 @@ export type Database = {
         Args: { token_param: string }
         Returns: boolean
       }
-      match_similar_assets: {
-        Args: {
-          exclude_id: string
-          match_count?: number
-          query_embedding: string
-        }
-        Returns: {
-          file_type: string
-          id: string
-          price: number
-          similarity: number
-          slug: string
-          thumbnail_path: string
-          title: string
-        }[]
-      }
+      match_similar_assets:
+        | {
+            Args: {
+              exclude_id: string
+              match_count?: number
+              query_embedding: string
+            }
+            Returns: {
+              file_type: string
+              id: string
+              price: number
+              similarity: number
+              slug: string
+              thumbnail_path: string
+              title: string
+            }[]
+          }
+        | {
+            Args: {
+              exclude_id: string
+              match_count?: number
+              max_per_creator?: number
+              min_similarity?: number
+              prefer_type?: string
+              query_embedding: string
+              query_tags?: string[]
+            }
+            Returns: {
+              file_type: string
+              id: string
+              price: number
+              similarity: number
+              slug: string
+              thumbnail_path: string
+              title: string
+            }[]
+          }
       mature_seller_earnings: { Args: never; Returns: number }
       process_scan_result: {
         Args: {
