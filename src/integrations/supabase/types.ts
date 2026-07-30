@@ -166,6 +166,41 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_embeddings: {
+        Row: {
+          created_at: string
+          embedding: string
+          model: string
+          source: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          embedding: string
+          model?: string
+          source?: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: string
+          model?: string
+          source?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_embeddings_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author: string
@@ -2667,6 +2702,22 @@ export type Database = {
       mark_download_token_used: {
         Args: { token_param: string }
         Returns: boolean
+      }
+      match_similar_assets: {
+        Args: {
+          exclude_id: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          file_type: string
+          id: string
+          price: number
+          similarity: number
+          slug: string
+          thumbnail_path: string
+          title: string
+        }[]
       }
       mature_seller_earnings: { Args: never; Returns: number }
       process_scan_result: {
