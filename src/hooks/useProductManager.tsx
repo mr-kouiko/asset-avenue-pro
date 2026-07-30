@@ -157,7 +157,9 @@ export const useProductManager = () => {
 
       let submissionId: string;
 
-      // If draftId is provided, update existing draft to pending_review
+      // A draft may be stale or shared by several uploaded files. Only promote it
+      // while it is still unpublished; otherwise create a distinct submission.
+      // This status guard also protects against concurrent tabs/double publishes.
       if (submission.draftId) {
         const { data: updatedSubmission, error: updateError } = await supabase
           .from('content_submissions')
@@ -174,12 +176,35 @@ export const useProductManager = () => {
           })
           .eq('id', submission.draftId)
           .eq('creator_id', user.id)
+          .in('status', ['draft', 'pending'])
           .select()
-          .single();
+          .maybeSingle();
 
         if (updateError) throw updateError;
-        submissionId = updatedSubmission.id;
-        console.log('📝 Updated draft to approved:', submissionId);
+        if (updatedSubmission) {
+          submissionId = updatedSubmission.id;
+          console.log('📝 Updated draft to approved:', submissionId);
+        } else {
+          const { data: submissionData, error: submissionError } = await supabase
+            .from('content_submissions')
+            .insert({
+              creator_id: user.id,
+              title: submission.productData.title,
+              description: submission.productData.description,
+              category_id: submission.productData.category_id || null,
+              tags: submission.productData.tags,
+              price: productPrice,
+              slug: uniqueSlug,
+              status: 'approved',
+              ai_declaration: submission.productData.aiDeclaration || null
+            })
+            .select()
+            .single();
+
+          if (submissionError) throw submissionError;
+          submissionId = submissionData.id;
+          console.log('🆕 Stale draft detected; created distinct submission:', submissionId);
+        }
       } else {
         // Create new content submission with pending_review
         const { data: submissionData, error: submissionError } = await supabase
