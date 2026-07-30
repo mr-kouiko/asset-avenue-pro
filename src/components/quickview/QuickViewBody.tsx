@@ -11,7 +11,7 @@ import { VideoWatermark } from '@/components/VideoWatermark';
 import { SocialShare } from '@/components/SocialShare';
 import { QuickViewItem, useQuickView } from './QuickViewContext';
 import { AIImageStudioTrigger } from '@/components/ai-studio/AIImageStudioPanel';
-import { useSimilarAssets } from '@/hooks/useSimilarAssets';
+import { SimilarContent } from '@/components/SimilarContent';
 
 
 interface Props { item: QuickViewItem; }
@@ -228,8 +228,6 @@ export const QuickViewBody = ({ item }: Props) => {
     if (product?.uploadDate) arr.push(['Uploaded', new Date(product.uploadDate).toLocaleDateString()]);
     return arr;
   }, [primaryFile, meta, product]);
-
-  const { similar, loading: similarLoading } = useSimilarAssets(item.id, item.source !== 'pexels');
 
   return (
     <div className="grid md:grid-cols-[minmax(0,1fr)_360px] gap-4 md:gap-6 h-full overflow-hidden">
