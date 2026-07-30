@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { ContentCard } from "@/components/ContentCard";
+import { SimilarContent } from "@/components/SimilarContent";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -1169,22 +1171,9 @@ const ProductDetailInner = () => {
             </TabsContent>
             
             <TabsContent value="related" className="mt-8">
-              <h3 className="text-xl font-semibold mb-6">Similar content</h3>
-              {relatedProducts.length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {relatedProducts.map((item) => (
-                    <ContentCard key={item.id} {...item} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-                    <Eye className="h-8 w-8" />
-                  </div>
-                  <p>No similar content found at the moment.</p>
-                </div>
-              )}
+              <SimilarContent submissionId={product.id} />
             </TabsContent>
+
             
             <TabsContent value="author" className="mt-8">
               <h3 className="text-xl font-semibold mb-6">More from {product.author}</h3>
