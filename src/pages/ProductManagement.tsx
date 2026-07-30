@@ -545,21 +545,16 @@ const ProductManagement = () => {
       file.submissionId,
       currentDraftId,
       editingSubmissionId
-    ], fileId);
+    ], fileId, { forPublish: true });
 
     console.log('📝 [PUBLISH] Resolved draft ID:', ownedDraftId);
     console.log('📁 [PUBLISH] File submissionId:', file.submissionId);
     console.log('🗂️ [PUBLISH] currentDraftId:', currentDraftId);
     console.log('✏️ [PUBLISH] editingSubmissionId:', editingSubmissionId);
 
-    if (!ownedDraftId) {
-      sessionStorage.removeItem('editingSubmission');
-      sessionStorage.removeItem('pendingUploadedFiles');
-      sessionStorage.removeItem('currentDraftId');
-      toast.error(t('sd.pm.toast.noDraftPublish'));
-      navigate('/file-upload');
-      return;
-    }
+    // No reusable draft left (e.g. publishing several files one by one from the
+    // same batch): publish creates a brand-new submission instead of overwriting.
+
 
     if (!productData.title.trim() || !productData.description.trim()) {
       toast.error(t('sd.pm.toast.titleDescRequired'));
