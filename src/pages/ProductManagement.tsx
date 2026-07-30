@@ -783,9 +783,11 @@ const ProductManagement = () => {
 
 
         if (success) {
+          if (effectiveDraftId) consumedDraftIdsRef.current.add(effectiveDraftId);
           successCount++;
           publishedFileIds.push(productData.fileId);
         }
+
       }
     }
 
