@@ -448,14 +448,21 @@ const ProductManagement = () => {
 
 
 
+  // Draft submissions already consumed by a publish in this page session.
+  // A draft row can only back ONE published product — reusing it would overwrite
+  // the previously published submission and its content_files row.
+  const consumedDraftIdsRef = useRef<Set<string>>(new Set());
+
   const resolveOwnedSubmissionIdForUser = async (
     userId: string,
     candidateIds: Array<string | undefined | null>,
-    fileId?: string
+    fileId?: string,
+    options?: { forPublish?: boolean }
   ): Promise<string | null> => {
-    const ordered = (candidateIds.filter(Boolean) as string[]).filter(
-      (id, idx, arr) => arr.indexOf(id) === idx
-    );
+    const consumed = consumedDraftIdsRef.current;
+    const ordered = (candidateIds.filter(Boolean) as string[])
+      .filter((id, idx, arr) => arr.indexOf(id) === idx)
+      .filter((id) => !(options?.forPublish && consumed.has(id)));
     
     console.log('🔍 [RESOLVE] Checking candidate IDs:', ordered, 'for user:', userId);
     
@@ -463,15 +470,21 @@ const ProductManagement = () => {
     if (ordered.length > 0) {
       const { data, error } = await supabase
         .from('content_submissions')
-        .select('id')
+        .select('id, status')
         .in('id', ordered)
         .eq('creator_id', userId);
 
       if (error) {
         console.error('❌ Failed to resolve owned submission id:', error);
       } else if (data && data.length > 0) {
-        const owned = new Set((data || []).map((r) => r.id));
-        const match = ordered.find((id) => owned.has(id));
+        // When publishing, never reuse a submission that is already published —
+        // that would silently replace an existing marketplace product.
+        const usable = new Map(
+          data
+            .filter((r) => !options?.forPublish || r.status === 'draft' || r.status === 'pending')
+            .map((r) => [r.id, r])
+        );
+        const match = ordered.find((id) => usable.has(id));
         if (match) {
           console.log('✅ [RESOLVE] Found owned submission:', match);
           return match;
@@ -479,8 +492,8 @@ const ProductManagement = () => {
       }
     }
     
-    // Fallback: Check if any of the user's draft submissions contain the file
-    // This handles cases where sessionStorage is stale but the file is still linked
+    // Fallback: reuse one of the user's own unpublished drafts (excluding ones
+    // already consumed by an earlier publish in this session).
     console.log('🔄 [RESOLVE] Fallback - checking user drafts...');
     const { data: userDrafts, error: draftsError } = await supabase
       .from('content_submissions')
@@ -493,15 +506,18 @@ const ProductManagement = () => {
       return null;
     }
     
-    if (userDrafts && userDrafts.length > 0) {
-      console.log('📋 [RESOLVE] User has', userDrafts.length, 'draft(s)');
-      // Return the first draft - the user can select which to publish from their dashboard
-      return userDrafts[0].id;
+    const available = (userDrafts || []).filter(
+      (d) => !(options?.forPublish && consumed.has(d.id))
+    );
+    if (available.length > 0) {
+      console.log('📋 [RESOLVE] User has', available.length, 'available draft(s)');
+      return available[0].id;
     }
     
     console.log('❌ [RESOLVE] No owned drafts found for user');
     return null;
   };
+
 
 
   const handlePublish = async (fileId: string) => {
@@ -529,21 +545,16 @@ const ProductManagement = () => {
       file.submissionId,
       currentDraftId,
       editingSubmissionId
-    ], fileId);
+    ], fileId, { forPublish: true });
 
     console.log('📝 [PUBLISH] Resolved draft ID:', ownedDraftId);
     console.log('📁 [PUBLISH] File submissionId:', file.submissionId);
     console.log('🗂️ [PUBLISH] currentDraftId:', currentDraftId);
     console.log('✏️ [PUBLISH] editingSubmissionId:', editingSubmissionId);
 
-    if (!ownedDraftId) {
-      sessionStorage.removeItem('editingSubmission');
-      sessionStorage.removeItem('pendingUploadedFiles');
-      sessionStorage.removeItem('currentDraftId');
-      toast.error(t('sd.pm.toast.noDraftPublish'));
-      navigate('/file-upload');
-      return;
-    }
+    // No reusable draft left (e.g. publishing several files one by one from the
+    // same batch): publish creates a brand-new submission instead of overwriting.
+
 
     if (!productData.title.trim() || !productData.description.trim()) {
       toast.error(t('sd.pm.toast.titleDescRequired'));
@@ -588,10 +599,12 @@ const ProductManagement = () => {
         tags: productData.tags,
         isFreeContent: productData.isFreeContent || false
       },
-      draftId: ownedDraftId // Always use a draft that belongs to the current user
+      draftId: ownedDraftId || undefined // Reuse an owned draft, else create a new submission
     });
 
     if (success) {
+      if (ownedDraftId) consumedDraftIdsRef.current.add(ownedDraftId);
+
       // Remove the published file from the list
       const updatedFiles = uploadedFiles.filter(f => f.id !== fileId);
       setUploadedFiles(updatedFiles);
@@ -734,10 +747,19 @@ const ProductManagement = () => {
         const perFileSubmissionId = file.submissionId;
         const sharedDraft = currentDraftId || editingSubmissionId || undefined;
         let effectiveDraftId: string | undefined = perFileSubmissionId;
-        if (!effectiveDraftId && sharedDraft && !sharedDraftUsed) {
+        if (
+          !effectiveDraftId &&
+          sharedDraft &&
+          !sharedDraftUsed &&
+          !consumedDraftIdsRef.current.has(sharedDraft)
+        ) {
           effectiveDraftId = sharedDraft;
           sharedDraftUsed = true;
         }
+        if (effectiveDraftId && consumedDraftIdsRef.current.has(effectiveDraftId)) {
+          effectiveDraftId = undefined;
+        }
+
 
         const success = await publishProduct({
           file: {
@@ -761,9 +783,11 @@ const ProductManagement = () => {
 
 
         if (success) {
+          if (effectiveDraftId) consumedDraftIdsRef.current.add(effectiveDraftId);
           successCount++;
           publishedFileIds.push(productData.fileId);
         }
+
       }
     }
 
