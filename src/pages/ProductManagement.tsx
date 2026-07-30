@@ -747,10 +747,19 @@ const ProductManagement = () => {
         const perFileSubmissionId = file.submissionId;
         const sharedDraft = currentDraftId || editingSubmissionId || undefined;
         let effectiveDraftId: string | undefined = perFileSubmissionId;
-        if (!effectiveDraftId && sharedDraft && !sharedDraftUsed) {
+        if (
+          !effectiveDraftId &&
+          sharedDraft &&
+          !sharedDraftUsed &&
+          !consumedDraftIdsRef.current.has(sharedDraft)
+        ) {
           effectiveDraftId = sharedDraft;
           sharedDraftUsed = true;
         }
+        if (effectiveDraftId && consumedDraftIdsRef.current.has(effectiveDraftId)) {
+          effectiveDraftId = undefined;
+        }
+
 
         const success = await publishProduct({
           file: {
