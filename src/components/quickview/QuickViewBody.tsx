@@ -11,6 +11,8 @@ import { VideoWatermark } from '@/components/VideoWatermark';
 import { SocialShare } from '@/components/SocialShare';
 import { QuickViewItem, useQuickView } from './QuickViewContext';
 import { AIImageStudioTrigger } from '@/components/ai-studio/AIImageStudioPanel';
+import { useSimilarAssets } from '@/hooks/useSimilarAssets';
+
 
 interface Props { item: QuickViewItem; }
 
@@ -227,7 +229,7 @@ export const QuickViewBody = ({ item }: Props) => {
     return arr;
   }, [primaryFile, meta, product]);
 
-  const strip = items.slice(0, 12);
+  const { similar, loading: similarLoading } = useSimilarAssets(item.id, item.source !== 'pexels');
 
   return (
     <div className="grid md:grid-cols-[minmax(0,1fr)_360px] gap-4 md:gap-6 h-full overflow-hidden">
@@ -343,29 +345,54 @@ export const QuickViewBody = ({ item }: Props) => {
           />
         </div>
 
-        {/* More from this browse */}
-        {strip.length > 1 && (
+        {/* Similar content (AI visual similarity) */}
+        {(similarLoading || similar.length > 0) && (
           <div className="border-t pt-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              More in this browse
+              Similar Content
             </h3>
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {strip.map((s, i) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => open(items, items.findIndex(x => x.id === s.id))}
-                  className={`shrink-0 w-20 h-20 rounded overflow-hidden border-2 ${
-                    s.id === item.id ? 'border-primary' : 'border-transparent hover:border-border'
-                  }`}
-                  aria-label={s.title}
-                >
-                  <img src={s.thumbnail} alt={s.title} className="w-full h-full object-cover" />
-                </button>
-              ))}
+              {similarLoading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="shrink-0 w-20 h-20 rounded bg-muted animate-pulse" />
+                  ))
+                : similar.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() =>
+                        open(
+                          [
+                            {
+                              id: s.id,
+                              slug: s.slug || undefined,
+                              title: s.title || 'Untitled',
+                              author: '',
+                              price: s.price ?? 0,
+                              type: (s.file_type || '').toLowerCase().startsWith('video')
+                                ? 'video'
+                                : 'photo',
+                              thumbnail: s.thumbnail_path || '/placeholder.svg',
+                            } as any,
+                          ],
+                          0
+                        )
+                      }
+                      className="shrink-0 w-20 h-20 rounded overflow-hidden border-2 border-transparent hover:border-border"
+                      aria-label={s.title || 'Similar asset'}
+                    >
+                      <img
+                        src={s.thumbnail_path || '/placeholder.svg'}
+                        alt={s.title || 'Similar asset'}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
             </div>
           </div>
         )}
+
       </aside>
     </div>
   );
