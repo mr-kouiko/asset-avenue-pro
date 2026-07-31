@@ -140,14 +140,22 @@ function buildHtml(opts: {
     schemaScript += `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`;
   }
 
+  const hreflangHtml = opts.hreflangPath
+    ? LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE_URL}${localized(opts.hreflangPath!, l)}">`).join("\n  ") +
+      `\n  <link rel="alternate" hreflang="x-default" href="${SITE_URL}${opts.hreflangPath}">`
+    : "";
+
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${opts.lang || "en"}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(desc)}">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <link rel="canonical" href="${opts.canonical}">
+  ${hreflangHtml}
+
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(desc)}">
   <meta property="og:url" content="${opts.url}">
