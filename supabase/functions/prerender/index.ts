@@ -802,6 +802,34 @@ Deno.serve(async (req) => {
               },
             }),
           },
+          // Media object so image/video rich results can be extracted.
+          (() => {
+            const ft: string = product.content_files?.[0]?.file_type || "";
+            const isVideo = /video/i.test(ft) || currentCat?.slug === "videos";
+            return isVideo
+              ? {
+                  "@type": "VideoObject",
+                  "@id": `${pUrl}#media`,
+                  name: product.title,
+                  description: product.description || product.title,
+                  thumbnailUrl: img,
+                  uploadDate: new Date().toISOString(),
+                  url: pUrl,
+                  publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+                }
+              : {
+                  "@type": "ImageObject",
+                  "@id": `${pUrl}#media`,
+                  name: product.title,
+                  description: product.description || product.title,
+                  contentUrl: img,
+                  thumbnailUrl: img,
+                  url: pUrl,
+                  acquireLicensePage: pUrl,
+                  creditText: "VisuStock",
+                  publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+                };
+          })(),
           {
             "@type": "BreadcrumbList",
             itemListElement: breadcrumbs.map((b, i) => ({
@@ -812,6 +840,7 @@ Deno.serve(async (req) => {
             })),
           },
         ],
+
       };
 
       const tagsHtml = product.tags?.length 
