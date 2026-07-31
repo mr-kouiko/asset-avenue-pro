@@ -444,13 +444,16 @@ Deno.serve(async (req) => {
     // ===== PEXELS ASSET PAGES (/pexels/:slug and /products/free-...-pexels-<id>) =====
     {
       const productForm = path.match(/^\/products\/(free-[a-z0-9-]*-pexels-(\d+))\/?$/i);
+      const pexelsFreeForm = path.match(/^\/pexels\/(free-[a-z0-9-]*-pexels-(\d+))\/?$/i);
       const legacyForm = path.match(/^\/pexels\/((photo|video)-(\d+)[a-z0-9-]*)\/?$/i);
 
-      if (productForm || legacyForm) {
-        const pexelsId = Number(productForm ? productForm[2] : legacyForm![3]);
-        const guessedType = productForm
-          ? (/^free-video-/i.test(productForm[1]) ? "video" : "photo")
+      if (productForm || pexelsFreeForm || legacyForm) {
+        const matchedSlug = productForm?.[1] || pexelsFreeForm?.[1] || legacyForm![1];
+        const pexelsId = Number(productForm?.[2] || pexelsFreeForm?.[2] || legacyForm![3]);
+        const guessedType: "photo" | "video" = (productForm || pexelsFreeForm)
+          ? (/^free-video-/i.test(matchedSlug) ? "video" : "photo")
           : (legacyForm![2].toLowerCase() as "photo" | "video");
+
 
         // Cached AI SEO copy, when it exists.
         const { data: seoRow } = await supabase
