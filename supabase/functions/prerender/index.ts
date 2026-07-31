@@ -248,8 +248,9 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+
 
     const logo = `${SITE_URL}/lovable-uploads/visustock-logo-no-bg.png`;
 
@@ -343,14 +344,17 @@ Deno.serve(async (req) => {
     // ===== MARKETPLACE / CATEGORY =====
     if (path === "/marketplace" || path.startsWith("/marketplace?")) {
       const urlObj = new URL(`${SITE_URL}${path}`);
-      const categoryId = urlObj.searchParams.get("category");
-      const search = urlObj.searchParams.get("search");
+      const categoryParam = urlObj.searchParams.get("category");
 
-      // Canonical URL: base marketplace without filters (except category)
-      let canonicalUrl = `${SITE_URL}/marketplace`;
-      if (categoryId) {
-        canonicalUrl = `${SITE_URL}/marketplace?category=${categoryId}`;
-      }
+      // The category param may be a UUID (app links) or a slug (SEO links).
+      const currentCat = categoryParam
+        ? cats.find((c) => c.id === categoryParam || c.slug === categoryParam)
+        : undefined;
+
+      const hreflangPath = currentCat
+        ? `/marketplace?category=${currentCat.slug || currentCat.id}`
+        : "/marketplace";
+      const canonicalUrl = `${SITE_URL}${hreflangPath}`;
 
       let query = supabase
         .from("content_submissions")
@@ -358,13 +362,13 @@ Deno.serve(async (req) => {
         .eq("status", "approved")
         .not("slug", "is", null);
 
-      if (categoryId) {
-        query = query.eq("category_id", categoryId);
+      if (currentCat) {
+        query = query.eq("category_id", currentCat.id);
       }
 
       const { data: products } = await query.order("created_at", { ascending: false }).limit(50);
+      const list: Product[] = products || [];
 
-      const currentCat = cats.find(c => c.id === categoryId);
       const pageTitle = currentCat 
         ? `${currentCat.name} - Stock Content | VisuStock`
         : "Marketplace - Browse Creative Content | VisuStock";
@@ -388,6 +392,16 @@ Deno.serve(async (req) => {
         name: pageH1,
         url: canonicalUrl,
         description: pageDesc,
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: list.length,
+          itemListElement: list.map((p, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: p.title,
+            url: `${SITE_URL}/s/products/${p.slug}`,
+          })),
+        },
         breadcrumb: {
           "@type": "BreadcrumbList",
           itemListElement: breadcrumbs.map((b, i) => ({
@@ -405,8 +419,8 @@ Deno.serve(async (req) => {
           <ul>${buildCategoryLinks(cats)}</ul>
         </section>
         <section>
-          <h2>Available Content (${products?.length || 0} items)</h2>
-          ${buildProductLinks(products || [])}
+          <h2>Available Content (${list.length} items)</h2>
+          ${buildProductLinks(list)}
         </section>`;
 
       return new Response(
@@ -421,6 +435,280 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath,
+          lang,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
+      );
+    }
+
+    // ===== PEXELS ASSET PAGES (/pexels/:slug and /products/free-...-pexels-<id>) =====
+    {
+      const productForm = path.match(/^\/products\/(free-[a-z0-9-]*-pexels-(\d+))\/?$/i);
+      const pexelsFreeForm = path.match(/^\/pexels\/(free-[a-z0-9-]*-pexels-(\d+))\/?$/i);
+      const legacyForm = path.match(/^\/pexels\/((photo|video)-(\d+)[a-z0-9-]*)\/?$/i);
+
+      if (productForm || pexelsFreeForm || legacyForm) {
+        const matchedSlug = productForm?.[1] || pexelsFreeForm?.[1] || legacyForm![1];
+        const pexelsId = Number(productForm?.[2] || pexelsFreeForm?.[2] || legacyForm![3]);
+        const guessedType: "photo" | "video" = (productForm || pexelsFreeForm)
+          ? (/^free-video-/i.test(matchedSlug) ? "video" : "photo")
+          : (legacyForm![2].toLowerCase() as "photo" | "video");
+
+
+        // Cached AI SEO copy, when it exists.
+        const { data: seoRow } = await supabase
+          .from("pexels_seo_content")
+          .select("seo_title, meta_description, h1, intro, main_content, use_cases, keywords, type")
+          .eq("pexels_id", pexelsId)
+          .eq("type", guessedType)
+          .maybeSingle();
+
+        // Live asset metadata from the Pexels API (best effort).
+        let asset: { alt: string; photographer: string; photographerUrl: string; image: string; width?: number; height?: number; duration?: number; videoUrl?: string } | null = null;
+        const pexelsKey = Deno.env.get("PEXELS_API_KEY");
+        if (pexelsKey) {
+          try {
+            const endpoint = guessedType === "video"
+              ? `https://api.pexels.com/videos/videos/${pexelsId}`
+              : `https://api.pexels.com/v1/photos/${pexelsId}`;
+            const r = await fetch(endpoint, { headers: { Authorization: pexelsKey } });
+            if (r.ok) {
+              const j = await r.json();
+              asset = guessedType === "video"
+                ? {
+                    alt: j.tags?.join(", ") || `Free stock video ${pexelsId}`,
+                    photographer: j.user?.name || "Pexels contributor",
+                    photographerUrl: j.user?.url || "https://www.pexels.com",
+                    image: j.image,
+                    width: j.width,
+                    height: j.height,
+                    duration: j.duration,
+                    videoUrl: j.video_files?.[0]?.link,
+                  }
+                : {
+                    alt: j.alt || `Free stock photo ${pexelsId}`,
+                    photographer: j.photographer || "Pexels contributor",
+                    photographerUrl: j.photographer_url || "https://www.pexels.com",
+                    image: j.src?.large2x || j.src?.large || j.src?.original,
+                    width: j.width,
+                    height: j.height,
+                  };
+            }
+          } catch (_e) { /* degrade gracefully */ }
+        }
+
+        const stop = new Set(["the","a","an","and","or","with","for","of","in","on","at","to","is","are","this","that","it","its","by","from"]);
+        const keywords = (asset?.alt || seoRow?.h1 || "")
+          .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9\s-]/g, " ").split(/\s+/)
+          .filter((w) => w.length > 2 && !stop.has(w)).slice(0, 6);
+        const productSlug = (productForm || pexelsFreeForm)
+          ? matchedSlug
+          : `free-${guessedType}${keywords.length ? `-${keywords.join("-")}` : ""}-pexels-${pexelsId}`;
+
+
+        const canonicalPath = `/products/${productSlug}`;
+        const canonical = `${SITE_URL}${canonicalPath}`;
+        const label = asset?.alt || seoRow?.h1 || `Free stock ${guessedType} ${pexelsId}`;
+        const h1 = seoRow?.h1 || `Free ${guessedType === "video" ? "Stock Video" : "Stock Photo"}: ${label}`;
+        const title = seoRow?.seo_title || `${h1} — Free Download | VisuStock`;
+        const desc = seoRow?.meta_description
+          || `Download this free ${guessedType === "video" ? "stock video" : "stock photo"} in high resolution — free for personal and commercial projects on VisuStock.`;
+        const img = asset?.image || logo;
+
+        const breadcrumbs = [
+          { name: "Home", url: SITE_URL },
+          { name: "Free Stock Library", url: `${SITE_URL}/free-stock-library` },
+          { name: h1, url: canonical },
+        ];
+
+        const media = guessedType === "video"
+          ? {
+              "@type": "VideoObject",
+              "@id": `${canonical}#media`,
+              name: h1,
+              description: desc,
+              thumbnailUrl: img,
+              contentUrl: asset?.videoUrl,
+              uploadDate: new Date().toISOString(),
+              ...(asset?.duration ? { duration: `PT${Math.floor(asset.duration / 60)}M${asset.duration % 60}S` } : {}),
+              ...(asset?.width ? { width: asset.width, height: asset.height } : {}),
+              author: { "@type": "Person", name: asset?.photographer || "Pexels contributor" },
+              publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+              url: canonical,
+            }
+          : {
+              "@type": "ImageObject",
+              "@id": `${canonical}#media`,
+              name: h1,
+              description: desc,
+              contentUrl: img,
+              thumbnailUrl: img,
+              ...(asset?.width ? { width: asset.width, height: asset.height } : {}),
+              author: { "@type": "Person", name: asset?.photographer || "Pexels contributor" },
+              creditText: `Photo by ${asset?.photographer || "Pexels contributor"}`,
+              acquireLicensePage: canonical,
+              publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+              url: canonical,
+            };
+
+        const schema = {
+          "@context": "https://schema.org",
+          "@graph": [
+            media,
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: breadcrumbs.map((b, i) => ({
+                "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+              })),
+            },
+          ],
+        };
+
+        const body = `
+          <section>
+            <img src="${img}" alt="${esc(label)}" width="${asset?.width || 1200}" height="${asset?.height || 800}">
+            <p>${esc(seoRow?.intro || desc)}</p>
+          </section>
+          ${seoRow?.main_content ? `<section>${markdownToHtml(String(seoRow.main_content))}</section>` : ""}
+          ${Array.isArray(seoRow?.use_cases) && seoRow!.use_cases.length
+            ? `<section><h2>How to use this ${guessedType}</h2><ul>${(seoRow!.use_cases as string[]).map((u) => `<li>${esc(String(u))}</li>`).join("")}</ul></section>`
+            : ""}
+          <section><h2>Asset details</h2><ul>
+            <li>Contributor: ${esc(asset?.photographer || "Pexels contributor")}</li>
+            ${asset?.width ? `<li>Resolution: ${asset.width} × ${asset.height}</li>` : ""}
+            ${asset?.duration ? `<li>Duration: ${asset.duration}s</li>` : ""}
+            <li>License: free for personal and commercial use</li>
+          </ul></section>
+          <nav>
+            <a href="${SITE_URL}/free-stock-library">More free ${guessedType === "video" ? "videos" : "photos"}</a> ·
+            <a href="${SITE_URL}/marketplace">Premium marketplace</a> ·
+            <a href="${SITE_URL}/s/collections">Collections</a> ·
+            <a href="${SITE_URL}/licenses">Licensing</a>
+          </nav>`;
+
+        return new Response(
+          buildHtml({
+            title, desc, h1,
+            url: canonical, canonical, img,
+            type: "website",
+            body, breadcrumbs, schema,
+            hreflangPath: canonicalPath,
+            lang,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
+        );
+      }
+    }
+
+    // ===== SELLER PORTFOLIOS (/seller/:storeSlug) =====
+    if (path.startsWith("/seller/")) {
+      const storeSlug = path.replace("/seller/", "").split("?")[0].split("/")[0].toLowerCase();
+      const slugify = (s: string) =>
+        s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "store";
+
+      const { data: creators } = await supabase
+        .from("creator_profiles_public")
+        .select("user_id, display_name, store_name, avatar_url")
+        .not("store_name", "is", null)
+        .limit(2000);
+
+      const creator = (creators || []).find((c: any) => slugify(c.store_name || "") === storeSlug);
+      const canonicalPath = `/seller/${storeSlug}`;
+      const canonical = `${SITE_URL}${canonicalPath}`;
+
+      if (!creator) {
+        return new Response(
+          buildHtml({
+            title: "Seller Not Found | VisuStock",
+            desc: "This seller portfolio is unavailable. Browse the VisuStock marketplace instead.",
+            h1: "Seller Not Found",
+            url: canonical, canonical, img: logo, type: "website",
+            body: `<p>This portfolio doesn't exist. <a href="${SITE_URL}/marketplace">Browse the marketplace</a>.</p>`,
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      const { data: sellerProducts } = await supabase
+        .from("content_submissions")
+        .select("id, title, slug, price, description")
+        .eq("status", "approved")
+        .eq("creator_id", creator.user_id)
+        .not("slug", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(48);
+      const items: Product[] = sellerProducts || [];
+
+      const storeName = creator.store_name as string;
+      const authorName = (creator.display_name as string) || storeName;
+      const desc = `Browse ${items.length} premium stock ${items.length === 1 ? "asset" : "assets"} by ${storeName} on VisuStock — photos, videos, audio and vectors licensed for commercial use.`;
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Marketplace", url: `${SITE_URL}/marketplace` },
+        { name: storeName, url: canonical },
+      ];
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "ProfilePage",
+            "@id": `${canonical}#profile`,
+            url: canonical,
+            name: `${storeName} — VisuStock Portfolio`,
+            description: desc,
+            mainEntity: {
+              "@type": "Person",
+              "@id": `${canonical}#person`,
+              name: authorName,
+              alternateName: storeName,
+              url: canonical,
+              ...(creator.avatar_url ? { image: creator.avatar_url } : {}),
+              worksFor: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+            },
+            hasPart: {
+              "@type": "ItemList",
+              numberOfItems: items.length,
+              itemListElement: items.map((p, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: p.title,
+                url: `${SITE_URL}/s/products/${p.slug}`,
+              })),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const body = `
+        <section>
+          ${creator.avatar_url ? `<img src="${esc(String(creator.avatar_url))}" alt="${esc(storeName)}" width="160" height="160">` : ""}
+          <p>${esc(desc)}</p>
+        </section>
+        <section>
+          <h2>Assets by ${esc(storeName)} (${items.length})</h2>
+          ${items.length ? buildProductLinks(items) : `<p>This seller hasn't published assets yet. <a href="${SITE_URL}/marketplace">Browse the marketplace</a>.</p>`}
+        </section>
+        <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/become-seller">Become a seller</a></nav>`;
+
+      return new Response(
+        buildHtml({
+          title: `${storeName} — Stock Portfolio | VisuStock`,
+          desc, h1: `${storeName} Portfolio`,
+          url: canonical, canonical, img: (creator.avatar_url as string) || logo,
+          type: "profile",
+          body, breadcrumbs, schema,
+          hreflangPath: canonicalPath,
           lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
@@ -428,6 +716,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== PRODUCT PAGES (canonical /s/products/:slug, legacy /products/:slug) =====
+
     if (path.startsWith("/products/") || path.startsWith("/s/products/")) {
       const slug = path.replace(/^\/(s\/)?products\//, "").split("?")[0].split("/")[0];
       const uuid = slug.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
@@ -455,18 +744,19 @@ Deno.serve(async (req) => {
       if (!product) {
         return new Response(
           buildHtml({
-            title: "Not Found - VisuStock",
-            desc: "Page not found",
-            h1: "Not Found",
+            title: "Asset Not Found | VisuStock",
+            desc: "This asset is no longer available. Browse the VisuStock marketplace for similar stock content.",
+            h1: "Asset Not Found",
             url: `${SITE_URL}${path}`,
-            canonical: SITE_URL,
+            canonical: `${SITE_URL}/s/products/${slug}`,
             img: logo,
             type: "website",
-            body: "<p>This page doesn't exist.</p>",
+            body: `<p>This asset is no longer available. <a href="${SITE_URL}/marketplace">Browse the marketplace</a> or explore the <a href="${SITE_URL}/free-stock-library">free stock library</a>.</p>`,
           }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } }
         );
       }
+
 
       const thumb = product.content_files?.[0]?.thumbnail_path;
       const img = thumb?.startsWith("http") ? thumb : thumb ? `${supabaseUrl}/storage/v1/object/public/content-files/${thumb}` : logo;
@@ -518,6 +808,34 @@ Deno.serve(async (req) => {
               },
             }),
           },
+          // Media object so image/video rich results can be extracted.
+          (() => {
+            const ft: string = product.content_files?.[0]?.file_type || "";
+            const isVideo = /video/i.test(ft) || currentCat?.slug === "videos";
+            return isVideo
+              ? {
+                  "@type": "VideoObject",
+                  "@id": `${pUrl}#media`,
+                  name: product.title,
+                  description: product.description || product.title,
+                  thumbnailUrl: img,
+                  uploadDate: new Date().toISOString(),
+                  url: pUrl,
+                  publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+                }
+              : {
+                  "@type": "ImageObject",
+                  "@id": `${pUrl}#media`,
+                  name: product.title,
+                  description: product.description || product.title,
+                  contentUrl: img,
+                  thumbnailUrl: img,
+                  url: pUrl,
+                  acquireLicensePage: pUrl,
+                  creditText: "VisuStock",
+                  publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+                };
+          })(),
           {
             "@type": "BreadcrumbList",
             itemListElement: breadcrumbs.map((b, i) => ({
@@ -528,6 +846,7 @@ Deno.serve(async (req) => {
             })),
           },
         ],
+
       };
 
       const tagsHtml = product.tags?.length 
@@ -568,10 +887,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ===== /s/categories/:slug =====
-    if (path.startsWith("/s/categories/")) {
-      const slug = path.replace("/s/categories/", "").split("?")[0].split("/")[0];
-      const canonical = `${SITE_URL}/s/categories/${slug}`;
+    // ===== /s/categories/:slug (and legacy /category/:slug) =====
+    if (path.startsWith("/s/categories/") || path.startsWith("/category/") || path.startsWith("/categories/")) {
+      const slug = path.replace(/^\/(s\/categories|categories|category)\//, "").split("?")[0].split("/")[0];
+      const canonicalPath = `/s/categories/${slug}`;
+      const canonical = `${SITE_URL}${canonicalPath}`;
 
       const { data: cat } = await supabase
         .from("categories")
@@ -592,20 +912,20 @@ Deno.serve(async (req) => {
           .eq("category_id", cat.id)
           .not("slug", "is", null)
           .order("created_at", { ascending: false })
-          .limit(30);
+          .limit(48);
         products = data || [];
       }
 
       const breadcrumbs = [
         { name: "Home", url: SITE_URL },
-        { name: "Categories", url: `${SITE_URL}/marketplace` },
+        { name: "Marketplace", url: `${SITE_URL}/marketplace` },
         { name: displayName, url: canonical },
       ];
 
       const itemListElement = products.map((p, i) => ({
         "@type": "ListItem",
         position: i + 1,
-        url: `${SITE_URL}/products/${p.slug}`,
+        url: `${SITE_URL}/s/products/${p.slug}`,
         name: p.title,
       }));
 
@@ -618,7 +938,7 @@ Deno.serve(async (req) => {
             url: canonical,
             name: `${displayName} Stock Content`,
             description: desc,
-            mainEntity: { "@type": "ItemList", itemListElement },
+            mainEntity: { "@type": "ItemList", numberOfItems: products.length, itemListElement },
           },
           {
             "@type": "BreadcrumbList",
@@ -630,7 +950,7 @@ Deno.serve(async (req) => {
       };
 
       const itemsHtml = products.length
-        ? products.map((p) => `<article><h3><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}${p.price ? `<p>Price: €${p.price}</p>` : ""}</article>`).join("\n")
+        ? products.map((p) => `<article><h3><a href="${SITE_URL}/s/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}${p.price ? `<p>Price: $${p.price}</p>` : ""}</article>`).join("\n")
         : `<p>New ${esc(displayName.toLowerCase())} content is being curated. <a href="${SITE_URL}/marketplace">Browse the full marketplace</a>.</p>`;
 
       const body = `
@@ -640,7 +960,8 @@ Deno.serve(async (req) => {
         <section>
           <h2>${esc(displayName)} Content (${products.length} items)</h2>
           ${itemsHtml}
-        </section>`;
+        </section>
+        <section><h2>Other categories</h2><ul>${buildCategoryLinks(cats)}</ul></section>`;
 
       return new Response(
         buildHtml({
@@ -654,10 +975,13 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath: canonicalPath,
+          lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
+
 
     // ===== /s/collections/:slug =====
     if (path.startsWith("/s/collections/") || path.startsWith("/collections/")) {
@@ -695,10 +1019,11 @@ Deno.serve(async (req) => {
             description: desc,
             mainEntity: {
               "@type": "ItemList",
+              numberOfItems: products.length,
               itemListElement: products.map((p, i) => ({
                 "@type": "ListItem",
                 position: i + 1,
-                url: `${SITE_URL}/products/${p.slug}`,
+                url: `${SITE_URL}/s/products/${p.slug}`,
                 name: p.title,
               })),
             },
@@ -713,7 +1038,7 @@ Deno.serve(async (req) => {
       };
 
       const itemsHtml = products.length
-        ? products.map((p) => `<article><h3><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}</article>`).join("\n")
+        ? products.map((p) => `<article><h3><a href="${SITE_URL}/s/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}</article>`).join("\n")
         : `<p>This ${esc(displayName.toLowerCase())} collection is being curated. <a href="${SITE_URL}/marketplace">Explore the marketplace</a>.</p>`;
 
       const body = `
@@ -721,7 +1046,8 @@ Deno.serve(async (req) => {
         <section>
           <h2>${esc(displayName)} Items (${products.length})</h2>
           ${itemsHtml}
-        </section>`;
+        </section>
+        <nav><a href="${SITE_URL}/s/collections">All collections</a> · <a href="${SITE_URL}/marketplace">Marketplace</a></nav>`;
 
       return new Response(
         buildHtml({
@@ -735,7 +1061,10 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath: `/s/collections/${slug}`,
+          lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
@@ -794,10 +1123,14 @@ Deno.serve(async (req) => {
           canonical,
           img: logo,
           type: "website",
-          body: `<section>${itemsHtml}</section>`,
+          body: `<section>${itemsHtml}</section>
+            <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/studio-ai">Studio AI</a></nav>`,
           breadcrumbs,
           schema,
+          hreflangPath: "/blog",
+          lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
@@ -892,7 +1225,10 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath: `/blog/${slug}`,
+          lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
@@ -966,22 +1302,54 @@ Deno.serve(async (req) => {
         .not("slug", "is", null)
         .order("created_at", { ascending: false })
         .limit(24);
+      const freeList: Product[] = freeProducts || [];
       const breadcrumbs = [
         { name: "Home", url: SITE_URL },
         { name: "Free Stock Library", url: canonical },
       ];
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "CollectionPage",
+            "@id": `${canonical}#collection`,
+            url: canonical,
+            name: "Free Stock Library",
+            description: desc,
+            isAccessibleForFree: true,
+            mainEntity: {
+              "@type": "ItemList",
+              numberOfItems: freeList.length,
+              itemListElement: freeList.map((p, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: p.title,
+                url: `${SITE_URL}/s/products/${p.slug}`,
+              })),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
       const body = `
         <section><p>${esc(desc)}</p></section>
-        <section><h2>Popular Free Downloads</h2>${buildProductLinks(freeProducts || [])}</section>
-        <nav><a href="${SITE_URL}/marketplace">Explore premium assets</a></nav>`;
+        <section><h2>Popular Free Downloads (${freeList.length})</h2>${buildProductLinks(freeList)}</section>
+        <section><h2>Browse by category</h2><ul>${buildCategoryLinks(cats)}</ul></section>
+        <nav><a href="${SITE_URL}/marketplace">Explore premium assets</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/licenses">Licensing</a></nav>`;
 
       return new Response(
         buildHtml({
           title: "Free Stock Photos & Videos | VisuStock",
           desc, h1: "Free Stock Library",
           url: canonical, canonical, img: logo, type: "website",
-          body, breadcrumbs, hreflangPath: "/free-stock-library", lang,
+          body, breadcrumbs, schema, hreflangPath: "/free-stock-library", lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } }
       );
     }
@@ -1087,6 +1455,93 @@ Deno.serve(async (req) => {
         { name: page.h1, url: canonical },
       ];
 
+      const pageTypeMap: Record<string, string> = {
+        "/about": "AboutPage",
+        "/contact": "ContactPage",
+        "/support": "FAQPage",
+        "/terms": "WebPage",
+        "/privacy": "WebPage",
+        "/privacy-policy": "WebPage",
+        "/cookie-policy": "WebPage",
+        "/license-agreement": "WebPage",
+        "/licenses": "WebPage",
+        "/packages-pricing": "WebPage",
+        "/buy-credits": "WebPage",
+        "/infinity": "WebPage",
+        "/become-seller": "WebPage",
+        "/business": "WebPage",
+      };
+      const pageType = pageTypeMap[path] || "WebPage";
+
+      const graph: any[] = [
+        {
+          "@type": pageType,
+          "@id": `${canonical}#page`,
+          url: canonical,
+          name: page.h1,
+          description: page.desc,
+          inLanguage: lang,
+          isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}#website`, url: SITE_URL, name: "VisuStock" },
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: breadcrumbs.map((b, i) => ({
+            "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+          })),
+        },
+      ];
+
+      if (path === "/contact") {
+        graph.push({
+          "@type": "Organization",
+          "@id": `${SITE_URL}#organization`,
+          name: "VisuStock",
+          url: SITE_URL,
+          logo,
+          contactPoint: {
+            "@type": "ContactPoint",
+            email: "contact@visustock.com",
+            contactType: "customer support",
+            availableLanguage: ["en", "fr", "es", "de", "pt"],
+          },
+        });
+      }
+
+      let faqHtml = "";
+      if (path === "/support") {
+        const faqs = [
+          { q: "How do I download an asset I purchased?", a: "Open your account dashboard, go to Downloads, and re-download any purchased asset at any time." },
+          { q: "What licence do VisuStock assets come with?", a: "Every purchase includes a commercial licence for use in personal and commercial projects. See the licence agreement for the full terms." },
+          { q: "How do I contact support?", a: "Email contact@visustock.com or submit a ticket from the support page and our team will reply within one business day." },
+          { q: "How do sellers get paid?", a: "Sellers earn 60% of every sale. Payouts are released via PayPal after a 14-day hold once the balance reaches $50." },
+        ];
+        (graph[0] as any).mainEntity = faqs.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        }));
+        faqHtml = `<section><h2>Frequently asked questions</h2>${faqs
+          .map((f) => `<div><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>`)
+          .join("\n")}</section>`;
+      }
+
+      if (path === "/packages-pricing" || path === "/buy-credits" || path === "/infinity") {
+        graph.push({
+          "@type": "Product",
+          name: path === "/infinity" ? "VisuStock Infinity Subscription" : "VisuStock Credits",
+          description: page.desc,
+          brand: { "@type": "Brand", name: "VisuStock" },
+          offers: {
+            "@type": "AggregateOffer",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+            url: canonical,
+          },
+        });
+      }
+
+      const schema = { "@context": "https://schema.org", "@graph": graph };
+
       return new Response(
         buildHtml({
           title: page.title,
@@ -1097,14 +1552,17 @@ Deno.serve(async (req) => {
           img: logo,
           type: "website",
           body: `<section><p>${esc(page.desc)}</p></section>
+            ${faqHtml}
             <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/free-stock-library">Free stock</a> · <a href="${SITE_URL}/studio-ai">Studio AI</a> · <a href="${SITE_URL}/support">Support</a></nav>`,
           breadcrumbs,
+          schema,
           hreflangPath: path,
           lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
       );
     }
+
 
 
     return new Response(JSON.stringify({ prerender: false, reason: "unknown-path" }), {
