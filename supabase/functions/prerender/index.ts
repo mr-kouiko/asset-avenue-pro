@@ -882,10 +882,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ===== /s/categories/:slug =====
-    if (path.startsWith("/s/categories/")) {
-      const slug = path.replace("/s/categories/", "").split("?")[0].split("/")[0];
-      const canonical = `${SITE_URL}/s/categories/${slug}`;
+    // ===== /s/categories/:slug (and legacy /category/:slug) =====
+    if (path.startsWith("/s/categories/") || path.startsWith("/category/") || path.startsWith("/categories/")) {
+      const slug = path.replace(/^\/(s\/categories|categories|category)\//, "").split("?")[0].split("/")[0];
+      const canonicalPath = `/s/categories/${slug}`;
+      const canonical = `${SITE_URL}${canonicalPath}`;
 
       const { data: cat } = await supabase
         .from("categories")
@@ -906,20 +907,20 @@ Deno.serve(async (req) => {
           .eq("category_id", cat.id)
           .not("slug", "is", null)
           .order("created_at", { ascending: false })
-          .limit(30);
+          .limit(48);
         products = data || [];
       }
 
       const breadcrumbs = [
         { name: "Home", url: SITE_URL },
-        { name: "Categories", url: `${SITE_URL}/marketplace` },
+        { name: "Marketplace", url: `${SITE_URL}/marketplace` },
         { name: displayName, url: canonical },
       ];
 
       const itemListElement = products.map((p, i) => ({
         "@type": "ListItem",
         position: i + 1,
-        url: `${SITE_URL}/products/${p.slug}`,
+        url: `${SITE_URL}/s/products/${p.slug}`,
         name: p.title,
       }));
 
@@ -932,7 +933,7 @@ Deno.serve(async (req) => {
             url: canonical,
             name: `${displayName} Stock Content`,
             description: desc,
-            mainEntity: { "@type": "ItemList", itemListElement },
+            mainEntity: { "@type": "ItemList", numberOfItems: products.length, itemListElement },
           },
           {
             "@type": "BreadcrumbList",
@@ -944,7 +945,7 @@ Deno.serve(async (req) => {
       };
 
       const itemsHtml = products.length
-        ? products.map((p) => `<article><h3><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}${p.price ? `<p>Price: €${p.price}</p>` : ""}</article>`).join("\n")
+        ? products.map((p) => `<article><h3><a href="${SITE_URL}/s/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}${p.price ? `<p>Price: $${p.price}</p>` : ""}</article>`).join("\n")
         : `<p>New ${esc(displayName.toLowerCase())} content is being curated. <a href="${SITE_URL}/marketplace">Browse the full marketplace</a>.</p>`;
 
       const body = `
@@ -954,7 +955,8 @@ Deno.serve(async (req) => {
         <section>
           <h2>${esc(displayName)} Content (${products.length} items)</h2>
           ${itemsHtml}
-        </section>`;
+        </section>
+        <section><h2>Other categories</h2><ul>${buildCategoryLinks(cats)}</ul></section>`;
 
       return new Response(
         buildHtml({
@@ -968,10 +970,13 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath: canonicalPath,
+          lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
+
 
     // ===== /s/collections/:slug =====
     if (path.startsWith("/s/collections/") || path.startsWith("/collections/")) {
