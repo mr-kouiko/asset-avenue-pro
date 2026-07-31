@@ -414,6 +414,7 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
