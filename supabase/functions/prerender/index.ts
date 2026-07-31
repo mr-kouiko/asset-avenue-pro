@@ -202,8 +202,8 @@ function buildCategoryLinks(categories: Category[]): string {
 function buildProductLinks(products: Product[]): string {
   return products.map(p => 
     `<article itemscope itemtype="https://schema.org/Product">
-      <h3 itemprop="name"><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>
-      ${p.price ? `<span itemprop="offers" itemscope itemtype="https://schema.org/Offer"><span itemprop="price" content="${p.price}">€${p.price}</span><meta itemprop="priceCurrency" content="EUR"></span>` : ''}
+      <h3 itemprop="name"><a href="${SITE_URL}/s/products/${p.slug}">${esc(p.title)}</a></h3>
+      ${p.price ? `<span itemprop="offers" itemscope itemtype="https://schema.org/Offer"><span itemprop="price" content="${p.price}">$${p.price}</span><meta itemprop="priceCurrency" content="USD"></span>` : ''}
     </article>`
   ).join('\n');
 }
@@ -211,9 +211,10 @@ function buildProductLinks(products: Product[]): string {
 function buildRelatedLinks(products: Product[]): string {
   if (!products.length) return '';
   return `<section><h2>Related Products</h2><ul>${products.map(p => 
-    `<li><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></li>`
+    `<li><a href="${SITE_URL}/s/products/${p.slug}">${esc(p.title)}</a></li>`
   ).join('')}</ul></section>`;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
