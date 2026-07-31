@@ -739,18 +739,19 @@ Deno.serve(async (req) => {
       if (!product) {
         return new Response(
           buildHtml({
-            title: "Not Found - VisuStock",
-            desc: "Page not found",
-            h1: "Not Found",
+            title: "Asset Not Found | VisuStock",
+            desc: "This asset is no longer available. Browse the VisuStock marketplace for similar stock content.",
+            h1: "Asset Not Found",
             url: `${SITE_URL}${path}`,
-            canonical: SITE_URL,
+            canonical: `${SITE_URL}/s/products/${slug}`,
             img: logo,
             type: "website",
-            body: "<p>This page doesn't exist.</p>",
+            body: `<p>This asset is no longer available. <a href="${SITE_URL}/marketplace">Browse the marketplace</a> or explore the <a href="${SITE_URL}/free-stock-library">free stock library</a>.</p>`,
           }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } }
         );
       }
+
 
       const thumb = product.content_files?.[0]?.thumbnail_path;
       const img = thumb?.startsWith("http") ? thumb : thumb ? `${supabaseUrl}/storage/v1/object/public/content-files/${thumb}` : logo;
