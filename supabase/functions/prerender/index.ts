@@ -529,8 +529,8 @@ Deno.serve(async (req) => {
           <img src="${img}" alt="${esc(product.title)}" itemprop="image" width="800" height="600">
           <p itemprop="description">${esc(product.description || '')}</p>
           ${product.price ? `<div itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-            <span>Price: </span><span itemprop="price" content="${product.price}">€${product.price}</span>
-            <meta itemprop="priceCurrency" content="EUR">
+            <span>Price: </span><span itemprop="price" content="${product.price}">$${product.price}</span>
+            <meta itemprop="priceCurrency" content="USD">
             <link itemprop="availability" href="https://schema.org/InStock">
           </div>` : ''}
           ${tagsHtml}
