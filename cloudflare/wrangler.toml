@@ -1,0 +1,17 @@
+name = "visustock-edge"
+main = "prerender-worker.js"
+compatibility_date = "2025-11-01"
+
+# Both apex and www must be routed through the worker, otherwise crawler
+# requests bypass the prerender branch and hit the SPA shell directly.
+routes = [
+  { pattern = "visustock.com/*", zone_name = "visustock.com" },
+  { pattern = "www.visustock.com/*", zone_name = "visustock.com" },
+]
+
+# Deploy:
+#   cd cloudflare && npx wrangler deploy
+#
+# Verify after deploy (expect X-Prerendered: 1 and real <h1> in the body):
+#   curl -sI -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" \
+#     https://visustock.com/ | grep -i x-prerendered
