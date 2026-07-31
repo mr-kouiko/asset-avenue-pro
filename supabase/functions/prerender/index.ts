@@ -417,10 +417,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ===== PRODUCT PAGES =====
-    if (path.startsWith("/products/")) {
-      const slug = path.replace("/products/", "");
+    // ===== PRODUCT PAGES (canonical /s/products/:slug, legacy /products/:slug) =====
+    if (path.startsWith("/products/") || path.startsWith("/s/products/")) {
+      const slug = path.replace(/^\/(s\/)?products\//, "").split("?")[0].split("/")[0];
       const uuid = slug.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+
 
       let product = null;
       const { data: bySlug } = await supabase
