@@ -502,7 +502,7 @@ Deno.serve(async (req) => {
               offers: {
                 "@type": "Offer",
                 price: product.price,
-                priceCurrency: "EUR",
+                priceCurrency: "USD",
                 availability: "https://schema.org/InStock",
                 url: pUrl,
               },
