@@ -460,7 +460,8 @@ Deno.serve(async (req) => {
 
       const thumb = product.content_files?.[0]?.thumbnail_path;
       const img = thumb?.startsWith("http") ? thumb : thumb ? `${supabaseUrl}/storage/v1/object/public/content-files/${thumb}` : logo;
-      const pUrl = `${SITE_URL}/products/${product.slug || slug}`;
+      const productPath = `/s/products/${product.slug || slug}`;
+      const pUrl = `${SITE_URL}${productPath}`;
       const currentCat = cats.find(c => c.id === product.category_id);
 
       // Fetch related products (same category, exclude current)
