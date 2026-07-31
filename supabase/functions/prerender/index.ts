@@ -343,14 +343,17 @@ Deno.serve(async (req) => {
     // ===== MARKETPLACE / CATEGORY =====
     if (path === "/marketplace" || path.startsWith("/marketplace?")) {
       const urlObj = new URL(`${SITE_URL}${path}`);
-      const categoryId = urlObj.searchParams.get("category");
-      const search = urlObj.searchParams.get("search");
+      const categoryParam = urlObj.searchParams.get("category");
 
-      // Canonical URL: base marketplace without filters (except category)
-      let canonicalUrl = `${SITE_URL}/marketplace`;
-      if (categoryId) {
-        canonicalUrl = `${SITE_URL}/marketplace?category=${categoryId}`;
-      }
+      // The category param may be a UUID (app links) or a slug (SEO links).
+      const currentCat = categoryParam
+        ? cats.find((c) => c.id === categoryParam || c.slug === categoryParam)
+        : undefined;
+
+      const hreflangPath = currentCat
+        ? `/marketplace?category=${currentCat.slug || currentCat.id}`
+        : "/marketplace";
+      const canonicalUrl = `${SITE_URL}${hreflangPath}`;
 
       let query = supabase
         .from("content_submissions")
@@ -358,13 +361,13 @@ Deno.serve(async (req) => {
         .eq("status", "approved")
         .not("slug", "is", null);
 
-      if (categoryId) {
-        query = query.eq("category_id", categoryId);
+      if (currentCat) {
+        query = query.eq("category_id", currentCat.id);
       }
 
       const { data: products } = await query.order("created_at", { ascending: false }).limit(50);
+      const list: Product[] = products || [];
 
-      const currentCat = cats.find(c => c.id === categoryId);
       const pageTitle = currentCat 
         ? `${currentCat.name} - Stock Content | VisuStock`
         : "Marketplace - Browse Creative Content | VisuStock";
@@ -388,6 +391,16 @@ Deno.serve(async (req) => {
         name: pageH1,
         url: canonicalUrl,
         description: pageDesc,
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: list.length,
+          itemListElement: list.map((p, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: p.title,
+            url: `${SITE_URL}/s/products/${p.slug}`,
+          })),
+        },
         breadcrumb: {
           "@type": "BreadcrumbList",
           itemListElement: breadcrumbs.map((b, i) => ({
@@ -405,8 +418,8 @@ Deno.serve(async (req) => {
           <ul>${buildCategoryLinks(cats)}</ul>
         </section>
         <section>
-          <h2>Available Content (${products?.length || 0} items)</h2>
-          ${buildProductLinks(products || [])}
+          <h2>Available Content (${list.length} items)</h2>
+          ${buildProductLinks(list)}
         </section>`;
 
       return new Response(
@@ -421,11 +434,13 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath,
           lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
+
 
     // ===== PRODUCT PAGES (canonical /s/products/:slug, legacy /products/:slug) =====
     if (path.startsWith("/products/") || path.startsWith("/s/products/")) {
