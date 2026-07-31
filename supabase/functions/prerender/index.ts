@@ -7,11 +7,40 @@ const corsHeaders = {
 
 const SITE_URL = "https://visustock.com";
 
-const CRAWLERS = ["googlebot", "bingbot", "yandexbot", "facebookexternalhit", "twitterbot", "linkedinbot", "discordbot", "applebot", "gptbot", "claudebot"];
+const CRAWLERS = [
+  "googlebot", "google-extended", "storebot-google", "google-inspectiontool",
+  "bingbot", "bingpreview", "yandexbot", "duckduckbot", "baiduspider",
+  "facebookexternalhit", "facebot", "twitterbot", "linkedinbot", "discordbot",
+  "slackbot", "telegrambot", "whatsapp", "pinterest", "redditbot", "applebot",
+  "gptbot", "chatgpt-user", "oai-searchbot", "claudebot", "anthropic-ai",
+  "claude-web", "perplexitybot", "ccbot", "amazonbot", "bytespider",
+  "ia_archiver", "prerender",
+];
 
 function isCrawler(ua: string): boolean {
   return CRAWLERS.some((c) => ua.toLowerCase().includes(c));
 }
+
+/** Supported language prefixes — canonical/hreflang aware. */
+const LANGS = ["en", "fr", "es", "de", "pt"] as const;
+type Lang = typeof LANGS[number];
+
+/** Split "/fr/s/products/x?y=1" → { lang: "fr", path: "/s/products/x?y=1" } */
+function splitLang(raw: string): { lang: Lang; path: string } {
+  const m = raw.match(/^\/([a-z]{2})(\/|$|\?)/i);
+  const code = m?.[1]?.toLowerCase() as Lang | undefined;
+  if (code && (LANGS as readonly string[]).includes(code)) {
+    const rest = raw.slice(3);
+    return { lang: code, path: rest.startsWith("/") || rest.startsWith("?") ? (rest.startsWith("?") ? "/" + rest : rest) : "/" };
+  }
+  return { lang: "en", path: raw };
+}
+
+/** Prefix a site-absolute path with the active language (en stays at root). */
+function localized(path: string, lang: Lang): string {
+  return lang === "en" ? path : `/${lang}${path === "/" ? "" : path}`;
+}
+
 
 function esc(t: string): string {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
