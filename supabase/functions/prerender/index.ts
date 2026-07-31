@@ -1118,10 +1118,14 @@ Deno.serve(async (req) => {
           canonical,
           img: logo,
           type: "website",
-          body: `<section>${itemsHtml}</section>`,
+          body: `<section>${itemsHtml}</section>
+            <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/studio-ai">Studio AI</a></nav>`,
           breadcrumbs,
           schema,
+          hreflangPath: "/blog",
+          lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
