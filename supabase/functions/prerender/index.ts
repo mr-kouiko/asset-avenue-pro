@@ -887,31 +887,182 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ===== COLLECTIONS INDEX =====
+    if (path === "/collections" || path === "/s/collections") {
+      const canonical = `${SITE_URL}/s/collections`;
+      const desc = "Browse curated VisuStock collections — business, technology, nature, travel, food, wellness, education, lifestyle, music and abstract backgrounds.";
+      const slugs = [
+        "business", "technology", "nature", "travel", "food",
+        "health-wellness", "education", "lifestyle", "music-audio", "abstract-backgrounds",
+      ];
+      const pretty = (s: string) => s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Collections", url: canonical },
+      ];
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "CollectionPage",
+            "@id": `${canonical}#collections`,
+            url: canonical,
+            name: "VisuStock Collections",
+            description: desc,
+            mainEntity: {
+              "@type": "ItemList",
+              itemListElement: slugs.map((s, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: pretty(s),
+                url: `${SITE_URL}/s/collections/${s}`,
+              })),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+      const body = `
+        <section><p>${esc(desc)}</p></section>
+        <section><h2>All Collections</h2><ul>
+          ${slugs.map((s) => `<li><a href="${SITE_URL}/s/collections/${s}">${esc(pretty(s))} Collection</a></li>`).join("\n")}
+        </ul></section>
+        <nav><a href="${SITE_URL}/marketplace">Browse the full marketplace</a></nav>`;
+
+      return new Response(
+        buildHtml({
+          title: "Curated Stock Collections | VisuStock",
+          desc, h1: "Curated Collections",
+          url: canonical, canonical, img: logo, type: "website",
+          body, breadcrumbs, schema, hreflangPath: "/s/collections", lang,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } }
+      );
+    }
+
+    // ===== FREE STOCK LIBRARY =====
+    if (path === "/free-stock-library") {
+      const canonical = `${SITE_URL}/free-stock-library`;
+      const desc = "Download free stock photos and videos from the VisuStock free library — no subscription required, ready for personal and commercial projects.";
+      const { data: freeProducts } = await supabase
+        .from("content_submissions")
+        .select("id, title, slug, price")
+        .eq("status", "approved")
+        .not("slug", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(24);
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Free Stock Library", url: canonical },
+      ];
+      const body = `
+        <section><p>${esc(desc)}</p></section>
+        <section><h2>Popular Free Downloads</h2>${buildProductLinks(freeProducts || [])}</section>
+        <nav><a href="${SITE_URL}/marketplace">Explore premium assets</a></nav>`;
+
+      return new Response(
+        buildHtml({
+          title: "Free Stock Photos & Videos | VisuStock",
+          desc, h1: "Free Stock Library",
+          url: canonical, canonical, img: logo, type: "website",
+          body, breadcrumbs, hreflangPath: "/free-stock-library", lang,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } }
+      );
+    }
+
+    // ===== STUDIO AI TOOL PAGES =====
+    const toolPages: Record<string, { title: string; desc: string; h1: string; intro: string }> = {
+      "/ai-upscaler": { title: "AI Image Upscaler — Enlarge Photos Without Losing Quality | VisuStock", desc: "Upscale images up to 4x in your browser with AI. Sharper details, no quality loss, free and private.", h1: "AI Image Upscaler", intro: "Enlarge photos up to 4x with Real-ESRGAN AI directly in your browser. Nothing is uploaded to a server." },
+      "/image-upscale": { title: "Image Upscale — AI Photo Enlarger | VisuStock", desc: "Enlarge and sharpen any photo with AI upscaling directly in your browser.", h1: "Image Upscale", intro: "Increase resolution while preserving fine detail using AI upscaling." },
+      "/face-enhancer": { title: "AI Face Enhancer — Restore & Sharpen Portraits | VisuStock", desc: "Restore blurry or low-resolution faces with GFPGAN AI face enhancement in your browser.", h1: "AI Face Enhancer", intro: "Restore facial detail in portraits and old photos with AI, right in your browser." },
+      "/remove-background": { title: "Remove Image Background Free | VisuStock", desc: "Remove backgrounds from photos automatically with AI and download a transparent PNG.", h1: "Remove Background", intro: "Cut out subjects automatically and export a transparent PNG in seconds." },
+      "/image-converter": { title: "Free Image Converter — JPG, PNG, WebP, AVIF | VisuStock", desc: "Convert images between JPG, PNG, WebP and AVIF instantly in your browser. Free, no upload.", h1: "Image Converter", intro: "Convert between JPG, PNG, WebP and AVIF locally — files never leave your device." },
+      "/image-resizer": { title: "Free Image Resizer — Resize Photos Online | VisuStock", desc: "Resize images to any dimension or social media preset instantly in your browser.", h1: "Image Resizer", intro: "Resize to exact pixel dimensions or ready-made social presets." },
+      "/reframe-video": { title: "AI Video Reframe — Auto Crop to Vertical & Square | VisuStock", desc: "Automatically reframe landscape videos to vertical or square with AI subject tracking.", h1: "AI Reframe Video", intro: "Reframe 16:9 footage to 9:16 or 1:1 with AI subject tracking." },
+      "/video-upscale": { title: "AI Video Upscaler — Improve Video Resolution | VisuStock", desc: "Upscale and sharpen video footage with AI for crisper, higher-resolution results.", h1: "AI Video Upscaler", intro: "Increase video resolution and clarity with AI enhancement." },
+      "/text-to-speech": { title: "Free Text to Speech — Natural AI Voices | VisuStock", desc: "Turn text into natural-sounding speech with neural AI voices and download the audio.", h1: "Text to Speech", intro: "Generate natural voiceovers from text with neural AI voices." },
+      "/text-to-video": { title: "AI Text to Video Generator | VisuStock", desc: "Generate short videos from a text prompt with AI video generation.", h1: "Text to Video AI", intro: "Describe a scene and generate a short AI video clip." },
+      "/image-to-video": { title: "AI Image to Video Generator | VisuStock", desc: "Animate any still image into a short AI-generated video clip.", h1: "Image to Video", intro: "Turn a still photo into a short animated video with AI." },
+      "/adjust-music-duration": { title: "Adjust Music Duration — Seamless Audio Trimming | VisuStock", desc: "Shorten or extend music tracks to an exact duration with seamless, loop-aware editing.", h1: "Adjust Music Duration", intro: "Fit any track to an exact runtime with seamless loop-aware editing." },
+      "/studio-ai": { title: "Studio AI — Free Creative AI Tools | VisuStock", desc: "A free suite of browser-based AI tools: upscaling, face enhancement, background removal, reframing, text to speech and more.", h1: "Studio AI", intro: "A complete suite of browser-based AI creative tools, free to use." },
+      "/ai-image-generator": { title: "AI Image Generator — Create Images From Text | VisuStock", desc: "Generate unique, royalty-free images from a text prompt with AI.", h1: "AI Image Generator", intro: "Create original royalty-free visuals from a text description." },
+    };
+
+    const tool = toolPages[path];
+    if (tool) {
+      const canonical = `${SITE_URL}${path}`;
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Studio AI", url: `${SITE_URL}/studio-ai` },
+        { name: tool.h1, url: canonical },
+      ];
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareApplication",
+            "@id": `${canonical}#app`,
+            name: tool.h1,
+            description: tool.desc,
+            url: canonical,
+            applicationCategory: "MultimediaApplication",
+            operatingSystem: "Any (web browser)",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+            publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+      const otherTools = Object.entries(toolPages).filter(([p]) => p !== path).slice(0, 8);
+      const body = `
+        <section><p>${esc(tool.intro)}</p></section>
+        <section><h2>How it works</h2><ol>
+          <li>Open ${esc(tool.h1)} on VisuStock.</li>
+          <li>Upload or select your file.</li>
+          <li>Process it and download the result.</li>
+        </ol></section>
+        <section><h2>More Studio AI tools</h2><ul>
+          ${otherTools.map(([p, t]) => `<li><a href="${SITE_URL}${p}">${esc(t.h1)}</a></li>`).join("\n")}
+        </ul></section>
+        <nav><a href="${SITE_URL}/marketplace">Browse stock assets</a> · <a href="${SITE_URL}/free-stock-library">Free stock library</a></nav>`;
+
+      return new Response(
+        buildHtml({
+          title: tool.title, desc: tool.desc, h1: tool.h1,
+          url: canonical, canonical, img: logo, type: "website",
+          body, breadcrumbs, schema, hreflangPath: path, lang,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
+      );
+    }
+
     // ===== STATIC PAGES =====
     const staticPages: Record<string, { title: string; desc: string; h1: string }> = {
-      "/about": { title: "About VisuStock", desc: "Learn about VisuStock marketplace", h1: "About Us" },
-      "/en/about": { title: "About VisuStock", desc: "Learn about VisuStock marketplace", h1: "About Us" },
-      "/contact": { title: "Contact VisuStock", desc: "Get in touch with our team", h1: "Contact Us" },
-      "/en/contact": { title: "Contact VisuStock", desc: "Get in touch with our team", h1: "Contact Us" },
-      "/licenses": { title: "Licensing - VisuStock", desc: "Content licensing information", h1: "Licensing" },
-      "/packages-pricing": { title: "Pricing - VisuStock", desc: "Subscription plans and pricing", h1: "Pricing & Packages" },
-      "/terms": { title: "Terms of Service - VisuStock", desc: "Terms and conditions", h1: "Terms of Service" },
-      "/en/terms": { title: "Terms of Service - VisuStock", desc: "Terms and conditions", h1: "Terms of Service" },
-      "/privacy": { title: "Privacy Policy - VisuStock", desc: "How we handle your data", h1: "Privacy Policy" },
-      "/en/privacy": { title: "Privacy Policy - VisuStock", desc: "How we handle your data", h1: "Privacy Policy" },
-      "/cookie-policy": { title: "Cookie Policy - VisuStock", desc: "Cookie usage information", h1: "Cookie Policy" },
-      "/en/cookie-policy": { title: "Cookie Policy - VisuStock", desc: "Cookie usage information", h1: "Cookie Policy" },
-      "/license-agreement": { title: "License Agreement - VisuStock", desc: "Content license agreement", h1: "License Agreement" },
-      "/en/license-agreement": { title: "License Agreement - VisuStock", desc: "Content license agreement", h1: "License Agreement" },
-      "/ai-image-generator": { title: "AI Image Generator - VisuStock", desc: "Generate unique images with AI", h1: "AI Image Generator" },
-      "/buy-credits": { title: "Buy Credits - VisuStock", desc: "Purchase credits for downloads", h1: "Buy Credits" },
-      "/support": { title: "Support - VisuStock", desc: "Get help and support", h1: "Support" },
+      "/about": { title: "About VisuStock — Our Story & Mission", desc: "Learn how VisuStock helps creators sell and buyers find premium stock photos, videos, audio and vectors.", h1: "About VisuStock" },
+      "/contact": { title: "Contact VisuStock — Support & Enquiries", desc: "Get in touch with the VisuStock team for support, partnerships or licensing questions.", h1: "Contact Us" },
+      "/licenses": { title: "Licensing — How VisuStock Licences Work", desc: "Understand VisuStock content licensing for personal, commercial and extended use.", h1: "Licensing" },
+      "/packages-pricing": { title: "Pricing & Packages — Credits and Subscriptions", desc: "Compare VisuStock credit packs and Infinity subscription plans in USD.", h1: "Pricing & Packages" },
+      "/terms": { title: "Terms of Service — VisuStock", desc: "The terms and conditions that govern use of the VisuStock marketplace.", h1: "Terms of Service" },
+      "/privacy": { title: "Privacy Policy — VisuStock", desc: "How VisuStock collects, uses and protects your personal data.", h1: "Privacy Policy" },
+      "/privacy-policy": { title: "Privacy Policy — VisuStock", desc: "How VisuStock collects, uses and protects your personal data.", h1: "Privacy Policy" },
+      "/cookie-policy": { title: "Cookie Policy — VisuStock", desc: "How VisuStock uses cookies and similar technologies.", h1: "Cookie Policy" },
+      "/license-agreement": { title: "License Agreement — VisuStock", desc: "The full VisuStock content license agreement for buyers and sellers.", h1: "License Agreement" },
+      "/buy-credits": { title: "Buy Credits — VisuStock", desc: "Purchase VisuStock credits in USD to download premium assets instantly.", h1: "Buy Credits" },
+      "/support": { title: "Support & Help Centre — VisuStock", desc: "Find answers, guides and direct support for your VisuStock account.", h1: "Support" },
+      "/infinity": { title: "VisuStock Infinity — Unlimited Downloads Subscription", desc: "Unlimited access to premium stock photos, videos, audio and vectors with VisuStock Infinity.", h1: "VisuStock Infinity" },
+      "/become-seller": { title: "Sell Your Content — Become a VisuStock Seller", desc: "Earn 60% on every sale. Upload photos, videos, audio and vectors to the VisuStock marketplace.", h1: "Become a Seller" },
       "/business": {
-        title: "Business Plans — Enterprise Solutions for Companies | VisuStock",
-        desc: "Custom business packages for companies and organizations. Premium photos, videos, vectors, and audio for professional and commercial use.",
-        h1: "Power Your Business With Premium Creative Content",
-      },
-      "/en/business": {
         title: "Business Plans — Enterprise Solutions for Companies | VisuStock",
         desc: "Custom business packages for companies and organizations. Premium photos, videos, vectors, and audio for professional and commercial use.",
         h1: "Power Your Business With Premium Creative Content",
@@ -920,9 +1071,10 @@ Deno.serve(async (req) => {
 
     const page = staticPages[path];
     if (page) {
+      const canonical = `${SITE_URL}${path}`;
       const breadcrumbs = [
         { name: "Home", url: SITE_URL },
-        { name: page.h1, url: `${SITE_URL}${path}` },
+        { name: page.h1, url: canonical },
       ];
 
       return new Response(
@@ -930,16 +1082,20 @@ Deno.serve(async (req) => {
           title: page.title,
           desc: page.desc,
           h1: page.h1,
-          url: `${SITE_URL}${path}`,
-          canonical: `${SITE_URL}${path}`,
+          url: canonical,
+          canonical,
           img: logo,
           type: "website",
-          body: `<section><p>${esc(page.desc)}</p></section>`,
+          body: `<section><p>${esc(page.desc)}</p></section>
+            <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/free-stock-library">Free stock</a> · <a href="${SITE_URL}/studio-ai">Studio AI</a> · <a href="${SITE_URL}/support">Support</a></nav>`,
           breadcrumbs,
+          hreflangPath: path,
+          lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
       );
     }
+
 
     return new Response(JSON.stringify({ prerender: false, reason: "unknown-path" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
