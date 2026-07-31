@@ -502,9 +502,10 @@ Deno.serve(async (req) => {
           .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-z0-9\s-]/g, " ").split(/\s+/)
           .filter((w) => w.length > 2 && !stop.has(w)).slice(0, 6);
-        const productSlug = productForm
-          ? productForm[1]
+        const productSlug = (productForm || pexelsFreeForm)
+          ? matchedSlug
           : `free-${guessedType}${keywords.length ? `-${keywords.join("-")}` : ""}-pexels-${pexelsId}`;
+
 
         const canonicalPath = `/products/${productSlug}`;
         const canonical = `${SITE_URL}${canonicalPath}`;
