@@ -1297,22 +1297,54 @@ Deno.serve(async (req) => {
         .not("slug", "is", null)
         .order("created_at", { ascending: false })
         .limit(24);
+      const freeList: Product[] = freeProducts || [];
       const breadcrumbs = [
         { name: "Home", url: SITE_URL },
         { name: "Free Stock Library", url: canonical },
       ];
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "CollectionPage",
+            "@id": `${canonical}#collection`,
+            url: canonical,
+            name: "Free Stock Library",
+            description: desc,
+            isAccessibleForFree: true,
+            mainEntity: {
+              "@type": "ItemList",
+              numberOfItems: freeList.length,
+              itemListElement: freeList.map((p, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: p.title,
+                url: `${SITE_URL}/s/products/${p.slug}`,
+              })),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
       const body = `
         <section><p>${esc(desc)}</p></section>
-        <section><h2>Popular Free Downloads</h2>${buildProductLinks(freeProducts || [])}</section>
-        <nav><a href="${SITE_URL}/marketplace">Explore premium assets</a></nav>`;
+        <section><h2>Popular Free Downloads (${freeList.length})</h2>${buildProductLinks(freeList)}</section>
+        <section><h2>Browse by category</h2><ul>${buildCategoryLinks(cats)}</ul></section>
+        <nav><a href="${SITE_URL}/marketplace">Explore premium assets</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/licenses">Licensing</a></nav>`;
 
       return new Response(
         buildHtml({
           title: "Free Stock Photos & Videos | VisuStock",
           desc, h1: "Free Stock Library",
           url: canonical, canonical, img: logo, type: "website",
-          body, breadcrumbs, hreflangPath: "/free-stock-library", lang,
+          body, breadcrumbs, schema, hreflangPath: "/free-stock-library", lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } }
       );
     }
