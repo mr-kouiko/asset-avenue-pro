@@ -145,6 +145,12 @@ function buildHtml(opts: {
       `\n  <link rel="alternate" hreflang="x-default" href="${SITE_URL}${opts.hreflangPath}">`
     : "";
 
+  // A localized page must self-reference its own language URL, otherwise the
+  // translated version gets folded into the English one.
+  const canonical = opts.hreflangPath && opts.lang && opts.lang !== "en"
+    ? `${SITE_URL}${localized(opts.hreflangPath, opts.lang)}`
+    : opts.canonical;
+
   return `<!DOCTYPE html>
 <html lang="${opts.lang || "en"}">
 <head>
@@ -153,7 +159,8 @@ function buildHtml(opts: {
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(desc)}">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
-  <link rel="canonical" href="${opts.canonical}">
+  <link rel="canonical" href="${canonical}">
+
   ${hreflangHtml}
 
   <meta property="og:title" content="${esc(title)}">
