@@ -223,10 +223,16 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const path = url.searchParams.get("path") || "/";
+    const rawPath = url.searchParams.get("path") || "/";
+    const { lang, path: langlessPath } = splitLang(rawPath);
+    // Normalize: drop trailing slash (except root) so route matching is stable.
+    const path = langlessPath.length > 1 && langlessPath.endsWith("/")
+      ? langlessPath.slice(0, -1)
+      : langlessPath;
     const ua = req.headers.get("user-agent") || "";
 
-    console.log(`[PRERENDER] Path: ${path}, UA: ${ua.substring(0, 50)}`);
+    console.log(`[PRERENDER] Path: ${path} (lang=${lang}), UA: ${ua.substring(0, 50)}`);
+
 
     if (!isCrawler(ua)) {
       return new Response(JSON.stringify({ prerender: false, reason: "not-crawler" }), {
