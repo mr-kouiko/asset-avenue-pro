@@ -1450,6 +1450,93 @@ Deno.serve(async (req) => {
         { name: page.h1, url: canonical },
       ];
 
+      const pageTypeMap: Record<string, string> = {
+        "/about": "AboutPage",
+        "/contact": "ContactPage",
+        "/support": "FAQPage",
+        "/terms": "WebPage",
+        "/privacy": "WebPage",
+        "/privacy-policy": "WebPage",
+        "/cookie-policy": "WebPage",
+        "/license-agreement": "WebPage",
+        "/licenses": "WebPage",
+        "/packages-pricing": "WebPage",
+        "/buy-credits": "WebPage",
+        "/infinity": "WebPage",
+        "/become-seller": "WebPage",
+        "/business": "WebPage",
+      };
+      const pageType = pageTypeMap[path] || "WebPage";
+
+      const graph: any[] = [
+        {
+          "@type": pageType,
+          "@id": `${canonical}#page`,
+          url: canonical,
+          name: page.h1,
+          description: page.desc,
+          inLanguage: lang,
+          isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}#website`, url: SITE_URL, name: "VisuStock" },
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: breadcrumbs.map((b, i) => ({
+            "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+          })),
+        },
+      ];
+
+      if (path === "/contact") {
+        graph.push({
+          "@type": "Organization",
+          "@id": `${SITE_URL}#organization`,
+          name: "VisuStock",
+          url: SITE_URL,
+          logo,
+          contactPoint: {
+            "@type": "ContactPoint",
+            email: "contact@visustock.com",
+            contactType: "customer support",
+            availableLanguage: ["en", "fr", "es", "de", "pt"],
+          },
+        });
+      }
+
+      let faqHtml = "";
+      if (path === "/support") {
+        const faqs = [
+          { q: "How do I download an asset I purchased?", a: "Open your account dashboard, go to Downloads, and re-download any purchased asset at any time." },
+          { q: "What licence do VisuStock assets come with?", a: "Every purchase includes a commercial licence for use in personal and commercial projects. See the licence agreement for the full terms." },
+          { q: "How do I contact support?", a: "Email contact@visustock.com or submit a ticket from the support page and our team will reply within one business day." },
+          { q: "How do sellers get paid?", a: "Sellers earn 60% of every sale. Payouts are released via PayPal after a 14-day hold once the balance reaches $50." },
+        ];
+        (graph[0] as any).mainEntity = faqs.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        }));
+        faqHtml = `<section><h2>Frequently asked questions</h2>${faqs
+          .map((f) => `<div><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>`)
+          .join("\n")}</section>`;
+      }
+
+      if (path === "/packages-pricing" || path === "/buy-credits" || path === "/infinity") {
+        graph.push({
+          "@type": "Product",
+          name: path === "/infinity" ? "VisuStock Infinity Subscription" : "VisuStock Credits",
+          description: page.desc,
+          brand: { "@type": "Brand", name: "VisuStock" },
+          offers: {
+            "@type": "AggregateOffer",
+            priceCurrency: "USD",
+            availability: "https://schema.org/InStock",
+            url: canonical,
+          },
+        });
+      }
+
+      const schema = { "@context": "https://schema.org", "@graph": graph };
+
       return new Response(
         buildHtml({
           title: page.title,
@@ -1460,14 +1547,17 @@ Deno.serve(async (req) => {
           img: logo,
           type: "website",
           body: `<section><p>${esc(page.desc)}</p></section>
+            ${faqHtml}
             <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/free-stock-library">Free stock</a> · <a href="${SITE_URL}/studio-ai">Studio AI</a> · <a href="${SITE_URL}/support">Support</a></nav>`,
           breadcrumbs,
+          schema,
           hreflangPath: path,
           lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
       );
     }
+
 
 
     return new Response(JSON.stringify({ prerender: false, reason: "unknown-path" }), {
