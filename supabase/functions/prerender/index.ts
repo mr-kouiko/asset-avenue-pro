@@ -1014,10 +1014,11 @@ Deno.serve(async (req) => {
             description: desc,
             mainEntity: {
               "@type": "ItemList",
+              numberOfItems: products.length,
               itemListElement: products.map((p, i) => ({
                 "@type": "ListItem",
                 position: i + 1,
-                url: `${SITE_URL}/products/${p.slug}`,
+                url: `${SITE_URL}/s/products/${p.slug}`,
                 name: p.title,
               })),
             },
@@ -1032,7 +1033,7 @@ Deno.serve(async (req) => {
       };
 
       const itemsHtml = products.length
-        ? products.map((p) => `<article><h3><a href="${SITE_URL}/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}</article>`).join("\n")
+        ? products.map((p) => `<article><h3><a href="${SITE_URL}/s/products/${p.slug}">${esc(p.title)}</a></h3>${p.description ? `<p>${esc(p.description.substring(0, 200))}</p>` : ""}</article>`).join("\n")
         : `<p>This ${esc(displayName.toLowerCase())} collection is being curated. <a href="${SITE_URL}/marketplace">Explore the marketplace</a>.</p>`;
 
       const body = `
@@ -1040,7 +1041,8 @@ Deno.serve(async (req) => {
         <section>
           <h2>${esc(displayName)} Items (${products.length})</h2>
           ${itemsHtml}
-        </section>`;
+        </section>
+        <nav><a href="${SITE_URL}/s/collections">All collections</a> · <a href="${SITE_URL}/marketplace">Marketplace</a></nav>`;
 
       return new Response(
         buildHtml({
@@ -1054,7 +1056,10 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs,
           schema,
+          hreflangPath: `/s/collections/${slug}`,
+          lang,
         }),
+
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
       );
     }
