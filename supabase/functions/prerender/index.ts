@@ -441,8 +441,277 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ===== PEXELS ASSET PAGES (/pexels/:slug and /products/free-...-pexels-<id>) =====
+    {
+      const productForm = path.match(/^\/products\/(free-[a-z0-9-]*-pexels-(\d+))\/?$/i);
+      const legacyForm = path.match(/^\/pexels\/((photo|video)-(\d+)[a-z0-9-]*)\/?$/i);
+
+      if (productForm || legacyForm) {
+        const pexelsId = Number(productForm ? productForm[2] : legacyForm![3]);
+        const guessedType = productForm
+          ? (/^free-video-/i.test(productForm[1]) ? "video" : "photo")
+          : (legacyForm![2].toLowerCase() as "photo" | "video");
+
+        // Cached AI SEO copy, when it exists.
+        const { data: seoRow } = await supabase
+          .from("pexels_seo_content")
+          .select("seo_title, meta_description, h1, intro, main_content, use_cases, keywords, type")
+          .eq("pexels_id", pexelsId)
+          .eq("type", guessedType)
+          .maybeSingle();
+
+        // Live asset metadata from the Pexels API (best effort).
+        let asset: { alt: string; photographer: string; photographerUrl: string; image: string; width?: number; height?: number; duration?: number; videoUrl?: string } | null = null;
+        const pexelsKey = Deno.env.get("PEXELS_API_KEY");
+        if (pexelsKey) {
+          try {
+            const endpoint = guessedType === "video"
+              ? `https://api.pexels.com/videos/videos/${pexelsId}`
+              : `https://api.pexels.com/v1/photos/${pexelsId}`;
+            const r = await fetch(endpoint, { headers: { Authorization: pexelsKey } });
+            if (r.ok) {
+              const j = await r.json();
+              asset = guessedType === "video"
+                ? {
+                    alt: j.tags?.join(", ") || `Free stock video ${pexelsId}`,
+                    photographer: j.user?.name || "Pexels contributor",
+                    photographerUrl: j.user?.url || "https://www.pexels.com",
+                    image: j.image,
+                    width: j.width,
+                    height: j.height,
+                    duration: j.duration,
+                    videoUrl: j.video_files?.[0]?.link,
+                  }
+                : {
+                    alt: j.alt || `Free stock photo ${pexelsId}`,
+                    photographer: j.photographer || "Pexels contributor",
+                    photographerUrl: j.photographer_url || "https://www.pexels.com",
+                    image: j.src?.large2x || j.src?.large || j.src?.original,
+                    width: j.width,
+                    height: j.height,
+                  };
+            }
+          } catch (_e) { /* degrade gracefully */ }
+        }
+
+        const stop = new Set(["the","a","an","and","or","with","for","of","in","on","at","to","is","are","this","that","it","its","by","from"]);
+        const keywords = (asset?.alt || seoRow?.h1 || "")
+          .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9\s-]/g, " ").split(/\s+/)
+          .filter((w) => w.length > 2 && !stop.has(w)).slice(0, 6);
+        const productSlug = productForm
+          ? productForm[1]
+          : `free-${guessedType}${keywords.length ? `-${keywords.join("-")}` : ""}-pexels-${pexelsId}`;
+
+        const canonicalPath = `/products/${productSlug}`;
+        const canonical = `${SITE_URL}${canonicalPath}`;
+        const label = asset?.alt || seoRow?.h1 || `Free stock ${guessedType} ${pexelsId}`;
+        const h1 = seoRow?.h1 || `Free ${guessedType === "video" ? "Stock Video" : "Stock Photo"}: ${label}`;
+        const title = seoRow?.seo_title || `${h1} — Free Download | VisuStock`;
+        const desc = seoRow?.meta_description
+          || `Download this free ${guessedType === "video" ? "stock video" : "stock photo"} in high resolution — free for personal and commercial projects on VisuStock.`;
+        const img = asset?.image || logo;
+
+        const breadcrumbs = [
+          { name: "Home", url: SITE_URL },
+          { name: "Free Stock Library", url: `${SITE_URL}/free-stock-library` },
+          { name: h1, url: canonical },
+        ];
+
+        const media = guessedType === "video"
+          ? {
+              "@type": "VideoObject",
+              "@id": `${canonical}#media`,
+              name: h1,
+              description: desc,
+              thumbnailUrl: img,
+              contentUrl: asset?.videoUrl,
+              uploadDate: new Date().toISOString(),
+              ...(asset?.duration ? { duration: `PT${Math.floor(asset.duration / 60)}M${asset.duration % 60}S` } : {}),
+              ...(asset?.width ? { width: asset.width, height: asset.height } : {}),
+              author: { "@type": "Person", name: asset?.photographer || "Pexels contributor" },
+              publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+              url: canonical,
+            }
+          : {
+              "@type": "ImageObject",
+              "@id": `${canonical}#media`,
+              name: h1,
+              description: desc,
+              contentUrl: img,
+              thumbnailUrl: img,
+              ...(asset?.width ? { width: asset.width, height: asset.height } : {}),
+              author: { "@type": "Person", name: asset?.photographer || "Pexels contributor" },
+              creditText: `Photo by ${asset?.photographer || "Pexels contributor"}`,
+              acquireLicensePage: canonical,
+              publisher: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+              url: canonical,
+            };
+
+        const schema = {
+          "@context": "https://schema.org",
+          "@graph": [
+            media,
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: breadcrumbs.map((b, i) => ({
+                "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+              })),
+            },
+          ],
+        };
+
+        const body = `
+          <section>
+            <img src="${img}" alt="${esc(label)}" width="${asset?.width || 1200}" height="${asset?.height || 800}">
+            <p>${esc(seoRow?.intro || desc)}</p>
+          </section>
+          ${seoRow?.main_content ? `<section>${markdownToHtml(String(seoRow.main_content))}</section>` : ""}
+          ${Array.isArray(seoRow?.use_cases) && seoRow!.use_cases.length
+            ? `<section><h2>How to use this ${guessedType}</h2><ul>${(seoRow!.use_cases as string[]).map((u) => `<li>${esc(String(u))}</li>`).join("")}</ul></section>`
+            : ""}
+          <section><h2>Asset details</h2><ul>
+            <li>Contributor: ${esc(asset?.photographer || "Pexels contributor")}</li>
+            ${asset?.width ? `<li>Resolution: ${asset.width} × ${asset.height}</li>` : ""}
+            ${asset?.duration ? `<li>Duration: ${asset.duration}s</li>` : ""}
+            <li>License: free for personal and commercial use</li>
+          </ul></section>
+          <nav>
+            <a href="${SITE_URL}/free-stock-library">More free ${guessedType === "video" ? "videos" : "photos"}</a> ·
+            <a href="${SITE_URL}/marketplace">Premium marketplace</a> ·
+            <a href="${SITE_URL}/s/collections">Collections</a> ·
+            <a href="${SITE_URL}/licenses">Licensing</a>
+          </nav>`;
+
+        return new Response(
+          buildHtml({
+            title, desc, h1,
+            url: canonical, canonical, img,
+            type: "website",
+            body, breadcrumbs, schema,
+            hreflangPath: canonicalPath,
+            lang,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } }
+        );
+      }
+    }
+
+    // ===== SELLER PORTFOLIOS (/seller/:storeSlug) =====
+    if (path.startsWith("/seller/")) {
+      const storeSlug = path.replace("/seller/", "").split("?")[0].split("/")[0].toLowerCase();
+      const slugify = (s: string) =>
+        s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "store";
+
+      const { data: creators } = await supabase
+        .from("creator_profiles_public")
+        .select("user_id, display_name, store_name, avatar_url")
+        .not("store_name", "is", null)
+        .limit(2000);
+
+      const creator = (creators || []).find((c: any) => slugify(c.store_name || "") === storeSlug);
+      const canonicalPath = `/seller/${storeSlug}`;
+      const canonical = `${SITE_URL}${canonicalPath}`;
+
+      if (!creator) {
+        return new Response(
+          buildHtml({
+            title: "Seller Not Found | VisuStock",
+            desc: "This seller portfolio is unavailable. Browse the VisuStock marketplace instead.",
+            h1: "Seller Not Found",
+            url: canonical, canonical, img: logo, type: "website",
+            body: `<p>This portfolio doesn't exist. <a href="${SITE_URL}/marketplace">Browse the marketplace</a>.</p>`,
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      const { data: sellerProducts } = await supabase
+        .from("content_submissions")
+        .select("id, title, slug, price, description")
+        .eq("status", "approved")
+        .eq("creator_id", creator.user_id)
+        .not("slug", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(48);
+      const items: Product[] = sellerProducts || [];
+
+      const storeName = creator.store_name as string;
+      const authorName = (creator.display_name as string) || storeName;
+      const desc = `Browse ${items.length} premium stock ${items.length === 1 ? "asset" : "assets"} by ${storeName} on VisuStock — photos, videos, audio and vectors licensed for commercial use.`;
+
+      const breadcrumbs = [
+        { name: "Home", url: SITE_URL },
+        { name: "Marketplace", url: `${SITE_URL}/marketplace` },
+        { name: storeName, url: canonical },
+      ];
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "ProfilePage",
+            "@id": `${canonical}#profile`,
+            url: canonical,
+            name: `${storeName} — VisuStock Portfolio`,
+            description: desc,
+            mainEntity: {
+              "@type": "Person",
+              "@id": `${canonical}#person`,
+              name: authorName,
+              alternateName: storeName,
+              url: canonical,
+              ...(creator.avatar_url ? { image: creator.avatar_url } : {}),
+              worksFor: { "@type": "Organization", name: "VisuStock", url: SITE_URL },
+            },
+            hasPart: {
+              "@type": "ItemList",
+              numberOfItems: items.length,
+              itemListElement: items.map((p, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: p.title,
+                url: `${SITE_URL}/s/products/${p.slug}`,
+              })),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem", position: i + 1, name: b.name, item: b.url,
+            })),
+          },
+        ],
+      };
+
+      const body = `
+        <section>
+          ${creator.avatar_url ? `<img src="${esc(String(creator.avatar_url))}" alt="${esc(storeName)}" width="160" height="160">` : ""}
+          <p>${esc(desc)}</p>
+        </section>
+        <section>
+          <h2>Assets by ${esc(storeName)} (${items.length})</h2>
+          ${items.length ? buildProductLinks(items) : `<p>This seller hasn't published assets yet. <a href="${SITE_URL}/marketplace">Browse the marketplace</a>.</p>`}
+        </section>
+        <nav><a href="${SITE_URL}/marketplace">Marketplace</a> · <a href="${SITE_URL}/s/collections">Collections</a> · <a href="${SITE_URL}/become-seller">Become a seller</a></nav>`;
+
+      return new Response(
+        buildHtml({
+          title: `${storeName} — Stock Portfolio | VisuStock`,
+          desc, h1: `${storeName} Portfolio`,
+          url: canonical, canonical, img: (creator.avatar_url as string) || logo,
+          type: "profile",
+          body, breadcrumbs, schema,
+          hreflangPath: canonicalPath,
+          lang,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=1800" } }
+      );
+    }
 
     // ===== PRODUCT PAGES (canonical /s/products/:slug, legacy /products/:slug) =====
+
     if (path.startsWith("/products/") || path.startsWith("/s/products/")) {
       const slug = path.replace(/^\/(s\/)?products\//, "").split("?")[0].split("/")[0];
       const uuid = slug.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
