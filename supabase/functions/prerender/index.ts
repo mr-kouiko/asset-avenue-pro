@@ -84,7 +84,11 @@ function buildHtml(opts: {
   breadcrumbs?: Array<{ name: string; url: string }>;
   schema?: object;
   seoMetadata?: SEOMetadata;
+  /** Language-neutral path (starts with "/") used to emit hreflang alternates. */
+  hreflangPath?: string;
+  lang?: Lang;
 }): string {
+
   // Apply SEO overrides if available
   const title = opts.seoMetadata?.seo_title || opts.title;
   const desc = opts.seoMetadata?.seo_description || opts.desc;
