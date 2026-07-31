@@ -326,6 +326,8 @@ Deno.serve(async (req) => {
           body,
           breadcrumbs: [{ name: "Home", url: SITE_URL }],
           schema,
+          hreflangPath: "/",
+          lang,
         }),
         { headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } }
       );
