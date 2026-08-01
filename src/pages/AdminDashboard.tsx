@@ -277,6 +277,10 @@ const AdminDashboard = () => {
               <Search className="h-4 w-4" />
               <span className="hidden sm:inline">SEO</span>
             </TabsTrigger>
+            <TabsTrigger value="blog" className="flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Blog</span>
+            </TabsTrigger>
             <TabsTrigger value="export" className="flex items-center gap-1">
               <FileArchive className="h-4 w-4" />
               <span className="hidden sm:inline">Export</span>
