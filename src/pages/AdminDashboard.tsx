@@ -42,6 +42,7 @@ import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
 import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
 import { AdminProductTranslations } from "@/components/admin/AdminProductTranslations";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { AdminBlogManagement } from "@/components/admin/AdminBlogManagement";
 
 
 
@@ -231,7 +232,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-13 mb-6" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
+          <TabsList className="grid w-full grid-cols-15 mb-6" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -275,6 +276,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="seo" className="flex items-center gap-1">
               <Search className="h-4 w-4" />
               <span className="hidden sm:inline">SEO</span>
+            </TabsTrigger>
+            <TabsTrigger value="blog" className="flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Blog</span>
             </TabsTrigger>
             <TabsTrigger value="export" className="flex items-center gap-1">
               <FileArchive className="h-4 w-4" />
@@ -534,6 +539,11 @@ const AdminDashboard = () => {
           {/* SEO Co-Pilot Tab */}
           <TabsContent value="seo">
             <AdminSEOCoPilot />
+          </TabsContent>
+
+          {/* Blog Management Tab */}
+          <TabsContent value="blog">
+            <AdminBlogManagement />
           </TabsContent>
 
           {/* Bulk Export Tab */}
