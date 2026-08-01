@@ -541,6 +541,11 @@ const AdminDashboard = () => {
             <AdminSEOCoPilot />
           </TabsContent>
 
+          {/* Blog Management Tab */}
+          <TabsContent value="blog">
+            <AdminBlogManagement />
+          </TabsContent>
+
           {/* Bulk Export Tab */}
           <TabsContent value="export">
             <AdminBulkExport />
