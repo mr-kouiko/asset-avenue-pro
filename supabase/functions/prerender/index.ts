@@ -193,6 +193,10 @@ function buildHtml(opts: {
 }
 
 function markdownToHtml(markdown: string): string {
+  // Content authored in the admin rich text editor is already semantic HTML.
+  if (/<(p|h2|h3|ul|ol|li|img|blockquote|div|strong|em|a)\b/i.test(markdown)) {
+    return markdown.replace(/<\s*(script|iframe|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+  }
   return markdown
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
