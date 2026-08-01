@@ -1225,6 +1225,8 @@ const defaultArticle = {
   relatedArticles: []
 };
 
+const isHtmlContent = (content: string) => /<(p|h2|h3|ul|ol|li|img|blockquote|div|strong|em|a)\b/i.test(content);
+
 const BlogArticleEN = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: dbPost, isLoading: dbLoading } = useBlogPost(slug);
@@ -1251,15 +1253,22 @@ const BlogArticleEN = () => {
 
   const isLoading = !staticArticle && dbLoading;
 
+  const seoTitle = (!staticArticle && dbPost?.seo_title) || article.title;
+  const seoDescription =
+    (!staticArticle && dbPost?.meta_description) ||
+    article.excerpt ||
+    "Read the latest insights from the VisuStock blog.";
+
   useSEO({
-    title: article.title.length > 55 ? `${article.title.slice(0, 52)}...` : article.title,
-    description: article.excerpt?.slice(0, 158) || "Read the latest insights from the VisuStock blog.",
+    title: seoTitle.length > 55 ? `${seoTitle.slice(0, 52)}...` : seoTitle,
+    description: seoDescription.slice(0, 158),
     type: "article",
     author: article.author,
     publishedTime: article.publishDate,
     tags: article.tags,
     image: article.image,
   });
+
 
 
   useEffect(() => {
