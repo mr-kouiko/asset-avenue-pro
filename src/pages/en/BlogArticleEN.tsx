@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import DOMPurify from "dompurify";
 import { useParams, Link } from "react-router-dom";
 import { useBlogPost } from "@/hooks/useBlogPosts";
 import { Skeleton } from "@/components/ui/skeleton";
