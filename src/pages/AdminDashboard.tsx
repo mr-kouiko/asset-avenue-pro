@@ -232,7 +232,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-13 mb-6" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
+          <TabsList className="grid w-full grid-cols-15 mb-6" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
