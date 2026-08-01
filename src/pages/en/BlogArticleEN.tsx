@@ -1428,29 +1428,36 @@ const BlogArticleEN = () => {
             </div>
 
             {/* Article Content */}
-            <div className="prose prose-lg max-w-none dark:prose-invert mb-12">
-              {article.content.split('\n').map((paragraph, index) => {
-                if (paragraph.startsWith('## ')) {
-                  return <h2 key={index} className="text-2xl font-bold mt-8 mb-4">{paragraph.replace('## ', '')}</h2>;
-                }
-                if (paragraph.startsWith('### ')) {
-                  return <h3 key={index} className="text-xl font-semibold mt-6 mb-3">{paragraph.replace('### ', '')}</h3>;
-                }
-                if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                  return <p key={index} className="font-semibold my-4">{paragraph.replace(/\*\*/g, '')}</p>;
-                }
-                if (paragraph.startsWith('- ')) {
-                  return <li key={index} className="ml-6 my-1">{renderInline(paragraph.replace('- ', ''))}</li>;
-                }
-                if (paragraph.match(/^\d+\./)) {
-                  return <li key={index} className="ml-6 my-1 list-decimal">{renderInline(paragraph.replace(/^\d+\.\s*/, ''))}</li>;
-                }
-                if (paragraph.trim()) {
-                  return <p key={index} className="my-4 text-muted-foreground leading-relaxed">{renderInline(paragraph)}</p>;
-                }
-                return null;
-              })}
-            </div>
+            {isHtmlContent(article.content) ? (
+              <div
+                className="prose prose-lg max-w-none dark:prose-invert mb-12 [&_a]:text-primary [&_a]:underline [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-3 [&_img]:rounded-lg [&_img]:my-6 [&_li]:ml-6 [&_ol]:list-decimal [&_p]:my-4 [&_ul]:list-disc"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
+              />
+            ) : (
+              <div className="prose prose-lg max-w-none dark:prose-invert mb-12">
+                {article.content.split('\n').map((paragraph, index) => {
+                  if (paragraph.startsWith('## ')) {
+                    return <h2 key={index} className="text-2xl font-bold mt-8 mb-4">{paragraph.replace('## ', '')}</h2>;
+                  }
+                  if (paragraph.startsWith('### ')) {
+                    return <h3 key={index} className="text-xl font-semibold mt-6 mb-3">{paragraph.replace('### ', '')}</h3>;
+                  }
+                  if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
+                    return <p key={index} className="font-semibold my-4">{paragraph.replace(/\*\*/g, '')}</p>;
+                  }
+                  if (paragraph.startsWith('- ')) {
+                    return <li key={index} className="ml-6 my-1">{renderInline(paragraph.replace('- ', ''))}</li>;
+                  }
+                  if (paragraph.match(/^\d+\./)) {
+                    return <li key={index} className="ml-6 my-1 list-decimal">{renderInline(paragraph.replace(/^\d+\.\s*/, ''))}</li>;
+                  }
+                  if (paragraph.trim()) {
+                    return <p key={index} className="my-4 text-muted-foreground leading-relaxed">{renderInline(paragraph)}</p>;
+                  }
+                  return null;
+                })}
+              </div>
+            )}
 
             {/* Tags */}
             <div className="flex flex-wrap gap-2 mb-8">
