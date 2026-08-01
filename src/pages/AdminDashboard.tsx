@@ -42,6 +42,7 @@ import { AdminBulkExport } from "@/components/admin/AdminBulkExport";
 import { AdminIntegrityPanel } from "@/components/admin/AdminIntegrityPanel";
 import { AdminProductTranslations } from "@/components/admin/AdminProductTranslations";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { AdminBlogManagement } from "@/components/admin/AdminBlogManagement";
 
 
 
