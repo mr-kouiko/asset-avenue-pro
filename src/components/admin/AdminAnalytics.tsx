@@ -74,25 +74,34 @@ const AiEditAnalytics = () => {
   const [rows, setRows] = useState<AiRow[]>([]);
   const [profiles, setProfiles] = useState<Record<string, { email: string; name: string | null }>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      setLoadError(null);
+      const { data, error } = await supabase
         .from("ai_image_generations")
         .select("id,user_id,prompt,image_url,source_image_url,action,status,error_message,created_at")
         .order("created_at", { ascending: false })
         .limit(1000);
+      if (error) {
+        console.error("[analytics] ai_image_generations read failed", error);
+        setLoadError(`${error.message}${error.code ? ` (${error.code})` : ""}`);
+      }
       const list = (data as AiRow[]) || [];
+      console.info("[analytics] ai_image_generations rows loaded:", list.length);
       setRows(list);
       const ids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
       if (ids.length) {
-        const { data: profs } = await supabase
+        const { data: profs, error: profErr } = await supabase
           .from("profiles")
           .select("user_id,email,display_name")
           .in("user_id", ids);
+        if (profErr) console.warn("[analytics] profiles read failed", profErr);
         const map: Record<string, { email: string; name: string | null }> = {};
         (profs || []).forEach((p: any) => {
           map[p.user_id] = { email: p.email, name: p.display_name };
@@ -101,11 +110,13 @@ const AiEditAnalytics = () => {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [reloadKey]);
 
   const stats = useMemo(() => bucketize(rows, "created_at"), [rows]);
   const successCount = rows.filter((r) => r.status === "success").length;
   const failureCount = rows.filter((r) => r.status === "failure").length;
+  const blockedCount = rows.filter((r) => r.status === "blocked").length;
+
 
   const topUsers = useMemo(() => {
     const counts: Record<string, number> = {};
