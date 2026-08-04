@@ -236,14 +236,8 @@ serve(async (req) => {
     if (deductErr) console.error("[ai-edit-image] deduct error", deductErr);
 
     // History (success)
-    await serviceClient.from("ai_image_generations").insert({
-      user_id: user.id,
-      prompt: `[${action}] ${finalPrompt}`.slice(0, 2000),
-      image_url: resultUrl,
-      source_image_url: imageUrl?.slice(0, 2000) ?? null,
-      action,
-      status: "success",
-    });
+    await logAttempt("success", { image_url: resultUrl, prompt: `[${action}] ${finalPrompt}` });
+
 
 
     const { data: updated } = await serviceClient
