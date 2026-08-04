@@ -186,21 +186,12 @@ serve(async (req) => {
       }),
     });
 
-    const logFailure = async (reason: string) => {
-      try {
-        await serviceClient.from("ai_image_generations").insert({
-          user_id: user.id,
-          prompt: `[${action}] ${finalPrompt}`.slice(0, 2000),
-          image_url: null,
-          source_image_url: imageUrl?.slice(0, 2000) ?? null,
-          action,
-          status: "failure",
-          error_message: reason.slice(0, 1000),
-        });
-      } catch (e) {
-        console.warn("[ai-edit-image] failure log error", e);
-      }
-    };
+    const logFailure = (reason: string) =>
+      logAttempt("failure", {
+        error_message: reason.slice(0, 1000),
+        prompt: `[${action}] ${finalPrompt}`,
+      });
+
 
     if (!aiRes.ok) {
       const txt = await aiRes.text();
