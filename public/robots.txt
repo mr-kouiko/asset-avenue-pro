@@ -55,7 +55,7 @@ Disallow: /seller-registration-cancelled
 Disallow: /portfolio
 Disallow: /test-accounts
 Disallow: /create-test-accounts
-Disallow: /studio-ai
+
 
 # Block low-value filter/search pages (crawl trap prevention)
 # These return 200 but have duplicate or thin content
