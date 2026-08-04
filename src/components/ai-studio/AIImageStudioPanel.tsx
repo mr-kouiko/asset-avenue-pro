@@ -154,6 +154,7 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
     }
     setLoading(true);
     setResult(null);
+    console.info("[ai-edit] invoke", { action, source, productId, hasPrompt: !!prompt.trim(), userId: user.id });
     try {
       const { data, error } = await supabase.functions.invoke("ai-edit-image", {
         body: { action, imageUrl, prompt: prompt.trim() || undefined, productId: source === "internal" ? productId : undefined },
@@ -162,13 +163,16 @@ export function AIImageStudioPanel({ open, onOpenChange, imageUrl, filenameBase 
       if (!data?.imageUrl) throw new Error("No image returned");
       setResult(data.imageUrl);
       if (typeof data.creditsRemaining === "number") setCreditsLeft(data.creditsRemaining);
+      console.info("[ai-edit] success", { action, creditsRemaining: data.creditsRemaining });
       toast({ title: "Edit ready", description: "Preview your AI-edited image below." });
     } catch (e: any) {
+      console.error("[ai-edit] failed", { action, source, productId, message: e?.message, error: e });
       toast({ title: "Edit failed", description: e?.message || "AI edit failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
+
 
   const download = async () => {
     if (!result) return;
