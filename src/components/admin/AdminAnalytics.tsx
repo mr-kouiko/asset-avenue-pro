@@ -223,8 +223,9 @@ const AiEditAnalytics = () => {
                 <SelectItem value="success">Success only</SelectItem>
                 <SelectItem value="failure">Failure only</SelectItem>
                 <SelectItem value="blocked">Blocked only</SelectItem>
-
+              </SelectContent>
             </Select>
+
           </div>
         </CardHeader>
         <CardContent>
