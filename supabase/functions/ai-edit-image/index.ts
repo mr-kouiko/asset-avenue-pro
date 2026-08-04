@@ -83,6 +83,25 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Central attempt logger — every attempt (even blocked ones) must land in
+    // ai_image_generations so the admin Analytics tab reflects real usage.
+    const logAttempt = async (
+      status: string,
+      extra: { image_url?: string | null; error_message?: string | null; prompt?: string }
+    ) => {
+      const { error } = await serviceClient.from("ai_image_generations").insert({
+        user_id: user.id,
+        prompt: (extra.prompt ?? `[${action}] ${(prompt || "").trim()}`).slice(0, 2000),
+        image_url: extra.image_url ?? null,
+        source_image_url: typeof imageUrl === "string" ? imageUrl.slice(0, 2000) : null,
+        action,
+        status,
+        error_message: extra.error_message ?? null,
+      });
+      if (error) console.error("[ai-edit-image] analytics insert FAILED", status, error);
+      else console.log("[ai-edit-image] analytics row written", status, action, user.id);
+    };
+
     const { data: creditsData } = await serviceClient
       .from("user_credits")
       .select("credits_balance")
@@ -91,6 +110,8 @@ serve(async (req) => {
 
     const currentBalance = creditsData?.credits_balance ?? 0;
     if (currentBalance < 1) {
+      console.log(`[ai-edit-image] blocked: insufficient credits user=${user.id} action=${action}`);
+      await logAttempt("blocked", { error_message: `insufficient_credits (balance=${currentBalance})` });
       return new Response(
         JSON.stringify({
           error: "insufficient_credits",
@@ -102,6 +123,7 @@ serve(async (req) => {
     }
 
     const finalPrompt = buildPrompt(action, prompt);
+
 
     // Resolve the CLEAN original image when a productId is supplied. The public
     // thumbnail may have a burned-in watermark; feeding that to Gemini would make
