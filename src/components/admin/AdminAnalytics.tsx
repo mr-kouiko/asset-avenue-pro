@@ -149,6 +149,25 @@ const AiEditAnalytics = () => {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive text-base">Could not read AI edit events</CardTitle>
+            <CardDescription>{loadError} — check that your account has the admin role.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="text-sm underline text-muted-foreground hover:text-foreground"
+        >
+          Refresh
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Total uses" value={stats.total} icon={Sparkles} />
         <StatCard label="Today" value={stats.today} icon={Sparkles} />
@@ -156,7 +175,9 @@ const AiEditAnalytics = () => {
         <StatCard label="Last 30 days" value={stats.month} icon={Sparkles} />
         <StatCard label="Success" value={successCount} icon={CheckCircle2} />
         <StatCard label="Failure" value={failureCount} icon={XCircle} />
+        <StatCard label="Blocked (no credits)" value={blockedCount} icon={XCircle} />
       </div>
+
 
       <Card>
         <CardHeader>
