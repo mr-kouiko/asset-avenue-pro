@@ -387,24 +387,17 @@ const PexelsDownloadsAnalytics = () => {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("pexels_downloads")
-        .select("id,user_id,pexels_id,media_type,author,downloaded_at")
-        .order("downloaded_at", { ascending: false })
-        .limit(2000);
-      const list = (data as PexRow[]) || [];
-      setRows(list);
-      const uids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
-      if (uids.length) {
-        const { data: profs } = await supabase
-          .from("profiles").select("user_id,email,display_name").in("user_id", uids);
-        const map: Record<string, { email: string; name: string | null }> = {};
-        (profs || []).forEach((p: any) => { map[p.user_id] = { email: p.email, name: p.display_name }; });
-        setProfiles(map);
-      }
+      const { data, error } = await supabase.rpc("admin_get_pexels_download_events", { _limit: 1000 });
+      if (error) console.error("[analytics] admin_get_pexels_download_events failed", error);
+      const raw = (data as any[]) || [];
+      setRows(raw as PexRow[]);
+      const map: Record<string, { email: string; name: string | null }> = {};
+      raw.forEach((r) => { if (r.user_id) map[r.user_id] = { email: r.user_email, name: null }; });
+      setProfiles(map);
       setLoading(false);
     })();
   }, []);
+
 
   const stats = useMemo(() => bucketize(rows, "downloaded_at"), [rows]);
 
