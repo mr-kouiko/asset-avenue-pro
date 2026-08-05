@@ -235,8 +235,10 @@ serve(async (req) => {
     });
     if (deductErr) console.error("[ai-edit-image] deduct error", deductErr);
 
-    // History (success)
-    await logAttempt("success", { image_url: resultUrl, prompt: `[${action}] ${finalPrompt}` });
+    // History (success). Never persist the generated base64 payload: it can be
+    // several MB and makes admin analytics responses hit PostgREST timeouts.
+    // The source URL and event metadata are sufficient for usage analytics.
+    await logAttempt("success", { image_url: null, prompt: `[${action}] ${finalPrompt}` });
 
 
 
