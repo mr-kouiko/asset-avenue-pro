@@ -83,34 +83,23 @@ const AiEditAnalytics = () => {
     (async () => {
       setLoading(true);
       setLoadError(null);
-      const { data, error } = await supabase
-        .from("ai_image_generations")
-        .select("id,user_id,prompt,image_url,source_image_url,action,status,error_message,created_at")
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      const { data, error } = await supabase.rpc("admin_get_ai_edit_events", { _limit: 500 });
       if (error) {
-        console.error("[analytics] ai_image_generations read failed", error);
+        console.error("[analytics] admin_get_ai_edit_events failed", error);
         setLoadError(`${error.message}${error.code ? ` (${error.code})` : ""}`);
       }
-      const list = (data as AiRow[]) || [];
-      console.info("[analytics] ai_image_generations rows loaded:", list.length);
-      setRows(list);
-      const ids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
-      if (ids.length) {
-        const { data: profs, error: profErr } = await supabase
-          .from("profiles")
-          .select("user_id,email,display_name")
-          .in("user_id", ids);
-        if (profErr) console.warn("[analytics] profiles read failed", profErr);
-        const map: Record<string, { email: string; name: string | null }> = {};
-        (profs || []).forEach((p: any) => {
-          map[p.user_id] = { email: p.email, name: p.display_name };
-        });
-        setProfiles(map);
-      }
+      const raw = (data as any[]) || [];
+      console.info("[analytics] ai edit rows loaded:", raw.length);
+      setRows(raw as AiRow[]);
+      const map: Record<string, { email: string; name: string | null }> = {};
+      raw.forEach((r) => {
+        if (r.user_id) map[r.user_id] = { email: r.user_email, name: r.user_name };
+      });
+      setProfiles(map);
       setLoading(false);
     })();
   }, [reloadKey]);
+
 
   const stats = useMemo(() => bucketize(rows, "created_at"), [rows]);
   const successCount = rows.filter((r) => r.status === "success").length;
