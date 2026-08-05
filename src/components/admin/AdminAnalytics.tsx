@@ -83,34 +83,23 @@ const AiEditAnalytics = () => {
     (async () => {
       setLoading(true);
       setLoadError(null);
-      const { data, error } = await supabase
-        .from("ai_image_generations")
-        .select("id,user_id,prompt,image_url,source_image_url,action,status,error_message,created_at")
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      const { data, error } = await supabase.rpc("admin_get_ai_edit_events", { _limit: 500 });
       if (error) {
-        console.error("[analytics] ai_image_generations read failed", error);
+        console.error("[analytics] admin_get_ai_edit_events failed", error);
         setLoadError(`${error.message}${error.code ? ` (${error.code})` : ""}`);
       }
-      const list = (data as AiRow[]) || [];
-      console.info("[analytics] ai_image_generations rows loaded:", list.length);
-      setRows(list);
-      const ids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
-      if (ids.length) {
-        const { data: profs, error: profErr } = await supabase
-          .from("profiles")
-          .select("user_id,email,display_name")
-          .in("user_id", ids);
-        if (profErr) console.warn("[analytics] profiles read failed", profErr);
-        const map: Record<string, { email: string; name: string | null }> = {};
-        (profs || []).forEach((p: any) => {
-          map[p.user_id] = { email: p.email, name: p.display_name };
-        });
-        setProfiles(map);
-      }
+      const raw = (data as any[]) || [];
+      console.info("[analytics] ai edit rows loaded:", raw.length);
+      setRows(raw as AiRow[]);
+      const map: Record<string, { email: string; name: string | null }> = {};
+      raw.forEach((r) => {
+        if (r.user_id) map[r.user_id] = { email: r.user_email, name: r.user_name };
+      });
+      setProfiles(map);
       setLoading(false);
     })();
   }, [reloadKey]);
+
 
   const stats = useMemo(() => bucketize(rows, "created_at"), [rows]);
   const successCount = rows.filter((r) => r.status === "success").length;
@@ -298,33 +287,22 @@ const MarketplaceDownloadsAnalytics = () => {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("downloads")
-        .select("id,user_id,submission_id,downloaded_at,created_at")
-        .order("created_at", { ascending: false })
-        .limit(2000);
-      const list = (data as DlRow[]) || [];
-      setRows(list);
-
-      const uids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
-      const sids = Array.from(new Set(list.map((r) => r.submission_id).filter(Boolean))) as string[];
-      if (uids.length) {
-        const { data: profs } = await supabase
-          .from("profiles").select("user_id,email,display_name").in("user_id", uids);
-        const map: Record<string, { email: string; name: string | null }> = {};
-        (profs || []).forEach((p: any) => { map[p.user_id] = { email: p.email, name: p.display_name }; });
-        setProfiles(map);
-      }
-      if (sids.length) {
-        const { data: subs } = await supabase
-          .from("content_submissions").select("id,title").in("id", sids);
-        const map: Record<string, string> = {};
-        (subs || []).forEach((s: any) => { map[s.id] = s.title; });
-        setProducts(map);
-      }
+      const { data, error } = await supabase.rpc("admin_get_download_events", { _limit: 1000 });
+      if (error) console.error("[analytics] admin_get_download_events failed", error);
+      const raw = (data as any[]) || [];
+      setRows(raw as DlRow[]);
+      const pmap: Record<string, { email: string; name: string | null }> = {};
+      const smap: Record<string, string> = {};
+      raw.forEach((r) => {
+        if (r.user_id) pmap[r.user_id] = { email: r.user_email, name: null };
+        if (r.submission_id && r.product_title) smap[r.submission_id] = r.product_title;
+      });
+      setProfiles(pmap);
+      setProducts(smap);
       setLoading(false);
     })();
   }, []);
+
 
   const dated = useMemo(() => rows.map((r) => ({ ...r, ts: r.downloaded_at || r.created_at })), [rows]);
   const stats = useMemo(() => bucketize(dated as any, "ts" as any), [dated]);
@@ -409,24 +387,17 @@ const PexelsDownloadsAnalytics = () => {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("pexels_downloads")
-        .select("id,user_id,pexels_id,media_type,author,downloaded_at")
-        .order("downloaded_at", { ascending: false })
-        .limit(2000);
-      const list = (data as PexRow[]) || [];
-      setRows(list);
-      const uids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
-      if (uids.length) {
-        const { data: profs } = await supabase
-          .from("profiles").select("user_id,email,display_name").in("user_id", uids);
-        const map: Record<string, { email: string; name: string | null }> = {};
-        (profs || []).forEach((p: any) => { map[p.user_id] = { email: p.email, name: p.display_name }; });
-        setProfiles(map);
-      }
+      const { data, error } = await supabase.rpc("admin_get_pexels_download_events", { _limit: 1000 });
+      if (error) console.error("[analytics] admin_get_pexels_download_events failed", error);
+      const raw = (data as any[]) || [];
+      setRows(raw as PexRow[]);
+      const map: Record<string, { email: string; name: string | null }> = {};
+      raw.forEach((r) => { if (r.user_id) map[r.user_id] = { email: r.user_email, name: null }; });
+      setProfiles(map);
       setLoading(false);
     })();
   }, []);
+
 
   const stats = useMemo(() => bucketize(rows, "downloaded_at"), [rows]);
 
