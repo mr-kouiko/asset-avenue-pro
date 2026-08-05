@@ -2332,6 +2332,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_get_ai_edit_events: {
+        Args: { _limit?: number }
+        Returns: {
+          action: string
+          created_at: string
+          error_message: string
+          id: string
+          image_url: string
+          prompt: string
+          source_image_url: string
+          status: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       admin_get_dashboard_stats: {
         Args: never
         Returns: {
@@ -2343,9 +2359,33 @@ export type Database = {
           total_users: number
         }[]
       }
+      admin_get_download_events: {
+        Args: { _limit?: number }
+        Returns: {
+          created_at: string
+          downloaded_at: string
+          id: string
+          product_title: string
+          submission_id: string
+          user_email: string
+          user_id: string
+        }[]
+      }
       admin_get_full_email: {
         Args: { business_justification: string; profile_user_id: string }
         Returns: string
+      }
+      admin_get_pexels_download_events: {
+        Args: { _limit?: number }
+        Returns: {
+          author: string
+          downloaded_at: string
+          id: string
+          media_type: string
+          pexels_id: number
+          user_email: string
+          user_id: string
+        }[]
       }
       admin_get_platform_settings: {
         Args: never
