@@ -167,9 +167,6 @@ verify_jwt = true
 [functions.pexels-search]
 verify_jwt = false
 
-[functions.pixabay-search]
-verify_jwt = false
-
 [functions.generate-pexels-seo]
 verify_jwt = false
 

@@ -23,13 +23,7 @@ CREATE OR REPLACE FUNCTION public.search_marketplace(
   p_with_people boolean DEFAULT NULL,
   p_sort text DEFAULT 'recent',
   p_offset integer DEFAULT 0,
-  p_limit integer DEFAULT 40,
-
-  p_resolution_tags text[] DEFAULT NULL,
-  p_loopable_tags text[] DEFAULT NULL,
-  p_number_of_people_tags text[] DEFAULT NULL,
-  p_copy_space_tags text[] DEFAULT NULL,
-  p_duration_tags text[] DEFAULT NULL
+  p_limit integer DEFAULT 40
 )
 RETURNS TABLE(
   id uuid,
