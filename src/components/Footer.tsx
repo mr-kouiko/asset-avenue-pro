@@ -1,6 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 
 export const Footer = () => {
+  const location = useLocation();
+  const isBlogPage = /\/blog(?:\/|$)/.test(location.pathname);
+
   return (
     <footer className="bg-muted py-12">
       <div className="container">
