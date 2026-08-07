@@ -1,6 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export const Footer = () => {
+  const location = useLocation();
+  const isBlogPage = /\/blog(?:\/|$)/.test(location.pathname);
+
   return (
     <footer className="bg-muted py-12">
       <div className="container">
@@ -49,13 +52,27 @@ export const Footer = () => {
               rel="noopener noreferrer"
               className="inline-flex items-center"
             >
-              <img
+            <img
                 src="https://sitepatent.com/api/badge?style=classic"
                 alt="Featured on SitePatent"
                 height={54}
                 className="h-[54px] w-auto"
               />
             </a>
+            {isBlogPage && (
+              <a
+                href="https://sellwithboost.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center"
+              >
+                <img
+                  src="https://sellwithboost.com/badge/listing.svg"
+                  alt="Listed on Sell With boost"
+                  style={{ height: 40, width: "auto" }}
+                />
+              </a>
+            )}
             <Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <span>|</span>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms & Conditions</Link>
