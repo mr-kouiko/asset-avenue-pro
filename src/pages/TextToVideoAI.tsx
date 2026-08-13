@@ -345,8 +345,14 @@ export default function TextToVideoAI() {
       {/* Marketing #1 */}
       <section className="container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-2 gap-10 items-center max-w-5xl mx-auto">
-          <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary/30 via-purple-500/20 to-background border border-border" />
-          <div>
+          <video
+  src="/videoai-promo.mp4"
+  autoPlay
+  muted
+  loop
+  playsInline
+  className="aspect-video w-full rounded-2xl object-cover border border-border"
+/>
             <h2 className="text-3xl font-bold mb-4">Generate professional-quality AI videos in seconds</h2>
             <p className="text-muted-foreground mb-4">
               Powered by Google Veo, our VideoAI generator creates cinematic, realistic videos with smooth motion,
